@@ -1,20 +1,26 @@
-import { useEffect, useState } from "react";
+import { useState } from 'react'
+import { DocumentPicker } from './DocumentPicker'
+import { CanvasView } from './CanvasView'
+
+type View =
+  | { state: 'picker' }
+  | { state: 'canvas'; path: string }
 
 export function App() {
-  const [message, setMessage] = useState<string | null>(null);
+  const [view, setView] = useState<View>({ state: 'picker' })
 
-  useEffect(() => {
-    fetch("/api/hello")
-      .then((res) => res.json())
-      .then((data: { message: string }) => setMessage(data.message))
-      .catch(() => setMessage("error fetching message"));
-  }, []);
+  if (view.state === 'canvas') {
+    return (
+      <CanvasView
+        documentPath={view.path}
+        onBack={() => setView({ state: 'picker' })}
+      />
+    )
+  }
 
   return (
-    <div className="flex h-screen items-center justify-center">
-      <p className="text-2xl font-mono">
-        {message === null ? "loading..." : message}
-      </p>
-    </div>
-  );
+    <DocumentPicker
+      onOpen={(path) => setView({ state: 'canvas', path })}
+    />
+  )
 }
