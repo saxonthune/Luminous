@@ -9,6 +9,14 @@
       "env": {
         "CARTA_SERVER_URL": "http://127.0.0.1:51234"
       }
+    },
+    "luminous": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/mcp/dist/server.js"],
+      "env": {
+        "LUMINOUS_SERVER_URL": "http://127.0.0.1:4080"
+      }
     }
   }
 }
