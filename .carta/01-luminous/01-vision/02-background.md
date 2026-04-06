@@ -3,7 +3,7 @@ title: Background
 status: draft
 summary: Why Luminous was split from Carta — separation of the docs system from the visualization tools
 tags: [background, history, carta, split]
-deps: [doc01.01]
+deps: [doc01.02.01]
 ---
 
 # Background

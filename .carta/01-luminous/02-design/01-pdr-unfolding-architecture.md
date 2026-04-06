@@ -3,7 +3,7 @@ title: PDR: Unfolding Architecture
 status: draft
 summary: Product decision record for transforming Luminous from schema-first to unfolding-first
 tags: [pdr, architecture, unfolding, crystallization]
-deps: [doc01.01]
+deps: [doc01.02.01]
 ---
 
 # PDR: Unfolding Architecture

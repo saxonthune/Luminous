@@ -3,12 +3,12 @@ title: API Contract
 status: draft
 summary: Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern.
 tags: [api, http, actions, server, contract]
-deps: [doc01.04]
+deps: [doc01.02.02]
 ---
 
 # API Contract
 
-Action-based HTTP API for `@luminous/server`. Endpoints map 1:1 to concept actions (doc01.04) rather than REST resources. The server is dumb storage — it applies actions to document state and persists. Domain logic lives in the client.
+Action-based HTTP API for `@luminous/server`. Endpoints map 1:1 to concept actions (doc01.02.02) rather than REST resources. The server is dumb storage — it applies actions to document state and persists. Domain logic lives in the client.
 
 ## Design Principles
 
@@ -87,7 +87,7 @@ Reads return the data directly (no envelope).
 
 ## Future endpoints
 
-These compose onto the existing contract when Structure concepts (doc01.04) are implemented. No existing endpoints change.
+These compose onto the existing contract when Structure concepts (doc01.02.02) are implemented. No existing endpoints change.
 
 ```
 POST /api/schema/define         { name, fields }                    → { ok }

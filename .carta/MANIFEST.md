@@ -30,11 +30,26 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 |-----|------|---------|------|------|------|
 
 | doc01.00 | `00-index.md` |  |  | — | — |
-| doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.02, doc01.03, doc01.04 |
-| doc01.02 | `02-background.md` | Why Luminous was split from Carta — separation of the docs system from the visualization tools | background, history, carta, split | doc01.01 | — |
-| doc01.03 | `03-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.01 | doc01.04 |
-| doc01.04 | `04-concept-inventory.md` | Luminous concepts (Jackson framework) — Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Document, Verification | concepts, design, jackson, formalization, unfolding | doc01.01, doc01.03 | doc01.05 |
-| doc01.05 | `05-api-contract.md` | Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern. | api, http, actions, server, contract | doc01.04 | — |
+
+### Vision
+
+| Ref | File | Summary | Tags | Deps | Refs |
+|-----|------|---------|------|------|------|
+
+| doc01.01.00 | `01-vision/00-index.md` |  |  | — | — |
+| doc01.01.01 | `01-vision/01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | — |
+| doc01.01.02 | `01-vision/02-background.md` | Why Luminous was split from Carta — separation of the docs system from the visualization tools | background, history, carta, split | doc01.02.01 | — |
+
+### Design
+
+| Ref | File | Summary | Tags | Deps | Refs |
+|-----|------|---------|------|------|------|
+
+| doc01.02.00 | `02-design/00-index.md` |  |  | — | — |
+| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.02.01, doc01.02.02 |
+| doc01.02.02 | `02-design/02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc01.02.01, doc01.02.01 | doc01.02.03, doc01.02.04 |
+| doc01.02.03 | `02-design/03-api-contract.md` | Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern. | api, http, actions, server, contract | doc01.02.02 | doc01.02.04 |
+| doc01.02.04 | `02-design/04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc01.02.02, doc01.02.03 | — |
 
 ## 02-carta-gold — 02-carta-gold
 
@@ -48,34 +63,36 @@ Quick lookup for file-path→doc mapping:
 
 | Tag | Relevant Docs |
 |-----|---------------|
-| `actions` | doc01.05 |
-| `ai` | doc00.04 |
-| `ai-context` | doc01.01 |
-| `api` | doc01.05 |
-| `architecture` | doc01.03 |
-| `background` | doc01.02 |
-| `canvas` | doc01.01 |
-| `carta` | doc01.02 |
-| `concepts` | doc01.04 |
-| `contract` | doc01.05 |
+| `actions` | doc01.02.03 |
+| `ai` | doc00.04, doc01.02.04 |
+| `ai-context` | doc01.01.01 |
+| `api` | doc01.02.03, doc01.02.04 |
+| `architecture` | doc01.02.01, doc01.02.04 |
+| `background` | doc01.01.02 |
+| `canvas` | doc01.01.01 |
+| `carta` | doc01.01.02 |
+| `concepts` | doc01.02.02 |
+| `contract` | doc01.02.03 |
 | `conventions` | doc00.03 |
-| `crystallization` | doc01.03 |
-| `design` | doc01.04 |
+| `crystallization` | doc01.02.01 |
+| `design` | doc01.02.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04 |
-| `formalization` | doc01.04 |
-| `history` | doc01.02 |
-| `http` | doc01.05 |
+| `formalization` | doc01.02.02 |
+| `history` | doc01.01.02 |
+| `http` | doc01.02.03 |
 | `index` | doc00.00 |
-| `jackson` | doc01.04 |
+| `jackson` | doc01.02.02 |
 | `maintenance` | doc00.02 |
+| `mcp` | doc01.02.04 |
 | `meta` | doc00.00, doc00.01 |
-| `pdr` | doc01.03 |
+| `pdr` | doc01.02.01 |
 | `philosophy` | doc00.02 |
 | `retrieval` | doc00.04 |
-| `server` | doc01.05 |
-| `software-design` | doc01.01 |
-| `split` | doc01.02 |
+| `server` | doc01.02.03 |
+| `software-design` | doc01.01.01 |
+| `split` | doc01.01.02 |
 | `theory` | doc00.01 |
-| `unfolding` | doc01.03, doc01.04 |
-| `vision` | doc01.01 |
-| `visualization` | doc01.01 |
+| `tools` | doc01.02.04 |
+| `unfolding` | doc01.02.01, doc01.02.02 |
+| `vision` | doc01.01.01 |
+| `visualization` | doc01.01.01 |

@@ -28,7 +28,7 @@ geometry → schema → document → server
                   ↘ vscode
 ```
 
-These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.03) for the migration plan.
+These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.02.01) for the migration plan.
 
 ## Architecture Direction
 

@@ -3,14 +3,14 @@ title: Concept Inventory
 status: draft
 summary: Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification
 tags: [concepts, design, jackson, formalization, unfolding]
-deps: [doc01.01, doc01.03]
+deps: [doc01.02.01, doc01.02.01]
 ---
 
 # Concept Inventory
 
 Luminous concepts analyzed using Daniel Jackson's concept-driven design framework (*The Essence of Software*). Each concept has a purpose, state, actions, and operational principle. Concepts are freestanding and composable — the seed (Milestone 0-1) needs only the first five; later concepts compose on top without breaking earlier ones.
 
-See doc01.03 for architectural decisions. See doc01.01 for the vision these concepts serve.
+See doc01.02.01 for architectural decisions. See doc01.02.01 for the vision these concepts serve.
 
 ## Dependence Diagram
 
@@ -94,7 +94,7 @@ Edges are undirected by default. Direction is visual (follows drag gesture) but 
 | **Actions** | `nest(parentId, childId)`, `unnest(childId)` |
 | **OP** | User drags a note into another; it becomes spatially contained. Parent auto-resizes to fit. Nesting is structural — "this belongs inside that." A thread screen contains a post list; a post list contains post cards. |
 
-Universal: any node can contain children, any node can be nested. Nesting survives formalization unchanged (doc01.03, D7) — when a parent is formalized, children stay as-is.
+Universal: any node can contain children, any node can be nested. Nesting survives formalization unchanged (doc01.02.01, D7) — when a parent is formalized, children stay as-is.
 
 ### Canvas
 
@@ -158,7 +158,7 @@ This is the central structure-preserving transformation. It synchronizes Note an
 | **Actions** | `describeSchemaPair(from, to, desc)`, `removeDescription(from, to)` |
 | **OP** | After formalizing Screen and Component schemas, user describes the pair: "this screen contains this component." Existing freeform edges between Screen and Component nodes retroactively gain that meaning — no edge was touched, only the lookup table changed. |
 
-Schema-Pair Description synchronizes Edge and Schema. It makes edge meaning emergent rather than pre-declared. The three-polarity port system (in/out/neutral) remains available for domains that need fine-grained connection typing (doc01.03, D1, D3).
+Schema-Pair Description synchronizes Edge and Schema. It makes edge meaning emergent rather than pre-declared. The three-polarity port system (in/out/neutral) remains available for domains that need fine-grained connection typing (doc01.02.01, D1, D3).
 
 ---
 
