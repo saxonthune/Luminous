@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "rimraf dist && tsc",
-    "dev": "tsx watch src/index.ts --dir .",
+    "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js"
   },
   "devDependencies": {
