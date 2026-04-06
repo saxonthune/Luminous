@@ -19,6 +19,8 @@ export type { Transform } from './useViewport.js';
 export type { CanvasProps, CanvasRef, ConnectionPreviewCoords } from './Canvas.js';
 export type { CanvasContextValue } from './CanvasContext.js';
 export type { Rect, ComputeBoundsOptions } from './containment.js';
+export type { Position, Size, NodeGeometry, OrganizerLayoutConfig, OrganizerFitResult } from './geometry.js';
+export { DEFAULT_ORGANIZER_LAYOUT } from './geometry.js';
 export type { NodeLink, FollowerDragDecision, UseNodeLinksOptions, UseNodeLinksResult } from './useNodeLinks.js';
 export type { ResizeDirection, NodeResizeCallbacks, UseNodeResizeOptions, UseNodeResizeResult } from './useNodeResize.js';
 export type { UseSelectionOptions, UseSelectionResult } from './useSelection.js';

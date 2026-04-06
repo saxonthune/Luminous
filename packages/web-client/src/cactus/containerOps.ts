@@ -14,7 +14,7 @@ import {
   type OrganizerLayoutConfig,
   type OrganizerFitResult,
   DEFAULT_ORGANIZER_LAYOUT,
-} from '@carta/geometry';
+} from './geometry.js';
 
 /** Minimal node interface — CartaNode satisfies this structurally. */
 export interface ContainerNode {

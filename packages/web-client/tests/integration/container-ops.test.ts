@@ -6,7 +6,7 @@ import {
   computeContainerFit,
 } from '../../src/cactus/containerOps';
 import type { ContainerNode } from '../../src/cactus/containerOps';
-import { DEFAULT_ORGANIZER_LAYOUT, type NodeGeometry } from '@carta/geometry';
+import { DEFAULT_ORGANIZER_LAYOUT, type NodeGeometry } from '../../src/cactus/index.js';
 
 // ===== HELPERS =====
 

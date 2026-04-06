@@ -1,6 +1,6 @@
 // Re-export geometry functions for backwards compat
-export { computeBounds, isPointInRect } from '@carta/geometry';
-export type { Rect, ComputeBoundsOptions } from '@carta/geometry';
+export { computeBounds, isPointInRect } from './geometry.js';
+export type { Rect, ComputeBoundsOptions } from './geometry.js';
 
 /**
  * Hit-test for drop targets using DOM data attributes.

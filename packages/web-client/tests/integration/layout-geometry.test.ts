@@ -7,7 +7,7 @@ import {
   ORGANIZER_CONTENT_TOP,
 } from '../../src/hooks/useLayoutActions.js';
 import { resolveAbsolutePosition } from '../../src/cactus/index.js';
-import { toRelativePosition } from '@carta/geometry';
+import { toRelativePosition } from '../../src/cactus/geometry.js';
 import { computeAlignment, computeDistribution } from '../../src/utils/layoutGeometry.js';
 
 describe('Layout Geometry Helpers', () => {
