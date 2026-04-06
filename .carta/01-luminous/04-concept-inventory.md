@@ -1,7 +1,7 @@
 ---
 title: Concept Inventory
 status: draft
-summary: Luminous concepts (Jackson framework) — Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Document, Verification
+summary: Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification
 tags: [concepts, design, jackson, formalization, unfolding]
 deps: [doc01.01, doc01.03]
 ---
@@ -15,22 +15,50 @@ See doc01.03 for architectural decisions. See doc01.01 for the vision these conc
 ## Dependence Diagram
 
 ```
-Canvas ← Note ← Nesting
-  ↑        ↑
-Selection  Edge
-              ↘
-         Schema ← Schema-Pair Description
-           ↑
-      Formalization
-           ↑
-       Verification
+Workspace → Document → Canvas ← Note ← Nesting
+                         ↑        ↑
+                      Selection   Edge
+                                     ↘
+                                Schema ← Schema-Pair Description
+                                  ↑
+                             Formalization
+                                  ↑
+                              Verification
 ```
 
-Concepts below the break (Schema and beyond) depend on concepts above. Concepts above are complete without those below.
+Workspace depends on Document (lists what's available). Document depends on Canvas (serializes its state). Concepts below the break (Schema and beyond) depend on concepts above. Concepts above are complete without those below.
 
 ---
 
-## Seed Concepts (Milestone 0-1)
+## Infrastructure Concepts
+
+### Workspace
+
+**Purpose:** Know what documents exist so you can choose one to open.
+
+| | |
+|---|---|
+| **State** | files: set of `{path, name, lastModified}` |
+| **Actions** | `listDocuments()`, `openDocument(path)`, `createDocument(name)` |
+| **OP** | User starts the client. Sees a list of available canvases. Picks one. Now they're in the Document concept working on a canvas. |
+
+Workspace is the entry point. It's what the user sees before any canvas. The server implements this by scanning its root directory for `.canvas.json` files.
+
+### Document
+
+**Purpose:** Persist canvas state as a versionable, readable file.
+
+| | |
+|---|---|
+| **State** | file path, document content (all nodes, edges, schemas) |
+| **Actions** | `save`, `load`, `watch` |
+| **OP** | User edits canvas. Changes persist to `.canvas.json`. Git tracks versions. AI reads the file for structured context. The document is the bridge between human visual work and AI consumption — it's what makes the canvas useful beyond the screen. |
+
+Document is infrastructure. It has no domain opinions — it serializes whatever the canvas contains. The server debounce-writes on mutation and reloads on external file changes.
+
+---
+
+## Seed Concepts (Milestone 1)
 
 ### Note
 
@@ -135,18 +163,6 @@ Schema-Pair Description synchronizes Edge and Schema. It makes edge meaning emer
 ---
 
 ## Verification Concepts (Milestone 4-5)
-
-### Document
-
-**Purpose:** Persist canvas state as a versionable, readable file.
-
-| | |
-|---|---|
-| **State** | file path, document content (all nodes, edges, schemas) |
-| **Actions** | `save`, `load`, `watch` |
-| **OP** | User edits canvas. Changes persist to `.canvas.json`. Git tracks versions. AI reads the file for structured context. The document is the bridge between human visual work and AI consumption — it's what makes the canvas useful beyond the screen. |
-
-Document is infrastructure. It has no domain opinions — it serializes whatever the canvas contains.
 
 ### Verification
 
