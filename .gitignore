@@ -142,9 +142,7 @@ vite.config.ts.timestamp-*
 .temp-docs/
 
 # Todo task runtime state
-.todo-tasks/.running/
-.todo-tasks/.done/
-.todo-tasks/.archived/
+.todo-tasks/
 
 # Playwright
 test-results/

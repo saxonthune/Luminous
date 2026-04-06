@@ -8,7 +8,19 @@ This is a *design* tool, not a diagramming tool. It was extracted from the Carta
 
 ## Project Structure
 
-Monorepo (pnpm workspaces). 6 packages with a layered dependency graph:
+Monorepo (pnpm workspaces). Two tracks:
+
+### Active development (new unfolding architecture)
+
+```
+server-next  (dumb storage + Yjs sync)
+client-next  (React canvas, all domain logic)
+```
+
+- `@luminous/server` (`packages/server-next`) — filesystem serving, WebSocket Yjs sync, no domain logic
+- `@luminous/canvas` (`packages/client-next`) — React + cactus canvas engine, notes, freeform edges, nesting
+
+### Legacy (schema-first, being superseded)
 
 ```
 geometry → schema → document → server
@@ -16,12 +28,20 @@ geometry → schema → document → server
                   ↘ vscode
 ```
 
-- `@carta/geometry` — layout primitives, constraint solver
-- `@carta/schema` — core data model (nodes, edges, ports, types), platform-agnostic
-- `@carta/document` — Yjs CRDT document operations, compiler, formatters
-- `@carta/server` — WebSocket sync, MongoDB persistence, MCP tools
-- `@carta/web-client` — React canvas editor (React Flow, Zustand, Yjs)
-- `carta-vscode` — VS Code extension for `.canvas.json` files
+These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.03) for the migration plan.
+
+## Architecture Direction
+
+See `.carta/01-luminous/03-pdr-unfolding-architecture.md` for full details. Key decisions:
+
+- **Notes are the fundamental node type.** Markdown title + body. Schemas come from crystallization, not upfront definition.
+- **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
+- **Server is storage, client is intelligence.** Server serves files and syncs Yjs. Client owns all domain logic.
+- **Willing to delete.** No backward compatibility with features nobody uses.
+
+## Canvas Engine
+
+The canvas engine is called **cactus** (`packages/web-client/src/cactus/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable hooks. The engine supports everything we need; restrictions are in the domain layer above it.
 
 ## Docs / Specs
 
@@ -33,4 +53,4 @@ The `.carta/` directory contains structured specifications managed by the `carta
 
 ## Tech Stack
 
-React 19, React Flow, TypeScript 5.9, Vite, Tailwind, Zustand, Yjs (CRDT), CodeMirror 6, Playwright (E2E), Vitest
+React 19, TypeScript 5.9, Vite, Tailwind, Zustand, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest
