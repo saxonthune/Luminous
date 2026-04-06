@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Canvas, useNodeDrag, useCanvasContext, type CanvasRef } from '../cactus/index.js';
+import { Canvas, useNodeDrag, useCanvasContext, type CanvasRef } from '@luminous/cactus';
 import { FileContainer } from './FileContainer.js';
 import { EnumerationEditor } from './EnumerationEditor.js';
 import { asEnumeration } from './parser.js';

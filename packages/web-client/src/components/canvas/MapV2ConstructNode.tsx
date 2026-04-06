@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ConnectionHandle } from '../../cactus/index.js';
+import { ConnectionHandle } from '@luminous/cactus';
 import { type ConstructSchema, type ConstructNodeData, getFieldsForSummary, resolveNodeColor, type DocumentAdapter, canConnect } from '@carta/schema';
 import type { LodBand } from './lod/lodPolicy.js';
 import ColorPicker from '../ui/ColorPicker.js';

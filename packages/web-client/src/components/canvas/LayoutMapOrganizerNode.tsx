@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   ArrowUpLeft,
 } from '@phosphor-icons/react';
-import { ConnectionHandle } from '../../cactus/index.js';
+import { ConnectionHandle } from '@luminous/cactus';
 
 export interface LayoutMapOrganizerNodeData {
   name: string;

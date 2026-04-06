@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import * as Y from 'yjs';
 import type { DocumentAdapter, CartaNode } from '@carta/schema';
 import { DEFAULT_ORGANIZER_LAYOUT, computeLayoutUnitSizes, computeLayoutUnitBounds, type LayoutItem, type WagonInfo, resolvePinConstraints, type PinLayoutNode, type NodeGeometry } from '@carta/schema';
-import { computeAttach, computeDetach, computeContainerFit } from '../cactus/index.js';
+import { computeAttach, computeDetach, computeContainerFit } from '@luminous/cactus';
 import { listPinConstraints, updateOrganizer } from '@carta/document';
 import { deOverlapNodes } from '../utils/deOverlapNodes.js';
 import { compactNodes } from '../utils/compactNodes.js';

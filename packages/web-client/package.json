@@ -19,6 +19,7 @@
     "test:all": "vitest run && playwright test"
   },
   "dependencies": {
+    "@luminous/cactus": "workspace:*",
     "@codemirror/lang-css": "^6.3.0",
     "@codemirror/lang-html": "^6.4.0",
     "@codemirror/lang-javascript": "^6.2.0",

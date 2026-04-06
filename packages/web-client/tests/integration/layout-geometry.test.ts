@@ -6,8 +6,8 @@ import {
   convertToConstructPositions,
   ORGANIZER_CONTENT_TOP,
 } from '../../src/hooks/useLayoutActions.js';
-import { resolveAbsolutePosition } from '../../src/cactus/index.js';
-import { toRelativePosition } from '../../src/cactus/geometry.js';
+import { resolveAbsolutePosition } from '@luminous/cactus';
+import { toRelativePosition } from '@luminous/cactus';
 import { computeAlignment, computeDistribution } from '../../src/utils/layoutGeometry.js';
 
 describe('Layout Geometry Helpers', () => {

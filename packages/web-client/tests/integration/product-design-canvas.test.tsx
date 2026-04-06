@@ -9,23 +9,19 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { CanvasContext } from '../../src/cactus/CanvasContext';
-import type { CanvasContextValue } from '../../src/cactus/CanvasContext';
+import { CanvasContext } from '@luminous/cactus';
+import type { CanvasContextValue } from '@luminous/cactus';
 import { ProductDesignCanvas } from '../../src/product-design/ProductDesignCanvas';
 import type { CanvasSourceFile, FileContainerLayout } from '../../src/product-design/types';
 
-// Mock Canvas to avoid d3-zoom / useViewport initialization in jsdom
-vi.mock('../../src/cactus/Canvas.tsx', () => ({
-  Canvas: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="canvas" className={className}>{children}</div>
-  ),
-}));
-
-// Mock useCanvasContext — inner component reads transform.k for drag scale
-vi.mock('../../src/cactus/CanvasContext.ts', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/cactus/CanvasContext')>();
+// Mock @luminous/cactus to avoid d3-zoom / useViewport initialization in jsdom
+vi.mock('@luminous/cactus', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@luminous/cactus')>();
   return {
     ...actual,
+    Canvas: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <div data-testid="canvas" className={className}>{children}</div>
+    ),
     useCanvasContext: () => ({
       transform: { x: 0, y: 0, k: 1 },
       screenToCanvas: (x: number, y: number) => ({ x, y }),

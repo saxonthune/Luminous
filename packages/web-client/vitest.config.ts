@@ -29,6 +29,7 @@ export default defineConfig({
       '@carta/schema': path.resolve(__dirname, '../schema/src/index.ts'),
       '@carta/document': path.resolve(__dirname, '../document/src/index.ts'),
       '@carta/geometry': path.resolve(__dirname, '../geometry/src/index.ts'),
+      '@luminous/cactus': path.resolve(__dirname, '../cactus/src/index.ts'),
     },
   },
 });

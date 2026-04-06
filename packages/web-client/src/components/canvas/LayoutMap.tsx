@@ -4,8 +4,7 @@ import type { PinLayoutNode, PinDirection, OrganizerNodeData } from '@carta/sche
 import { useNodes, usePinConstraints } from '../../hooks';
 import LayoutMapOrganizerNode from './LayoutMapOrganizerNode';
 import ContextMenuPrimitive from '../ui/ContextMenuPrimitive';
-import { Canvas, useCanvasContext, useNodeDrag, useKeyboardShortcuts, ConnectionPreview, type CanvasRef } from '../../cactus/index.js';
-import { EdgeLabel } from '../../cactus/EdgeLabel.js';
+import { Canvas, useCanvasContext, useNodeDrag, useKeyboardShortcuts, ConnectionPreview, EdgeLabel, type CanvasRef } from '@luminous/cactus';
 import CanvasToolbar, { ToolbarButton, ToolbarDivider } from './CanvasToolbar';
 import { Tooltip } from '../ui';
 import { MagnifyingGlassPlus, MagnifyingGlassMinus, CornersOut, ArrowsClockwise, X } from '@phosphor-icons/react';
