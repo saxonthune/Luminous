@@ -24,7 +24,8 @@
     "serve": "pnpm build:all && node packages/server/dist/cli.js serve .",
     "server:memory": "pnpm --filter @carta/server build && STORAGE=memory pnpm --filter @carta/server document-server",
     "server:stop": "docker compose down",
-    "vscode": "pnpm --filter @carta/web-client build && pnpm --filter carta-vscode build && pnpm --filter carta-vscode watch"
+    "vscode": "pnpm --filter @carta/web-client build && pnpm --filter carta-vscode build && pnpm --filter carta-vscode watch",
+    "dev:next": "pnpm --filter @luminous/server dev & pnpm --filter @luminous/canvas dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
