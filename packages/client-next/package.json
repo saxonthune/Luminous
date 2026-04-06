@@ -8,6 +8,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.7.1",
+    "@codemirror/lang-markdown": "^6.3.1",
+    "@codemirror/language": "^6.10.6",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.36.3",
+    "@lezer/markdown": "^1.4.2",
     "@luminous/cactus": "workspace:*",
     "d3-selection": "^3.0.0",
     "d3-transition": "^3.0.1",

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useCanvasContext, ConnectionHandle } from '@luminous/cactus'
 import type { ResizeDirection } from '@luminous/cactus'
 import type { Note } from './api'
+import { MarkdownEditor } from './MarkdownEditor'
 
 interface NoteNodeProps {
   note: Note
@@ -35,11 +36,9 @@ export function NoteNode({
 }: NoteNodeProps) {
   const { startConnection, isSelected, onNodePointerDown } = useCanvasContext()
   const [localTitle, setLocalTitle] = useState(note.title)
-  const [localBody, setLocalBody] = useState(note.body)
 
-  // Sync when note changes from server
+  // Sync when note title changes from server
   useEffect(() => setLocalTitle(note.title), [note.title])
-  useEffect(() => setLocalBody(note.body), [note.body])
 
   const selected = isSelected(note.id)
 
@@ -84,17 +83,10 @@ export function NoteNode({
       />
 
       {/* Body */}
-      <textarea
-        data-no-pan="true"
-        className="w-full px-2 py-1 text-xs outline-none bg-transparent resize-none text-gray-600 flex-1"
-        style={{ minHeight: Math.max(h - 80, 40) }}
-        value={localBody}
-        onChange={(e) => setLocalBody(e.target.value)}
-        onBlur={() => onUpdateBody(note.id, localBody)}
-        onKeyDown={(e) => {
-          // Prevent delete/backspace from bubbling to the canvas delete handler
-          e.stopPropagation()
-        }}
+      <MarkdownEditor
+        value={note.body}
+        minHeight={Math.max(h - 80, 40)}
+        onChange={(body) => onUpdateBody(note.id, body)}
       />
 
       {/* Nested children — absolutely positioned within this note */}
