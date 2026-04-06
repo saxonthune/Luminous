@@ -14,7 +14,7 @@ interface MetamapSchemaNodeProps {
   height: number;
   onPointerDown?: (e: React.PointerEvent) => void;
   onDoubleClick?: () => void;
-  onStartConnection?: (nodeId: string, handleId: string, clientX: number, clientY: number) => void;
+  onStartConnection?: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void;
   isExpanded?: boolean;
   isRenaming?: boolean;
   onStartRenaming?: () => void;

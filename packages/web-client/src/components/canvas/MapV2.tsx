@@ -1006,16 +1006,16 @@ export default function MapV2({ searchText, onSelectionChange: onSelectionChange
 
   // Connection validation
   const handleValidateConnection = useCallback((conn: {
-    source: string; sourceHandle: string;
-    target: string; targetHandle: string;
+    source: string; sourceHandle: string | null;
+    target: string; targetHandle: string | null;
   }) => {
     return validateConnection(conn, getSchema, (id) => nodes.find(n => n.id === id));
   }, [nodes, getSchema]);
 
   // Connection creation
   const handleConnect = useCallback((conn: {
-    source: string; sourceHandle: string;
-    target: string; targetHandle: string;
+    source: string; sourceHandle: string | null;
+    target: string; targetHandle: string | null;
   }) => {
     const normalized = normalizeConnection(conn, getSchema, (id) => nodes.find(n => n.id === id));
     if (!normalized) return;

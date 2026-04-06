@@ -67,9 +67,9 @@ function getConnectionPath(
 
 interface ConnectionCandidate {
   source: string;
-  sourceHandle: string;
+  sourceHandle: string | null;
   target: string;
-  targetHandle: string;
+  targetHandle: string | null;
 }
 
 interface ConnectionRule {
@@ -92,7 +92,7 @@ const LAYOUT_MAP_RULES: ConnectionRule[] = [
   {
     id: 'source-is-compass',
     message: 'Must drag from a compass handle',
-    test: (c) => VALID_SOURCE_HANDLES.has(c.sourceHandle),
+    test: (c) => c.sourceHandle !== null && VALID_SOURCE_HANDLES.has(c.sourceHandle),
   },
   {
     id: 'target-is-body',
@@ -218,7 +218,7 @@ function LayoutMapInner({
       if (targetEl) {
         const targetNodeId = targetEl.getAttribute('data-node-id');
         const targetHandleId = targetEl.getAttribute('data-handle-id');
-        if (targetNodeId && targetHandleId) {
+        if (targetNodeId && targetHandleId && connectionDrag.sourceHandle !== null) {
           const result = validateConnection(
             LAYOUT_MAP_RULES,
             {
@@ -361,7 +361,7 @@ export default function LayoutMap({ onClose }: LayoutMapProps) {
 
   // Connection drag callbacks
   const handleConnect = useCallback(
-    (connection: { source: string; sourceHandle: string; target: string; targetHandle: string }) => {
+    (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => {
       if (connection.source === connection.target) return; // no self-loops
       const direction = connection.sourceHandle as PinDirection;
       // Swap source and target: dragging from org1's NE handle to org2 means "org2 is NE of org1"
@@ -371,7 +371,7 @@ export default function LayoutMap({ onClose }: LayoutMapProps) {
   );
 
   const isValidConnection = useCallback(
-    (connection: { source: string; sourceHandle: string; target: string; targetHandle: string }) => {
+    (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => {
       const nameMap = new Map<string, string>();
       for (const n of localNodesRef.current) {
         nameMap.set(n.id, n.data.name || n.id);

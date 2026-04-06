@@ -269,7 +269,7 @@ export default function MetamapV2() {
   }, [edgePopover, removeRelationship]);
 
   // Connection handlers
-  const handleConnect = useCallback((connection: { source: string; sourceHandle: string; target: string; targetHandle: string }) => {
+  const handleConnect = useCallback((connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => {
     const source = getSchema(connection.source);
     const target = getSchema(connection.target);
     if (source && target) {
@@ -277,7 +277,7 @@ export default function MetamapV2() {
     }
   }, [getSchema]);
 
-  const isValidConnection = useCallback((_connection: { source: string; sourceHandle: string; target: string; targetHandle: string }) => {
+  const isValidConnection = useCallback((_connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => {
     // Allow self-referential connections
     return true;
   }, []);

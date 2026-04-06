@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 export interface ConnectionDragState {
   sourceNodeId: string;
-  sourceHandle: string;
+  sourceHandle: string | null;
   /** Start position in canvas coordinates (zoom-invariant anchor) */
   startCanvasX: number;
   startCanvasY: number;
@@ -14,15 +14,15 @@ export interface ConnectionDragState {
 export interface UseConnectionDragOptions {
   onConnect: (connection: {
     source: string;
-    sourceHandle: string;
+    sourceHandle: string | null;
     target: string;
-    targetHandle: string;
+    targetHandle: string | null;
   }) => void;
   isValidConnection?: (connection: {
     source: string;
-    sourceHandle: string;
+    sourceHandle: string | null;
     target: string;
-    targetHandle: string;
+    targetHandle: string | null;
   }) => boolean;
   /** Convert screen coords to canvas coords (for zoom-invariant start anchor) */
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
@@ -30,7 +30,7 @@ export interface UseConnectionDragOptions {
 
 export interface UseConnectionDragResult {
   connectionDrag: ConnectionDragState | null;
-  startConnection: (sourceNodeId: string, sourceHandle: string, clientX: number, clientY: number) => void;
+  startConnection: (sourceNodeId: string, sourceHandle: string | null, clientX: number, clientY: number) => void;
 }
 
 export function useConnectionDrag({
@@ -57,7 +57,7 @@ export function useConnectionDrag({
   }, [screenToCanvas]);
 
   const startConnection = useCallback(
-    (sourceNodeId: string, sourceHandle: string, clientX: number, clientY: number) => {
+    (sourceNodeId: string, sourceHandle: string | null, clientX: number, clientY: number) => {
       const canvasStart = screenToCanvasRef.current(clientX, clientY);
       setConnectionDrag({
         sourceNodeId,
@@ -103,12 +103,12 @@ export function useConnectionDrag({
           const targetNodeId = targetElement.getAttribute('data-node-id');
           const targetHandleId = targetElement.getAttribute('data-handle-id');
 
-          if (targetNodeId && targetHandleId) {
+          if (targetNodeId) {
             const connection = {
               source: sourceNodeId,
               sourceHandle,
               target: targetNodeId,
-              targetHandle: targetHandleId,
+              targetHandle: targetHandleId ?? null,
             };
 
             // Validate connection if validator provided

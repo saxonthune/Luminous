@@ -22,7 +22,7 @@ export interface NormalizedConnection {
  * Returns false for self-connections, missing handles, and incompatible port types.
  */
 export function validateConnection(
-  conn: { source: string; sourceHandle: string; target: string; targetHandle: string },
+  conn: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null },
   getSchema: (type: string) => ConstructSchema | undefined,
   findNode: (id: string) => { type?: string; data: Record<string, unknown> } | undefined,
 ): boolean {
@@ -54,10 +54,11 @@ export function validateConnection(
  * Returns null if the connection is invalid (missing node/schema/port).
  */
 export function normalizeConnection(
-  conn: { source: string; sourceHandle: string; target: string; targetHandle: string },
+  conn: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null },
   getSchema: (type: string) => ConstructSchema | undefined,
   findNode: (id: string) => { type?: string; data: Record<string, unknown> } | undefined,
 ): NormalizedConnection | null {
+  if (!conn.sourceHandle || !conn.targetHandle) return null;
   const sourceNode = findNode(conn.source);
   const targetNode = findNode(conn.target);
   if (!sourceNode || !targetNode) return null;

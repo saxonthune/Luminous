@@ -124,7 +124,7 @@ interface ShapeRenderProps {
   connectionDrag: any;
   sourcePortType: string | null;
   getPortSchema: (type: string) => any;
-  startConnection: (nodeId: string, handleId: string, clientX: number, clientY: number) => void;
+  startConnection: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void;
   showNarrative: (state: any) => void;
   hideNarrative: () => void;
 }
@@ -696,7 +696,7 @@ export interface MapV2ConstructNodeProps {
   connectionDrag: any;
   sourcePortType: string | null;
   getPortSchema: (type: string) => any;
-  startConnection: (nodeId: string, handleId: string, clientX: number, clientY: number) => void;
+  startConnection: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void;
   // Narrative
   showNarrative: (state: any) => void;
   hideNarrative: () => void;

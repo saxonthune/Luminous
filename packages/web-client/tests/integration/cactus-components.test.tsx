@@ -78,4 +78,24 @@ describe('ConnectionHandle', () => {
     expect(el.style.backgroundColor).toBe('red');
     expect(el.style.width).toBe('20px');
   });
+
+  it('target without id omits data-handle-id', () => {
+    const { container } = render(
+      <ConnectionHandle type="target" nodeId="node-1" />
+    );
+    const el = container.firstElementChild as HTMLElement;
+    expect(el.getAttribute('data-connection-target')).toBe('true');
+    expect(el.getAttribute('data-node-id')).toBe('node-1');
+    expect(el.getAttribute('data-handle-id')).toBeNull();
+  });
+
+  it('source without id calls onStartConnection with null handle', () => {
+    const onStart = vi.fn();
+    const { container } = render(
+      <ConnectionHandle type="source" nodeId="node-1" onStartConnection={onStart} />
+    );
+    const el = container.firstElementChild as HTMLElement;
+    fireEvent.pointerDown(el);
+    expect(onStart).toHaveBeenCalledWith('node-1', null, expect.any(Number), expect.any(Number));
+  });
 });

@@ -9,7 +9,7 @@ import { CanvasContext, type CanvasContextValue } from './CanvasContext.js';
 /** Container-local coords passed to renderConnectionPreview. Both start and current are in pixel space relative to the canvas container. */
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
-  sourceHandle: string;
+  sourceHandle: string | null;
   /** Start position in container-local pixels (zoom-stable: re-derived from canvas coords each frame) */
   startX: number;
   startY: number;
@@ -25,15 +25,15 @@ export interface CanvasProps {
   connectionDrag?: {
     onConnect: (connection: {
       source: string;
-      sourceHandle: string;
+      sourceHandle: string | null;
       target: string;
-      targetHandle: string;
+      targetHandle: string | null;
     }) => void;
     isValidConnection?: (connection: {
       source: string;
-      sourceHandle: string;
+      sourceHandle: string | null;
       target: string;
-      targetHandle: string;
+      targetHandle: string | null;
     }) => boolean;
   };
   /** Box select config — if provided, box select is enabled */

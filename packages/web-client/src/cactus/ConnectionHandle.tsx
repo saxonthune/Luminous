@@ -2,12 +2,12 @@ import React, { useRef } from 'react';
 
 export interface ConnectionHandleProps {
   type: 'source' | 'target';
-  id: string;
+  id?: string;
   nodeId: string;
   style?: React.CSSProperties;
   className?: string;
   children?: React.ReactNode;
-  onStartConnection?: (nodeId: string, handleId: string, clientX: number, clientY: number) => void;
+  onStartConnection?: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void;
 }
 
 export function ConnectionHandle({
@@ -27,9 +27,9 @@ export function ConnectionHandle({
       // Anchor the connection line at the right-edge midpoint of this element
       if (elRef.current) {
         const rect = elRef.current.getBoundingClientRect();
-        onStartConnection(nodeId, id, rect.right, rect.top + rect.height / 2);
+        onStartConnection(nodeId, id ?? null, rect.right, rect.top + rect.height / 2);
       } else {
-        onStartConnection(nodeId, id, event.clientX, event.clientY);
+        onStartConnection(nodeId, id ?? null, event.clientX, event.clientY);
       }
     }
   };
@@ -39,7 +39,7 @@ export function ConnectionHandle({
       ? {
           'data-connection-target': 'true',
           'data-node-id': nodeId,
-          'data-handle-id': id,
+          ...(id ? { 'data-handle-id': id } : {}),
         }
       : {
           'data-no-pan': 'true',
