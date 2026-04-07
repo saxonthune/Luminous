@@ -1,0 +1,330 @@
+{
+  "notes": {
+    "6b74396b-3fd8-47a3-8bef-ccc096325d46": {
+      "id": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
+      "title": "DOM Events",
+      "body": "The browser. Raw pointer, keyboard, and wheel events. Entry point for all user interaction.\\n\\n**Emits:** pointerdown, pointermove, pointerup, keydown, wheel, blur, focus",
+      "parentId": null,
+      "x": 147,
+      "y": 291,
+      "w": 350,
+      "h": 180
+    },
+    "799b8cad-a25b-4a0f-8a4d-1c7b93cfaa85": {
+      "id": "799b8cad-a25b-4a0f-8a4d-1c7b93cfaa85",
+      "title": "Cactus: useViewport",
+      "body": "d3-zoom on container element.\\n\\n**Input:** wheel, mousedown (filtered by `[data-no-pan]`)\\n**Signal:** `transform()` → `{ x, y, k }`\\n**Consumers:** Canvas CSS transform, edge SVG transform, screenToCanvas()",
+      "parentId": null,
+      "x": -70,
+      "y": -90,
+      "w": 350,
+      "h": 200
+    },
+    "4ddadbdd-3770-49f5-b4cf-609cdd710951": {
+      "id": "4ddadbdd-3770-49f5-b4cf-609cdd710951",
+      "title": "Cactus: useNodeDrag",
+      "body": "Pointer math for node dragging.\\n\\n**Input:** pointerdown (filtered by `handleSelector: [data-drag-handle]`)\\n**Attaches:** global pointermove/pointerup on window\\n**Emits:** `onDragStart(nodeId)`, `onDrag(nodeId, dx, dy)`, `onDragEnd(nodeId)`\\n**Signal:** `draggingNodeId()`\\n**Key:** delta divided by `zoomScale()` for zoom-corrected movement",
+      "parentId": null,
+      "x": 1073.760029260899,
+      "y": 432.7999501877968,
+      "w": 350,
+      "h": 230
+    },
+    "100f1166-882d-4251-8eaa-5fad88231e98": {
+      "id": "100f1166-882d-4251-8eaa-5fad88231e98",
+      "title": "Cactus: useSelection",
+      "body": "Node selection state.\\n\\n**Input:** `onNodePointerDown(nodeId, event)` — called from NoteNode\\n**Logic:** shift/ctrl = toggle/add, plain click = replace\\n**Signal:** `selectedIds()`, `isSelected(id)`\\n**Consumers:** NoteNode outline style, delete handler",
+      "parentId": null,
+      "x": -44,
+      "y": 686,
+      "w": 350,
+      "h": 200
+    },
+    "ca9ea797-4881-4f52-b128-5d73d4ef5395": {
+      "id": "ca9ea797-4881-4f52-b128-5d73d4ef5395",
+      "title": "Cactus: useNodeResize",
+      "body": "Mirrors useNodeDrag pattern for resize.\\n\\n**Input:** pointerdown on resize handle\\n**Emits:** `onResizeStart`, `onResize(nodeId, dw, dh)`, `onResizeEnd`\\n**Signal:** `resizingNodeId()`",
+      "parentId": null,
+      "x": 2214.30611147181,
+      "y": 520.2710528399452,
+      "w": 350,
+      "h": 180
+    },
+    "60af37f0-99d4-4595-8e4c-b281295c0173": {
+      "id": "60af37f0-99d4-4595-8e4c-b281295c0173",
+      "title": "Cactus: useConnectionDrag",
+      "body": "Edge creation via drag from ConnectionHandle.\\n\\n**Input:** pointerdown on ConnectionHandle\\n**Signal:** `connectionDragState()` — source node, current screen coords\\n**Output:** `onConnect({ source, target })` callback\\n**Consumers:** connection preview SVG line",
+      "parentId": null,
+      "x": 373,
+      "y": -84,
+      "w": 350,
+      "h": 200
+    },
+    "e1856415-023d-4e33-a84b-1374d8f1a833": {
+      "id": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "title": "Client: doc signal",
+      "body": "The central document state.\\n\\n`const [doc, setDoc] = createSignal<Document | null>(null)`\\n\\nContains all notes (positions, sizes, content) and all edges. Single source of truth for persisted state.\\n\\n**Written by:** loadDoc (API fetch), setDoc (optimistic updates)\\n**Read by:** mergedNotes memo, renderEdges, CanvasContent props, topLevelNotes",
+      "parentId": null,
+      "x": 1293,
+      "y": -70,
+      "w": 350,
+      "h": 230
+    },
+    "f3d00302-4640-4aab-9051-4ba298147db3": {
+      "id": "f3d00302-4640-4aab-9051-4ba298147db3",
+      "title": "Client: livePositions / liveSizes",
+      "body": "Ephemeral signals for in-flight drag/resize.\\n\\n`const [livePositions, setLivePositions] = createSignal<Map>()`\\n`const [liveSizes, setLiveSizes] = createSignal<Map>()`\\n\\n**Written by:** onDrag callback, onResize callback\\n**Cleared on:** onDragEnd, onResizeEnd\\n**Read by:** mergedNotes memo\\n\\nThese overlay doc state during interaction — DOM sees smooth movement without waiting for API.",
+      "parentId": null,
+      "x": 1731,
+      "y": 742,
+      "w": 350,
+      "h": 250
+    },
+    "d7899a40-255c-406d-b9cd-0dab8fe99709": {
+      "id": "d7899a40-255c-406d-b9cd-0dab8fe99709",
+      "title": "Client: mergedNotes memo",
+      "body": "`createMemo` that fuses persistent + ephemeral state.\\n\\n```\\nmergedNotes = doc().notes\\n  + livePositions() overlay\\n  + liveSizes() overlay\\n```\\n\\n**Consumers:** renderEdges (FreeformEdge props), renderNote (NoteNode x/y/w/h)\\n\\nThis is the single reactive source for all spatial rendering. Fires on any change to doc, livePositions, or liveSizes.",
+      "parentId": null,
+      "x": 1267,
+      "y": 723,
+      "w": 350,
+      "h": 230
+    },
+    "d2b7c152-5e2b-42fe-b575-de85edfcd3ec": {
+      "id": "d2b7c152-5e2b-42fe-b575-de85edfcd3ec",
+      "title": "Client: drag callbacks",
+      "body": "CanvasView.tsx:156-231. Bridge between cactus hooks and client state.\\n\\n**onDragStart:** capture baseline from doc → dragBaseMap\\n**onDrag:** base + delta → setLivePositions\\n**onDragEnd:** read final from livePositions → setDoc + postAction('node/move') → clear livePositions\\n\\nAlso handles ctrl+drag nesting: findDropTarget → nest/unnest API calls.",
+      "parentId": null,
+      "x": 1733.9223190919697,
+      "y": 299.1905607877455,
+      "w": 350,
+      "h": 230
+    },
+    "27824539-7691-4af2-85bf-f345a0aa2154": {
+      "id": "27824539-7691-4af2-85bf-f345a0aa2154",
+      "title": "CodeMirror: EditorView",
+      "body": "Created once per MarkdownEditor via `createCodeMirror()`.\\n\\nOwns its own DOM (contenteditable), internal state, cursor, selection. Extensions configured via Compartments.\\n\\n**Custom dispatch:** intercepts transactions, calls `onValueChange(doc.toString())` on docChanged\\n**Extensions:** markdown, livePreview, markdownTheme, history, keymap, lineWrapping, blur handler",
+      "parentId": null,
+      "x": 592,
+      "y": 310,
+      "w": 350,
+      "h": 230
+    },
+    "f43c38d2-20f5-4e17-a8b8-06270222de87": {
+      "id": "f43c38d2-20f5-4e17-a8b8-06270222de87",
+      "title": "CodeMirror: controlled value sync",
+      "body": "`createEditorControlledValue(editorView, () => props.value)`\\n\\nTwo-way binding between CM local state and Solid props:\\n\\n**Inbound:** when `memoizedCode` changes and editor not focused → dispatch full doc replacement\\n**Outbound:** CM dispatch → onValueChange → 500ms debounce → props.onChange → setDoc\\n\\n**Guard:** `view.hasFocus` check prevents overwriting during active editing",
+      "parentId": null,
+      "x": 1083,
+      "y": -478,
+      "w": 350,
+      "h": 230
+    },
+    "6f1bf129-805c-4c0a-97a5-e12c2e871b49": {
+      "id": "6f1bf129-805c-4c0a-97a5-e12c2e871b49",
+      "title": "CodeMirror: livePreview",
+      "body": "ViewPlugin that renders markdown as you type.\\n\\nRebuilds decorations on `docChanged`, `selectionSet`, `viewportChanged`.\\n\\n**Hides:** header marks, emphasis marks, code marks, list marks (on non-cursor lines)\\n**Replaces:** task markers with checkbox widgets\\n\\nUses `syntaxTree(state)` — Lezer parser runs async, can trigger delayed decoration rebuilds.",
+      "parentId": null,
+      "x": 827,
+      "y": 844,
+      "w": 350,
+      "h": 220
+    },
+    "fca15463-cb37-4446-af5a-54e78b2cb54a": {
+      "id": "fca15463-cb37-4446-af5a-54e78b2cb54a",
+      "title": "Server: REST API",
+      "body": "Dumb storage. `postAction(action, params)` → POST /api/{action}.\\n\\n**Endpoints:** node/move, node/resize, note/create, note/update, note/delete, edge/connect, edge/disconnect, edge/relabel, nest, unnest\\n**Read:** GET /api/document/{path}\\n\\n**Pattern:** Client does optimistic update via setDoc FIRST, then fires postAction. On failure → loadDoc() to resync.",
+      "parentId": null,
+      "x": 829,
+      "y": -89,
+      "w": 350,
+      "h": 250
+    },
+    "e0e54c2e-9eb5-4a12-9685-5f2df6ab7845": {
+      "id": "e0e54c2e-9eb5-4a12-9685-5f2df6ab7845",
+      "title": "Server: File Watch",
+      "body": "WebSocket at /ws/watch.\\n\\nNotifies client when backing file changes on disk (external edit, git pull).\\n\\n**Message:** `{ event: \"changed\", path }`\\n**Client response:** `loadDoc()` → fresh GET → `setDoc()`",
+      "parentId": null,
+      "x": 1739,
+      "y": -49,
+      "w": 350,
+      "h": 180
+    },
+    "8eeedefa-1391-407a-9986-f8b0234f0866": {
+      "id": "8eeedefa-1391-407a-9986-f8b0234f0866",
+      "title": "DOM: Node Rendering",
+      "body": "NoteNode component. Absolutely positioned div.\\n\\n**Reads:** mergedNotes → x, y, w, h → CSS left/top/width/min-height\\n**Contains:** drag handle, title input, MarkdownEditor (CodeMirror), ConnectionHandle, resize handle, context menu\\n\\n**Events emitted up:** onPointerDown → selection + drag, onContextMenu, title onBlur",
+      "parentId": null,
+      "x": 397,
+      "y": 717,
+      "w": 350,
+      "h": 200
+    },
+    "13776ffa-32c9-4a7f-89c1-718a93736cc0": {
+      "id": "13776ffa-32c9-4a7f-89c1-718a93736cc0",
+      "title": "DOM: Edge Rendering",
+      "body": "FreeformEdge component. SVG `<line>` elements.\\n\\n**Reads:** mergedNotes → getAbsoluteRect → rectBorderIntersection → from/to coordinates\\n**Renders:** hit area line (transparent, wide) + visible line (stroke)\\n**Events:** dblclick for label editing\\n\\nReactive chain: mergedNotes() changes → from()/to() recompute → SVG attributes update",
+      "parentId": null,
+      "x": 1195,
+      "y": 1174,
+      "w": 350,
+      "h": 220
+    },
+    "e51cd308-3f5f-4eca-8bdd-1e7079e4dd46": {
+      "id": "e51cd308-3f5f-4eca-8bdd-1e7079e4dd46",
+      "title": "DOM: Canvas Container",
+      "body": "Root div managed by cactus Canvas component.\\n\\n**Layers (DOM order):**\\n1. DotGrid background (SVG pattern)\\n2. Edge SVG (position: absolute)\\n3. Nodes div (position: absolute, CSS transform from viewport)\\n4. Connection preview SVG\\n5. Selection rect div\\n\\nd3-zoom attached here. Filters `[data-no-pan]` elements from pan/zoom.",
+      "parentId": null,
+      "x": -305,
+      "y": 302,
+      "w": 350,
+      "h": 250
+    }
+  },
+  "edges": {
+    "b03cc973-7627-422a-ab58-584d143f5230": {
+      "id": "b03cc973-7627-422a-ab58-584d143f5230",
+      "fromId": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
+      "toId": "799b8cad-a25b-4a0f-8a4d-1c7b93cfaa85",
+      "label": "wheel, mousedown"
+    },
+    "b01d68cb-8a25-4b54-becb-76819380a36c": {
+      "id": "b01d68cb-8a25-4b54-becb-76819380a36c",
+      "fromId": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
+      "toId": "4ddadbdd-3770-49f5-b4cf-609cdd710951",
+      "label": "pointerdown (drag handle)"
+    },
+    "25ffe739-3590-4175-ae92-f49aa67efb3b": {
+      "id": "25ffe739-3590-4175-ae92-f49aa67efb3b",
+      "fromId": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
+      "toId": "100f1166-882d-4251-8eaa-5fad88231e98",
+      "label": "pointerdown (node body)"
+    },
+    "b3752432-9d3a-4c1f-bab5-4585d21cbda7": {
+      "id": "b3752432-9d3a-4c1f-bab5-4585d21cbda7",
+      "fromId": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
+      "toId": "27824539-7691-4af2-85bf-f345a0aa2154",
+      "label": "keydown, focus, blur"
+    },
+    "eea8e49b-c3e4-4b2e-9662-ec525cb6fb63": {
+      "id": "eea8e49b-c3e4-4b2e-9662-ec525cb6fb63",
+      "fromId": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
+      "toId": "60af37f0-99d4-4595-8e4c-b281295c0173",
+      "label": "pointerdown (connection handle)"
+    },
+    "73f63adf-a058-470a-9c3e-4730509dffd8": {
+      "id": "73f63adf-a058-470a-9c3e-4730509dffd8",
+      "fromId": "799b8cad-a25b-4a0f-8a4d-1c7b93cfaa85",
+      "toId": "e51cd308-3f5f-4eca-8bdd-1e7079e4dd46",
+      "label": "transform() → CSS transform"
+    },
+    "e04d36e6-1f42-4b1c-9521-d4de14a31484": {
+      "id": "e04d36e6-1f42-4b1c-9521-d4de14a31484",
+      "fromId": "4ddadbdd-3770-49f5-b4cf-609cdd710951",
+      "toId": "d2b7c152-5e2b-42fe-b575-de85edfcd3ec",
+      "label": "onDragStart / onDrag / onDragEnd"
+    },
+    "de37b3d4-65f8-438a-96f7-f61d393f6838": {
+      "id": "de37b3d4-65f8-438a-96f7-f61d393f6838",
+      "fromId": "d2b7c152-5e2b-42fe-b575-de85edfcd3ec",
+      "toId": "f3d00302-4640-4aab-9051-4ba298147db3",
+      "label": "onDrag → setLivePositions"
+    },
+    "a9a005d2-b83f-48fb-820a-0c221abce6cc": {
+      "id": "a9a005d2-b83f-48fb-820a-0c221abce6cc",
+      "fromId": "d2b7c152-5e2b-42fe-b575-de85edfcd3ec",
+      "toId": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "label": "onDragEnd → setDoc"
+    },
+    "2728112e-c8c0-45b5-b876-6f23b146b226": {
+      "id": "2728112e-c8c0-45b5-b876-6f23b146b226",
+      "fromId": "d2b7c152-5e2b-42fe-b575-de85edfcd3ec",
+      "toId": "fca15463-cb37-4446-af5a-54e78b2cb54a",
+      "label": "onDragEnd → postAction('node/move')"
+    },
+    "116220a9-0bbb-4647-8593-b75d732bd26e": {
+      "id": "116220a9-0bbb-4647-8593-b75d732bd26e",
+      "fromId": "f3d00302-4640-4aab-9051-4ba298147db3",
+      "toId": "d7899a40-255c-406d-b9cd-0dab8fe99709",
+      "label": "feeds memo"
+    },
+    "79731c84-af17-4b93-a86d-931605eb2bfb": {
+      "id": "79731c84-af17-4b93-a86d-931605eb2bfb",
+      "fromId": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "toId": "d7899a40-255c-406d-b9cd-0dab8fe99709",
+      "label": "feeds memo"
+    },
+    "b1d814bf-35e0-4d9d-8fed-e4a9b2a1bc45": {
+      "id": "b1d814bf-35e0-4d9d-8fed-e4a9b2a1bc45",
+      "fromId": "d7899a40-255c-406d-b9cd-0dab8fe99709",
+      "toId": "8eeedefa-1391-407a-9986-f8b0234f0866",
+      "label": "mergedNotes → x/y/w/h props"
+    },
+    "f05bce76-de68-4352-b436-399b315daea5": {
+      "id": "f05bce76-de68-4352-b436-399b315daea5",
+      "fromId": "d7899a40-255c-406d-b9cd-0dab8fe99709",
+      "toId": "13776ffa-32c9-4a7f-89c1-718a93736cc0",
+      "label": "mergedNotes → from/to coords"
+    },
+    "ac4a705c-e75e-4ef1-9199-83b1b81d2059": {
+      "id": "ac4a705c-e75e-4ef1-9199-83b1b81d2059",
+      "fromId": "27824539-7691-4af2-85bf-f345a0aa2154",
+      "toId": "f43c38d2-20f5-4e17-a8b8-06270222de87",
+      "label": "onValueChange (each keystroke)"
+    },
+    "887218af-b423-4b4f-b617-40c7343c32fa": {
+      "id": "887218af-b423-4b4f-b617-40c7343c32fa",
+      "fromId": "f43c38d2-20f5-4e17-a8b8-06270222de87",
+      "toId": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "label": "500ms debounce → onChange → setDoc"
+    },
+    "50bd013c-2d60-4b12-bf53-98c0181e6afa": {
+      "id": "50bd013c-2d60-4b12-bf53-98c0181e6afa",
+      "fromId": "f43c38d2-20f5-4e17-a8b8-06270222de87",
+      "toId": "fca15463-cb37-4446-af5a-54e78b2cb54a",
+      "label": "onChange → postAction('note/update')"
+    },
+    "57b2c8fc-cf3e-4b8c-ac8b-ec400048c688": {
+      "id": "57b2c8fc-cf3e-4b8c-ac8b-ec400048c688",
+      "fromId": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "toId": "f43c38d2-20f5-4e17-a8b8-06270222de87",
+      "label": "props.value → memoizedCode (skipped if focused)"
+    },
+    "2e134985-425d-4e91-93cf-d075b9d7309d": {
+      "id": "2e134985-425d-4e91-93cf-d075b9d7309d",
+      "fromId": "27824539-7691-4af2-85bf-f345a0aa2154",
+      "toId": "6f1bf129-805c-4c0a-97a5-e12c2e871b49",
+      "label": "docChanged / selectionSet"
+    },
+    "1dce76df-a21b-415c-b1b1-52683ecf4fb9": {
+      "id": "1dce76df-a21b-415c-b1b1-52683ecf4fb9",
+      "fromId": "6f1bf129-805c-4c0a-97a5-e12c2e871b49",
+      "toId": "8eeedefa-1391-407a-9986-f8b0234f0866",
+      "label": "decorations → DOM mutations"
+    },
+    "1907b530-e318-479d-b72a-14433b3c08b2": {
+      "id": "1907b530-e318-479d-b72a-14433b3c08b2",
+      "fromId": "100f1166-882d-4251-8eaa-5fad88231e98",
+      "toId": "8eeedefa-1391-407a-9986-f8b0234f0866",
+      "label": "isSelected() → outline class"
+    },
+    "098320f8-a0eb-4753-8386-12a5b2462259": {
+      "id": "098320f8-a0eb-4753-8386-12a5b2462259",
+      "fromId": "fca15463-cb37-4446-af5a-54e78b2cb54a",
+      "toId": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "label": "on failure → loadDoc() → setDoc"
+    },
+    "d5ac637e-62eb-4dea-b010-3d3535cd806a": {
+      "id": "d5ac637e-62eb-4dea-b010-3d3535cd806a",
+      "fromId": "e0e54c2e-9eb5-4a12-9685-5f2df6ab7845",
+      "toId": "e1856415-023d-4e33-a84b-1374d8f1a833",
+      "label": "file changed → loadDoc() → setDoc"
+    },
+    "af99b1d1-bd44-4a04-a999-4cf3445a4b21": {
+      "id": "af99b1d1-bd44-4a04-a999-4cf3445a4b21",
+      "fromId": "60af37f0-99d4-4595-8e4c-b281295c0173",
+      "toId": "fca15463-cb37-4446-af5a-54e78b2cb54a",
+      "label": "onConnect → postAction('edge/connect')"
+    }
+  }
+}

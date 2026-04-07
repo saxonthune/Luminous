@@ -43,12 +43,12 @@
     "55803589-90fd-4d72-ba6d-367d59df68d4": {
       "id": "55803589-90fd-4d72-ba6d-367d59df68d4",
       "title": "Nesting",
-      "body": "POST /api/nest { path, parentId, childId } → { ok }\\nPOST /api/unnest { path, childId } → { ok }\\n\\nTop-level — synchronizes Note and Canvas concepts.",
+      "body": "POST /api/nest { path, parentId, childId } → { ok }\\nPOST /api/unnest { path, childId } → { ok }\\n\\nTop-level — synchronizes Note and Canvas concepts.   dfdfdffdfdfdfdfdfdffdfdfdfdfdfdf\niklkkl\nhhhh\nh\nh\nh\nh\nh\nh",
       "parentId": null,
-      "x": 880.833251953125,
-      "y": 246.66665649414065,
-      "w": 200,
-      "h": 150
+      "x": 975.5059796216505,
+      "y": 258.37875830632873,
+      "w": 231.232223842504,
+      "h": 80
     },
     "9b4027c4-0c59-4da7-9702-15637473e162": {
       "id": "9b4027c4-0c59-4da7-9702-15637473e162",
@@ -75,8 +75,8 @@
       "title": "Response Envelope",
       "body": "Success: { ok: true, id? }\\nFailure: { ok: false, error: string }\\n\\nReads return data directly (no envelope).",
       "parentId": null,
-      "x": 608.3333740234375,
-      "y": 418.33331298828125,
+      "x": 831.457294689355,
+      "y": 635.4237312013805,
       "w": 200,
       "h": 150
     },
