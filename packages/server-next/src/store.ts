@@ -32,8 +32,9 @@ async function loadDocument(filePath: string): Promise<Document> {
 }
 
 async function saveDocument(filePath: string, doc: Document): Promise<void> {
-  recentWrites.set(filePath, Date.now())
   await writeFile(filePath, JSON.stringify(doc, null, 2), "utf-8")
+  // Record after write completes so the timestamp reflects when fs.watch will fire
+  recentWrites.set(filePath, Date.now())
 }
 
 function scheduleSave(relativePath: string): void {
@@ -104,10 +105,12 @@ export function watchDocuments(
     if (!normalized.endsWith(".canvas.json")) return
     const absPath = resolve(watchRootDir, normalized)
     const lastWrite = recentWrites.get(absPath)
-    if (lastWrite !== undefined && Date.now() - lastWrite < 500) {
-      recentWrites.delete(absPath)
+    if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {
+      // Don't delete the entry — fs.watch fires multiple events per write.
+      // Let it expire naturally by timestamp comparison.
       return
     }
+    recentWrites.delete(absPath)
     cache.delete(normalized)
     onChange(normalized)
   })

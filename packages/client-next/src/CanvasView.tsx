@@ -440,17 +440,20 @@ export function CanvasView(props: CanvasViewProps) {
   let canvasRef: CanvasRef | undefined;
 
   const loadDoc = () => {
-    setLoading(true);
+    const isInitial = !doc.current;
+    if (isInitial) setLoading(true);
     setError(null);
     getDocument(props.documentPath)
       .then((d) => {
         setDoc('current', reconcile(d));
-        setLoading(false);
+        if (isInitial) setLoading(false);
       })
       .catch((err) => {
         console.error('[CanvasView] failed to load document:', props.documentPath, err);
-        setError('Failed to load document');
-        setLoading(false);
+        if (isInitial) {
+          setError('Failed to load document');
+          setLoading(false);
+        }
       });
   };
 

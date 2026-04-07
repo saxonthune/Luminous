@@ -30,6 +30,12 @@ geometry → schema → document → server
 
 These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.02.01) for the migration plan.
 
+## Development Philosophy
+
+- **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Don't add complexity before forces demand it.
+- **Spec-driven development**: specs in carta bridge product expectations to source code.
+- **Willing to delete**: no backward compatibility with features nobody uses. If something isn't earning its place, remove it.
+
 ## Architecture Direction
 
 See `.carta/01-luminous/03-pdr-unfolding-architecture.md` for full details. Key decisions:

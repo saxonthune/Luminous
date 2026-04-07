@@ -3,7 +3,7 @@
     "6b74396b-3fd8-47a3-8bef-ccc096325d46": {
       "id": "6b74396b-3fd8-47a3-8bef-ccc096325d46",
       "title": "DOM Events",
-      "body": "The browser. Raw pointer, keyboard, and wheel events. Entry point for all user interaction.\n\n**Emits:** pointerdown, pointermove, pointerup, keydown, wheel, blur, focus",
+      "body": "The browser. Raw pointer, keyboard, and wheel events. Entry point for all user interaction.\n\n**Emits:** pointerdown, pointermove, pointerup, keydown, wheel, blur, focus\n\nfoo bar",
       "parentId": null,
       "x": 113.52949851708122,
       "y": 379.3624377016231,
@@ -97,13 +97,13 @@
       "parentId": null,
       "x": 1733.9223190919697,
       "y": 299.1905607877455,
-      "w": 350,
-      "h": 230
+      "w": 462.24102335680027,
+      "h": 273.9203817957054
     },
     "27824539-7691-4af2-85bf-f345a0aa2154": {
       "id": "27824539-7691-4af2-85bf-f345a0aa2154",
       "title": "CodeMirror: EditorView",
-      "body": "Created once per MarkdownEditor via `createCodeMirror()`.\n\nOwns its own DOM (contenteditable), internal state, cursor, selection. Extensions configured via Compartments.\n\n**Custom dispatch:** intercepts transactions, calls `onValueChange(doc.toString())` on docChanged\n**Extensions:** markdown, livePreview, markdownTheme, history, keymap, lineWrapping, blur handler",
+      "body": "Created once per MarkdownEditor via `createCodeMirror()`.\n\nOwns its own DOM (contenteditable), internal state, cursor, selection. Extensions configured via Compartments.\n\n**Custom dispatch:** intercepts transactions, calls /usage`onValueChange(doc.toString())` on docChanged\n**Extensions:** markdown, livePreview, markdownTheme, history, keymap, lineWrapping, blur handler",
       "parentId": null,
       "x": 706.1666259765625,
       "y": 333.3333435058594,
