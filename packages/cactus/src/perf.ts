@@ -1,5 +1,4 @@
 const FRAME_BUDGET = 16; // ms — one animation frame
-const INTERACTION_BUDGET = 100; // ms — noticeable interaction lag
 
 /**
  * Wraps a function to measure its execution time with performance.mark/measure.
@@ -50,13 +49,14 @@ export function observeLongTasks(): () => void {
 /**
  * Marks the start of an interaction lifecycle (e.g., drag start to drag end).
  * Returns `{ end() }` to call when the interaction completes.
- * Logs if total duration exceeds 100ms. No-op in production.
+ * Creates a performance.measure visible in DevTools — no console warning,
+ * since interaction duration depends on how long the user holds the button.
+ * No-op in production.
  */
 export function markInteraction(name: string): { end: () => void } {
   if (!import.meta.env.DEV) return { end: () => {} };
 
   const startMark = `cactus:${name}:start`;
-  const t0 = performance.now();
   performance.mark(startMark);
 
   return {
@@ -64,10 +64,6 @@ export function markInteraction(name: string): { end: () => void } {
       const endMark = `cactus:${name}:end`;
       performance.mark(endMark);
       performance.measure(`cactus:${name}`, startMark, endMark);
-      const elapsed = performance.now() - t0;
-      if (elapsed > INTERACTION_BUDGET) {
-        console.warn(`[cactus] slow interaction: ${name} took ${elapsed.toFixed(1)}ms`);
-      }
     },
   };
 }

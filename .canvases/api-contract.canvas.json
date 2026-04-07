@@ -45,8 +45,8 @@
       "title": "Nesting",
       "body": "POST /api/nest { path, parentId, childId } → { ok }\\nPOST /api/unnest { path, childId } → { ok }\\n\\nTop-level — synchronizes Note and Canvas concepts.   dfdfdffdfdfdfdfdfdffdfdfdfdfdfdf\niklkkl\nhhhh\nh\nh\nh\nh\nh\nh",
       "parentId": null,
-      "x": 975.5059796216505,
-      "y": 258.37875830632873,
+      "x": 1021.2304783906405,
+      "y": 276.6685075795515,
       "w": 231.232223842504,
       "h": 80
     },

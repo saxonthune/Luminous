@@ -3,6 +3,11 @@ import type { Document } from "./types.js"
 
 type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
 
+/** Replace literal \n and \t escape sequences with real whitespace */
+function unescapeText(s: string): string {
+  return s.replace(/\\n/g, "\n").replace(/\\t/g, "\t")
+}
+
 export function applyActionToDoc(
   doc: Document,
   action: string,
@@ -14,7 +19,7 @@ export function applyActionToDoc(
       doc.notes[id] = {
         id,
         title: (params.title as string) ?? "",
-        body: (params.body as string) ?? "",
+        body: unescapeText((params.body as string) ?? ""),
         parentId: (params.parentId as string | null) ?? null,
         x: (params.x as number) ?? 0,
         y: (params.y as number) ?? 0,
@@ -29,7 +34,7 @@ export function applyActionToDoc(
       const note = doc.notes[id]
       if (!note) return { ok: false, error: "not found" }
       if (params.title !== undefined) note.title = params.title as string
-      if (params.body !== undefined) note.body = params.body as string
+      if (params.body !== undefined) note.body = unescapeText(params.body as string)
       return { ok: true }
     }
 

@@ -9,10 +9,7 @@ import type { MenuItem } from './ContextMenu';
 
 interface NoteNodeProps {
   note: Note;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  mergedNotes: () => Record<string, Note>;
   onDragPointerDown: (nodeId: string, event: PointerEvent) => void;
   onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void;
   onUpdateTitle: (id: string, title: string) => void;
@@ -29,6 +26,12 @@ export function NoteNode(props: NoteNodeProps) {
   let editorHandle: MarkdownEditorHandle | undefined;
 
   createEffect(() => setLocalTitle(props.note.title));
+
+  const merged = () => props.mergedNotes()[props.note.id];
+  const x = () => merged()?.x ?? props.note.x;
+  const y = () => merged()?.y ?? props.note.y;
+  const w = () => merged()?.w ?? props.note.w;
+  const h = () => merged()?.h ?? props.note.h;
 
   const selected = () => isSelected(props.note.id);
 
@@ -56,7 +59,7 @@ export function NoteNode(props: NoteNodeProps) {
       data-container-id={props.note.id}
       data-connection-target="true"
       data-no-pan="true"
-      style={{ position: 'absolute', left: `${props.x}px`, top: `${props.y}px`, width: `${props.w}px`, "min-height": `${props.h}px`, "box-shadow": "var(--shadow-sm)" }}
+      style={{ position: 'absolute', left: `${x()}px`, top: `${y()}px`, width: `${w()}px`, "min-height": `${h()}px`, "box-shadow": "var(--shadow-sm)" }}
       class={`bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
         selected()
           ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
@@ -95,7 +98,7 @@ export function NoteNode(props: NoteNodeProps) {
       <MarkdownEditor
         ref={(h) => (editorHandle = h)}
         value={props.note.body}
-        minHeight={Math.max(props.h - 80, 40)}
+        minHeight={Math.max(h() - 80, 40)}
         onChange={(body) => props.onUpdateBody(props.note.id, body)}
       />
 

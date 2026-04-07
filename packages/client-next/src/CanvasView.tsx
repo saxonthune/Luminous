@@ -387,17 +387,12 @@ function CanvasContent(props: CanvasContentProps) {
   };
 
   function renderNote(note: Note): any {
-    const merged = props.mergedNotes()[note.id];
-    const x = merged?.x ?? note.x;
-    const y = merged?.y ?? note.y;
-    const w = merged?.w ?? note.w;
-    const h = merged?.h ?? note.h;
     const nestedChildren = childrenMap()[note.id] ?? [];
 
     return (
       <NoteNode
         note={note}
-        x={x} y={y} w={w} h={h}
+        mergedNotes={props.mergedNotes}
         onDragPointerDown={onDragPointerDown}
         onResizePointerDown={onResizePointerDown}
         onUpdateTitle={handleUpdateTitle}

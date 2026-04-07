@@ -89,19 +89,11 @@ describe('markInteraction', () => {
     expect(performance.getEntriesByName('cactus:resize', 'measure')).toHaveLength(1);
   });
 
-  it('does not warn for fast interactions', () => {
-    const mark = markInteraction('fast');
-    mark.end();
-    expect(console.warn).not.toHaveBeenCalled();
-  });
-
-  it('warns when interaction exceeds 100ms', () => {
-    const mark = markInteraction('connect');
+  it('does not warn — interaction duration is user-controlled', () => {
+    const mark = markInteraction('drag');
     busyWait(110);
     mark.end();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringMatching(/\[cactus\] slow interaction: connect took \d+\.\d+ms/)
-    );
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });
 
