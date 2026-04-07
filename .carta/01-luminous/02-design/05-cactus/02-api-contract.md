@@ -8,7 +8,7 @@ deps: [doc01.02.05.01]
 
 # Cactus API Contract
 
-Public API of the cactus canvas engine (`packages/web-client/src/cactus/`). Everything exported from the barrel `index.ts` is documented here. Internal modules are not part of the contract.
+Public API of the cactus canvas engine (`packages/cactus/src/`). Everything exported from the barrel `index.ts` is documented here. Internal modules are not part of the contract.
 
 ## Components
 
@@ -26,17 +26,18 @@ interface CanvasProps {
   boxSelect?: {
     getNodeRects: () => NodeRect[]
   }
-  renderEdges?: (transform: Transform) => React.ReactNode
-  renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => React.ReactNode
-  renderBackground?: (transform: Transform, patternId?: string) => React.ReactNode
-  onBackgroundPointerDown?: (event: React.PointerEvent) => void
+  renderEdges?: (transform: Transform) => JSX.Element
+  renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element
+  renderBackground?: (transform: Transform, patternId?: string) => JSX.Element
+  onBackgroundPointerDown?: (event: PointerEvent) => void
   className?: string
   patternId?: string
-  children: React.ReactNode
+  children: JSX.Element
+  ref?: (el: CanvasRef) => void
 }
 ```
 
-**Ref methods** (`CanvasRef`):
+**Ref methods** (`CanvasRef`) — accessed via ref callback (not `forwardRef`):
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
@@ -89,9 +90,9 @@ interface ConnectionHandleProps {
   id?: string                // Handle ID (null if omitted)
   nodeId: string
   onStartConnection?: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void
-  style?: React.CSSProperties
+  style?: JSX.CSSProperties
   className?: string
-  children?: React.ReactNode
+  children?: JSX.Element
 }
 ```
 
@@ -105,10 +106,10 @@ SVG foreignObject wrapper for rendering labels on edges. Renders HTML content ce
 interface EdgeLabelProps {
   x: number
   y: number
-  children: React.ReactNode
+  children: JSX.Element
   className?: string
-  style?: React.CSSProperties
-  onContextMenu?: (event: React.MouseEvent) => void
+  style?: JSX.CSSProperties
+  onContextMenu?: (event: MouseEvent) => void
 }
 ```
 
@@ -140,8 +141,8 @@ interface UseViewportOptions {
 }
 
 function useViewport(options?: UseViewportOptions): {
-  transform: Transform
-  containerRef: React.RefObject<HTMLDivElement>
+  transform: Accessor<Transform>
+  containerRef: (el: HTMLDivElement) => void
   fitView: (rects: NodeRect[], padding?: number) => void
   zoomIn: () => void
   zoomOut: () => void
@@ -165,8 +166,8 @@ interface UseNodeDragOptions {
 }
 
 function useNodeDrag(options: UseNodeDragOptions): {
-  draggingNodeId: string | null
-  onPointerDown: (nodeId: string, event: React.PointerEvent) => void
+  draggingNodeId: Accessor<string | null>
+  onPointerDown: (nodeId: string, event: PointerEvent) => void
 }
 ```
 
@@ -192,8 +193,8 @@ interface UseNodeResizeOptions {
 }
 
 function useNodeResize(options: UseNodeResizeOptions): {
-  resizingNodeId: string | null
-  onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: React.PointerEvent) => void
+  resizingNodeId: Accessor<string | null>
+  onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void
 }
 ```
 
@@ -233,10 +234,10 @@ interface UseSelectionOptions {
 }
 
 function useSelection(options: UseSelectionOptions): {
-  selectedIds: string[]
+  selectedIds: Accessor<string[]>
   setSelectedIds: (ids: string[]) => void
   isSelected: (id: string) => boolean
-  onNodePointerDown: (nodeId: string, event: React.PointerEvent) => void
+  onNodePointerDown: (nodeId: string, event: PointerEvent) => void
   clearSelection: () => void
   mergeBoxSelection: (ids: string[]) => void
 }
@@ -250,17 +251,17 @@ Implements shift-drag rectangle selection. Converts screen rectangle to canvas c
 
 ```typescript
 interface UseBoxSelectOptions {
-  transform: Transform
-  containerRef: React.RefObject<HTMLElement>
+  transform: Accessor<Transform>
+  containerRef: () => HTMLElement | undefined
   getNodeRects: () => NodeRect[]
   onSelectionChange?: (selectedIds: string[]) => void
   onBoxSelectHits?: (hitIds: string[]) => void
 }
 
 function useBoxSelect(options: UseBoxSelectOptions): {
-  selectedIds: string[]
+  selectedIds: Accessor<string[]>
   clearSelection: () => void
-  selectionRect: { x: number; y: number; width: number; height: number } | null
+  selectionRect: Accessor<{ x: number; y: number; width: number; height: number } | null>
 }
 ```
 
@@ -317,20 +318,20 @@ function useNodeLinks(options: {
 
 ### CanvasContext / useCanvasContext
 
-Global canvas state provided by `<Canvas>`. Child components consume this for selection, connections, and transform info.
+Global canvas state provided by `<Canvas>` via Solid context. Child components consume this for selection, connections, and transform info.
 
 ```typescript
 interface CanvasContextValue {
-  transform: Transform
+  transform: Accessor<Transform>
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number }
   startConnection: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void
-  connectionDrag: ConnectionDragState | null
-  selectedIds: string[]
+  connectionDrag: Accessor<ConnectionDragState | null>
+  selectedIds: Accessor<string[]>
   clearSelection: () => void
   isSelected: (id: string) => boolean
-  onNodePointerDown: (nodeId: string, event: React.PointerEvent) => void
+  onNodePointerDown: (nodeId: string, event: PointerEvent) => void
   setSelectedIds: (ids: string[]) => void
-  ctrlHeld: boolean
+  ctrlHeld: Accessor<boolean>
 }
 
 function useCanvasContext(): CanvasContextValue  // throws if outside Canvas

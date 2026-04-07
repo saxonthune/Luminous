@@ -14,11 +14,11 @@ Monorepo (pnpm workspaces). Two tracks:
 
 ```
 server-next  (dumb storage + Yjs sync)
-client-next  (React canvas, all domain logic)
+client-next  (Solid.js canvas, all domain logic)
 ```
 
 - `@luminous/server` (`packages/server-next`) — filesystem serving, WebSocket Yjs sync, no domain logic
-- `@luminous/canvas` (`packages/client-next`) — React + cactus canvas engine, notes, freeform edges, nesting
+- `@luminous/canvas` (`packages/client-next`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting
 
 ### Legacy (schema-first, being superseded)
 
@@ -41,7 +41,7 @@ See `.carta/01-luminous/03-pdr-unfolding-architecture.md` for full details. Key 
 
 ## Canvas Engine
 
-The canvas engine is called **cactus** (`packages/web-client/src/cactus/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable hooks. The engine supports everything we need; restrictions are in the domain layer above it.
+The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable Solid primitives. The engine supports everything we need; restrictions are in the domain layer above it.
 
 ## Docs / Specs
 
@@ -71,4 +71,4 @@ All paths are relative to the workspace root, **without** the `.carta/` prefix (
 
 ## Tech Stack
 
-React 19, TypeScript 5.9, Vite, Tailwind, Zustand, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest
+Solid.js, TypeScript 5.9, Vite, Tailwind, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest

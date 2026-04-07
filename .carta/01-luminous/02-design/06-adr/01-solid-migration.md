@@ -1,6 +1,6 @@
 ---
 title: "ADR: React to Solid.js Migration"
-status: proposed
+status: accepted
 summary: Architecture decision record for migrating Luminous client-next and cactus from React to Solid.js
 tags: [adr, architecture, solid, react, performance, reactivity]
 deps: [doc01.02.01, doc01.02.05]
@@ -10,7 +10,7 @@ deps: [doc01.02.01, doc01.02.05]
 
 ## Status
 
-Proposed — 2026-04-06.
+Accepted — migration complete.
 
 ## Context
 

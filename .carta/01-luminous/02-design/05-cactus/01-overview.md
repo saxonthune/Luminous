@@ -8,7 +8,7 @@ deps: [doc01.02.01]
 
 # Cactus Overview
 
-Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses d3-zoom for viewport control, DOM data-attributes for hit-testing, and composable React hooks for interaction. The engine provides primitives; the domain layer above it (in `client-next`) decides what nodes mean, how edges behave, and what gestures do.
+Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses d3-zoom for viewport control, DOM data-attributes for hit-testing, and composable Solid primitives for interaction. The engine provides primitives; the domain layer above it (in `client-next`) decides what nodes mean, how edges behave, and what gestures do.
 
 **Location:** `packages/web-client/src/cactus/`
 **Consumer:** `packages/client-next/` (the active Luminous client)
@@ -17,7 +17,7 @@ Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses
 
 **Domain-agnostic.** Cactus knows nothing about notes, schemas, or document models. It provides a zoomable canvas with nodes, edges, selection, and connection gestures. The domain layer maps its own concepts onto these primitives.
 
-**Composable hooks.** Each interaction (drag, resize, connect, select) is a standalone hook with its own state. The `Canvas` component composes them, but they can be used independently. This avoids monolithic state and makes interactions testable in isolation.
+**Composable primitives.** Each interaction (drag, resize, connect, select) is a standalone primitive with its own state. The `Canvas` component composes them, but they can be used independently. This avoids monolithic state and makes interactions testable in isolation.
 
 **DOM-based hit-testing.** Rather than maintaining a spatial index, cactus uses `document.elementsFromPoint()` and data attributes for hit-testing. This is simpler, naturally respects CSS z-order, and means the DOM is the source of truth for what's clickable.
 
@@ -53,7 +53,7 @@ Three coordinate spaces are in play:
 | **Screen** | Top-left of browser viewport | Pointer events, cursor tracking | `screenToCanvas(x, y)` |
 | **Container-local** | Top-left of Canvas container div | Connection preview, box-select overlay | `screen - containerRect` |
 
-The `screenToCanvas` function (from `useViewport`) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
+The `screenToCanvas` function (from `useViewport`, returns signal Accessors) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
 
 ## DOM Attribute Conventions
 
@@ -102,4 +102,4 @@ A typical domain integration (like `client-next`'s CanvasView) looks like:
 5. **Use `useNodeDrag` / `useNodeResize`** inside the content — attach handlers to node elements.
 6. **Use `ConnectionHandle`** on nodes — source handles initiate connections, target handles receive them.
 
-The Canvas component provides a `CanvasContext` with `transform`, `screenToCanvas`, `selectedIds`, `clearSelection`, `isSelected`, `onNodePointerDown`, `startConnection`, and `ctrlHeld`. Child components consume this to participate in canvas interactions.
+The Canvas component provides a Solid context (`CanvasContext`) with `transform`, `screenToCanvas`, `selectedIds`, `clearSelection`, `isSelected`, `onNodePointerDown`, `startConnection`, and `ctrlHeld`. Child components consume this via `useCanvasContext()` to participate in canvas interactions.
