@@ -164,17 +164,12 @@ function CanvasContent({
     return () => window.removeEventListener('pointermove', handler)
   }, [])
 
-  // ---- Delete key handler ----
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return
-      // selectedIds from context closure — always fresh since this effect re-runs when selectedIds changes
-      if (selectedIds.length === 0) return
+  // ---- Shared delete logic ----
+  const deleteNotes = useCallback(
+    (toDelete: string[]) => {
+      if (toDelete.length === 0) return
 
-      const toDelete = [...selectedIds]
-      clearSelection()
-
-      // Optimistic: remove all selected notes + cascade edges
+      // Optimistic: remove notes + cascade edges
       setDoc((prev) => {
         if (!prev) return prev
         const notes = { ...prev.notes }
@@ -201,11 +196,25 @@ function CanvasContent({
       Promise.all(
         toDelete.map((id) => postAction('note/delete', { path: documentPath, id }))
       ).catch(() => loadDoc())
+    },
+    [documentPath, setDoc, loadDoc]
+  )
+
+  // ---- Delete key handler ----
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      // selectedIds from context closure — always fresh since this effect re-runs when selectedIds changes
+      if (selectedIds.length === 0) return
+
+      const toDelete = [...selectedIds]
+      clearSelection()
+      deleteNotes(toDelete)
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selectedIds, clearSelection, documentPath, setDoc, loadDoc])
+  }, [selectedIds, clearSelection, deleteNotes])
 
   // ---- Drag callbacks ----
   const dragCallbacks = useMemo(
@@ -434,6 +443,143 @@ function CanvasContent({
     [documentPath, setDoc, loadDoc]
   )
 
+  // ---- Auto-resize parent to fit children ----
+  const autoResizeParent = useCallback(
+    (parentId: string) => {
+      const doc = docRef.current
+      if (!doc) return
+      const parent = doc.notes[parentId]
+      if (!parent) return
+
+      const children = Object.values(doc.notes).filter((n) => n.parentId === parentId)
+      if (children.length === 0) return
+
+      const headerHeight = 80
+      const padding = 10
+      let maxRight = parent.w
+      let maxBottom = headerHeight
+
+      for (const child of children) {
+        maxRight = Math.max(maxRight, child.x + child.w + padding)
+        maxBottom = Math.max(maxBottom, child.y + child.h + padding)
+      }
+
+      const newW = Math.max(parent.w, maxRight)
+      const newH = Math.max(parent.h, maxBottom)
+
+      if (newW !== parent.w || newH !== parent.h) {
+        setDoc((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            notes: {
+              ...prev.notes,
+              [parentId]: { ...prev.notes[parentId], w: newW, h: newH },
+            },
+          }
+        })
+        postAction('node/resize', { path: documentPath, id: parentId, w: newW, h: newH }).catch(
+          () => loadDoc()
+        )
+      }
+    },
+    [documentPath, setDoc, loadDoc]
+  )
+
+  // ---- Extract selected text to child note ----
+  const handleExtract = useCallback(
+    (parentNoteId: string, selectedText: string, selectionFrom: number, selectionTo: number) => {
+      const parentNote = docRef.current?.notes[parentNoteId]
+      if (!parentNote) return
+
+      // Auto-title heuristic: first line, or text before first colon, max 40 chars
+      const firstLine = selectedText.split('\n')[0]
+      const colonIdx = firstLine.indexOf(':')
+      let title = colonIdx > 0 ? firstLine.slice(0, colonIdx).trim() : firstLine.trim()
+      if (title.length > 40) title = title.slice(0, 40) + '\u2026'
+      if (!title) title = 'Untitled'
+
+      // Body: everything after the title portion (or empty if no colon split)
+      const body = colonIdx > 0 ? selectedText.slice(colonIdx + 1).trim() : ''
+
+      // Position child inside parent
+      const existingChildren = Object.values(docRef.current!.notes).filter(
+        (n) => n.parentId === parentNoteId
+      )
+      const childX = 10
+      const childY = 80 + existingChildren.length * 40
+      const childW = Math.max(parentNote.w - 20, 120)
+      const childH = 100
+
+      const tempId = `temp-${Date.now()}`
+
+      // Optimistic update: add child, remove selected text from parent body
+      setDoc((prev) => {
+        if (!prev) return prev
+        const newChild: Note = {
+          id: tempId,
+          title,
+          body,
+          parentId: parentNoteId,
+          x: childX,
+          y: childY,
+          w: childW,
+          h: childH,
+        }
+        const parentBody = prev.notes[parentNoteId].body
+        const updatedParentBody = parentBody.slice(0, selectionFrom) + parentBody.slice(selectionTo)
+        return {
+          ...prev,
+          notes: {
+            ...prev.notes,
+            [tempId]: newChild,
+            [parentNoteId]: { ...prev.notes[parentNoteId], body: updatedParentBody },
+          },
+        }
+      })
+
+      // Server calls
+      postAction('note/create', {
+        path: documentPath,
+        title,
+        body,
+        x: childX,
+        y: childY,
+        w: childW,
+        h: childH,
+      })
+        .then((result) => {
+          if (!result.ok || !result.id) throw new Error('create failed')
+          const realId = result.id
+          const updatedParentBody = docRef.current!.notes[parentNoteId].body
+          return Promise.all([
+            postAction('nest', { path: documentPath, parentId: parentNoteId, childId: realId }),
+            postAction('node/move', { path: documentPath, id: realId, x: childX, y: childY }),
+            postAction('note/update', { path: documentPath, id: parentNoteId, body: updatedParentBody }),
+          ]).then(() => realId)
+        })
+        .then((realId) => {
+          // Swap temp id for real id
+          setDoc((prev) => {
+            if (!prev) return prev
+            const { [tempId]: tempNote, ...rest } = prev.notes
+            return { ...prev, notes: { ...rest, [realId]: { ...tempNote, id: realId } } }
+          })
+          autoResizeParent(parentNoteId)
+        })
+        .catch(() => loadDoc())
+    },
+    [documentPath, setDoc, loadDoc, autoResizeParent]
+  )
+
+  // ---- Delete note from context menu ----
+  const handleDeleteNote = useCallback(
+    (noteId: string) => {
+      deleteNotes([noteId])
+    },
+    [deleteNotes]
+  )
+
   // ---- Render helpers ----
 
   // Build children map once per render
@@ -471,6 +617,8 @@ function CanvasContent({
         onResizePointerDown={onResizePointerDown}
         onUpdateTitle={handleUpdateTitle}
         onUpdateBody={handleUpdateBody}
+        onDelete={handleDeleteNote}
+        onExtract={handleExtract}
       >
         {nestedChildren.map((child) => renderNote(child))}
       </NoteNode>

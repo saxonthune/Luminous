@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useCanvasContext, ConnectionHandle } from '@luminous/cactus'
 import type { ResizeDirection } from '@luminous/cactus'
 import type { Note } from './api'
 import { MarkdownEditor } from './MarkdownEditor'
+import type { MarkdownEditorHandle } from './MarkdownEditor'
+import { ContextMenu } from './ContextMenu'
+import type { MenuItem } from './ContextMenu'
 
 interface NoteNodeProps {
   note: Note
@@ -18,6 +21,8 @@ interface NoteNodeProps {
   onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: React.PointerEvent) => void
   onUpdateTitle: (id: string, title: string) => void
   onUpdateBody: (id: string, body: string) => void
+  onDelete: (noteId: string) => void
+  onExtract: (noteId: string, selectedText: string, selectionFrom: number, selectionTo: number) => void
   /** Nested NoteNode elements rendered absolutely within this note */
   children?: React.ReactNode
 }
@@ -32,15 +37,39 @@ export function NoteNode({
   onResizePointerDown,
   onUpdateTitle,
   onUpdateBody,
+  onDelete,
+  onExtract,
   children,
 }: NoteNodeProps) {
   const { startConnection, isSelected, onNodePointerDown } = useCanvasContext()
   const [localTitle, setLocalTitle] = useState(note.title)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const editorRef = useRef<MarkdownEditorHandle>(null)
 
   // Sync when note title changes from server
   useEffect(() => setLocalTitle(note.title), [note.title])
 
   const selected = isSelected(note.id)
+
+  const buildMenuItems = (): MenuItem[] => {
+    const items: MenuItem[] = []
+
+    const selection = editorRef.current?.getSelection()
+    if (selection) {
+      items.push({
+        label: 'Extract to note',
+        action: () => onExtract(note.id, selection.text, selection.from, selection.to),
+      })
+      items.push({ label: '', action: () => {}, separator: true })
+    }
+
+    items.push({
+      label: 'Delete note',
+      action: () => onDelete(note.id),
+    })
+
+    return items
+  }
 
   return (
     <div
@@ -58,6 +87,10 @@ export function NoteNode({
       onPointerDown={(e) => {
         onNodePointerDown(note.id, e)
         onDragPointerDown(note.id, e)
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        setContextMenu({ x: e.clientX, y: e.clientY })
       }}
     >
       {/* Drag handle — only this area initiates drag */}
@@ -84,6 +117,7 @@ export function NoteNode({
 
       {/* Body */}
       <MarkdownEditor
+        ref={editorRef}
         value={note.body}
         minHeight={Math.max(h - 80, 40)}
         onChange={(body) => onUpdateBody(note.id, body)}
@@ -113,6 +147,16 @@ export function NoteNode({
           onResizePointerDown(note.id, { horizontal: 'right', vertical: 'bottom' }, e)
         }}
       />
+
+      {/* Context menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={buildMenuItems()}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 }
