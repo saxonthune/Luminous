@@ -56,11 +56,11 @@ export function NoteNode(props: NoteNodeProps) {
       data-container-id={props.note.id}
       data-connection-target="true"
       data-no-pan="true"
-      style={{ position: 'absolute', left: `${props.x}px`, top: `${props.y}px`, width: `${props.w}px`, "min-height": `${props.h}px` }}
-      class={`bg-white rounded-lg shadow-sm flex flex-col select-none ${
+      style={{ position: 'absolute', left: `${props.x}px`, top: `${props.y}px`, width: `${props.w}px`, "min-height": `${props.h}px`, "box-shadow": "var(--shadow-sm)" }}
+      class={`bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
         selected()
-          ? 'outline outline-2 outline-blue-500 border-transparent'
-          : 'border border-gray-200'
+          ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
+          : 'border border-[var(--border-default)]'
       }`}
       onPointerDown={(e) => {
         onNodePointerDown(props.note.id, e);
@@ -73,14 +73,14 @@ export function NoteNode(props: NoteNodeProps) {
     >
       <div
         data-drag-handle="true"
-        class="h-5 bg-gray-50 rounded-t-lg cursor-grab active:cursor-grabbing border-b border-gray-100 flex items-center justify-center shrink-0"
+        class="h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0"
       >
-        <div class="w-8 h-0.5 bg-gray-300 rounded-full" />
+        <div class="w-8 h-0.5 bg-[var(--text-tertiary)] rounded-full" />
       </div>
 
       <input
         data-no-pan="true"
-        class="w-full px-2 py-1 font-semibold text-sm outline-none bg-transparent border-b border-gray-100"
+        class="w-full px-2 py-1 font-semibold text-sm outline-none bg-transparent border-b border-[var(--border-subtle)]"
         value={localTitle()}
         onInput={(e) => setLocalTitle(e.currentTarget.value)}
         onBlur={() => props.onUpdateTitle(props.note.id, localTitle())}
@@ -103,7 +103,7 @@ export function NoteNode(props: NoteNodeProps) {
         type="source"
         nodeId={props.note.id}
         onStartConnection={startConnection}
-        class="absolute top-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
+        class="absolute top-1/2 w-3 h-3 rounded-full bg-[var(--color-accent-subtle)] border-2 border-[var(--bg-surface)] shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
         style={{ right: '-6px', transform: 'translateY(-50%)' }}
       />
 
@@ -111,7 +111,7 @@ export function NoteNode(props: NoteNodeProps) {
         data-no-pan="true"
         class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-40 hover:opacity-80 transition-opacity rounded-br-lg"
         style={{
-          background: 'linear-gradient(135deg, transparent 50%, #94a3b8 50%)',
+          background: 'linear-gradient(135deg, transparent 50%, var(--color-resize-handle) 50%)',
         }}
         onPointerDown={(e) => {
           e.stopPropagation();

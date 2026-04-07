@@ -1,1 +1,60 @@
 @import "tailwindcss";
+
+:root,
+[data-theme="light"] {
+  --bg-canvas: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-alt: #f9fafb;
+  --bg-overlay: #ffffff;
+  --bg-input: transparent;
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-on-accent: #ffffff;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-10: rgba(37, 99, 235, 0.1);
+  --color-accent-subtle: #3b82f6;
+  --color-edge: #94a3b8;
+  --color-edge-label: #64748b;
+  --color-dot-grid: #d1d5db;
+  --color-surface: #ffffff;
+  --color-resize-handle: #94a3b8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --cm-text: rgb(75 85 99);
+  --cm-code-bg: rgb(243 244 246);
+  --cm-checkbox: rgb(107 114 128);
+  --cm-checkbox-checked: rgb(59 130 246);
+}
+
+[data-theme="dusk"] {
+  --bg-canvas: #1e1a17;
+  --bg-surface: #2a2420;
+  --bg-surface-alt: #342e28;
+  --bg-overlay: #2a2420;
+  --bg-input: transparent;
+  --border-default: #4a4038;
+  --border-subtle: #3a3228;
+  --text-primary: #e8e0d8;
+  --text-secondary: #a89888;
+  --text-tertiary: #786858;
+  --text-on-accent: #ffffff;
+  --color-accent: #d4915a;
+  --color-accent-hover: #c07840;
+  --color-accent-10: rgba(212, 145, 90, 0.1);
+  --color-accent-subtle: #d4915a;
+  --color-edge: #8a7a68;
+  --color-edge-label: #a89888;
+  --color-dot-grid: #3a3228;
+  --color-surface: #2a2420;
+  --color-resize-handle: #8a7a68;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+  --cm-text: #e8e0d8;
+  --cm-code-bg: #3a3228;
+  --cm-checkbox: #a89888;
+  --cm-checkbox-checked: #d4915a;
+}

@@ -113,7 +113,7 @@ export function FreeformEdge(props: FreeformEdgeProps) {
         />
         <line
           x1={from().x} y1={from().y} x2={to().x} y2={to().y}
-          stroke="#94a3b8" stroke-width={2} stroke-linecap="round"
+          stroke="var(--color-edge)" stroke-width={2} stroke-linecap="round"
           style={{ "pointer-events": 'none' }}
         />
         <Show when={editing()} fallback={
@@ -121,7 +121,7 @@ export function FreeformEdge(props: FreeformEdgeProps) {
             <text
               x={midX()} y={midY()}
               text-anchor="middle" dominant-baseline="middle"
-              font-size="12" fill="#64748b"
+              font-size="12" fill="var(--color-edge-label)"
               style={{ cursor: 'pointer', "user-select": 'none' }}
               onDblClick={startEditing}
             >
@@ -148,10 +148,10 @@ export function FreeformEdge(props: FreeformEdgeProps) {
                 width: '100%',
                 "font-size": '12px',
                 "text-align": 'center',
-                border: '1px solid #94a3b8',
+                border: '1px solid var(--color-edge)',
                 "border-radius": '3px',
                 padding: '2px 4px',
-                background: 'white',
+                background: 'var(--bg-surface)',
                 outline: 'none',
               }}
             />

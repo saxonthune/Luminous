@@ -12,6 +12,7 @@ import { getDocument, postAction, type Document, type Note } from './api';
 import { NoteNode } from './NoteNode';
 import { FreeformEdge } from './FreeformEdge';
 import { CanvasToolbar } from './CanvasToolbar';
+import { theme, toggleTheme } from './theme';
 
 interface CanvasViewProps {
   documentPath: string;
@@ -529,19 +530,25 @@ export function CanvasView(props: CanvasViewProps) {
   };
 
   return (
-    <div class="flex h-screen flex-col">
-      <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2 shrink-0">
+    <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
+      <div class="flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
         <button
           onClick={props.onBack}
-          class="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
         >
           ← Back
         </button>
-        <span class="text-sm text-gray-500">{props.documentPath}</span>
+        <span class="text-sm text-[var(--text-secondary)]">{props.documentPath}</span>
         <div class="flex-1" />
         <button
+          onClick={toggleTheme}
+          class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+        >
+          {theme() === 'light' ? '☀' : '☾'}
+        </button>
+        <button
           onClick={() => createNoteFn()}
-          class="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+          class="rounded-md bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--color-accent-hover)]"
         >
           + New Note
         </button>
@@ -549,7 +556,7 @@ export function CanvasView(props: CanvasViewProps) {
 
       <div class="flex-1 overflow-hidden relative">
         <Show when={loading()}>
-          <div class="flex h-full items-center justify-center text-sm text-gray-500">
+          <div class="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
             Loading…
           </div>
         </Show>
@@ -570,7 +577,7 @@ export function CanvasView(props: CanvasViewProps) {
                   <line
                     x1={coords.startX} y1={coords.startY}
                     x2={coords.currentX} y2={coords.currentY}
-                    stroke="#94a3b8" stroke-width={2}
+                    stroke="var(--color-edge)" stroke-width={2}
                     stroke-dasharray="6 3" stroke-linecap="round"
                   />
                 )}

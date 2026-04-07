@@ -7,7 +7,7 @@ export const markdownTheme: Extension = EditorView.theme({
     outline: 'none',
     background: 'transparent',
     fontSize: '0.75rem',
-    color: 'rgb(75 85 99)',
+    color: 'var(--cm-text)',
   },
   '&.cm-focused': {
     outline: 'none',
@@ -18,14 +18,14 @@ export const markdownTheme: Extension = EditorView.theme({
     overflow: 'auto',
   },
   '.cm-content': {
-    caretColor: 'rgb(75 85 99)',
+    caretColor: 'var(--cm-text)',
     padding: '4px 8px',
   },
   '.cm-line': {
     padding: '0',
   },
   '.cm-cursor': {
-    borderLeftColor: 'rgb(75 85 99)',
+    borderLeftColor: 'var(--cm-text)',
   },
   // Headings
   '.cm-md-h1': {
@@ -60,17 +60,17 @@ export const markdownTheme: Extension = EditorView.theme({
     fontStyle: 'italic',
   },
   '.cm-md-code': {
-    background: 'rgb(243 244 246)',
+    background: 'var(--cm-code-bg)',
     borderRadius: '2px',
     padding: '0 2px',
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
   },
   // Checkbox indicators
   '.cm-md-checkbox': {
-    color: 'rgb(107 114 128)',
+    color: 'var(--cm-checkbox)',
     marginRight: '2px',
   },
   '.cm-md-checkbox-checked': {
-    color: 'rgb(59 130 246)',
+    color: 'var(--cm-checkbox-checked)',
   },
 })

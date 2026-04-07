@@ -55,18 +55,19 @@ export function ContextMenu(props: ContextMenuProps) {
         top: `${adjustedY()}px`,
         "z-index": 9999,
         "min-width": `${menuWidth}px`,
+        "box-shadow": "var(--shadow-lg)",
       }}
-      class="bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm"
+      class="bg-[var(--bg-overlay)] rounded-lg border border-[var(--border-default)] py-1 text-sm"
     >
       <For each={props.items}>
         {(item, i) => (
-          <Show when={!item.separator} fallback={<div class="my-1 border-t border-gray-100" />}>
+          <Show when={!item.separator} fallback={<div class="my-1 border-t border-[var(--border-subtle)]" />}>
             <button
               disabled={item.disabled}
               class={`w-full text-left px-3 py-1.5 rounded transition-colors ${
                 item.disabled
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
+                  ? 'text-[var(--text-tertiary)] cursor-not-allowed'
+                  : 'text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] cursor-pointer'
               }`}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={() => {
