@@ -62,6 +62,11 @@ interface CanvasContentProps {
   clearSelectionRef: React.MutableRefObject<() => void>
   /** Ref populated by CanvasContent so the toolbar can trigger note creation */
   createNoteRef: React.MutableRefObject<() => void>
+  /** Live positions lifted to CanvasView so renderEdges can see them */
+  livePositions: Map<string, { x: number; y: number }>
+  setLivePositions: React.Dispatch<React.SetStateAction<Map<string, { x: number; y: number }>>>
+  liveSizes: Map<string, { w: number; h: number }>
+  setLiveSizes: React.Dispatch<React.SetStateAction<Map<string, { w: number; h: number }>>>
 }
 
 function CanvasContent({
@@ -71,6 +76,10 @@ function CanvasContent({
   loadDoc,
   clearSelectionRef,
   createNoteRef,
+  livePositions,
+  setLivePositions,
+  liveSizes,
+  setLiveSizes,
 }: CanvasContentProps) {
   const {
     transform,
@@ -129,10 +138,7 @@ function CanvasContent({
   }, [screenToCanvas, documentPath, setDoc, loadDoc])
 
   // ---- Live drag/resize tracking ----
-  const [livePositions, setLivePositions] = useState<Map<string, { x: number; y: number }>>(
-    new Map()
-  )
-  const [liveSizes, setLiveSizes] = useState<Map<string, { w: number; h: number }>>(new Map())
+  // livePositions/liveSizes are lifted to CanvasView so renderEdges can see them.
   // Refs hold the same values for synchronous reads inside callbacks
   const livePositionRef = useRef<Map<string, { x: number; y: number }>>(new Map())
   const liveSizeRef = useRef<Map<string, { w: number; h: number }>>(new Map())
@@ -490,6 +496,12 @@ export function CanvasView({ documentPath, onBack }: CanvasViewProps) {
   const [error, setError] = useState<string | null>(null)
   const canvasRef = useRef<CanvasRef>(null)
 
+  // Lifted live position/size state so renderEdges can see drag updates in real-time
+  const [livePositions, setLivePositions] = useState<Map<string, { x: number; y: number }>>(
+    new Map()
+  )
+  const [liveSizes, setLiveSizes] = useState<Map<string, { w: number; h: number }>>(new Map())
+
   // Refs for cross-boundary communication with CanvasContent
   const clearSelectionRef = useRef<() => void>(() => {})
   const createNoteRef = useRef<() => void>(() => {})
@@ -543,23 +555,60 @@ export function CanvasView({ documentPath, onBack }: CanvasViewProps) {
     [documentPath, loadDoc]
   )
 
-  // Stable renderEdges — reads from docRef so Canvas doesn't re-render unnecessarily
-  // But we need re-renders when edges change, so we make this depend on doc.edges
+  const handleUpdateEdgeLabel = useCallback(
+    (edgeId: string, label: string | null) => {
+      setDoc((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          edges: {
+            ...prev.edges,
+            [edgeId]: { ...prev.edges[edgeId], label },
+          },
+        }
+      })
+      postAction('edge/relabel', { path: documentPath, id: edgeId, label }).catch(() => loadDoc())
+    },
+    [documentPath, loadDoc]
+  )
+
+  // renderEdges merges live drag positions/sizes into notes so edges track nodes in real-time.
+  // Depends on edges, doc.notes, livePositions, and liveSizes.
   const edges = doc?.edges
+  const docNotes = doc?.notes
   const renderEdges = useMemo(
     () => () => {
       const d = docRef.current
       if (!d) return null
+
+      // Merge live overrides onto stored notes
+      const mergedNotes = { ...d.notes }
+      for (const [id, pos] of livePositions) {
+        if (mergedNotes[id]) {
+          mergedNotes[id] = { ...mergedNotes[id], ...pos }
+        }
+      }
+      for (const [id, size] of liveSizes) {
+        if (mergedNotes[id]) {
+          mergedNotes[id] = { ...mergedNotes[id], ...size }
+        }
+      }
+
       return (
         <>
           {Object.values(d.edges).map((edge) => (
-            <FreeformEdge key={edge.id} edge={edge} notes={d.notes} />
+            <FreeformEdge
+              key={edge.id}
+              edge={edge}
+              notes={mergedNotes}
+              onUpdateLabel={handleUpdateEdgeLabel}
+            />
           ))}
         </>
       )
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [edges]
+    [edges, docNotes, livePositions, liveSizes, handleUpdateEdgeLabel]
   )
 
   const getNodeRects = useCallback(() => {
@@ -630,6 +679,10 @@ export function CanvasView({ documentPath, onBack }: CanvasViewProps) {
               loadDoc={loadDoc}
               clearSelectionRef={clearSelectionRef}
               createNoteRef={createNoteRef}
+              livePositions={livePositions}
+              setLivePositions={setLivePositions}
+              liveSizes={liveSizes}
+              setLiveSizes={setLiveSizes}
             />
           </Canvas>
         )}
