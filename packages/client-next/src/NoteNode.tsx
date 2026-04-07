@@ -1,5 +1,5 @@
 import { createSignal, createEffect, Show, type JSX } from 'solid-js';
-import { useCanvasContext, ConnectionHandle } from '@luminous/cactus';
+import { NodeShell } from '@luminous/cactus';
 import type { ResizeDirection } from '@luminous/cactus';
 import type { Note } from './api';
 import { MarkdownEditor } from './MarkdownEditor';
@@ -20,7 +20,6 @@ interface NoteNodeProps {
 }
 
 export function NoteNode(props: NoteNodeProps) {
-  const { startConnection, isSelected, onNodePointerDown } = useCanvasContext();
   const [localTitle, setLocalTitle] = createSignal(props.note.title);
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   let editorHandle: MarkdownEditorHandle | undefined;
@@ -28,12 +27,6 @@ export function NoteNode(props: NoteNodeProps) {
   createEffect(() => setLocalTitle(props.note.title));
 
   const merged = () => props.mergedNotes()[props.note.id];
-  const x = () => merged()?.x ?? props.note.x;
-  const y = () => merged()?.y ?? props.note.y;
-  const w = () => merged()?.w ?? props.note.w;
-  const h = () => merged()?.h ?? props.note.h;
-
-  const selected = () => isSelected(props.note.id);
 
   const buildMenuItems = (): MenuItem[] => {
     const items: MenuItem[] = [];
@@ -53,34 +46,19 @@ export function NoteNode(props: NoteNodeProps) {
   };
 
   return (
-    <div
-      data-node-id={props.note.id}
-      data-drop-target="true"
-      data-container-id={props.note.id}
-      data-connection-target="true"
-      data-no-pan="true"
-      style={{ position: 'absolute', left: `${x()}px`, top: `${y()}px`, width: `${w()}px`, "min-height": `${h()}px`, "box-shadow": "var(--shadow-sm)" }}
-      class={`bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
-        selected()
-          ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
-          : 'border border-[var(--border-default)]'
-      }`}
-      onPointerDown={(e) => {
-        onNodePointerDown(props.note.id, e);
-        props.onDragPointerDown(props.note.id, e);
-      }}
+    <NodeShell
+      nodeId={props.note.id}
+      x={() => merged()?.x ?? props.note.x}
+      y={() => merged()?.y ?? props.note.y}
+      w={() => merged()?.w ?? props.note.w}
+      h={() => merged()?.h ?? props.note.h}
+      onDragPointerDown={props.onDragPointerDown}
+      onResizePointerDown={props.onResizePointerDown}
       onContextMenu={(e) => {
         e.preventDefault();
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
     >
-      <div
-        data-drag-handle="true"
-        class="h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0"
-      >
-        <div class="w-8 h-0.5 bg-[var(--text-tertiary)] rounded-full" />
-      </div>
-
       <input
         data-no-pan="true"
         class="w-full px-2 py-1 font-semibold text-sm outline-none bg-transparent border-b border-[var(--border-subtle)]"
@@ -98,31 +76,11 @@ export function NoteNode(props: NoteNodeProps) {
       <MarkdownEditor
         ref={(h) => (editorHandle = h)}
         value={props.note.body}
-        minHeight={Math.max(h() - 80, 40)}
+        minHeight={Math.max((merged()?.h ?? props.note.h) - 80, 40)}
         onChange={(body) => props.onUpdateBody(props.note.id, body)}
       />
 
       {props.children}
-
-      <ConnectionHandle
-        type="source"
-        nodeId={props.note.id}
-        onStartConnection={startConnection}
-        class="absolute top-1/2 w-3 h-3 rounded-full bg-[var(--color-accent-subtle)] border-2 border-[var(--bg-surface)] shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
-        style={{ right: '-6px', transform: 'translateY(-50%)' }}
-      />
-
-      <div
-        data-no-pan="true"
-        class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-40 hover:opacity-80 transition-opacity rounded-br-lg"
-        style={{
-          background: 'linear-gradient(135deg, transparent 50%, var(--color-resize-handle) 50%)',
-        }}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          props.onResizePointerDown(props.note.id, { horizontal: 'right', vertical: 'bottom' }, e);
-        }}
-      />
 
       <Show when={contextMenu()}>
         {(menu) => (
@@ -134,6 +92,6 @@ export function NoteNode(props: NoteNodeProps) {
           />
         )}
       </Show>
-    </div>
+    </NodeShell>
   );
 }

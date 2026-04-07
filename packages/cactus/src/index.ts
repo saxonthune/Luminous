@@ -6,6 +6,8 @@ export { useKeyboardShortcuts } from './useKeyboardShortcuts.js';
 export { useBoxSelect } from './useBoxSelect.js';
 export { useSelection } from './useSelection.js';
 export { ConnectionHandle } from './ConnectionHandle.js';
+export { NodeShell } from './NodeShell.js';
+export type { NodeShellProps } from './NodeShell.js';
 export { DotGrid } from './DotGrid.js';
 export { CrossGrid, type CrossGridProps } from './CrossGrid.js';
 export { EdgeLabel } from './EdgeLabel.js';
