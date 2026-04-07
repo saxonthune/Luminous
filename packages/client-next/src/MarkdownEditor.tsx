@@ -1,5 +1,5 @@
 import { onCleanup } from 'solid-js';
-import { createCodeMirror, createEditorControlledValue } from 'solid-codemirror';
+import { createCodeMirror, createEditorControlledValue } from './createCodeMirror';
 import { EditorView, keymap } from '@codemirror/view';
 import { markdown } from '@codemirror/lang-markdown';
 import { history, historyKeymap, defaultKeymap } from '@codemirror/commands';
