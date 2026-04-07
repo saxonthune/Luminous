@@ -1,6 +1,6 @@
-import { onMount, onCleanup, createEffect } from 'solid-js';
+import { onCleanup } from 'solid-js';
+import { createCodeMirror, createEditorControlledValue } from 'solid-codemirror';
 import { EditorView, keymap } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
 import { markdown } from '@codemirror/lang-markdown';
 import { history, historyKeymap, defaultKeymap } from '@codemirror/commands';
 import { livePreviewExtension } from './livePreview';
@@ -19,81 +19,62 @@ interface MarkdownEditorProps {
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
-  let containerEl: HTMLDivElement | undefined;
-  let view: EditorView | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  onMount(() => {
-    if (!containerEl) return;
-
-    const state = EditorState.create({
-      doc: props.value,
-      extensions: [
-        markdown(),
-        livePreviewExtension(),
-        markdownTheme,
-        history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
-        EditorView.lineWrapping,
-        EditorView.updateListener.of((update) => {
-          if (!update.docChanged) return;
-          const newValue = update.state.doc.toString();
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            props.onChange(newValue);
-          }, 500);
-        }),
-        EditorView.domEventHandlers({
-          blur: () => {
-            if (debounceTimer) {
-              clearTimeout(debounceTimer);
-              debounceTimer = null;
-            }
-            if (view) {
-              props.onChange(view.state.doc.toString());
-            }
-          },
-        }),
-      ],
-    });
-
-    view = new EditorView({ state, parent: containerEl });
-
-    props.ref?.({
-      getSelection() {
-        if (!view) return null;
-        const sel = view.state.selection.main;
-        if (sel.from === sel.to) return null;
-        return { text: view.state.sliceDoc(sel.from, sel.to), from: sel.from, to: sel.to };
-      },
-      replaceRange(from: number, to: number, text: string) {
-        if (!view) return;
-        view.dispatch({ changes: { from, to, insert: text } });
-      },
-    });
+  const { editorView, ref, createExtension } = createCodeMirror({
+    onValueChange: (value) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        props.onChange(value);
+      }, 500);
+    },
   });
+
+  createEditorControlledValue(editorView, () => props.value);
+
+  createExtension(() => markdown());
+  createExtension(() => livePreviewExtension());
+  createExtension(() => markdownTheme);
+  createExtension(() => history());
+  createExtension(() => keymap.of([...defaultKeymap, ...historyKeymap]));
+  createExtension(() => EditorView.lineWrapping);
+  createExtension(() =>
+    EditorView.domEventHandlers({
+      blur: () => {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        const view = editorView();
+        if (view) props.onChange(view.state.doc.toString());
+      },
+    })
+  );
 
   onCleanup(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
-    view?.destroy();
-    view = null;
   });
 
-  // Sync external value changes
-  createEffect(() => {
-    const v = props.value;
-    if (!view) return;
-    const current = view.state.doc.toString();
-    if (v !== current) {
-      view.dispatch({ changes: { from: 0, to: current.length, insert: v } });
-    }
+  props.ref?.({
+    getSelection() {
+      const view = editorView();
+      if (!view) return null;
+      const sel = view.state.selection.main;
+      if (sel.from === sel.to) return null;
+      return { text: view.state.sliceDoc(sel.from, sel.to), from: sel.from, to: sel.to };
+    },
+    replaceRange(from: number, to: number, text: string) {
+      const view = editorView();
+      if (!view) return;
+      view.dispatch({ changes: { from, to, insert: text } });
+    },
   });
 
   return (
     <div
-      ref={containerEl}
+      ref={ref}
       data-no-pan="true"
-      style={{ "min-height": `${props.minHeight}px` }}
+      style={{ 'min-height': `${props.minHeight}px` }}
       onKeyDown={(e) => e.stopPropagation()}
     />
   );
