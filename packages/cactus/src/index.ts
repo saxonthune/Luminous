@@ -28,3 +28,5 @@ export type { UseSelectionOptions, UseSelectionResult } from './useSelection.js'
 export { forceDirectedLayout } from './layout.js';
 export type { LayoutNode, LayoutEdge, LayoutResult } from './layout.js';
 export { traceCallback, observeLongTasks, markInteraction } from './perf.js';
+export { createPerformanceMonitor } from './createPerformanceMonitor.js';
+export type { PerformanceMonitorOptions, PerformanceMonitorResult } from './createPerformanceMonitor.js';
