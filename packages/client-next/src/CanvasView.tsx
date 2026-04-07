@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onMount, onCleanup, Show, For } from 'solid-js';
+import { createSignal, createEffect, createMemo, onMount, onCleanup, Show, For } from 'solid-js';
 import {
   Canvas,
   useNodeDrag,
@@ -49,9 +49,8 @@ interface CanvasContentProps {
   loadDoc: () => void;
   onClearSelectionReady: (fn: () => void) => void;
   onCreateNoteReady: (fn: () => void) => void;
-  livePositions: () => Map<string, { x: number; y: number }>;
+  mergedNotes: () => Record<string, Note>;
   setLivePositions: (fn: (prev: Map<string, { x: number; y: number }>) => Map<string, { x: number; y: number }>) => void;
-  liveSizes: () => Map<string, { w: number; h: number }>;
   setLiveSizes: (fn: (prev: Map<string, { w: number; h: number }>) => Map<string, { w: number; h: number }>) => void;
 }
 
@@ -382,12 +381,11 @@ function CanvasContent(props: CanvasContentProps) {
   };
 
   function renderNote(note: Note): any {
-    const livePos = props.livePositions().get(note.id);
-    const liveSize = props.liveSizes().get(note.id);
-    const x = livePos?.x ?? note.x;
-    const y = livePos?.y ?? note.y;
-    const w = liveSize?.w ?? note.w;
-    const h = liveSize?.h ?? note.h;
+    const merged = props.mergedNotes()[note.id];
+    const x = merged?.x ?? note.x;
+    const y = merged?.y ?? note.y;
+    const w = merged?.w ?? note.w;
+    const h = merged?.h ?? note.h;
     const nestedChildren = childrenMap()[note.id] ?? [];
 
     return (
@@ -427,6 +425,19 @@ export function CanvasView(props: CanvasViewProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [livePositions, setLivePositions] = createSignal<Map<string, { x: number; y: number }>>(new Map());
   const [liveSizes, setLiveSizes] = createSignal<Map<string, { w: number; h: number }>>(new Map());
+
+  const mergedNotes = createMemo(() => {
+    const d = doc();
+    if (!d) return {} as Record<string, Note>;
+    const notes = { ...d.notes };
+    for (const [id, pos] of livePositions()) {
+      if (notes[id]) notes[id] = { ...notes[id], ...pos };
+    }
+    for (const [id, size] of liveSizes()) {
+      if (notes[id]) notes[id] = { ...notes[id], ...size };
+    }
+    return notes;
+  });
 
   let clearSelectionFn: () => void = () => {};
   let createNoteFn: () => void = () => {};
@@ -471,27 +482,16 @@ export function CanvasView(props: CanvasViewProps) {
   const renderEdges = () => {
     const d = doc();
     if (!d) return null;
-
-    const mergedNotes = { ...d.notes };
-    for (const [id, pos] of livePositions()) {
-      if (mergedNotes[id]) mergedNotes[id] = { ...mergedNotes[id], ...pos };
-    }
-    for (const [id, size] of liveSizes()) {
-      if (mergedNotes[id]) mergedNotes[id] = { ...mergedNotes[id], ...size };
-    }
-
     return (
-      <>
-        <For each={Object.values(d.edges)}>
-          {(edge) => (
-            <FreeformEdge
-              edge={edge}
-              notes={mergedNotes}
-              onUpdateLabel={handleUpdateEdgeLabel}
-            />
-          )}
-        </For>
-      </>
+      <For each={Object.values(d.edges)}>
+        {(edge) => (
+          <FreeformEdge
+            edge={edge}
+            notes={mergedNotes()}
+            onUpdateLabel={handleUpdateEdgeLabel}
+          />
+        )}
+      </For>
     );
   };
 
@@ -557,9 +557,8 @@ export function CanvasView(props: CanvasViewProps) {
                 loadDoc={loadDoc}
                 onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
                 onCreateNoteReady={(fn) => (createNoteFn = fn)}
-                livePositions={livePositions}
+                mergedNotes={mergedNotes}
                 setLivePositions={setLivePositions}
-                liveSizes={liveSizes}
                 setLiveSizes={setLiveSizes}
               />
             </Canvas>
