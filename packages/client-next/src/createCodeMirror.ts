@@ -71,6 +71,7 @@ export function createEditorControlledValue(
         on(memoizedCode, (code) => {
           const localValue = view.state.doc.toString();
           if (localValue === code) return;
+          if (view.hasFocus) return; // Don't overwrite while user is editing
           view.dispatch({
             changes: { from: 0, to: localValue.length, insert: code ?? '' },
           });

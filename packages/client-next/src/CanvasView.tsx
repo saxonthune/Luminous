@@ -144,6 +144,9 @@ function CanvasContent(props: CanvasContentProps) {
   onMount(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      // Don't delete nodes when user is editing text
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).closest?.('.cm-editor'))) return;
       const ids = selectedIds();
       if (ids.length === 0) return;
       const toDelete = [...ids];

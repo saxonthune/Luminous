@@ -74,8 +74,9 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     <div
       ref={ref}
       data-no-pan="true"
-      style={{ 'min-height': `${props.minHeight}px` }}
+      style={{ 'min-height': `${props.minHeight}px`, 'user-select': 'text' }}
       onKeyDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     />
   );
 }
