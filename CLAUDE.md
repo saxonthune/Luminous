@@ -32,8 +32,10 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Development Philosophy
 
-- **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Don't add complexity before forces demand it.
-- **Spec-driven development**: specs in carta bridge product expectations to source code.
+- **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Living software starts small and develops centers and ornamentation as feature complexity evolves.
+- **Happy path first**: implement the minimal end-to-end path. Complex algorithms, guards, and elaborate systems come only when sufficient forces cross the threshold — change in quantity begets change in quality.
+- **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in carta bridge the gap between them — they don't replace either side.
+- **Refactorability**: every part (specs, artifacts, code) must be refactorable. Avoid structures that resist change — they become degenerative over time and require massive investment to evolve.
 - **Willing to delete**: no backward compatibility with features nobody uses. If something isn't earning its place, remove it.
 
 ## Architecture Direction

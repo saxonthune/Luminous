@@ -27,6 +27,6 @@ jobs:
           GITHUB_PAGES: 'true'
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/web-client/dist
+          path: packages/client-next/dist
       - id: deployment
         uses: actions/deploy-pages@v4
