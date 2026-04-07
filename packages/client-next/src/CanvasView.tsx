@@ -439,22 +439,30 @@ export function CanvasView(props: CanvasViewProps) {
   let createNoteFn: () => void = () => {};
   let canvasRef: CanvasRef | undefined;
 
+  let loadDocTimer: ReturnType<typeof setTimeout> | null = null;
   const loadDoc = () => {
+    // Debounce: coalesce rapid calls (e.g. fs.watch firing multiple times)
+    if (loadDocTimer !== null) return;
     const isInitial = !doc.current;
     if (isInitial) setLoading(true);
     setError(null);
-    getDocument(props.documentPath)
-      .then((d) => {
-        setDoc('current', reconcile(d));
-        if (isInitial) setLoading(false);
-      })
-      .catch((err) => {
-        console.error('[CanvasView] failed to load document:', props.documentPath, err);
-        if (isInitial) {
-          setError('Failed to load document');
-          setLoading(false);
-        }
-      });
+    // For initial load, fire immediately. For subsequent, debounce 300ms.
+    const delay = isInitial ? 0 : 300;
+    loadDocTimer = setTimeout(() => {
+      loadDocTimer = null;
+      getDocument(props.documentPath)
+        .then((d) => {
+          setDoc('current', reconcile(d));
+          if (isInitial) setLoading(false);
+        })
+        .catch((err) => {
+          console.error('[CanvasView] failed to load document:', props.documentPath, err);
+          if (isInitial) {
+            setError('Failed to load document');
+            setLoading(false);
+          }
+        });
+    }, delay);
   };
 
   onMount(() => {
@@ -485,6 +493,7 @@ export function CanvasView(props: CanvasViewProps) {
 
     onCleanup(() => {
       if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      if (loadDocTimer !== null) clearTimeout(loadDocTimer);
       ws?.close();
     });
   });

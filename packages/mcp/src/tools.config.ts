@@ -9,6 +9,16 @@ export interface ToolGroupConfig {
   actions: Record<string, ActionConfig>
 }
 
+export interface BatchToolConfig {
+  description: string
+  path: string
+}
+
+export const batchToolConfig: BatchToolConfig = {
+  description: "Apply multiple actions in a single atomic batch. Actions are an ordered array — each can declare a 'ref' name, and later actions can reference generated IDs via '$ref:<name>' in string param values. Supports all action types: note/create, note/update, note/delete, edge/connect, edge/disconnect, edge/relabel, nest, unnest, node/move, node/resize.",
+  path: '/api/action/batch',
+}
+
 export const toolConfig: Record<string, ToolGroupConfig> = {
   canvas: {
     description: "Browse and read canvas documents. Use 'list' to discover available canvases, 'read' to load a canvas for inspection.",

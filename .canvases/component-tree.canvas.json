@@ -1,0 +1,186 @@
+{
+  "notes": {
+    "e8a8a511-9271-4f5f-aead-f86f524189a0": {
+      "id": "e8a8a511-9271-4f5f-aead-f86f524189a0",
+      "title": "App",
+      "body": "Entry point. Routes between DocumentPicker and CanvasView.",
+      "parentId": null,
+      "x": 568,
+      "y": 347,
+      "w": 200,
+      "h": 150
+    },
+    "029c9eac-139d-4ab5-876d-d5b3b0a5635a": {
+      "id": "029c9eac-139d-4ab5-876d-d5b3b0a5635a",
+      "title": "DocumentPicker",
+      "body": "Lists available .canvas.json files. Calls onSelect(path) to open.",
+      "parentId": null,
+      "x": 580,
+      "y": 57,
+      "w": 200,
+      "h": 150
+    },
+    "7ae9fc25-4802-4db3-9cec-1ab86e537f46": {
+      "id": "7ae9fc25-4802-4db3-9cec-1ab86e537f46",
+      "title": "CanvasView",
+      "body": "Outer canvas wrapper. Owns document state (store), WebSocket watch, live position/size tracking. Renders Canvas + toolbar.",
+      "parentId": null,
+      "x": 316,
+      "y": 490,
+      "w": 200,
+      "h": 150
+    },
+    "32c6e09f-d58e-4cce-a55e-4989c829c415": {
+      "id": "32c6e09f-d58e-4cce-a55e-4989c829c415",
+      "title": "CanvasContent",
+      "body": "Inner component inside <Canvas> provider. Owns drag/resize callbacks, delete handler, extract-to-note. Renders notes and edges.",
+      "parentId": null,
+      "x": 45,
+      "y": 345,
+      "w": 240,
+      "h": 120
+    },
+    "e56aef71-ca4b-41f8-888f-827da379b2cf": {
+      "id": "e56aef71-ca4b-41f8-888f-827da379b2cf",
+      "title": "Canvas (cactus)",
+      "body": "Engine component from @luminous/cactus. Provides context: transform, selection, connection drag, box-select. Wraps d3-zoom.",
+      "parentId": null,
+      "x": 312,
+      "y": 191,
+      "w": 240,
+      "h": 120
+    },
+    "c3bbb39d-08c5-4b68-af76-79d20521fb15": {
+      "id": "c3bbb39d-08c5-4b68-af76-79d20521fb15",
+      "title": "CanvasToolbar",
+      "body": "Floating toolbar. Zoom in/out, fit view, untangle (layout).",
+      "parentId": null,
+      "x": 689.6048290396116,
+      "y": 696.3673233378944,
+      "w": 200,
+      "h": 100
+    },
+    "b3a274b5-2090-4c4d-bb11-acb1c30bbd23": {
+      "id": "b3a274b5-2090-4c4d-bb11-acb1c30bbd23",
+      "title": "NoteNode",
+      "body": "Individual note on the canvas. Title input, MarkdownEditor, context menu. Will use NodeShell from cactus after extraction refactor.\n\n\n\n",
+      "parentId": null,
+      "x": -248,
+      "y": 249,
+      "w": 240,
+      "h": 120
+    },
+    "740dbd9a-05a4-47cd-99bf-7a489415831a": {
+      "id": "740dbd9a-05a4-47cd-99bf-7a489415831a",
+      "title": "FreeformEdge",
+      "body": "SVG line between two notes. Resolves absolute positions from note hierarchy. Double-click to edit label.",
+      "parentId": null,
+      "x": 72,
+      "y": 638,
+      "w": 220,
+      "h": 100
+    },
+    "5442c5c5-95ee-416f-ad6c-c67435681c5c": {
+      "id": "5442c5c5-95ee-416f-ad6c-c67435681c5c",
+      "title": "MarkdownEditor",
+      "body": "CodeMirror 6 editor with markdown syntax. Handles onChange, text selection for extract-to-note.",
+      "parentId": null,
+      "x": -443,
+      "y": 470,
+      "w": 220,
+      "h": 100
+    },
+    "66f4983c-8921-4d03-b385-0e395931db7b": {
+      "id": "66f4983c-8921-4d03-b385-0e395931db7b",
+      "title": "ContextMenu",
+      "body": "Right-click menu. Renders menu items with actions. Closes on outside click.",
+      "parentId": null,
+      "x": -176,
+      "y": 526,
+      "w": 200,
+      "h": 100
+    },
+    "e1647a6d-57c1-409b-88d8-d166a5f5a6ed": {
+      "id": "e1647a6d-57c1-409b-88d8-d166a5f5a6ed",
+      "title": "ConnectionHandle (cactus)",
+      "body": "Draggable source handle on node edge. Initiates connection drag via onStartConnection.",
+      "parentId": null,
+      "x": -540,
+      "y": 206,
+      "w": 220,
+      "h": 100
+    },
+    "cbfd6d68-3e45-4851-967d-f1206727bd09": {
+      "id": "cbfd6d68-3e45-4851-967d-f1206727bd09",
+      "title": "DotGrid (cactus)",
+      "body": "SVG background pattern. Renders dot grid that pans/zooms with canvas.",
+      "parentId": null,
+      "x": -31.232295327500402,
+      "y": -58.5605090609405,
+      "w": 200,
+      "h": 150
+    }
+  },
+  "edges": {
+    "4955cb60-22c6-4c01-bf9e-2f0a9a025dd8": {
+      "id": "4955cb60-22c6-4c01-bf9e-2f0a9a025dd8",
+      "fromId": "e8a8a511-9271-4f5f-aead-f86f524189a0",
+      "toId": "029c9eac-139d-4ab5-876d-d5b3b0a5635a",
+      "label": "renders"
+    },
+    "daca2fdd-721a-47fe-96f8-36fb21a67f37": {
+      "id": "daca2fdd-721a-47fe-96f8-36fb21a67f37",
+      "fromId": "e8a8a511-9271-4f5f-aead-f86f524189a0",
+      "toId": "7ae9fc25-4802-4db3-9cec-1ab86e537f46",
+      "label": "renders"
+    },
+    "af73630d-5028-41f4-8846-cd0f00e6afc3": {
+      "id": "af73630d-5028-41f4-8846-cd0f00e6afc3",
+      "fromId": "7ae9fc25-4802-4db3-9cec-1ab86e537f46",
+      "toId": "e56aef71-ca4b-41f8-888f-827da379b2cf",
+      "label": "renders"
+    },
+    "2b5738d7-b0bf-4918-8409-8c25baeb822b": {
+      "id": "2b5738d7-b0bf-4918-8409-8c25baeb822b",
+      "fromId": "7ae9fc25-4802-4db3-9cec-1ab86e537f46",
+      "toId": "c3bbb39d-08c5-4b68-af76-79d20521fb15",
+      "label": "renders"
+    },
+    "d7aae22a-bf47-40f6-a879-209bfbc74599": {
+      "id": "d7aae22a-bf47-40f6-a879-209bfbc74599",
+      "fromId": "e56aef71-ca4b-41f8-888f-827da379b2cf",
+      "toId": "32c6e09f-d58e-4cce-a55e-4989c829c415",
+      "label": "wraps"
+    },
+    "3659ab03-3287-4336-ac0c-c1c4a0549c6d": {
+      "id": "3659ab03-3287-4336-ac0c-c1c4a0549c6d",
+      "fromId": "32c6e09f-d58e-4cce-a55e-4989c829c415",
+      "toId": "b3a274b5-2090-4c4d-bb11-acb1c30bbd23",
+      "label": "renders"
+    },
+    "1fc34d5d-9fcd-444d-a931-185d8a252a19": {
+      "id": "1fc34d5d-9fcd-444d-a931-185d8a252a19",
+      "fromId": "32c6e09f-d58e-4cce-a55e-4989c829c415",
+      "toId": "740dbd9a-05a4-47cd-99bf-7a489415831a",
+      "label": "renders"
+    },
+    "0da8da53-baa0-4d78-9089-232bf2f0e3f6": {
+      "id": "0da8da53-baa0-4d78-9089-232bf2f0e3f6",
+      "fromId": "b3a274b5-2090-4c4d-bb11-acb1c30bbd23",
+      "toId": "5442c5c5-95ee-416f-ad6c-c67435681c5c",
+      "label": "renders"
+    },
+    "f9fa6275-3514-41f6-8bbe-c734d6732468": {
+      "id": "f9fa6275-3514-41f6-8bbe-c734d6732468",
+      "fromId": "b3a274b5-2090-4c4d-bb11-acb1c30bbd23",
+      "toId": "66f4983c-8921-4d03-b385-0e395931db7b",
+      "label": "renders"
+    },
+    "f81406d8-7d30-46ff-8bea-55e904fa483f": {
+      "id": "f81406d8-7d30-46ff-8bea-55e904fa483f",
+      "fromId": "b3a274b5-2090-4c4d-bb11-acb1c30bbd23",
+      "toId": "e1647a6d-57c1-409b-88d8-d166a5f5a6ed",
+      "label": "renders"
+    }
+  }
+}

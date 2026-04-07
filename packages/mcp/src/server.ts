@@ -1,7 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { toolConfig, type ActionConfig, type ToolGroupConfig } from './tools.config.js'
+import { toolConfig, batchToolConfig, type ActionConfig, type ToolGroupConfig } from './tools.config.js'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -96,11 +96,55 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     description: group.description,
     inputSchema: buildInputSchema(group),
   }))
+  tools.push({
+    name: 'batch',
+    description: batchToolConfig.description,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Canvas document path' },
+        actions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              action: { type: 'string' },
+              params: { type: 'object' },
+              ref: { type: 'string' },
+            },
+            required: ['action', 'params'],
+          },
+        },
+      },
+      required: ['path', 'actions'],
+    },
+  })
   return { tools }
 })
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
+
+  // Handle batch tool separately
+  if (name === 'batch') {
+    const { path, actions } = args as { path: string; actions: unknown[] }
+    try {
+      const res = await fetch(`${serverUrl}${batchToolConfig.path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, actions }),
+      })
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${await res.text()}`)
+      }
+      const result = await res.json()
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
   const group = toolConfig[name]
 
   if (!group) {
