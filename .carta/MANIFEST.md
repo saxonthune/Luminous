@@ -45,11 +45,14 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 | Ref | File | Summary | Tags | Deps | Refs |
 |-----|------|---------|------|------|------|
 
-| doc01.02.00 | `02-design/00-index.md` |  |  | — | — |
-| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.02.01, doc01.02.02 |
+| doc01.02.00 | `02-design/00-index.md` | Product and software design — architecture decisions, concept inventory, API contracts, engine internals | design | — | — |
+| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.02.01, doc01.02.02, doc01.02.05.01 |
 | doc01.02.02 | `02-design/02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc01.02.01, doc01.02.01 | doc01.02.03, doc01.02.04 |
 | doc01.02.03 | `02-design/03-api-contract.md` | Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern. | api, http, actions, server, contract | doc01.02.02 | doc01.02.04 |
 | doc01.02.04 | `02-design/04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc01.02.02, doc01.02.03 | — |
+| doc01.02.05.00 | `02-design/05-cactus/00-index.md` |  |  | — | — |
+| doc01.02.05.01 | `02-design/05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc01.02.01 | doc01.02.05.02 |
+| doc01.02.05.02 | `02-design/05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc01.02.05.01 | — |
 
 ## 02-carta-gold — 02-carta-gold
 
@@ -66,25 +69,30 @@ Quick lookup for file-path→doc mapping:
 | `actions` | doc01.02.03 |
 | `ai` | doc00.04, doc01.02.04 |
 | `ai-context` | doc01.01.01 |
-| `api` | doc01.02.03, doc01.02.04 |
-| `architecture` | doc01.02.01, doc01.02.04 |
+| `api` | doc01.02.03, doc01.02.04, doc01.02.05.02 |
+| `architecture` | doc01.02.01, doc01.02.04, doc01.02.05.01 |
 | `background` | doc01.01.02 |
-| `canvas` | doc01.01.01 |
+| `cactus` | doc01.02.05.01, doc01.02.05.02 |
+| `canvas` | doc01.01.01, doc01.02.05.01, doc01.02.05.02 |
 | `carta` | doc01.01.02 |
+| `components` | doc01.02.05.02 |
 | `concepts` | doc01.02.02 |
 | `contract` | doc01.02.03 |
 | `conventions` | doc00.03 |
 | `crystallization` | doc01.02.01 |
-| `design` | doc01.02.02 |
+| `design` | doc01.02.00, doc01.02.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04 |
+| `engine` | doc01.02.05.01 |
 | `formalization` | doc01.02.02 |
 | `history` | doc01.01.02 |
+| `hooks` | doc01.02.05.02 |
 | `http` | doc01.02.03 |
 | `index` | doc00.00 |
 | `jackson` | doc01.02.02 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc01.02.04 |
 | `meta` | doc00.00, doc00.01 |
+| `overview` | doc01.02.05.01 |
 | `pdr` | doc01.02.01 |
 | `philosophy` | doc00.02 |
 | `retrieval` | doc00.04 |
@@ -93,6 +101,7 @@ Quick lookup for file-path→doc mapping:
 | `split` | doc01.01.02 |
 | `theory` | doc00.01 |
 | `tools` | doc01.02.04 |
+| `types` | doc01.02.05.02 |
 | `unfolding` | doc01.02.01, doc01.02.02 |
 | `vision` | doc01.01.01 |
 | `visualization` | doc01.01.01 |
