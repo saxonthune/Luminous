@@ -1,95 +1,86 @@
-import React, { useEffect, useRef } from 'react'
+import { onMount, onCleanup, For, Show } from 'solid-js';
 
 export interface MenuItem {
-  label: string
-  action: () => void
-  disabled?: boolean
-  separator?: boolean
+  label: string;
+  action: () => void;
+  disabled?: boolean;
+  separator?: boolean;
 }
 
 interface ContextMenuProps {
-  x: number
-  y: number
-  items: MenuItem[]
-  onClose: () => void
+  x: number;
+  y: number;
+  items: MenuItem[];
+  onClose: () => void;
 }
 
-export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
-  const menuRef = useRef<HTMLDivElement>(null)
+export function ContextMenu(props: ContextMenuProps) {
+  let menuRef: HTMLDivElement | undefined;
 
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
-
-  // Close on click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose()
+  onMount(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') props.onClose();
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef && !menuRef.contains(e.target as Node)) {
+        props.onClose();
       }
-    }
-    // Use capture so we intercept before the click reaches other handlers
-    window.addEventListener('mousedown', handler, true)
-    return () => window.removeEventListener('mousedown', handler, true)
-  }, [onClose])
+    };
 
-  // Adjust position to avoid viewport overflow
-  const menuWidth = 160
-  const menuItemHeight = 28
-  const separatorHeight = 9
-  const padding = 8
-  const itemCount = items.filter((i) => !i.separator).length
-  const sepCount = items.filter((i) => i.separator).length
-  const estimatedHeight = itemCount * menuItemHeight + sepCount * separatorHeight + padding * 2
+    window.addEventListener('keydown', handleEscape);
+    window.addEventListener('mousedown', handleClickOutside, true);
+    onCleanup(() => {
+      window.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('mousedown', handleClickOutside, true);
+    });
+  });
 
-  const adjustedX = x + menuWidth > window.innerWidth ? x - menuWidth : x
-  const adjustedY = y + estimatedHeight > window.innerHeight ? y - estimatedHeight : y
+  const menuWidth = 160;
+  const menuItemHeight = 28;
+  const separatorHeight = 9;
+  const padding = 8;
+  const itemCount = () => props.items.filter((i) => !i.separator).length;
+  const sepCount = () => props.items.filter((i) => i.separator).length;
+  const estimatedHeight = () => itemCount() * menuItemHeight + sepCount() * separatorHeight + padding * 2;
+
+  const adjustedX = () => props.x + menuWidth > window.innerWidth ? props.x - menuWidth : props.x;
+  const adjustedY = () => props.y + estimatedHeight() > window.innerHeight ? props.y - estimatedHeight() : props.y;
 
   return (
     <div
       ref={menuRef}
       style={{
         position: 'fixed',
-        left: adjustedX,
-        top: adjustedY,
-        zIndex: 9999,
-        minWidth: menuWidth,
+        left: `${adjustedX()}px`,
+        top: `${adjustedY()}px`,
+        "z-index": 9999,
+        "min-width": `${menuWidth}px`,
       }}
-      className="bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm"
+      class="bg-white rounded-lg shadow-lg border border-gray-200 py-1 text-sm"
     >
-      {items.map((item, i) => {
-        if (item.separator) {
-          return <div key={i} className="my-1 border-t border-gray-100" />
-        }
-        return (
-          <button
-            key={i}
-            disabled={item.disabled}
-            className={`w-full text-left px-3 py-1.5 rounded transition-colors ${
-              item.disabled
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
-            }`}
-            onMouseDown={(e) => {
-              // Prevent the outside-click handler from firing before action
-              e.stopPropagation()
-            }}
-            onClick={() => {
-              if (!item.disabled) {
-                item.action()
-                onClose()
-              }
-            }}
-          >
-            {item.label}
-          </button>
-        )
-      })}
+      <For each={props.items}>
+        {(item, i) => (
+          <Show when={!item.separator} fallback={<div class="my-1 border-t border-gray-100" />}>
+            <button
+              disabled={item.disabled}
+              class={`w-full text-left px-3 py-1.5 rounded transition-colors ${
+                item.disabled
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
+              }`}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                if (!item.disabled) {
+                  item.action();
+                  props.onClose();
+                }
+              }}
+            >
+              {item.label}
+            </button>
+          </Show>
+        )}
+      </For>
     </div>
-  )
+  );
 }

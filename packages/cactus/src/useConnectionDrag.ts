@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { createSignal } from 'solid-js';
 
 export interface ConnectionDragState {
   sourceNodeId: string;
@@ -29,7 +29,7 @@ export interface UseConnectionDragOptions {
 }
 
 export interface UseConnectionDragResult {
-  connectionDrag: ConnectionDragState | null;
+  connectionDrag: () => ConnectionDragState | null;
   startConnection: (sourceNodeId: string, sourceHandle: string | null, clientX: number, clientY: number) => void;
 }
 
@@ -38,104 +38,80 @@ export function useConnectionDrag({
   isValidConnection,
   screenToCanvas,
 }: UseConnectionDragOptions): UseConnectionDragResult {
-  const [connectionDrag, setConnectionDrag] = useState<ConnectionDragState | null>(null);
-  const onConnectRef = useRef(onConnect);
-  const isValidConnectionRef = useRef(isValidConnection);
-  const screenToCanvasRef = useRef(screenToCanvas);
+  const [connectionDrag, setConnectionDrag] = createSignal<ConnectionDragState | null>(null);
 
-  // Keep refs up to date
-  useEffect(() => {
-    onConnectRef.current = onConnect;
-  }, [onConnect]);
+  const startConnection = (
+    sourceNodeId: string,
+    sourceHandle: string | null,
+    clientX: number,
+    clientY: number
+  ) => {
+    const canvasStart = screenToCanvas(clientX, clientY);
+    setConnectionDrag({
+      sourceNodeId,
+      sourceHandle,
+      startCanvasX: canvasStart.x,
+      startCanvasY: canvasStart.y,
+      currentScreenX: clientX,
+      currentScreenY: clientY,
+    });
 
-  useEffect(() => {
-    isValidConnectionRef.current = isValidConnection;
-  }, [isValidConnection]);
+    let latestX = clientX;
+    let latestY = clientY;
+    let rafId = 0;
 
-  useEffect(() => {
-    screenToCanvasRef.current = screenToCanvas;
-  }, [screenToCanvas]);
-
-  const startConnection = useCallback(
-    (sourceNodeId: string, sourceHandle: string | null, clientX: number, clientY: number) => {
-      const canvasStart = screenToCanvasRef.current(clientX, clientY);
-      setConnectionDrag({
-        sourceNodeId,
-        sourceHandle,
-        startCanvasX: canvasStart.x,
-        startCanvasY: canvasStart.y,
-        currentScreenX: clientX,
-        currentScreenY: clientY,
+    const flushPosition = () => {
+      rafId = 0;
+      setConnectionDrag((prev) => {
+        if (!prev) return prev;
+        if (prev.currentScreenX === latestX && prev.currentScreenY === latestY) return prev;
+        return { ...prev, currentScreenX: latestX, currentScreenY: latestY };
       });
+    };
 
-      // RAF-throttled cursor tracking: collect latest position, flush once per frame
-      let latestX = clientX;
-      let latestY = clientY;
-      let rafId = 0;
+    const handlePointerMove = (e: PointerEvent) => {
+      latestX = e.clientX;
+      latestY = e.clientY;
+      if (!rafId) {
+        rafId = requestAnimationFrame(flushPosition);
+      }
+    };
 
-      const flushPosition = () => {
-        rafId = 0;
-        setConnectionDrag((prev) => {
-          if (!prev) return prev;
-          if (prev.currentScreenX === latestX && prev.currentScreenY === latestY) return prev;
-          return { ...prev, currentScreenX: latestX, currentScreenY: latestY };
-        });
-      };
+    const handlePointerUp = (e: PointerEvent) => {
+      if (rafId) cancelAnimationFrame(rafId);
 
-      const handlePointerMove = (e: PointerEvent) => {
-        latestX = e.clientX;
-        latestY = e.clientY;
-        if (!rafId) {
-          rafId = requestAnimationFrame(flushPosition);
-        }
-      };
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      const targetElement = elements.find((el) =>
+        el.hasAttribute('data-connection-target')
+      ) as HTMLElement | undefined;
 
-      const handlePointerUp = (e: PointerEvent) => {
-        if (rafId) cancelAnimationFrame(rafId);
+      if (targetElement) {
+        const targetNodeId = targetElement.getAttribute('data-node-id');
+        const targetHandleId = targetElement.getAttribute('data-handle-id');
 
-        // Hit-test to find a connection target
-        const elements = document.elementsFromPoint(e.clientX, e.clientY);
-        const targetElement = elements.find((el) =>
-          el.hasAttribute('data-connection-target')
-        ) as HTMLElement | undefined;
+        if (targetNodeId) {
+          const connection = {
+            source: sourceNodeId,
+            sourceHandle,
+            target: targetNodeId,
+            targetHandle: targetHandleId ?? null,
+          };
 
-        if (targetElement) {
-          const targetNodeId = targetElement.getAttribute('data-node-id');
-          const targetHandleId = targetElement.getAttribute('data-handle-id');
-
-          if (targetNodeId) {
-            const connection = {
-              source: sourceNodeId,
-              sourceHandle,
-              target: targetNodeId,
-              targetHandle: targetHandleId ?? null,
-            };
-
-            // Validate connection if validator provided
-            const isValid = isValidConnectionRef.current
-              ? isValidConnectionRef.current(connection)
-              : true;
-
-            if (isValid) {
-              onConnectRef.current(connection);
-            }
+          const isValid = isValidConnection ? isValidConnection(connection) : true;
+          if (isValid) {
+            onConnect(connection);
           }
         }
+      }
 
-        // Clean up
-        setConnectionDrag(null);
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-      };
+      setConnectionDrag(null);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
 
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-    },
-    []
-  );
-
-  return {
-    connectionDrag,
-    startConnection,
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
   };
+
+  return { connectionDrag, startConnection };
 }

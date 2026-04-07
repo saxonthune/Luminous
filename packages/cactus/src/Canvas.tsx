@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { createSignal, onCleanup, Show, type JSX } from 'solid-js';
 import { useViewport, type UseViewportOptions, type Transform } from './useViewport.js';
 import { useConnectionDrag } from './useConnectionDrag.js';
 import { useBoxSelect } from './useBoxSelect.js';
@@ -6,54 +6,32 @@ import { useSelection } from './useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue } from './CanvasContext.js';
 
-/** Container-local coords passed to renderConnectionPreview. Both start and current are in pixel space relative to the canvas container. */
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
   sourceHandle: string | null;
-  /** Start position in container-local pixels (zoom-stable: re-derived from canvas coords each frame) */
   startX: number;
   startY: number;
-  /** Current cursor position in container-local pixels */
   currentX: number;
   currentY: number;
 }
 
 export interface CanvasProps {
-  /** Viewport options */
   viewportOptions?: UseViewportOptions;
-  /** Connection drag callbacks */
   connectionDrag?: {
-    onConnect: (connection: {
-      source: string;
-      sourceHandle: string | null;
-      target: string;
-      targetHandle: string | null;
-    }) => void;
-    isValidConnection?: (connection: {
-      source: string;
-      sourceHandle: string | null;
-      target: string;
-      targetHandle: string | null;
-    }) => boolean;
+    onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;
+    isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean;
   };
-  /** Box select config — if provided, box select is enabled */
   boxSelect?: {
     getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
   };
-  /** Render the SVG edge layer. Receives transform for the <g> group. */
-  renderEdges?: (transform: Transform) => React.ReactNode;
-  /** Render the connection preview line during connection drag. All coords are container-local pixels. */
-  renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => React.ReactNode;
-  /** CSS class for the container */
-  className?: string;
-  /** Child nodes rendered inside the transformed div */
-  children: React.ReactNode;
-  /** Pattern ID for DotGrid SVG pattern (avoids collisions when multiple canvases exist) */
+  renderEdges?: (transform: Transform) => JSX.Element;
+  renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
+  class?: string;
+  children: JSX.Element;
   patternId?: string;
-  /** Pointer down on the canvas background (not on a data-no-pan element). Useful for clearing selection. */
-  onBackgroundPointerDown?: (event: React.PointerEvent) => void;
-  /** Custom background renderer. Receives transform. If not provided, renders DotGrid. */
-  renderBackground?: (transform: Transform, patternId?: string) => React.ReactNode;
+  onBackgroundPointerDown?: (event: PointerEvent) => void;
+  renderBackground?: (transform: Transform, patternId?: string) => JSX.Element;
+  ref?: (handle: CanvasRef) => void;
 }
 
 export interface CanvasRef {
@@ -65,200 +43,150 @@ export interface CanvasRef {
   clearSelection: () => void;
 }
 
-export const Canvas = forwardRef<CanvasRef, CanvasProps>(function Canvas(
-  {
-    viewportOptions,
-    connectionDrag,
-    boxSelect,
-    renderEdges,
-    renderConnectionPreview,
-    className,
-    children,
-    patternId,
-    onBackgroundPointerDown,
-    renderBackground,
-  },
-  ref
-) {
-  // 1. Setup viewport
-  const { transform, containerRef, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(viewportOptions);
+export function Canvas(props: CanvasProps) {
+  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(props.viewportOptions);
 
-  // 2. Setup connection drag (if enabled)
   const connectionDragResult = useConnectionDrag(
-    connectionDrag
-      ? { ...connectionDrag, screenToCanvas }
+    props.connectionDrag
+      ? { ...props.connectionDrag, screenToCanvas }
       : { onConnect: () => {}, screenToCanvas }
   );
   const { connectionDrag: connectionDragState, startConnection } = connectionDragResult;
 
-  // 3. Setup box select (if enabled) — delegate state to useSelection
-  // 3b. Setup unified selection (always on)
   const selection = useSelection({});
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
 
   const boxSelectResult = useBoxSelect(
-    boxSelect
+    props.boxSelect
       ? {
           transform,
-          containerRef,
-          getNodeRects: boxSelect.getNodeRects,
+          containerEl,
+          getNodeRects: props.boxSelect.getNodeRects,
           onBoxSelectHits: selection.mergeBoxSelection,
         }
       : {
           transform,
-          containerRef,
+          containerEl,
           getNodeRects: () => [],
         }
   );
   const { selectionRect } = boxSelectResult;
-  // NOTE: selectedIds and clearSelection now come from useSelection, NOT from boxSelectResult
 
-  // 4. Track Ctrl/Meta key state
-  const [ctrlHeld, setCtrlHeld] = useState(false);
+  const [ctrlHeld, setCtrlHeld] = createSignal(false);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        setCtrlHeld(true);
-      }
-    };
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey) setCtrlHeld(true);
+  };
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) setCtrlHeld(false);
+  };
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+  onCleanup(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
+  });
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (!e.ctrlKey && !e.metaKey) {
-        setCtrlHeld(false);
-      }
-    };
+  props.ref?.({
+    fitView,
+    screenToCanvas,
+    getTransform: () => transform(),
+    zoomIn,
+    zoomOut,
+    clearSelection,
+  });
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+  const contextValue: CanvasContextValue = {
+    transform,
+    screenToCanvas,
+    startConnection: props.connectionDrag ? startConnection : () => {},
+    connectionDrag: props.connectionDrag ? connectionDragState : () => null,
+    selectedIds,
+    clearSelection,
+    isSelected,
+    onNodePointerDown,
+    setSelectedIds,
+    ctrlHeld,
+  };
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  // 5. Expose imperative methods
-  useImperativeHandle(
-    ref,
-    () => ({
-      fitView,
-      screenToCanvas,
-      getTransform: () => transform,
-      zoomIn,
-      zoomOut,
-      clearSelection,
-    }),
-    [fitView, screenToCanvas, transform, zoomIn, zoomOut, clearSelection]
-  );
-
-  // 6. Setup context value
-  const contextValue: CanvasContextValue = useMemo(
-    () => ({
-      transform,
-      screenToCanvas,
-      startConnection: connectionDrag ? startConnection : () => {},
-      connectionDrag: connectionDrag ? connectionDragState : null,
-      selectedIds,
-      clearSelection,
-      isSelected,
-      onNodePointerDown,
-      setSelectedIds,
-      ctrlHeld,
-    }),
-    [
-      transform,
-      screenToCanvas,
-      connectionDrag,
-      startConnection,
-      connectionDragState,
-      selectedIds,
-      clearSelection,
-      isSelected,
-      onNodePointerDown,
-      setSelectedIds,
-      ctrlHeld,
-    ]
-  );
-
-  // 7. Render DOM skeleton
   return (
     <CanvasContext.Provider value={contextValue}>
       <div
-        ref={containerRef}
-        className={className}
-        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', userSelect: 'none' }}
+        ref={setContainerRef}
+        class={props.class}
+        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none' }}
         onPointerDown={(e) => {
-          if (onBackgroundPointerDown) {
+          if (props.onBackgroundPointerDown) {
             const target = e.target as HTMLElement;
             if (!target.closest?.('[data-no-pan]')) {
-              onBackgroundPointerDown(e);
+              props.onBackgroundPointerDown(e);
             }
           }
         }}
       >
-        {/* Background grid */}
-        {renderBackground ? renderBackground(transform, patternId) : <DotGrid transform={transform} patternId={patternId} />}
+        {props.renderBackground
+          ? props.renderBackground(transform(), props.patternId)
+          : <DotGrid transform={transform()} patternId={props.patternId} />
+        }
 
-        {/* Node layer — transformed */}
         <div
           style={{
-            transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`,
-            transformOrigin: '0 0',
+            transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
+            "transform-origin": '0 0',
             position: 'absolute',
-            inset: 0,
+            inset: '0',
           }}
         >
-          {children}
+          {props.children}
         </div>
 
-        {/* Edge layer — SVG with same transform */}
-        {renderEdges && (
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}>
-              {renderEdges(transform)}
+        <Show when={props.renderEdges}>
+          <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
+              {props.renderEdges!(transform())}
             </g>
           </svg>
-        )}
+        </Show>
 
-        {/* Connection preview — container-local coords */}
-        {connectionDragState && renderConnectionPreview && (
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <Show when={connectionDragState() && props.renderConnectionPreview}>
+          <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             {(() => {
-              const rect = containerRef.current?.getBoundingClientRect();
+              const state = connectionDragState()!;
+              const el = containerEl();
+              const rect = el?.getBoundingClientRect();
               const offsetX = rect?.left ?? 0;
               const offsetY = rect?.top ?? 0;
-              // Start: canvas → container-local (re-derived each frame, so zoom-stable)
-              // Current: screen → container-local
+              const t = transform();
               const coords: ConnectionPreviewCoords = {
-                sourceNodeId: connectionDragState.sourceNodeId,
-                sourceHandle: connectionDragState.sourceHandle,
-                startX: connectionDragState.startCanvasX * transform.k + transform.x,
-                startY: connectionDragState.startCanvasY * transform.k + transform.y,
-                currentX: connectionDragState.currentScreenX - offsetX,
-                currentY: connectionDragState.currentScreenY - offsetY,
+                sourceNodeId: state.sourceNodeId,
+                sourceHandle: state.sourceHandle,
+                startX: state.startCanvasX * t.k + t.x,
+                startY: state.startCanvasY * t.k + t.y,
+                currentX: state.currentScreenX - offsetX,
+                currentY: state.currentScreenY - offsetY,
               };
-              return renderConnectionPreview(coords, transform);
+              return props.renderConnectionPreview!(coords, t);
             })()}
           </svg>
-        )}
+        </Show>
 
-        {/* Box select overlay */}
-        {selectionRect && (
-          <div
-            style={{
-              position: 'absolute',
-              left: selectionRect.x,
-              top: selectionRect.y,
-              width: selectionRect.width,
-              height: selectionRect.height,
-              border: '1px solid var(--color-accent)',
-              backgroundColor: 'var(--color-accent-10)',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
+        <Show when={selectionRect()}>
+          {(rect) => (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${rect().x}px`,
+                top: `${rect().y}px`,
+                width: `${rect().width}px`,
+                height: `${rect().height}px`,
+                border: '1px solid var(--color-accent)',
+                "background-color": 'var(--color-accent-10)',
+                "pointer-events": 'none',
+              }}
+            />
+          )}
+        </Show>
       </div>
     </CanvasContext.Provider>
   );
-});
+}

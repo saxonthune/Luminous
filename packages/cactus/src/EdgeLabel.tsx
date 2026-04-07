@@ -1,71 +1,55 @@
-import React from 'react';
+import type { JSX } from 'solid-js';
 
 export interface EdgeLabelProps {
-  /** Center X position in canvas coordinates */
   x: number;
-  /** Center Y position in canvas coordinates */
   y: number;
-  /** Content to render inside the label pill */
-  children: React.ReactNode;
-  /** Additional CSS classes on the pill container */
-  className?: string;
-  /** Additional inline styles on the pill container */
-  style?: React.CSSProperties;
-  /** Context menu handler — makes the label interactive */
-  onContextMenu?: (event: React.MouseEvent) => void;
+  children: JSX.Element;
+  class?: string;
+  style?: JSX.CSSProperties;
+  onContextMenu?: (event: MouseEvent) => void;
 }
 
-export function EdgeLabel({
-  x,
-  y,
-  children,
-  className,
-  style,
-  onContextMenu,
-}: EdgeLabelProps): React.ReactElement {
-  // foreignObject needs explicit width/height. Use a large value and let
-  // the inner div shrink-wrap via width: fit-content. The overflow is hidden
-  // by the foreignObject, so we center the inner div with flexbox.
+export function EdgeLabel(props: EdgeLabelProps): JSX.Element {
   const foWidth = 400;
   const foHeight = 60;
 
   return (
     <foreignObject
-      x={x - foWidth / 2}
-      y={y - foHeight / 2}
+      x={props.x - foWidth / 2}
+      y={props.y - foHeight / 2}
       width={foWidth}
       height={foHeight}
-      style={{ overflow: 'visible', pointerEvents: 'none' }}
+      style={{ overflow: 'visible', "pointer-events": 'none' }}
     >
       <div
         style={{
           width: '100%',
           height: '100%',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
+          "align-items": 'center',
+          "justify-content": 'center',
+          "pointer-events": 'none',
         }}
       >
         <div
-          className={className}
+          class={props.class}
           style={{
-            pointerEvents: onContextMenu ? 'auto' : 'none',
-            cursor: onContextMenu ? 'context-menu' : undefined,
-            borderRadius: 9999,
-            paddingLeft: 8,
-            paddingRight: 8,
-            paddingTop: 2,
-            paddingBottom: 2,
-            backgroundColor: 'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-            backdropFilter: 'blur(4px)',
-            userSelect: 'none',
-            whiteSpace: 'nowrap',
-            ...style,
+            "pointer-events": props.onContextMenu ? 'auto' : 'none',
+            cursor: props.onContextMenu ? 'context-menu' : undefined,
+            "border-radius": '9999px',
+            "padding-left": '8px',
+            "padding-right": '8px',
+            "padding-top": '2px',
+            "padding-bottom": '2px',
+            "background-color": 'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            "backdrop-filter": 'blur(4px)',
+            "user-select": 'none',
+            "white-space": 'nowrap',
+            ...props.style,
           }}
-          onContextMenu={onContextMenu}
+          onContextMenu={props.onContextMenu}
         >
-          {children}
+          {props.children}
         </div>
       </div>
     </foreignObject>

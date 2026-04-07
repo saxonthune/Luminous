@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { createSignal, onMount, onCleanup } from 'solid-js';
 import type { Transform } from './useViewport.js';
 
 export interface NodeRect {
@@ -10,10 +10,10 @@ export interface NodeRect {
 }
 
 export interface UseBoxSelectOptions {
-  /** Current viewport transform — needed to convert screen drag to canvas coords */
-  transform: Transform;
-  /** Container element ref — box select listens for pointer events here */
-  containerRef: React.RefObject<HTMLElement>;
+  /** Current viewport transform — accessor for reactive updates */
+  transform: () => Transform;
+  /** Container element accessor */
+  containerEl: () => HTMLElement | undefined;
   /** Returns current node rects in canvas coordinates for hit-testing */
   getNodeRects: () => NodeRect[];
   /** Called when selection changes */
@@ -23,52 +23,35 @@ export interface UseBoxSelectOptions {
 }
 
 export interface UseBoxSelectResult {
-  /** Currently selected node IDs */
-  selectedIds: string[];
+  /** Currently selected node IDs — signal accessor */
+  selectedIds: () => string[];
   /** Clear selection programmatically */
   clearSelection: () => void;
-  /** The selection rectangle in screen coordinates, or null if not dragging */
-  selectionRect: { x: number; y: number; width: number; height: number } | null;
+  /** The selection rectangle in screen coordinates, or null if not dragging — signal accessor */
+  selectionRect: () => { x: number; y: number; width: number; height: number } | null;
 }
 
-export function useBoxSelect({
-  transform,
-  containerRef,
-  getNodeRects,
-  onSelectionChange,
-  onBoxSelectHits,
-}: UseBoxSelectOptions): UseBoxSelectResult {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectionRect, setSelectionRect] = useState<{
+export function useBoxSelect(options: UseBoxSelectOptions): UseBoxSelectResult {
+  const [selectedIds, setSelectedIds] = createSignal<string[]>([]);
+  const [selectionRect, setSelectionRect] = createSignal<{
     x: number;
     y: number;
     width: number;
     height: number;
   } | null>(null);
 
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
-  const getNodeRectsRef = useRef(getNodeRects);
-  getNodeRectsRef.current = getNodeRects;
-  const onSelectionChangeRef = useRef(onSelectionChange);
-  onSelectionChangeRef.current = onSelectionChange;
-  const onBoxSelectHitsRef = useRef(onBoxSelectHits);
-  onBoxSelectHitsRef.current = onBoxSelectHits;
-
-  const clearSelection = useCallback(() => {
+  const clearSelection = () => {
     setSelectedIds([]);
-    onSelectionChangeRef.current?.([]);
-  }, []);
+    options.onSelectionChange?.([]);
+  };
 
-  useEffect(() => {
-    const container = containerRef.current;
+  onMount(() => {
+    const container = options.containerEl();
     if (!container) return;
 
     const handlePointerDown = (e: PointerEvent) => {
-      // Only initiate box select on Shift+click on the background
       if (!e.shiftKey) return;
 
-      // Don't initiate on interactive elements
       const target = e.target as HTMLElement;
       if (target.closest?.('[data-no-pan]')) return;
 
@@ -82,7 +65,6 @@ export function useBoxSelect({
         const currentX = moveEvent.clientX;
         const currentY = moveEvent.clientY;
 
-        // Selection rect in screen coords
         const rect = {
           x: Math.min(startX, currentX),
           y: Math.min(startY, currentY),
@@ -91,8 +73,7 @@ export function useBoxSelect({
         };
         setSelectionRect(rect);
 
-        // Convert screen rect to canvas coords for hit-testing
-        const t = transformRef.current;
+        const t = options.transform();
         const containerRect = container.getBoundingClientRect();
         const canvasRect = {
           x: (rect.x - containerRect.left - t.x) / t.k,
@@ -101,17 +82,16 @@ export function useBoxSelect({
           height: rect.height / t.k,
         };
 
-        // Hit-test: select nodes whose rects intersect the selection rect
-        const nodeRects = getNodeRectsRef.current();
+        const nodeRects = options.getNodeRects();
         const hits = nodeRects
           .filter((nr) => rectsIntersect(canvasRect, nr))
           .map((nr) => nr.id);
 
-        if (onBoxSelectHitsRef.current) {
-          onBoxSelectHitsRef.current(hits);
+        if (options.onBoxSelectHits) {
+          options.onBoxSelectHits(hits);
         } else {
           setSelectedIds(hits);
-          onSelectionChangeRef.current?.(hits);
+          options.onSelectionChange?.(hits);
         }
       };
 
@@ -126,8 +106,8 @@ export function useBoxSelect({
     };
 
     container.addEventListener('pointerdown', handlePointerDown);
-    return () => container.removeEventListener('pointerdown', handlePointerDown);
-  }, [containerRef]);
+    onCleanup(() => container.removeEventListener('pointerdown', handlePointerDown));
+  });
 
   return { selectedIds, clearSelection, selectionRect };
 }

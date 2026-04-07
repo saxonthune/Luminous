@@ -6,7 +6,7 @@ import {
   computeContainerFit,
 } from '../src/containerOps';
 import type { ContainerNode } from '../src/containerOps';
-import { DEFAULT_ORGANIZER_LAYOUT, type NodeGeometry } from '../src/index.js';
+import { DEFAULT_ORGANIZER_LAYOUT, type NodeGeometry } from '../src/geometry.js';
 
 // ===== HELPERS =====
 

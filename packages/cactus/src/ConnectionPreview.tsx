@@ -1,30 +1,21 @@
-import React from 'react';
+import type { JSX } from 'solid-js';
 
 export interface ConnectionPreviewProps {
-  /** SVG path data string (the `d` attribute) */
   d: string;
-  /** Stroke color (default 'var(--color-accent)') */
   stroke?: string;
-  /** Stroke width (default 2) */
   strokeWidth?: number;
-  /** Dash pattern (default '4 4') — set to 'none' for solid */
   strokeDasharray?: string;
 }
 
-export function ConnectionPreview({
-  d,
-  stroke = 'var(--color-accent)',
-  strokeWidth = 2,
-  strokeDasharray = '4 4',
-}: ConnectionPreviewProps): React.ReactElement {
+export function ConnectionPreview(props: ConnectionPreviewProps): JSX.Element {
   return (
     <path
-      d={d}
+      d={props.d}
       fill="none"
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeDasharray={strokeDasharray === 'none' ? undefined : strokeDasharray}
-      style={{ pointerEvents: 'none' }}
+      stroke={props.stroke ?? 'var(--color-accent)'}
+      stroke-width={props.strokeWidth ?? 2}
+      stroke-dasharray={(props.strokeDasharray ?? '4 4') === 'none' ? undefined : (props.strokeDasharray ?? '4 4')}
+      style={{ "pointer-events": 'none' }}
     />
   );
 }

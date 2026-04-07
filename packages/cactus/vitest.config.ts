@@ -1,12 +1,12 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [solidPlugin()],
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['tests/**/*.test.{ts,tsx}'],
+    include: ['tests/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
     pool: 'forks',
     poolOptions: {

@@ -1,13 +1,13 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from 'vite'
+import solidPlugin from 'vite-plugin-solid'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [solidPlugin(), tailwindcss()],
   server: {
     port: 5200,
     proxy: {
-      "/api": "http://localhost:4080",
+      '/api': 'http://localhost:4080',
     },
   },
-});
+})

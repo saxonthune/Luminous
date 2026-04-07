@@ -1,26 +1,29 @@
-import { useState } from 'react'
-import { DocumentPicker } from './DocumentPicker'
-import { CanvasView } from './CanvasView'
+import { createSignal, Show } from 'solid-js';
+import { DocumentPicker } from './DocumentPicker';
+import { CanvasView } from './CanvasView';
 
 type View =
   | { state: 'picker' }
   | { state: 'canvas'; path: string }
 
 export function App() {
-  const [view, setView] = useState<View>({ state: 'picker' })
-
-  if (view.state === 'canvas') {
-    return (
-      <CanvasView
-        documentPath={view.path}
-        onBack={() => setView({ state: 'picker' })}
-      />
-    )
-  }
+  const [view, setView] = createSignal<View>({ state: 'picker' });
 
   return (
-    <DocumentPicker
-      onOpen={(path) => setView({ state: 'canvas', path })}
-    />
-  )
+    <Show
+      when={view().state === 'canvas' ? view() as { state: 'canvas'; path: string } : undefined}
+      fallback={
+        <DocumentPicker
+          onOpen={(path) => setView({ state: 'canvas', path })}
+        />
+      }
+    >
+      {(canvasView) => (
+        <CanvasView
+          documentPath={canvasView().path}
+          onBack={() => setView({ state: 'picker' })}
+        />
+      )}
+    </Show>
+  );
 }
