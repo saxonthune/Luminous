@@ -1,4 +1,5 @@
-import { createSignal, createEffect, createMemo, onMount, onCleanup, Show, For } from 'solid-js';
+import { createSignal, createMemo, onMount, onCleanup, Show, For } from 'solid-js';
+import { createStore, produce, reconcile, type SetStoreFunction } from 'solid-js/store';
 import {
   Canvas,
   useNodeDrag,
@@ -47,14 +48,16 @@ function findDropTarget(screenX: number, screenY: number, excludeId: string): st
 
 interface CanvasContentProps {
   doc: Document;
-  setDoc: (fn: (prev: Document | null) => Document | null) => void;
+  setDoc: SetStoreFunction<{ current: Document | null }>;
   documentPath: string;
   loadDoc: () => void;
   onClearSelectionReady: (fn: () => void) => void;
   onCreateNoteReady: (fn: () => void) => void;
   mergedNotes: () => Record<string, Note>;
-  setLivePositions: (fn: (prev: Map<string, { x: number; y: number }>) => Map<string, { x: number; y: number }>) => void;
-  setLiveSizes: (fn: (prev: Map<string, { w: number; h: number }>) => Map<string, { w: number; h: number }>) => void;
+  setLive: SetStoreFunction<{
+    positions: Record<string, { x: number; y: number }>;
+    sizes: Record<string, { w: number; h: number }>;
+  }>;
 }
 
 function CanvasContent(props: CanvasContentProps) {
@@ -78,24 +81,24 @@ function CanvasContent(props: CanvasContentProps) {
     const tempId = `temp-${Date.now()}`;
     const newNote: Note = { id: tempId, title: 'New Note', body: '', parentId: null, x, y, w: 200, h: 150 };
 
-    props.setDoc((prev) =>
-      prev ? { ...prev, notes: { ...prev.notes, [tempId]: newNote } } : prev
-    );
+    props.setDoc('current', produce((d) => {
+      if (d) d.notes[tempId] = newNote;
+    }));
 
     postAction('note/create', { path: props.documentPath, title: 'New Note', x, y, w: 200, h: 150 })
       .then((result) => {
         if (result.ok && result.id) {
-          props.setDoc((prev) => {
-            if (!prev) return prev;
-            const { [tempId]: _, ...rest } = prev.notes;
-            return { ...prev, notes: { ...rest, [result.id!]: { ...newNote, id: result.id! } } };
-          });
+          props.setDoc('current', produce((d) => {
+            if (!d) return;
+            const temp = d.notes[tempId];
+            delete d.notes[tempId];
+            d.notes[result.id!] = { ...temp, id: result.id! };
+          }));
         } else {
-          props.setDoc((prev) => {
-            if (!prev) return prev;
-            const { [tempId]: _, ...rest } = prev.notes;
-            return { ...prev, notes: rest };
-          });
+          props.setDoc('current', produce((d) => {
+            if (!d) return;
+            delete d.notes[tempId];
+          }));
         }
       })
       .catch(() => props.loadDoc());
@@ -119,21 +122,18 @@ function CanvasContent(props: CanvasContentProps) {
   const deleteNotes = (toDelete: string[]) => {
     if (toDelete.length === 0) return;
 
-    props.setDoc((prev) => {
-      if (!prev) return prev;
-      const notes = { ...prev.notes };
-      const edges = { ...prev.edges };
+    props.setDoc('current', produce((d) => {
+      if (!d) return;
       for (const id of toDelete) {
-        delete notes[id];
-        for (const edgeId of Object.keys(edges)) {
-          if (edges[edgeId].fromId === id || edges[edgeId].toId === id) delete edges[edgeId];
+        delete d.notes[id];
+        for (const edgeId of Object.keys(d.edges)) {
+          if (d.edges[edgeId].fromId === id || d.edges[edgeId].toId === id) delete d.edges[edgeId];
         }
-        for (const note of Object.values(notes)) {
-          if (note.parentId === id) notes[note.id] = { ...note, parentId: null };
+        for (const note of Object.values(d.notes)) {
+          if (note.parentId === id) note.parentId = null;
         }
       }
-      return { ...prev, notes, edges };
-    });
+    }));
 
     Promise.all(
       toDelete.map((id) => postAction('note/delete', { path: props.documentPath, id }))
@@ -168,7 +168,7 @@ function CanvasContent(props: CanvasContentProps) {
       if (!base) return;
       const pos = { x: base.x + dx, y: base.y + dy };
       livePositionMap.set(nodeId, pos);
-      props.setLivePositions((prev) => new Map(prev).set(nodeId, pos));
+      props.setLive('positions', nodeId, pos);
     },
     onDragEnd(nodeId: string) {
       const livePos = livePositionMap.get(nodeId);
@@ -185,11 +185,7 @@ function CanvasContent(props: CanvasContentProps) {
 
       livePositionMap.delete(nodeId);
       dragBaseMap.delete(nodeId);
-      props.setLivePositions((prev) => {
-        const next = new Map(prev);
-        next.delete(nodeId);
-        return next;
-      });
+      props.setLive(produce((s) => { delete s.positions[nodeId]; }));
 
       if (ctrlHeld()) {
         const pointer = lastPointer;
@@ -199,39 +195,41 @@ function CanvasContent(props: CanvasContentProps) {
           const targetAbsPos = getAbsolutePos(dropTargetId, props.doc.notes);
           const relPos = { x: finalAbsPos.x - targetAbsPos.x, y: finalAbsPos.y - targetAbsPos.y };
 
-          props.setDoc((prev) =>
-            prev
-              ? { ...prev, notes: { ...prev.notes, [nodeId]: { ...prev.notes[nodeId], parentId: dropTargetId, x: relPos.x, y: relPos.y } } }
-              : prev
-          );
+          props.setDoc('current', produce((d) => {
+            if (!d) return;
+            d.notes[nodeId].parentId = dropTargetId;
+            d.notes[nodeId].x = relPos.x;
+            d.notes[nodeId].y = relPos.y;
+          }));
           Promise.all([
             postAction('nest', { path: props.documentPath, parentId: dropTargetId, childId: nodeId }),
             postAction('node/move', { path: props.documentPath, id: nodeId, x: relPos.x, y: relPos.y }),
           ]).catch(() => props.loadDoc());
         } else if (!dropTargetId && note.parentId) {
-          props.setDoc((prev) =>
-            prev
-              ? { ...prev, notes: { ...prev.notes, [nodeId]: { ...prev.notes[nodeId], parentId: null, x: finalAbsPos.x, y: finalAbsPos.y } } }
-              : prev
-          );
+          props.setDoc('current', produce((d) => {
+            if (!d) return;
+            d.notes[nodeId].parentId = null;
+            d.notes[nodeId].x = finalAbsPos.x;
+            d.notes[nodeId].y = finalAbsPos.y;
+          }));
           Promise.all([
             postAction('unnest', { path: props.documentPath, childId: nodeId }),
             postAction('node/move', { path: props.documentPath, id: nodeId, x: finalAbsPos.x, y: finalAbsPos.y }),
           ]).catch(() => props.loadDoc());
         } else {
-          props.setDoc((prev) =>
-            prev
-              ? { ...prev, notes: { ...prev.notes, [nodeId]: { ...prev.notes[nodeId], x: finalLocalPos.x, y: finalLocalPos.y } } }
-              : prev
-          );
+          props.setDoc('current', produce((d) => {
+            if (!d) return;
+            d.notes[nodeId].x = finalLocalPos.x;
+            d.notes[nodeId].y = finalLocalPos.y;
+          }));
           postAction('node/move', { path: props.documentPath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
         }
       } else {
-        props.setDoc((prev) =>
-          prev
-            ? { ...prev, notes: { ...prev.notes, [nodeId]: { ...prev.notes[nodeId], x: finalLocalPos.x, y: finalLocalPos.y } } }
-            : prev
-        );
+        props.setDoc('current', produce((d) => {
+          if (!d) return;
+          d.notes[nodeId].x = finalLocalPos.x;
+          d.notes[nodeId].y = finalLocalPos.y;
+        }));
         postAction('node/move', { path: props.documentPath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
       }
     },
@@ -253,7 +251,7 @@ function CanvasContent(props: CanvasContentProps) {
       if (!base) return;
       const size = { w: Math.max(120, base.w + dw), h: Math.max(80, base.h + dh) };
       liveSizeMap.set(nodeId, size);
-      props.setLiveSizes((prev) => new Map(prev).set(nodeId, size));
+      props.setLive('sizes', nodeId, size);
     },
     onResizeEnd(nodeId: string) {
       const liveSize = liveSizeMap.get(nodeId);
@@ -262,16 +260,12 @@ function CanvasContent(props: CanvasContentProps) {
       const finalSize = liveSize ?? { w: note.w, h: note.h };
       liveSizeMap.delete(nodeId);
       resizeBaseMap.delete(nodeId);
-      props.setLiveSizes((prev) => {
-        const next = new Map(prev);
-        next.delete(nodeId);
-        return next;
-      });
-      props.setDoc((prev) =>
-        prev
-          ? { ...prev, notes: { ...prev.notes, [nodeId]: { ...prev.notes[nodeId], w: finalSize.w, h: finalSize.h } } }
-          : prev
-      );
+      props.setLive(produce((s) => { delete s.sizes[nodeId]; }));
+      props.setDoc('current', produce((d) => {
+        if (!d) return;
+        d.notes[nodeId].w = finalSize.w;
+        d.notes[nodeId].h = finalSize.h;
+      }));
       postAction('node/resize', { path: props.documentPath, id: nodeId, w: finalSize.w, h: finalSize.h }).catch(() => props.loadDoc());
     },
   };
@@ -282,16 +276,16 @@ function CanvasContent(props: CanvasContentProps) {
   });
 
   const handleUpdateTitle = (id: string, title: string) => {
-    props.setDoc((prev) =>
-      prev ? { ...prev, notes: { ...prev.notes, [id]: { ...prev.notes[id], title } } } : prev
-    );
+    props.setDoc('current', produce((d) => {
+      if (d) d.notes[id].title = title;
+    }));
     postAction('note/update', { path: props.documentPath, id, title }).catch(() => props.loadDoc());
   };
 
   const handleUpdateBody = (id: string, body: string) => {
-    props.setDoc((prev) =>
-      prev ? { ...prev, notes: { ...prev.notes, [id]: { ...prev.notes[id], body } } } : prev
-    );
+    props.setDoc('current', produce((d) => {
+      if (d) d.notes[id].body = body;
+    }));
     postAction('note/update', { path: props.documentPath, id, body }).catch(() => props.loadDoc());
   };
 
@@ -311,10 +305,11 @@ function CanvasContent(props: CanvasContentProps) {
     const newW = Math.max(parent.w, maxRight);
     const newH = Math.max(parent.h, maxBottom);
     if (newW !== parent.w || newH !== parent.h) {
-      props.setDoc((prev) => {
-        if (!prev) return prev;
-        return { ...prev, notes: { ...prev.notes, [parentId]: { ...prev.notes[parentId], w: newW, h: newH } } };
-      });
+      props.setDoc('current', produce((d) => {
+        if (!d) return;
+        d.notes[parentId].w = newW;
+        d.notes[parentId].h = newH;
+      }));
       postAction('node/resize', { path: props.documentPath, id: parentId, w: newW, h: newH }).catch(() => props.loadDoc());
     }
   };
@@ -335,20 +330,14 @@ function CanvasContent(props: CanvasContentProps) {
     const childH = 100;
     const tempId = `temp-${Date.now()}`;
 
-    props.setDoc((prev) => {
-      if (!prev) return prev;
+    props.setDoc('current', produce((d) => {
+      if (!d) return;
       const newChild: Note = { id: tempId, title, body, parentId: parentNoteId, x: childX, y: childY, w: childW, h: childH };
-      const parentBody = prev.notes[parentNoteId].body;
+      const parentBody = d.notes[parentNoteId].body;
       const updatedParentBody = parentBody.slice(0, selectionFrom) + parentBody.slice(selectionTo);
-      return {
-        ...prev,
-        notes: {
-          ...prev.notes,
-          [tempId]: newChild,
-          [parentNoteId]: { ...prev.notes[parentNoteId], body: updatedParentBody },
-        },
-      };
-    });
+      d.notes[tempId] = newChild;
+      d.notes[parentNoteId].body = updatedParentBody;
+    }));
 
     postAction('note/create', { path: props.documentPath, title, body, x: childX, y: childY, w: childW, h: childH })
       .then((result) => {
@@ -362,11 +351,12 @@ function CanvasContent(props: CanvasContentProps) {
         ]).then(() => realId);
       })
       .then((realId) => {
-        props.setDoc((prev) => {
-          if (!prev) return prev;
-          const { [tempId]: tempNote, ...rest } = prev.notes;
-          return { ...prev, notes: { ...rest, [realId]: { ...tempNote, id: realId } } };
-        });
+        props.setDoc('current', produce((d) => {
+          if (!d) return;
+          const tempNote = d.notes[tempId];
+          delete d.notes[tempId];
+          d.notes[realId] = { ...tempNote, id: realId };
+        }));
         autoResizeParent(parentNoteId);
       })
       .catch(() => props.loadDoc());
@@ -421,21 +411,26 @@ function CanvasContent(props: CanvasContentProps) {
 // ---------------------------------------------------------------------------
 
 export function CanvasView(props: CanvasViewProps) {
-  const [doc, setDoc] = createSignal<Document | null>(null);
+  const [doc, setDoc] = createStore<{ current: Document | null }>({ current: null });
+  const [live, setLive] = createStore<{
+    positions: Record<string, { x: number; y: number }>;
+    sizes: Record<string, { w: number; h: number }>;
+  }>({ positions: {}, sizes: {} });
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
-  const [livePositions, setLivePositions] = createSignal<Map<string, { x: number; y: number }>>(new Map());
-  const [liveSizes, setLiveSizes] = createSignal<Map<string, { w: number; h: number }>>(new Map());
 
   const mergedNotes = createMemo(() => {
-    const d = doc();
+    const d = doc.current;
     if (!d) return {} as Record<string, Note>;
-    const notes = { ...d.notes };
-    for (const [id, pos] of livePositions()) {
-      if (notes[id]) notes[id] = { ...notes[id], ...pos };
-    }
-    for (const [id, size] of liveSizes()) {
-      if (notes[id]) notes[id] = { ...notes[id], ...size };
+    const notes: Record<string, Note> = {};
+    for (const [id, note] of Object.entries(d.notes)) {
+      const livePos = live.positions[id];
+      const liveSize = live.sizes[id];
+      if (livePos || liveSize) {
+        notes[id] = { ...note, ...livePos, ...liveSize };
+      } else {
+        notes[id] = note;
+      }
     }
     return notes;
   });
@@ -449,7 +444,7 @@ export function CanvasView(props: CanvasViewProps) {
     setError(null);
     getDocument(props.documentPath)
       .then((d) => {
-        setDoc(d);
+        setDoc('current', reconcile(d));
         setLoading(false);
       })
       .catch((err) => {
@@ -493,29 +488,32 @@ export function CanvasView(props: CanvasViewProps) {
 
   const handleConnect = ({ source, target }: { source: string; target: string }) => {
     if (source === target) return;
-    setDoc((prev) => {
-      if (!prev) return prev;
-      const tempId = `edge-temp-${Date.now()}`;
-      return { ...prev, edges: { ...prev.edges, [tempId]: { id: tempId, fromId: source, toId: target, label: null } } };
-    });
+    const tempId = `edge-temp-${Date.now()}`;
+    setDoc('current', produce((d) => {
+      if (!d) return;
+      d.edges[tempId] = { id: tempId, fromId: source, toId: target, label: null };
+    }));
     postAction('edge/connect', { path: props.documentPath, fromId: source, toId: target })
       .then((result) => { if (result.ok) loadDoc(); })
       .catch(() => loadDoc());
   };
 
   const handleUpdateEdgeLabel = (edgeId: string, label: string | null) => {
-    setDoc((prev) => {
-      if (!prev) return prev;
-      return { ...prev, edges: { ...prev.edges, [edgeId]: { ...prev.edges[edgeId], label } } };
-    });
+    setDoc('current', produce((d) => {
+      if (!d) return;
+      d.edges[edgeId].label = label;
+    }));
     postAction('edge/relabel', { path: props.documentPath, id: edgeId, label }).catch(() => loadDoc());
   };
 
+  const edgeList = createMemo(() => {
+    const d = doc.current;
+    return d ? Object.values(d.edges) : [];
+  });
+
   const renderEdges = () => {
-    const d = doc();
-    if (!d) return null;
     return (
-      <For each={Object.values(d.edges)}>
+      <For each={edgeList()}>
         {(edge) => (
           <FreeformEdge
             edge={edge}
@@ -528,7 +526,7 @@ export function CanvasView(props: CanvasViewProps) {
   };
 
   const getNodeRects = () => {
-    const d = doc();
+    const d = doc.current;
     if (!d) return [];
     return Object.values(d.notes)
       .filter((n) => !n.parentId)
@@ -536,7 +534,7 @@ export function CanvasView(props: CanvasViewProps) {
   };
 
   const untangle = () => {
-    const d = doc();
+    const d = doc.current;
     if (!d) return;
 
     const layoutNodes = Object.values(d.notes)
@@ -548,11 +546,11 @@ export function CanvasView(props: CanvasViewProps) {
     const result = forceDirectedLayout(layoutNodes, layoutEdges);
 
     for (const [id, pos] of result) {
-      setDoc((prev) =>
-        prev
-          ? { ...prev, notes: { ...prev.notes, [id]: { ...prev.notes[id], x: pos.x, y: pos.y } } }
-          : prev
-      );
+      setDoc('current', produce((d) => {
+        if (!d) return;
+        d.notes[id].x = pos.x;
+        d.notes[id].y = pos.y;
+      }));
       postAction('node/move', { path: props.documentPath, id, x: pos.x, y: pos.y }).catch(() => loadDoc());
     }
   };
@@ -593,7 +591,7 @@ export function CanvasView(props: CanvasViewProps) {
             {error()}
           </div>
         </Show>
-        <Show when={!loading() && !error() && doc()}>
+        <Show when={!loading() && !error() && doc.current}>
           {(currentDoc) => (
             <>
               <Canvas
@@ -620,8 +618,7 @@ export function CanvasView(props: CanvasViewProps) {
                   onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
                   onCreateNoteReady={(fn) => (createNoteFn = fn)}
                   mergedNotes={mergedNotes}
-                  setLivePositions={setLivePositions}
-                  setLiveSizes={setLiveSizes}
+                  setLive={setLive}
                 />
               </Canvas>
               <CanvasToolbar
