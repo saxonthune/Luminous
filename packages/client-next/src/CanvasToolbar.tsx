@@ -1,11 +1,16 @@
+import { createSignal } from 'solid-js';
+
 interface CanvasToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitView: () => void;
-  onUntangle: () => void;
+  onTreeLayout: () => void;
+  onForceLayout: () => void;
 }
 
 export function CanvasToolbar(props: CanvasToolbarProps) {
+  const [dropdownOpen, setDropdownOpen] = createSignal(false);
+
   return (
     <div
       data-no-pan
@@ -32,13 +37,35 @@ export function CanvasToolbar(props: CanvasToolbarProps) {
       >
         ⊞
       </button>
-      <button
-        onClick={props.onUntangle}
-        class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600 text-sm"
-        title="Untangle"
+      <div
+        class="relative"
+        onMouseEnter={() => setDropdownOpen(true)}
+        onMouseLeave={() => setDropdownOpen(false)}
       >
-        ⊙
-      </button>
+        <button
+          onClick={props.onTreeLayout}
+          class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600 text-sm"
+          title="Arrange"
+        >
+          ⊙
+        </button>
+        {dropdownOpen() && (
+          <div class="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-md border border-gray-200 py-1 min-w-max">
+            <button
+              onClick={() => { props.onTreeLayout(); setDropdownOpen(false); }}
+              class="w-full px-3 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+            >
+              Tree Layout
+            </button>
+            <button
+              onClick={() => { props.onForceLayout(); setDropdownOpen(false); }}
+              class="w-full px-3 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+            >
+              Force Layout
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

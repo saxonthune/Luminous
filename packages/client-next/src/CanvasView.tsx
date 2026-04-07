@@ -6,6 +6,7 @@ import {
   useNodeResize,
   useCanvasContext,
   forceDirectedLayout,
+  treeLayout,
   type CanvasRef,
   type ResizeDirection,
 } from '@luminous/cactus';
@@ -545,7 +546,7 @@ export function CanvasView(props: CanvasViewProps) {
       .map((n) => ({ id: n.id, x: n.x, y: n.y, width: n.w, height: n.h }));
   };
 
-  const untangle = () => {
+  const arrangeForceLayout = () => {
     const d = doc.current;
     if (!d) return;
 
@@ -556,6 +557,28 @@ export function CanvasView(props: CanvasViewProps) {
     const layoutEdges = Object.values(d.edges).map((e) => ({ source: e.fromId, target: e.toId }));
 
     const result = forceDirectedLayout(layoutNodes, layoutEdges);
+
+    for (const [id, pos] of result) {
+      setDoc('current', produce((d) => {
+        if (!d) return;
+        d.notes[id].x = pos.x;
+        d.notes[id].y = pos.y;
+      }));
+      postAction('node/move', { path: props.documentPath, id, x: pos.x, y: pos.y }).catch(() => loadDoc());
+    }
+  };
+
+  const arrangeTreeLayout = () => {
+    const d = doc.current;
+    if (!d) return;
+
+    const layoutNodes = Object.values(d.notes)
+      .filter((n) => !n.parentId)
+      .map((n) => ({ id: n.id, x: n.x, y: n.y, width: n.w, height: n.h }));
+
+    const layoutEdges = Object.values(d.edges).map((e) => ({ source: e.fromId, target: e.toId }));
+
+    const result = treeLayout(layoutNodes, layoutEdges);
 
     for (const [id, pos] of result) {
       setDoc('current', produce((d) => {
@@ -637,7 +660,8 @@ export function CanvasView(props: CanvasViewProps) {
                 onZoomIn={() => canvasRef?.zoomIn()}
                 onZoomOut={() => canvasRef?.zoomOut()}
                 onFitView={() => canvasRef?.fitView(getNodeRects())}
-                onUntangle={untangle}
+                onTreeLayout={arrangeTreeLayout}
+                onForceLayout={arrangeForceLayout}
               />
             </>
           )}
