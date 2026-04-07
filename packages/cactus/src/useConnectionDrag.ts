@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { traceCallback, markInteraction } from './perf.js';
 
 export interface ConnectionDragState {
   sourceNodeId: string;
@@ -40,6 +41,10 @@ export function useConnectionDrag({
 }: UseConnectionDragOptions): UseConnectionDragResult {
   const [connectionDrag, setConnectionDrag] = createSignal<ConnectionDragState | null>(null);
 
+  const tracedOnConnect = import.meta.env.DEV
+    ? traceCallback('onConnect', onConnect)
+    : onConnect;
+
   const startConnection = (
     sourceNodeId: string,
     sourceHandle: string | null,
@@ -55,6 +60,9 @@ export function useConnectionDrag({
       currentScreenX: clientX,
       currentScreenY: clientY,
     });
+
+    let connectMark: { end: () => void } | undefined;
+    if (import.meta.env.DEV) connectMark = markInteraction('connect');
 
     let latestX = clientX;
     let latestY = clientY;
@@ -99,11 +107,12 @@ export function useConnectionDrag({
 
           const isValid = isValidConnection ? isValidConnection(connection) : true;
           if (isValid) {
-            onConnect(connection);
+            tracedOnConnect(connection);
           }
         }
       }
 
+      if (import.meta.env.DEV) connectMark?.end();
       setConnectionDrag(null);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);

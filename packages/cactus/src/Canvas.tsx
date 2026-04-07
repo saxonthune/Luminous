@@ -1,5 +1,6 @@
 import { createSignal, onCleanup, Show, type JSX } from 'solid-js';
 import { useViewport, type UseViewportOptions, type Transform } from './useViewport.js';
+import { observeLongTasks } from './perf.js';
 import { useConnectionDrag } from './useConnectionDrag.js';
 import { useBoxSelect } from './useBoxSelect.js';
 import { useSelection } from './useSelection.js';
@@ -71,6 +72,11 @@ export function Canvas(props: CanvasProps) {
         }
   );
   const { selectionRect } = boxSelectResult;
+
+  if (import.meta.env.DEV) {
+    const cleanup = observeLongTasks();
+    onCleanup(cleanup);
+  }
 
   const [ctrlHeld, setCtrlHeld] = createSignal(false);
 

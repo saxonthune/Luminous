@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { traceCallback, markInteraction } from './perf.js';
 
 export interface NodeDragCallbacks {
   onDragStart?: (nodeId: string, event: PointerEvent) => void;
@@ -25,6 +26,16 @@ export function useNodeDrag(options: UseNodeDragOptions): UseNodeDragResult {
   const [draggingNodeId, setDraggingNodeId] = createSignal<string | null>(null);
   let dragStart: { x: number; y: number } | null = null;
 
+  const tracedOnDragStart = import.meta.env.DEV && options.callbacks.onDragStart
+    ? traceCallback('onDragStart', options.callbacks.onDragStart)
+    : options.callbacks.onDragStart;
+  const tracedOnDrag = import.meta.env.DEV && options.callbacks.onDrag
+    ? traceCallback('onDrag', options.callbacks.onDrag)
+    : options.callbacks.onDrag;
+  const tracedOnDragEnd = import.meta.env.DEV && options.callbacks.onDragEnd
+    ? traceCallback('onDragEnd', options.callbacks.onDragEnd)
+    : options.callbacks.onDragEnd;
+
   const onPointerDown = (nodeId: string, event: PointerEvent) => {
     if (event.button !== 0) return;
 
@@ -36,18 +47,22 @@ export function useNodeDrag(options: UseNodeDragOptions): UseNodeDragResult {
     event.stopPropagation();
     dragStart = { x: event.clientX, y: event.clientY };
     setDraggingNodeId(nodeId);
-    options.callbacks.onDragStart?.(nodeId, event);
+    tracedOnDragStart?.(nodeId, event);
+
+    let dragMark: { end: () => void } | undefined;
+    if (import.meta.env.DEV) dragMark = markInteraction('drag');
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragStart) return;
       const k = options.zoomScale();
       const cumulativeX = (e.clientX - dragStart.x) / k;
       const cumulativeY = (e.clientY - dragStart.y) / k;
-      options.callbacks.onDrag?.(nodeId, cumulativeX, cumulativeY);
+      tracedOnDrag?.(nodeId, cumulativeX, cumulativeY);
     };
 
     const handlePointerUp = () => {
-      options.callbacks.onDragEnd?.(nodeId);
+      tracedOnDragEnd?.(nodeId);
+      if (import.meta.env.DEV) dragMark?.end();
       setDraggingNodeId(null);
       dragStart = null;
       window.removeEventListener('pointermove', handlePointerMove);

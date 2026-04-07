@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { traceCallback, markInteraction } from './perf.js';
 
 export interface ResizeDirection {
   horizontal: 'left' | 'right' | 'none';
@@ -26,11 +27,24 @@ export function useNodeResize(options: UseNodeResizeOptions): UseNodeResizeResul
   const [resizingNodeId, setResizingNodeId] = createSignal<string | null>(null);
   let resizeStart: { x: number; y: number; direction: ResizeDirection } | null = null;
 
+  const tracedOnResizeStart = import.meta.env.DEV && options.callbacks.onResizeStart
+    ? traceCallback('onResizeStart', options.callbacks.onResizeStart)
+    : options.callbacks.onResizeStart;
+  const tracedOnResize = import.meta.env.DEV && options.callbacks.onResize
+    ? traceCallback('onResize', options.callbacks.onResize)
+    : options.callbacks.onResize;
+  const tracedOnResizeEnd = import.meta.env.DEV && options.callbacks.onResizeEnd
+    ? traceCallback('onResizeEnd', options.callbacks.onResizeEnd)
+    : options.callbacks.onResizeEnd;
+
   const onResizePointerDown = (nodeId: string, direction: ResizeDirection, event: PointerEvent) => {
     event.stopPropagation();
     resizeStart = { x: event.clientX, y: event.clientY, direction };
     setResizingNodeId(nodeId);
-    options.callbacks.onResizeStart?.(nodeId, direction);
+    tracedOnResizeStart?.(nodeId, direction);
+
+    let resizeMark: { end: () => void } | undefined;
+    if (import.meta.env.DEV) resizeMark = markInteraction('resize');
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!resizeStart) return;
@@ -45,11 +59,12 @@ export function useNodeResize(options: UseNodeResizeOptions): UseNodeResizeResul
       if (resizeStart.direction.vertical === 'bottom') deltaHeight = dy;
       else if (resizeStart.direction.vertical === 'top') deltaHeight = -dy;
 
-      options.callbacks.onResize?.(nodeId, deltaWidth, deltaHeight, resizeStart.direction);
+      tracedOnResize?.(nodeId, deltaWidth, deltaHeight, resizeStart.direction);
     };
 
     const handlePointerUp = () => {
-      options.callbacks.onResizeEnd?.(nodeId);
+      tracedOnResizeEnd?.(nodeId);
+      if (import.meta.env.DEV) resizeMark?.end();
       setResizingNodeId(null);
       resizeStart = null;
       window.removeEventListener('pointermove', handlePointerMove);
