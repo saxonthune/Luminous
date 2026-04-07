@@ -459,7 +459,37 @@ export function CanvasView(props: CanvasViewProps) {
       });
   };
 
-  onMount(() => loadDoc());
+  onMount(() => {
+    loadDoc();
+
+    // WebSocket watch — reload when an external process edits this file
+    const wsUrl = `ws://${location.host}/ws/watch`;
+    let ws: WebSocket;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      ws = new WebSocket(wsUrl);
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data as string);
+          if (data.event === 'changed' && data.path === props.documentPath) {
+            loadDoc();
+          }
+        } catch {
+          // ignore malformed frames
+        }
+      };
+      ws.onclose = () => {
+        reconnectTimer = setTimeout(connect, 2000);
+      };
+    }
+    connect();
+
+    onCleanup(() => {
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      ws?.close();
+    });
+  });
 
   const handleConnect = ({ source, target }: { source: string; target: string }) => {
     if (source === target) return;

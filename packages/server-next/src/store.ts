@@ -1,3 +1,4 @@
+import { watch } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import type { Document } from "./types.js"
@@ -8,6 +9,7 @@ type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
 const cache = new Map<string, Document>()
 const dirty = new Set<string>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
+const recentWrites = new Map<string, number>()
 
 let rootDir = process.cwd()
 
@@ -30,6 +32,7 @@ async function loadDocument(filePath: string): Promise<Document> {
 }
 
 async function saveDocument(filePath: string, doc: Document): Promise<void> {
+  recentWrites.set(filePath, Date.now())
   await writeFile(filePath, JSON.stringify(doc, null, 2), "utf-8")
 }
 
@@ -89,4 +92,23 @@ export async function applyAction(
     scheduleSave(relativePath)
   }
   return result
+}
+
+export function watchDocuments(
+  watchRootDir: string,
+  onChange: (relativePath: string) => void
+): void {
+  watch(watchRootDir, { recursive: true }, (_event, filename) => {
+    if (!filename) return
+    const normalized = filename.replace(/\\/g, "/")
+    if (!normalized.endsWith(".canvas.json")) return
+    const absPath = resolve(watchRootDir, normalized)
+    const lastWrite = recentWrites.get(absPath)
+    if (lastWrite !== undefined && Date.now() - lastWrite < 500) {
+      recentWrites.delete(absPath)
+      return
+    }
+    cache.delete(normalized)
+    onChange(normalized)
+  })
 }

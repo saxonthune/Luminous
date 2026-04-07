@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto"
 import { createServer, IncomingMessage, ServerResponse } from "node:http"
+import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments } from "./workspace.js"
-import { getDocument, applyAction, flushAll, setRootDir } from "./store.js"
+import { getDocument, applyAction, flushAll, setRootDir, watchDocuments } from "./store.js"
 
 const port = Number(process.env.PORT ?? 4080)
 
@@ -13,6 +15,61 @@ const rootDir = resolve(
     : process.cwd()
 )
 setRootDir(rootDir)
+
+// ---------------------------------------------------------------------------
+// WebSocket helpers (text frames only, no library)
+// ---------------------------------------------------------------------------
+
+const clients = new Set<Socket>()
+
+function wsHandshake(socket: Socket, key: string): void {
+  const accept = createHash("sha1")
+    .update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+    .digest("base64")
+  socket.write(
+    "HTTP/1.1 101 Switching Protocols\r\n" +
+      "Upgrade: websocket\r\n" +
+      "Connection: Upgrade\r\n" +
+      `Sec-WebSocket-Accept: ${accept}\r\n` +
+      "\r\n"
+  )
+}
+
+function wsSendText(socket: Socket, text: string): void {
+  const payload = Buffer.from(text, "utf-8")
+  const len = payload.length
+  let header: Buffer
+  if (len < 126) {
+    header = Buffer.alloc(2)
+    header[0] = 0x81
+    header[1] = len
+  } else if (len < 65536) {
+    header = Buffer.alloc(4)
+    header[0] = 0x81
+    header[1] = 126
+    header.writeUInt16BE(len, 2)
+  } else {
+    header = Buffer.alloc(10)
+    header[0] = 0x81
+    header[1] = 127
+    header.writeBigUInt64BE(BigInt(len), 2)
+  }
+  socket.write(Buffer.concat([header, payload]))
+}
+
+function broadcast(path: string): void {
+  const msg = JSON.stringify({ event: "changed", path })
+  for (const socket of clients) {
+    try {
+      wsSendText(socket, msg)
+    } catch {
+      socket.destroy()
+      clients.delete(socket)
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 function setCorsHeaders(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*")
@@ -112,9 +169,32 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   sendJson(res, 404, { error: "not found" })
 })
 
+server.on("upgrade", (req: IncomingMessage, socket: Socket, _head: Buffer) => {
+  if (req.url !== "/ws/watch") {
+    socket.destroy()
+    return
+  }
+  const key = req.headers["sec-websocket-key"] as string | undefined
+  if (!key) {
+    socket.destroy()
+    return
+  }
+  wsHandshake(socket, key)
+  clients.add(socket)
+  socket.on("close", () => clients.delete(socket))
+  socket.on("error", () => {
+    socket.destroy()
+    clients.delete(socket)
+  })
+})
+
 server.listen(port, () => {
   console.log(`server listening on http://localhost:${port}`)
   console.log(`serving documents from: ${rootDir}`)
+  watchDocuments(rootDir, (path) => {
+    console.log(`[watch] external change detected: ${path}`)
+    broadcast(path)
+  })
 })
 
 async function shutdown(): Promise<void> {
