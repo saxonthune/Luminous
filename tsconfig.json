@@ -2,8 +2,6 @@
   "files": [],
   "references": [
     { "path": "./packages/cactus/tsconfig.json" },
-    { "path": "./packages/web-client/tsconfig.json" },
-    { "path": "./packages/web-client/tsconfig.node.json" },
     { "path": "./packages/server-next/tsconfig.json" },
     { "path": "./packages/client-next/tsconfig.json" }
   ]
