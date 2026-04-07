@@ -4,12 +4,14 @@ import {
   useNodeDrag,
   useNodeResize,
   useCanvasContext,
+  forceDirectedLayout,
   type CanvasRef,
   type ResizeDirection,
 } from '@luminous/cactus';
 import { getDocument, postAction, type Document, type Note } from './api';
 import { NoteNode } from './NoteNode';
 import { FreeformEdge } from './FreeformEdge';
+import { CanvasToolbar } from './CanvasToolbar';
 
 interface CanvasViewProps {
   documentPath: string;
@@ -441,6 +443,7 @@ export function CanvasView(props: CanvasViewProps) {
 
   let clearSelectionFn: () => void = () => {};
   let createNoteFn: () => void = () => {};
+  let canvasRef: CanvasRef | undefined;
 
   const loadDoc = () => {
     setLoading(true);
@@ -503,6 +506,28 @@ export function CanvasView(props: CanvasViewProps) {
       .map((n) => ({ id: n.id, x: n.x, y: n.y, width: n.w, height: n.h }));
   };
 
+  const untangle = () => {
+    const d = doc();
+    if (!d) return;
+
+    const layoutNodes = Object.values(d.notes)
+      .filter((n) => !n.parentId)
+      .map((n) => ({ id: n.id, x: n.x, y: n.y, width: n.w, height: n.h }));
+
+    const layoutEdges = Object.values(d.edges).map((e) => ({ source: e.fromId, target: e.toId }));
+
+    const result = forceDirectedLayout(layoutNodes, layoutEdges);
+
+    for (const [id, pos] of result) {
+      setDoc((prev) =>
+        prev
+          ? { ...prev, notes: { ...prev.notes, [id]: { ...prev.notes[id], x: pos.x, y: pos.y } } }
+          : prev
+      );
+      postAction('node/move', { path: props.documentPath, id, x: pos.x, y: pos.y }).catch(() => loadDoc());
+    }
+  };
+
   return (
     <div class="flex h-screen flex-col">
       <div class="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2 shrink-0">
@@ -522,7 +547,7 @@ export function CanvasView(props: CanvasViewProps) {
         </button>
       </div>
 
-      <div class="flex-1 overflow-hidden">
+      <div class="flex-1 overflow-hidden relative">
         <Show when={loading()}>
           <div class="flex h-full items-center justify-center text-sm text-gray-500">
             Loading…
@@ -535,33 +560,42 @@ export function CanvasView(props: CanvasViewProps) {
         </Show>
         <Show when={!loading() && !error() && doc()}>
           {(currentDoc) => (
-            <Canvas
-              class="w-full h-full"
-              connectionDrag={{ onConnect: handleConnect }}
-              renderEdges={renderEdges}
-              renderConnectionPreview={(coords) => (
-                <line
-                  x1={coords.startX} y1={coords.startY}
-                  x2={coords.currentX} y2={coords.currentY}
-                  stroke="#94a3b8" stroke-width={2}
-                  stroke-dasharray="6 3" stroke-linecap="round"
+            <>
+              <Canvas
+                ref={(ref) => { canvasRef = ref; }}
+                class="w-full h-full"
+                connectionDrag={{ onConnect: handleConnect }}
+                renderEdges={renderEdges}
+                renderConnectionPreview={(coords) => (
+                  <line
+                    x1={coords.startX} y1={coords.startY}
+                    x2={coords.currentX} y2={coords.currentY}
+                    stroke="#94a3b8" stroke-width={2}
+                    stroke-dasharray="6 3" stroke-linecap="round"
+                  />
+                )}
+                boxSelect={{ getNodeRects }}
+                onBackgroundPointerDown={() => clearSelectionFn()}
+              >
+                <CanvasContent
+                  doc={currentDoc()}
+                  setDoc={setDoc}
+                  documentPath={props.documentPath}
+                  loadDoc={loadDoc}
+                  onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
+                  onCreateNoteReady={(fn) => (createNoteFn = fn)}
+                  mergedNotes={mergedNotes}
+                  setLivePositions={setLivePositions}
+                  setLiveSizes={setLiveSizes}
                 />
-              )}
-              boxSelect={{ getNodeRects }}
-              onBackgroundPointerDown={() => clearSelectionFn()}
-            >
-              <CanvasContent
-                doc={currentDoc()}
-                setDoc={setDoc}
-                documentPath={props.documentPath}
-                loadDoc={loadDoc}
-                onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
-                onCreateNoteReady={(fn) => (createNoteFn = fn)}
-                mergedNotes={mergedNotes}
-                setLivePositions={setLivePositions}
-                setLiveSizes={setLiveSizes}
+              </Canvas>
+              <CanvasToolbar
+                onZoomIn={() => canvasRef?.zoomIn()}
+                onZoomOut={() => canvasRef?.zoomOut()}
+                onFitView={() => canvasRef?.fitView(getNodeRects())}
+                onUntangle={untangle}
               />
-            </Canvas>
+            </>
           )}
         </Show>
       </div>

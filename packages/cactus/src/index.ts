@@ -25,3 +25,5 @@ export { DEFAULT_ORGANIZER_LAYOUT, toRelativePosition } from './geometry.js';
 export type { NodeLink, FollowerDragDecision, UseNodeLinksOptions, UseNodeLinksResult } from './useNodeLinks.js';
 export type { ResizeDirection, NodeResizeCallbacks, UseNodeResizeOptions, UseNodeResizeResult } from './useNodeResize.js';
 export type { UseSelectionOptions, UseSelectionResult } from './useSelection.js';
+export { forceDirectedLayout } from './layout.js';
+export type { LayoutNode, LayoutEdge, LayoutResult } from './layout.js';
