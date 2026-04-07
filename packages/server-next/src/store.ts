@@ -23,7 +23,8 @@ async function loadDocument(filePath: string): Promise<Document> {
   try {
     const raw = await readFile(filePath, "utf-8")
     return JSON.parse(raw) as Document
-  } catch {
+  } catch (err) {
+    console.error(`[store] failed to load document: ${filePath}`, err)
     return emptyDoc()
   }
 }

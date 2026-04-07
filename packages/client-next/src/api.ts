@@ -34,8 +34,17 @@ export async function listDocuments(): Promise<DocumentMeta[]> {
 }
 
 export async function getDocument(path: string): Promise<Document> {
-  const res = await fetch(`/api/document/${encodeURIComponent(path)}`)
-  return res.json()
+  const url = `/api/document/${encodeURIComponent(path)}`
+  console.log(`[api] GET ${url}`)
+  const res = await fetch(url)
+  if (!res.ok) {
+    const text = await res.text()
+    console.error(`[api] GET ${url} failed (${res.status}):`, text)
+    throw new Error(`Failed to load document: ${res.status}`)
+  }
+  const doc = await res.json()
+  console.log(`[api] loaded document: ${path}`, { notes: Object.keys(doc.notes ?? {}).length, edges: Object.keys(doc.edges ?? {}).length })
+  return doc
 }
 
 export async function postAction(
@@ -47,5 +56,9 @@ export async function postAction(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
   })
-  return res.json()
+  const result = await res.json()
+  if (!result.ok) {
+    console.error(`[api] POST /api/${action} failed:`, result.error, params)
+  }
+  return result
 }

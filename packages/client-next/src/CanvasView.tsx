@@ -439,7 +439,8 @@ export function CanvasView(props: CanvasViewProps) {
         setDoc(d);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[CanvasView] failed to load document:', props.documentPath, err);
         setError('Failed to load document');
         setLoading(false);
       });

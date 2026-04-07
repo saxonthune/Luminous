@@ -71,11 +71,12 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // GET /api/document/:path
   if (url.startsWith("/api/document/") && req.method === "GET") {
-    const docPath = url.slice("/api/document/".length)
+    const docPath = decodeURIComponent(url.slice("/api/document/".length))
     if (!docPath || hasTraversal(docPath)) {
       sendJson(res, 400, { error: "invalid path" })
       return
     }
+    console.log(`[api] GET document: ${docPath}`)
     const doc = await getDocument(docPath)
     sendJson(res, 200, doc)
     return
@@ -101,6 +102,9 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const result = await applyAction(docPath, action, body)
+    if (!result.ok) {
+      console.error(`[api] action failed: ${action} on ${docPath}`, result)
+    }
     sendJson(res, result.ok ? 200 : 400, result)
     return
   }
