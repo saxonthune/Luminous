@@ -45,8 +45,8 @@
       "title": "Cactus: useNodeResize",
       "body": "Mirrors useNodeDrag pattern for resize.\n\n**Input:** pointerdown on resize handle\n**Emits:** `onResizeStart`, `onResize(nodeId, dw, dh)`, `onResizeEnd`\n**Signal:** `resizingNodeId()`",
       "parentId": null,
-      "x": 2214.30611147181,
-      "y": 520.2710528399452,
+      "x": 2230.8982080490787,
+      "y": 560.2874245265867,
       "w": 350,
       "h": 180
     },
@@ -65,8 +65,8 @@
       "title": "Client: doc signal",
       "body": "The central document state.\n\n`const [doc, setDoc] = createSignal<Document | null>(null)`\n\nContains all notes (positions, sizes, content) and all edges. Single source of truth for persisted state.\n\n**Written by:** loadDoc (API fetch), setDoc (optimistic updates)\n**Read by:** mergedNotes memo, renderEdges, CanvasContent props, topLevelNotes",
       "parentId": null,
-      "x": 1293,
-      "y": -70,
+      "x": 1649.2825644601699,
+      "y": -205.90167579474928,
       "w": 350,
       "h": 230
     },
@@ -75,8 +75,8 @@
       "title": "Client: livePositions / liveSizes",
       "body": "Ephemeral signals for in-flight drag/resize.\n\n`const [livePositions, setLivePositions] = createSignal<Map>()`\n`const [liveSizes, setLiveSizes] = createSignal<Map>()`\n\n**Written by:** onDrag callback, onResize callback\n**Cleared on:** onDragEnd, onResizeEnd\n**Read by:** mergedNotes memo\n\nThese overlay doc state during interaction — DOM sees smooth movement without waiting for API.",
       "parentId": null,
-      "x": 1731,
-      "y": 742,
+      "x": 1755.400188280393,
+      "y": 731.2639543288252,
       "w": 350,
       "h": 250
     },
@@ -105,8 +105,8 @@
       "title": "CodeMirror: EditorView",
       "body": "Created once per MarkdownEditor via `createCodeMirror()`.\n\nOwns its own DOM (contenteditable), internal state, cursor, selection. Extensions configured via Compartments.\n\n**Custom dispatch:** intercepts transactions, calls `onValueChange(doc.toString())` on docChanged\n**Extensions:** markdown, livePreview, markdownTheme, history, keymap, lineWrapping, blur handler",
       "parentId": null,
-      "x": 592,
-      "y": 310,
+      "x": 706.1666259765625,
+      "y": 333.3333435058594,
       "w": 350,
       "h": 230
     },
@@ -145,7 +145,7 @@
       "title": "Server: File Watch",
       "body": "WebSocket at /ws/watch.\n\nNotifies client when backing file changes on disk (external edit, git pull).\n\n**Message:** `{ event: \"changed\", path }`\n**Client response:** `loadDoc()` → fresh GET → `setDoc()`",
       "parentId": null,
-      "x": 1739,
+      "x": 2216.4921272065967,
       "y": -49,
       "w": 350,
       "h": 180
