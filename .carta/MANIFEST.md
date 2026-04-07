@@ -46,13 +46,15 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 |-----|------|---------|------|------|------|
 
 | doc01.02.00 | `02-design/00-index.md` | Product and software design — architecture decisions, concept inventory, API contracts, engine internals | design | — | — |
-| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.02.01, doc01.02.02, doc01.02.05.01 |
+| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.02.01, doc01.02.02, doc01.02.05.01, doc01.02.06.01 |
 | doc01.02.02 | `02-design/02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc01.02.01, doc01.02.01 | doc01.02.03, doc01.02.04 |
 | doc01.02.03 | `02-design/03-api-contract.md` | Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern. | api, http, actions, server, contract | doc01.02.02 | doc01.02.04 |
 | doc01.02.04 | `02-design/04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc01.02.02, doc01.02.03 | — |
 | doc01.02.05.00 | `02-design/05-cactus/00-index.md` |  |  | — | — |
 | doc01.02.05.01 | `02-design/05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc01.02.01 | doc01.02.05.02 |
 | doc01.02.05.02 | `02-design/05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc01.02.05.01 | — |
+| doc01.02.06.00 | `02-design/06-adr/00-index.md` | Significant architecture decisions with context, rationale, and consequences | adr, architecture | — | — |
+| doc01.02.06.01 | `02-design/06-adr/01-solid-migration.md` | Architecture decision record for migrating Luminous client-next and cactus from React to Solid.js | adr, architecture, solid, react, performance, reactivity | doc01.02.01, doc01.02.05 | — |
 
 ## 02-carta-gold — 02-carta-gold
 
@@ -67,10 +69,11 @@ Quick lookup for file-path→doc mapping:
 | Tag | Relevant Docs |
 |-----|---------------|
 | `actions` | doc01.02.03 |
+| `adr` | doc01.02.06.00, doc01.02.06.01 |
 | `ai` | doc00.04, doc01.02.04 |
 | `ai-context` | doc01.01.01 |
 | `api` | doc01.02.03, doc01.02.04, doc01.02.05.02 |
-| `architecture` | doc01.02.01, doc01.02.04, doc01.02.05.01 |
+| `architecture` | doc01.02.01, doc01.02.04, doc01.02.05.01, doc01.02.06.00, doc01.02.06.01 |
 | `background` | doc01.01.02 |
 | `cactus` | doc01.02.05.01, doc01.02.05.02 |
 | `canvas` | doc01.01.01, doc01.02.05.01, doc01.02.05.02 |
@@ -94,10 +97,14 @@ Quick lookup for file-path→doc mapping:
 | `meta` | doc00.00, doc00.01 |
 | `overview` | doc01.02.05.01 |
 | `pdr` | doc01.02.01 |
+| `performance` | doc01.02.06.01 |
 | `philosophy` | doc00.02 |
+| `react` | doc01.02.06.01 |
+| `reactivity` | doc01.02.06.01 |
 | `retrieval` | doc00.04 |
 | `server` | doc01.02.03 |
 | `software-design` | doc01.01.01 |
+| `solid` | doc01.02.06.01 |
 | `split` | doc01.01.02 |
 | `theory` | doc00.01 |
 | `tools` | doc01.02.04 |

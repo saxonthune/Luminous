@@ -47,9 +47,27 @@ The canvas engine is called **cactus** (`packages/web-client/src/cactus/`). Cust
 
 The `.carta/` directory contains structured specifications managed by the `carta` CLI.
 
-- **Structural changes** (create, move, delete, punch, flatten): use `carta` commands
 - **Content edits** to existing docs: direct file editing is fine, then `carta regenerate`
-- Run `carta ai-skill` for the full CLI reference
+- **Structural changes**: use `carta` commands (see below)
+- If confused about usage, run `carta ai-skill` for the full CLI reference with examples
+
+### Carta Commands Quick Reference
+
+All paths are relative to the workspace root, **without** the `.carta/` prefix (e.g., `01-luminous/02-design`, not `.carta/01-luminous/02-design`).
+
+**After any structural change**, run `carta regenerate` to rebuild MANIFEST.md. Most commands do this automatically; use `--no-regen` to skip (useful during batch operations).
+
+| Command | Use case | Flags |
+|---|---|---|
+| `carta regenerate` | After editing frontmatter, or to fix a stale MANIFEST | (none) |
+| `carta create <dest> <slug>` | Add a new doc to an existing section | `--title`, `--summary`, `--tags` (comma-sep), `--deps` (comma-sep), `--order`, `--dry-run` |
+| `carta group <target>` | Create a new section (directory + 00-index.md) | `--title`, `--no-regen` |
+| `carta delete <path> [paths...]` | Remove docs; siblings renumber to close gaps | `--dry-run`, `--output-mapping` |
+| `carta move <src> <dest>` | Reorder docs or move between sections | `--order`, `--mkdir`, `--rename`, `--no-gap-close` (for batch moves), `--dry-run` |
+| `carta punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
+| `carta flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
+| `carta rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
+| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc01.02.01`) | (none) |
 
 ## Tech Stack
 
