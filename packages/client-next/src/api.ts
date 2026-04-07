@@ -62,3 +62,19 @@ export async function postAction(
   }
   return result
 }
+
+export async function postBatch(
+  path: string,
+  actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
+): Promise<{ ok: boolean; results: Array<{ ok: boolean; id?: string; ref?: string; error?: string }> }> {
+  const res = await fetch('/api/action/batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, actions }),
+  })
+  const result = await res.json()
+  if (!result.ok) {
+    console.error('[api] POST /api/action/batch failed:', result, actions)
+  }
+  return result
+}

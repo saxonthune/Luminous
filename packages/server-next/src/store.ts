@@ -95,6 +95,56 @@ export async function applyAction(
   return result
 }
 
+export async function applyBatch(
+  relativePath: string,
+  actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
+): Promise<Array<ActionResult & { ref?: string }>> {
+  const doc = await getDocument(relativePath)
+  const refs = new Map<string, string>()
+  const results: Array<ActionResult & { ref?: string }> = []
+
+  for (const entry of actions) {
+    const resolvedParams: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(entry.params)) {
+      if (typeof value === "string") {
+        const refMatch = value.match(/^\$ref:(.+)$/)
+        if (refMatch) {
+          const refName = refMatch[1]
+          const resolved = refs.get(refName)
+          if (resolved === undefined) {
+            const failResult: ActionResult & { ref?: string } = {
+              ok: false,
+              error: `unresolved ref: ${refName}`,
+            }
+            results.push(failResult)
+            return results
+          }
+          resolvedParams[key] = resolved
+          continue
+        }
+      }
+      resolvedParams[key] = value
+    }
+
+    const result = applyActionToDoc(doc, entry.action, resolvedParams)
+    if (!result.ok) {
+      results.push(entry.ref ? { ...result, ref: entry.ref } : result)
+      return results
+    }
+
+    if (entry.ref && result.id !== undefined) {
+      refs.set(entry.ref, result.id)
+    }
+
+    results.push(entry.ref ? { ...result, ref: entry.ref } : result)
+  }
+
+  dirty.add(relativePath)
+  scheduleSave(relativePath)
+
+  return results
+}
+
 export function watchDocuments(
   watchRootDir: string,
   onChange: (relativePath: string) => void

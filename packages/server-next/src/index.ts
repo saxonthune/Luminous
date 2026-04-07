@@ -3,7 +3,7 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments } from "./workspace.js"
-import { getDocument, applyAction, flushAll, setRootDir, watchDocuments } from "./store.js"
+import { getDocument, applyAction, applyBatch, flushAll, setRootDir, watchDocuments } from "./store.js"
 
 const port = Number(process.env.PORT ?? 4080)
 
@@ -136,6 +136,31 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     console.log(`[api] GET document: ${docPath}`)
     const doc = await getDocument(docPath)
     sendJson(res, 200, doc)
+    return
+  }
+
+  // POST /api/action/batch
+  if (url === "/api/action/batch" && req.method === "POST") {
+    let body: { path?: string; actions?: unknown[] }
+    try {
+      body = (await parseBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: "invalid JSON" })
+      return
+    }
+    const docPath = body.path as string | undefined
+    if (!docPath || hasTraversal(docPath)) {
+      sendJson(res, 400, { error: "invalid path" })
+      return
+    }
+    const actions = body.actions
+    if (!Array.isArray(actions) || actions.length === 0) {
+      sendJson(res, 400, { error: "actions must be a non-empty array" })
+      return
+    }
+    const results = await applyBatch(docPath, actions as Array<{ action: string; params: Record<string, unknown>; ref?: string }>)
+    const allOk = results.every((r) => r.ok)
+    sendJson(res, allOk ? 200 : 400, { ok: allOk, results })
     return
   }
 

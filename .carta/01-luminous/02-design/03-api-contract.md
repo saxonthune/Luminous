@@ -61,6 +61,55 @@ Top-level — synchronizes Note and Canvas concepts.
 | `POST` | `/api/node/move` | `{ id, x, y }` | `{ ok }` |
 | `POST` | `/api/node/resize` | `{ id, w, h }` | `{ ok }` |
 
+### Batch
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| `POST` | `/api/action/batch` | `{ path, actions[] }` | `{ ok, results[] }` |
+
+Submit an ordered array of actions in a single request. Actions execute in sequence; each can reference IDs produced by earlier actions using `$ref` syntax.
+
+**Request body:**
+
+```json
+{
+  "path": "canvas.canvas.json",
+  "actions": [
+    { "action": "note/create", "params": { "title": "A" }, "ref": "a" },
+    { "action": "note/create", "params": { "title": "B" }, "ref": "b" },
+    { "action": "edge/connect", "params": { "fromId": "$ref:a", "toId": "$ref:b", "label": "depends on" } }
+  ]
+}
+```
+
+- `path` — relative path to the canvas file (required, no traversal)
+- `actions` — non-empty array of action descriptors (required)
+  - `action` — action name matching the existing single-action API
+  - `params` — action parameters; string values matching `$ref:<name>` are resolved to IDs from earlier actions
+  - `ref` — optional name to register the action's returned `id` for use in subsequent `$ref` values
+
+**Response (all succeeded):** HTTP 200
+
+```json
+{ "ok": true, "results": [{ "ok": true, "id": "abc" }, { "ok": true, "id": "def" }, { "ok": true, "id": "ghi" }] }
+```
+
+**Response (failure):** HTTP 400
+
+```json
+{ "ok": false, "results": [{ "ok": true, "id": "abc" }, { "ok": false, "error": "note not found" }] }
+```
+
+**Error semantics:**
+- **Fail-fast:** processing stops at the first failed action. Results contains only the actions processed up to and including the failure.
+- **No rollback:** successfully applied actions before the failure are persisted. The batch is not atomic.
+- **Unresolved ref:** if a `$ref:<name>` value cannot be resolved (the named ref was never set), the current action fails with `{ ok: false, error: "unresolved ref: <name>" }` and processing stops.
+- **Partial save:** the document is only marked dirty and saved when all actions succeed. If any action fails, no write occurs.
+
+**`$ref` resolution rules:**
+- Only top-level string values in `params` are scanned — nested objects are not traversed.
+- A `ref` is registered only when the action returns `{ ok: true, id }`. Actions without an `id` in their result do not produce a ref even if `ref` is declared.
+
 ### Change notifications
 
 | Protocol | Path | Purpose |
