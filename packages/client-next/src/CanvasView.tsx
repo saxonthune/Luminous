@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onMount, onCleanup, Show, For } from 'solid-js';
+import { createSignal, createMemo, onMount, onCleanup, Show, For, type JSX } from 'solid-js';
 import { createStore, produce, reconcile, type SetStoreFunction } from 'solid-js/store';
 import {
   Canvas,
@@ -60,6 +60,11 @@ interface CanvasContentProps {
     positions: Record<string, { x: number; y: number }>;
     sizes: Record<string, { w: number; h: number }>;
   }>;
+  // Multi-source support
+  sources: Record<string, Document>;
+  setSources: SetStoreFunction<Record<string, Document>>;
+  sourceMap: Record<string, string>;
+  onSourceLoaded: (path: string, doc: Document) => void;
 }
 
 function CanvasContent(props: CanvasContentProps) {
@@ -106,6 +111,30 @@ function CanvasContent(props: CanvasContentProps) {
       .catch(() => props.loadDoc());
   });
 
+  // --- Helpers for multi-source routing ---
+
+  /** Returns the source path that owns a given node or edge id. */
+  const getSourcePath = (id: string): string =>
+    props.sourceMap[id] ?? props.documentPath;
+
+  /** Update a note's fields in whichever store owns it. */
+  const setNoteFields = (nodeId: string, fields: Partial<Note>) => {
+    const path = getSourcePath(nodeId);
+    if (path === props.documentPath) {
+      props.setDoc('current', 'notes', nodeId, fields as any);
+    } else {
+      props.setSources(path, 'notes', nodeId, fields as any);
+    }
+  };
+
+  /** Get a note from any loaded source. */
+  const getNoteFromAnySource = (nodeId: string): Note | undefined => {
+    if (props.doc.notes[nodeId]) return props.doc.notes[nodeId];
+    const path = props.sourceMap[nodeId];
+    if (path) return props.sources[path]?.notes[nodeId];
+    return undefined;
+  };
+
   // Live tracking state
   const livePositionMap = new Map<string, { x: number; y: number }>();
   const liveSizeMap = new Map<string, { w: number; h: number }>();
@@ -124,29 +153,60 @@ function CanvasContent(props: CanvasContentProps) {
   const deleteNotes = (toDelete: string[]) => {
     if (toDelete.length === 0) return;
 
-    props.setDoc('current', produce((d) => {
-      if (!d) return;
-      for (const id of toDelete) {
-        delete d.notes[id];
-        for (const edgeId of Object.keys(d.edges)) {
-          if (d.edges[edgeId].fromId === id || d.edges[edgeId].toId === id) delete d.edges[edgeId];
-        }
-        for (const note of Object.values(d.notes)) {
-          if (note.parentId === id) note.parentId = null;
-        }
-      }
-    }));
+    // Group by source path
+    const bySource = new Map<string, string[]>();
+    for (const id of toDelete) {
+      const path = getSourcePath(id);
+      if (!bySource.has(path)) bySource.set(path, []);
+      bySource.get(path)!.push(id);
+    }
 
-    Promise.all(
-      toDelete.map((id) => postAction('note/delete', { path: props.documentPath, id }))
-    ).catch(() => props.loadDoc());
+    // Remove from main doc store
+    const mainIds = bySource.get(props.documentPath);
+    if (mainIds && mainIds.length > 0) {
+      props.setDoc('current', produce((d) => {
+        if (!d) return;
+        for (const id of mainIds) {
+          delete d.notes[id];
+          for (const edgeId of Object.keys(d.edges)) {
+            if (d.edges[edgeId].fromId === id || d.edges[edgeId].toId === id) delete d.edges[edgeId];
+          }
+          for (const note of Object.values(d.notes)) {
+            if (note.parentId === id) note.parentId = null;
+          }
+        }
+      }));
+    }
+
+    // Remove from source stores
+    for (const [path, ids] of bySource) {
+      if (path === props.documentPath) continue;
+      props.setSources(path, produce((d: Document) => {
+        for (const id of ids) {
+          delete d.notes[id];
+          for (const edgeId of Object.keys(d.edges)) {
+            if (d.edges[edgeId].fromId === id || d.edges[edgeId].toId === id) delete d.edges[edgeId];
+          }
+          for (const note of Object.values(d.notes)) {
+            if (note.parentId === id) note.parentId = null;
+          }
+        }
+      }));
+    }
+
+    const actions: Promise<any>[] = [];
+    for (const [path, ids] of bySource) {
+      for (const id of ids) {
+        actions.push(postAction('note/delete', { path, id }));
+      }
+    }
+    Promise.all(actions).catch(() => props.loadDoc());
   };
 
   // Delete key handler
   onMount(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-      // Don't delete nodes when user is editing text
       const active = document.activeElement;
       if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || (active as HTMLElement).closest?.('.cm-editor'))) return;
       const ids = selectedIds();
@@ -162,7 +222,7 @@ function CanvasContent(props: CanvasContentProps) {
   // Drag callbacks
   const dragCallbacks = {
     onDragStart(nodeId: string) {
-      const note = props.doc.notes[nodeId];
+      const note = getNoteFromAnySource(nodeId);
       if (note) dragBaseMap.set(nodeId, { x: note.x, y: note.y });
     },
     onDrag(nodeId: string, dx: number, dy: number) {
@@ -174,12 +234,13 @@ function CanvasContent(props: CanvasContentProps) {
     },
     onDragEnd(nodeId: string) {
       const livePos = livePositionMap.get(nodeId);
-      const note = props.doc.notes[nodeId];
+      const note = getNoteFromAnySource(nodeId);
       if (!note) return;
 
+      const allNotes = props.mergedNotes();
       const finalLocalPos = livePos ?? { x: note.x, y: note.y };
       const parentAbsPos = note.parentId
-        ? getAbsolutePos(note.parentId, props.doc.notes)
+        ? getAbsolutePos(note.parentId, allNotes)
         : { x: 0, y: 0 };
       const finalAbsPos = note.parentId
         ? { x: parentAbsPos.x + finalLocalPos.x, y: parentAbsPos.y + finalLocalPos.y }
@@ -189,50 +250,43 @@ function CanvasContent(props: CanvasContentProps) {
       dragBaseMap.delete(nodeId);
       props.setLive(produce((s) => { delete s.positions[nodeId]; }));
 
+      const sourcePath = getSourcePath(nodeId);
+
       if (ctrlHeld()) {
         const pointer = lastPointer;
         const dropTargetId = findDropTarget(pointer.x, pointer.y, nodeId);
 
         if (dropTargetId && dropTargetId !== note.parentId) {
-          const targetAbsPos = getAbsolutePos(dropTargetId, props.doc.notes);
+          // Cross-source nesting guard
+          const targetSource = getSourcePath(dropTargetId);
+          if (sourcePath !== targetSource) {
+            // Block cross-source nest — treat as a regular move
+            setNoteFields(nodeId, { x: finalLocalPos.x, y: finalLocalPos.y });
+            postAction('node/move', { path: sourcePath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
+            return;
+          }
+
+          const targetAbsPos = getAbsolutePos(dropTargetId, allNotes);
           const relPos = { x: finalAbsPos.x - targetAbsPos.x, y: finalAbsPos.y - targetAbsPos.y };
 
-          props.setDoc('current', produce((d) => {
-            if (!d) return;
-            d.notes[nodeId].parentId = dropTargetId;
-            d.notes[nodeId].x = relPos.x;
-            d.notes[nodeId].y = relPos.y;
-          }));
+          setNoteFields(nodeId, { parentId: dropTargetId, x: relPos.x, y: relPos.y });
           Promise.all([
-            postAction('nest', { path: props.documentPath, parentId: dropTargetId, childId: nodeId }),
-            postAction('node/move', { path: props.documentPath, id: nodeId, x: relPos.x, y: relPos.y }),
+            postAction('nest', { path: sourcePath, parentId: dropTargetId, childId: nodeId }),
+            postAction('node/move', { path: sourcePath, id: nodeId, x: relPos.x, y: relPos.y }),
           ]).catch(() => props.loadDoc());
         } else if (!dropTargetId && note.parentId) {
-          props.setDoc('current', produce((d) => {
-            if (!d) return;
-            d.notes[nodeId].parentId = null;
-            d.notes[nodeId].x = finalAbsPos.x;
-            d.notes[nodeId].y = finalAbsPos.y;
-          }));
+          setNoteFields(nodeId, { parentId: null, x: finalAbsPos.x, y: finalAbsPos.y });
           Promise.all([
-            postAction('unnest', { path: props.documentPath, childId: nodeId }),
-            postAction('node/move', { path: props.documentPath, id: nodeId, x: finalAbsPos.x, y: finalAbsPos.y }),
+            postAction('unnest', { path: sourcePath, childId: nodeId }),
+            postAction('node/move', { path: sourcePath, id: nodeId, x: finalAbsPos.x, y: finalAbsPos.y }),
           ]).catch(() => props.loadDoc());
         } else {
-          props.setDoc('current', produce((d) => {
-            if (!d) return;
-            d.notes[nodeId].x = finalLocalPos.x;
-            d.notes[nodeId].y = finalLocalPos.y;
-          }));
-          postAction('node/move', { path: props.documentPath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
+          setNoteFields(nodeId, { x: finalLocalPos.x, y: finalLocalPos.y });
+          postAction('node/move', { path: sourcePath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
         }
       } else {
-        props.setDoc('current', produce((d) => {
-          if (!d) return;
-          d.notes[nodeId].x = finalLocalPos.x;
-          d.notes[nodeId].y = finalLocalPos.y;
-        }));
-        postAction('node/move', { path: props.documentPath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
+        setNoteFields(nodeId, { x: finalLocalPos.x, y: finalLocalPos.y });
+        postAction('node/move', { path: sourcePath, id: nodeId, x: finalLocalPos.x, y: finalLocalPos.y }).catch(() => props.loadDoc());
       }
     },
   };
@@ -245,7 +299,7 @@ function CanvasContent(props: CanvasContentProps) {
 
   const resizeCallbacks = {
     onResizeStart(nodeId: string) {
-      const note = props.doc.notes[nodeId];
+      const note = getNoteFromAnySource(nodeId);
       if (note) resizeBaseMap.set(nodeId, { w: note.w, h: note.h });
     },
     onResize(nodeId: string, dw: number, dh: number) {
@@ -257,18 +311,15 @@ function CanvasContent(props: CanvasContentProps) {
     },
     onResizeEnd(nodeId: string) {
       const liveSize = liveSizeMap.get(nodeId);
-      const note = props.doc.notes[nodeId];
+      const note = getNoteFromAnySource(nodeId);
       if (!note) return;
       const finalSize = liveSize ?? { w: note.w, h: note.h };
       liveSizeMap.delete(nodeId);
       resizeBaseMap.delete(nodeId);
       props.setLive(produce((s) => { delete s.sizes[nodeId]; }));
-      props.setDoc('current', produce((d) => {
-        if (!d) return;
-        d.notes[nodeId].w = finalSize.w;
-        d.notes[nodeId].h = finalSize.h;
-      }));
-      postAction('node/resize', { path: props.documentPath, id: nodeId, w: finalSize.w, h: finalSize.h }).catch(() => props.loadDoc());
+      setNoteFields(nodeId, { w: finalSize.w, h: finalSize.h });
+      const sourcePath = getSourcePath(nodeId);
+      postAction('node/resize', { path: sourcePath, id: nodeId, w: finalSize.w, h: finalSize.h }).catch(() => props.loadDoc());
     },
   };
 
@@ -278,17 +329,13 @@ function CanvasContent(props: CanvasContentProps) {
   });
 
   const handleUpdateTitle = (id: string, title: string) => {
-    props.setDoc('current', produce((d) => {
-      if (d) d.notes[id].title = title;
-    }));
-    postAction('note/update', { path: props.documentPath, id, title }).catch(() => props.loadDoc());
+    setNoteFields(id, { title } as any);
+    postAction('note/update', { path: getSourcePath(id), id, title }).catch(() => props.loadDoc());
   };
 
   const handleUpdateBody = (id: string, body: string) => {
-    props.setDoc('current', produce((d) => {
-      if (d) (d.notes[id] as any).body = body;
-    }));
-    postAction('note/update', { path: props.documentPath, id, body }).catch(() => props.loadDoc());
+    setNoteFields(id, { body } as any);
+    postAction('note/update', { path: getSourcePath(id), id, body }).catch(() => props.loadDoc());
   };
 
   const autoResizeParent = (parentId: string) => {
@@ -307,18 +354,15 @@ function CanvasContent(props: CanvasContentProps) {
     const newW = Math.max(parent.w, maxRight);
     const newH = Math.max(parent.h, maxBottom);
     if (newW !== parent.w || newH !== parent.h) {
-      props.setDoc('current', produce((d) => {
-        if (!d) return;
-        d.notes[parentId].w = newW;
-        d.notes[parentId].h = newH;
-      }));
-      postAction('node/resize', { path: props.documentPath, id: parentId, w: newW, h: newH }).catch(() => props.loadDoc());
+      setNoteFields(parentId, { w: newW, h: newH });
+      postAction('node/resize', { path: getSourcePath(parentId), id: parentId, w: newW, h: newH }).catch(() => props.loadDoc());
     }
   };
 
   const handleExtract = (parentNoteId: string, selectedText: string, selectionFrom: number, selectionTo: number) => {
     const parentNote = props.doc.notes[parentNoteId];
     if (!parentNote) return;
+    const sourcePath = getSourcePath(parentNoteId);
     const firstLine = selectedText.split('\n')[0];
     const colonIdx = firstLine.indexOf(':');
     let title = colonIdx > 0 ? firstLine.slice(0, colonIdx).trim() : firstLine.trim();
@@ -341,15 +385,15 @@ function CanvasContent(props: CanvasContentProps) {
       (d.notes[parentNoteId] as any).body = updatedParentBody;
     }));
 
-    postAction('note/create', { path: props.documentPath, title, body, x: childX, y: childY, w: childW, h: childH })
+    postAction('note/create', { path: sourcePath, title, body, x: childX, y: childY, w: childW, h: childH })
       .then((result) => {
         if (!result.ok || !result.id) throw new Error('create failed');
         const realId = result.id;
         const updatedParentBody = (props.doc.notes[parentNoteId] as any).body as string;
         return Promise.all([
-          postAction('nest', { path: props.documentPath, parentId: parentNoteId, childId: realId }),
-          postAction('node/move', { path: props.documentPath, id: realId, x: childX, y: childY }),
-          postAction('note/update', { path: props.documentPath, id: parentNoteId, body: updatedParentBody }),
+          postAction('nest', { path: sourcePath, parentId: parentNoteId, childId: realId }),
+          postAction('node/move', { path: sourcePath, id: realId, x: childX, y: childY }),
+          postAction('note/update', { path: sourcePath, id: parentNoteId, body: updatedParentBody }),
         ]).then(() => realId);
       })
       .then((realId) => {
@@ -366,19 +410,28 @@ function CanvasContent(props: CanvasContentProps) {
 
   const handleDeleteNote = (noteId: string) => deleteNotes([noteId]);
 
-  // Build children map
+  // Build children map across all sources
   const childrenMap = () => {
     const map: Record<string, Node[]> = {};
-    for (const note of Object.values(props.doc.notes)) {
-      if (note.parentId) {
-        if (!map[note.parentId]) map[note.parentId] = [];
-        map[note.parentId].push(note);
+    const addNotes = (notes: Record<string, Node>) => {
+      for (const note of Object.values(notes)) {
+        if (note.parentId) {
+          if (!map[note.parentId]) map[note.parentId] = [];
+          map[note.parentId].push(note);
+        }
       }
+    };
+    addNotes(props.doc.notes);
+    for (const sourceDoc of Object.values(props.sources)) {
+      addNotes(sourceDoc.notes);
     }
     return map;
   };
 
-  function renderNote(note: Node): any {
+  // Initial ancestor set for the main document
+  const initialAncestors = new Set([props.documentPath]);
+
+  function renderNote(note: Node, sourcePath: string = props.documentPath, ancestors: Set<string> = initialAncestors): JSX.Element {
     const nestedChildren = childrenMap()[note.id] ?? [];
 
     if (note.type === 'portal') {
@@ -389,9 +442,13 @@ function CanvasContent(props: CanvasContentProps) {
           onDragPointerDown={onDragPointerDown}
           onResizePointerDown={onResizePointerDown}
           onDelete={handleDeleteNote}
+          sources={props.sources}
+          onSourceLoaded={props.onSourceLoaded}
+          ancestorSources={ancestors}
+          renderNode={renderNote}
         >
           <For each={nestedChildren}>
-            {(child) => renderNote(child)}
+            {(child) => renderNote(child, sourcePath, ancestors)}
           </For>
         </PortalNode>
       );
@@ -409,7 +466,7 @@ function CanvasContent(props: CanvasContentProps) {
         onExtract={handleExtract}
       >
         <For each={nestedChildren}>
-          {(child) => renderNote(child)}
+          {(child) => renderNote(child, sourcePath, ancestors)}
         </For>
       </NoteNode>
     );
@@ -437,11 +494,37 @@ export function CanvasView(props: CanvasViewProps) {
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
 
+  // Multi-source state
+  const [sources, setSources] = createStore<Record<string, Document>>({});
+  // Maps nodeId/edgeId → source path (for action routing)
+  const [sourceMap, setSourceMap] = createStore<Record<string, string>>({});
+
+  const handleSourceLoaded = (path: string, sourceDoc: Document) => {
+    setSources(path, reconcile(sourceDoc));
+    setSourceMap(produce((sm: Record<string, string>) => {
+      for (const id of Object.keys(sourceDoc.notes)) sm[id] = path;
+      for (const id of Object.keys(sourceDoc.edges)) sm[id] = path;
+    }));
+  };
+
   const mergedNotes = createMemo(() => {
     const d = doc.current;
     if (!d) return {} as Record<string, Note>;
-    const notes: Record<string, Note> = {};
+
+    const allNotes: Record<string, Note> = {};
+    // Main document notes
     for (const [id, note] of Object.entries(d.notes)) {
+      allNotes[id] = note;
+    }
+    // Portal source notes
+    for (const sourceDoc of Object.values(sources)) {
+      for (const [id, note] of Object.entries(sourceDoc.notes)) {
+        allNotes[id] = note;
+      }
+    }
+    // Apply live overlays (drag/resize in progress)
+    const notes: Record<string, Note> = {};
+    for (const [id, note] of Object.entries(allNotes)) {
       const livePos = live.positions[id];
       const liveSize = live.sizes[id];
       if (livePos || liveSize) {
@@ -459,18 +542,21 @@ export function CanvasView(props: CanvasViewProps) {
 
   let loadDocTimer: ReturnType<typeof setTimeout> | null = null;
   const loadDoc = () => {
-    // Debounce: coalesce rapid calls (e.g. fs.watch firing multiple times)
     if (loadDocTimer !== null) return;
     const isInitial = !doc.current;
     if (isInitial) setLoading(true);
     setError(null);
-    // For initial load, fire immediately. For subsequent, debounce 300ms.
     const delay = isInitial ? 0 : 300;
     loadDocTimer = setTimeout(() => {
       loadDocTimer = null;
       getDocument(props.documentPath)
         .then((d) => {
           setDoc('current', reconcile(d));
+          // Register main doc node/edge ids in sourceMap
+          setSourceMap(produce((sm: Record<string, string>) => {
+            for (const id of Object.keys(d.notes)) sm[id] = props.documentPath;
+            for (const id of Object.keys(d.edges)) sm[id] = props.documentPath;
+          }));
           if (isInitial) setLoading(false);
         })
         .catch((err) => {
@@ -486,7 +572,7 @@ export function CanvasView(props: CanvasViewProps) {
   onMount(() => {
     loadDoc();
 
-    // WebSocket watch — reload when an external process edits this file
+    // WebSocket watch — reload when an external process edits a watched file
     const wsUrl = `ws://${location.host}/ws/watch`;
     let ws: WebSocket;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -496,8 +582,15 @@ export function CanvasView(props: CanvasViewProps) {
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data as string);
-          if (data.event === 'changed' && data.path === props.documentPath) {
-            loadDoc();
+          if (data.event === 'changed') {
+            if (data.path === props.documentPath) {
+              loadDoc();
+            } else if (sources[data.path]) {
+              // Reload a portal source that changed externally
+              getDocument(data.path)
+                .then((d) => handleSourceLoaded(data.path, d))
+                .catch((err) => console.error('[CanvasView] failed to reload portal source:', data.path, err));
+            }
           }
         } catch {
           // ignore malformed frames
@@ -518,27 +611,51 @@ export function CanvasView(props: CanvasViewProps) {
 
   const handleConnect = ({ source, target }: { source: string; target: string }) => {
     if (source === target) return;
+    // Cross-source edges are not allowed
+    const sourceSourcePath = sourceMap[source] ?? props.documentPath;
+    const targetSourcePath = sourceMap[target] ?? props.documentPath;
+    if (sourceSourcePath !== targetSourcePath) return;
+
+    const edgePath = sourceSourcePath;
     const tempId = `edge-temp-${Date.now()}`;
-    setDoc('current', produce((d) => {
-      if (!d) return;
-      d.edges[tempId] = { id: tempId, fromId: source, toId: target, label: null };
-    }));
-    postAction('edge/connect', { path: props.documentPath, fromId: source, toId: target })
+
+    if (edgePath === props.documentPath) {
+      setDoc('current', produce((d) => {
+        if (!d) return;
+        d.edges[tempId] = { id: tempId, fromId: source, toId: target, label: null };
+      }));
+    } else {
+      setSources(edgePath, produce((d: Document) => {
+        d.edges[tempId] = { id: tempId, fromId: source, toId: target, label: null };
+      }));
+    }
+
+    postAction('edge/connect', { path: edgePath, fromId: source, toId: target })
       .then((result) => { if (result.ok) loadDoc(); })
       .catch(() => loadDoc());
   };
 
   const handleUpdateEdgeLabel = (edgeId: string, label: string | null) => {
-    setDoc('current', produce((d) => {
-      if (!d) return;
-      d.edges[edgeId].label = label;
-    }));
-    postAction('edge/relabel', { path: props.documentPath, id: edgeId, label }).catch(() => loadDoc());
+    const edgePath = sourceMap[edgeId] ?? props.documentPath;
+    if (edgePath === props.documentPath) {
+      setDoc('current', produce((d) => {
+        if (!d) return;
+        d.edges[edgeId].label = label;
+      }));
+    } else {
+      setSources(edgePath, produce((d: Document) => {
+        if (d.edges[edgeId]) d.edges[edgeId].label = label;
+      }));
+    }
+    postAction('edge/relabel', { path: edgePath, id: edgeId, label }).catch(() => loadDoc());
   };
 
+  // All edges — main document + all portal sources
   const edgeList = createMemo(() => {
     const d = doc.current;
-    return d ? Object.values(d.edges) : [];
+    const mainEdges = d ? Object.values(d.edges) : [];
+    const sourceEdges = Object.values(sources).flatMap((s) => Object.values(s.edges));
+    return [...mainEdges, ...sourceEdges];
   });
 
   const renderEdges = () => {
@@ -671,6 +788,10 @@ export function CanvasView(props: CanvasViewProps) {
                   onCreateNoteReady={(fn) => (createNoteFn = fn)}
                   mergedNotes={mergedNotes}
                   setLive={setLive}
+                  sources={sources}
+                  setSources={setSources}
+                  sourceMap={sourceMap}
+                  onSourceLoaded={handleSourceLoaded}
                 />
               </Canvas>
               <CanvasToolbar
