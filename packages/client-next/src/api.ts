@@ -11,6 +11,7 @@ export interface NodeBase {
   w: number
   h: number
   parentId: string | null
+  kind?: string           // optional semantic type hint for visual styling
 }
 
 export interface NoteNode extends NodeBase {

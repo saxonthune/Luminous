@@ -47,6 +47,15 @@ export function NoteNode(props: NoteNodeProps) {
     return items;
   };
 
+  const kindStyle = () => {
+    const k = props.note.kind
+    if (!k) return {}
+    return {
+      'background-color': `var(--kind-${k}-bg, var(--bg-surface))`,
+      'border-color': `var(--kind-${k}-border, var(--border-default))`,
+    }
+  }
+
   return (
     <NodeContainer
       nodeId={props.note.id}
@@ -69,7 +78,7 @@ export function NoteNode(props: NoteNodeProps) {
             ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
             : 'border border-[var(--border-default)]'
         }`}
-        style={{ 'box-shadow': 'var(--shadow-sm)', width: '100%', 'min-height': 'inherit' }}
+        style={{ 'box-shadow': 'var(--shadow-sm)', width: '100%', 'min-height': 'inherit', ...kindStyle() }}
       >
         <DragHandle class="h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0">
           <div class="w-8 h-0.5 bg-[var(--text-tertiary)] rounded-full" />

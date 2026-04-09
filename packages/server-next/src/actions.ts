@@ -26,6 +26,7 @@ export function applyActionToDoc(
         y: (params.y as number) ?? 0,
         w: (params.w as number) ?? 200,
         h: (params.h as number) ?? 150,
+        kind: (params.kind as string | undefined),
       }
       return { ok: true, id }
     }
