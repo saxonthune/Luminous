@@ -75,25 +75,27 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                   ...kindStyle(n().schemaName),
                 }}
               >
-                {/* Render each primitive in the schema */}
-                <For each={s().primitives}>
-                  {(primitive) => {
-                    const Renderer = primitiveRenderers[primitive.type] ?? UnknownPrimitiveRenderer
-                    const value = primitive.bind ? content()[primitive.bind] : undefined
-                    return (
-                      <Renderer
-                        primitive={primitive}
-                        nodeId={props.nodeId}
-                        value={value}
-                        onChange={(next) => {
-                          if (primitive.bind) {
-                            props.index.setContent(props.nodeId, { [primitive.bind]: next })
-                          }
-                        }}
-                      />
-                    )
-                  }}
-                </For>
+                {/* Render each primitive in the schema — wrapped for measurement only */}
+                <div data-primitive-stack="true">
+                  <For each={s().primitives}>
+                    {(primitive) => {
+                      const Renderer = primitiveRenderers[primitive.type] ?? UnknownPrimitiveRenderer
+                      const value = primitive.bind ? content()[primitive.bind] : undefined
+                      return (
+                        <Renderer
+                          primitive={primitive}
+                          nodeId={props.nodeId}
+                          value={value}
+                          onChange={(next) => {
+                            if (primitive.bind) {
+                              props.index.setContent(props.nodeId, { [primitive.bind]: next })
+                            }
+                          }}
+                        />
+                      )
+                    }}
+                  </For>
+                </div>
 
                 {/* Default child region — render children of this node, recursively */}
                 <Show when={children().length > 0}>

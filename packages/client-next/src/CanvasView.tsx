@@ -479,17 +479,19 @@ export function CanvasView(props: CanvasViewProps) {
     if (!idx) return;
     const doc = idx.doc();
 
-    // 1. Snapshot offsetHeight of every node's inner div in one DOM pass.
-    // SchemaNode renders the inner div as a child of NodeContainer, which has
-    // data-node-id="{id}". The first child of that element is the inner div.
+    // 1. Snapshot offsetHeight of the primitive stack in one DOM pass.
+    // Measures the primitive stack only (the schema's own header content) —
+    // never includes children, which are computed by tidyLayout.
+    // NodeContainer has data-node-id="{id}"; its child is the inner div from
+    // SchemaNode; the primitive stack wrapper is a child of that inner div.
     const measured = new Map<string, number>();
     const nodeEls = document.querySelectorAll<HTMLElement>('[data-node-id]');
     for (const el of nodeEls) {
       const id = el.dataset.nodeId;
       if (!id || !doc.structure[id]) continue;
-      const inner = el.firstElementChild as HTMLElement | null;
-      if (!inner) continue;
-      measured.set(id, inner.offsetHeight);
+      const stack = el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
+      if (!stack) continue;
+      measured.set(id, stack.offsetHeight);
     }
 
     // 2. Build TidyNode[] using measured heights (fall back to geometry.h if unmeasured).
@@ -523,6 +525,51 @@ export function CanvasView(props: CanvasViewProps) {
     );
 
     // 4. Apply results: update index + post to server.
+
+    // Tidy summary log — catches feedback loops and pathological inflation in one place.
+    const before = new Map<string, Geometry>();
+    for (const id of result.keys()) {
+      const node = idx.getNode(id);
+      if (node) before.set(id, { ...node.geometry });
+    }
+
+    let maxDeltaH = 0;
+    let maxDeltaHId: string | null = null;
+    let inflated = 0;
+    for (const [id, rect] of result) {
+      const b = before.get(id);
+      if (!b) continue;
+      const dh = rect.h - b.h;
+      if (Math.abs(dh) > Math.abs(maxDeltaH)) {
+        maxDeltaH = dh;
+        maxDeltaHId = id;
+      }
+      // Inflation flag: any node whose h more than doubled in one tidy run
+      if (b.h > 0 && rect.h > b.h * 2 && rect.h - b.h > 200) inflated++;
+    }
+
+    const byCategory = new Map<string, { count: number; maxH: number }>();
+    for (const [id, rect] of result) {
+      const node = idx.getNode(id);
+      if (!node || node.parent !== null) continue;
+      const cat = node.schemaName;
+      const cur = byCategory.get(cat) ?? { count: 0, maxH: 0 };
+      cur.count++;
+      cur.maxH = Math.max(cur.maxH, rect.h);
+      byCategory.set(cat, cur);
+    }
+
+    console.groupCollapsed(
+      `[tidy] ${rootId ? 'subtree' : 'full'}  nodes=${result.size}  maxΔh=${maxDeltaH}${maxDeltaHId ? ` (${maxDeltaHId.slice(0, 8)})` : ''}${inflated > 0 ? `  ⚠ inflated=${inflated}` : ''}`,
+    );
+    for (const [cat, stats] of byCategory) {
+      console.log(`  ${cat}: count=${stats.count}, maxH=${stats.maxH}`);
+    }
+    if (inflated > 0) {
+      console.warn(`[tidy] ${inflated} node(s) more than doubled in height in one run — likely measurement feedback loop`);
+    }
+    console.groupEnd();
+
     for (const [id, rect] of result) {
       const isSubtreeRoot = rootId === id;
       const node = idx.getNode(id);

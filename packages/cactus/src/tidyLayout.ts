@@ -97,6 +97,12 @@ export function tidyLayout(nodes: TidyNode[], options?: TidyLayoutOptions): Tidy
     if (children.length === 0) {
       // Leaf: keep original size
       const node = nodeMap.get(nodeId)!;
+      // Sanity: warn if any leaf has implausibly large h (likely a measurement bug)
+      if (node.h > 5000) {
+        if (typeof console !== 'undefined') {
+          console.warn(`[tidyLayout] leaf node ${nodeId} has h=${node.h} (>5000) — likely measurement error`);
+        }
+      }
       return { w: node.w, h: node.h };
     }
 

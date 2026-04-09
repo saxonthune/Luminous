@@ -106,6 +106,45 @@ describe('tidyLayout', () => {
     })
   })
 
+  describe('6. idempotence — tidy(tidy(x)) === tidy(x)', () => {
+    it('is idempotent: tidy(tidy(x)) === tidy(x)', () => {
+      // Build a small tree: root with 3 children, one child with 2 grandchildren.
+      const nodes: TidyNode[] = [
+        { id: 'root', parentId: null, w: 800, h: 60, category: 'component' },
+        { id: 'a',    parentId: 'root', w: 200, h: 40 },
+        { id: 'b',    parentId: 'root', w: 200, h: 40 },
+        { id: 'c',    parentId: 'root', w: 200, h: 60 },
+        { id: 'c1',   parentId: 'c',    w: 80,  h: 30 },
+        { id: 'c2',   parentId: 'c',    w: 80,  h: 30 },
+      ];
+
+      const first = tidyLayout(nodes, { categoryOrder: ['component'] });
+
+      // Feed result back as new node sizes — IMPORTANT: only update leaves' h.
+      // Parents keep their original header h (the contract: parent.h is the header,
+      // not the computed container height).
+      const childIds = new Set(nodes.filter(n => nodes.some(m => m.parentId === n.id)).map(n => n.id));
+      const second = tidyLayout(
+        nodes.map((n) => {
+          const r = first.get(n.id)!;
+          return childIds.has(n.id)
+            ? { ...n, w: r.w } // parent: keep original h, take computed w
+            : { ...n, w: r.w, h: r.h }; // leaf: take both
+        }),
+        { categoryOrder: ['component'] },
+      );
+
+      // Every node's geometry from the second pass should equal the first pass.
+      for (const [id, r1] of first) {
+        const r2 = second.get(id)!;
+        expect(r2.x).toBe(r1.x);
+        expect(r2.y).toBe(r1.y);
+        expect(r2.w).toBe(r1.w);
+        expect(r2.h).toBe(r1.h);
+      }
+    });
+  });
+
   describe('5. categoryOrder: [] (empty) — still buckets in first-seen order', () => {
     it('empty categoryOrder array still activates bucketed mode, first-seen wins', () => {
       const rowGap = 120
