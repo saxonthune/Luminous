@@ -1,12 +1,12 @@
 import { watch } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
-import type { Document } from "./types.js"
-import { applyActionToDoc } from "./actions.js"
+import type { Document, DocumentV2 } from "./types.js"
+import { applyActionToDoc, applyV2ActionToDoc } from "./actions.js"
 
 type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
 
-const cache = new Map<string, Document>()
+const cache = new Map<string, Document | DocumentV2>()
 const dirty = new Set<string>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const recentWrites = new Map<string, number>()
@@ -21,12 +21,17 @@ function emptyDoc(): Document {
   return { notes: {}, edges: {} }
 }
 
-async function loadDocument(filePath: string): Promise<Document> {
+async function loadDocument(filePath: string): Promise<Document | DocumentV2> {
   try {
     const raw = await readFile(filePath, "utf-8")
-    const doc = JSON.parse(raw) as Document
-    // Normalize legacy nodes that lack a type field
-    for (const node of Object.values(doc.notes)) {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object' && parsed.version === 2) {
+      // v2 — return as DocumentV2; trust the shape (no validation for now)
+      return parsed as DocumentV2
+    }
+    // v1 — apply existing normalization (legacy nodes lacking type get type='note')
+    const doc = parsed as Document
+    for (const node of Object.values(doc.notes ?? {})) {
       if (!(node as any).type) {
         (node as any).type = 'note'
       }
@@ -38,7 +43,7 @@ async function loadDocument(filePath: string): Promise<Document> {
   }
 }
 
-async function saveDocument(filePath: string, doc: Document): Promise<void> {
+async function saveDocument(filePath: string, doc: Document | DocumentV2): Promise<void> {
   await writeFile(filePath, JSON.stringify(doc, null, 2), "utf-8")
   // Record after write completes so the timestamp reflects when fs.watch will fire
   recentWrites.set(filePath, Date.now())
@@ -78,7 +83,7 @@ export async function flushAll(): Promise<void> {
   dirty.clear()
 }
 
-export async function getDocument(relativePath: string): Promise<Document> {
+export async function getDocument(relativePath: string): Promise<Document | DocumentV2> {
   if (cache.has(relativePath)) {
     return cache.get(relativePath)!
   }
@@ -88,13 +93,24 @@ export async function getDocument(relativePath: string): Promise<Document> {
   return doc
 }
 
+function dispatchAction(
+  doc: Document | DocumentV2,
+  action: string,
+  params: Record<string, unknown>
+): ActionResult {
+  if ((doc as DocumentV2).version === 2) {
+    return applyV2ActionToDoc(doc as DocumentV2, action, params)
+  }
+  return applyActionToDoc(doc as Document, action, params)
+}
+
 export async function applyAction(
   relativePath: string,
   action: string,
   params: Record<string, unknown>
 ): Promise<ActionResult> {
   const doc = await getDocument(relativePath)
-  const result = applyActionToDoc(doc, action, params)
+  const result = dispatchAction(doc, action, params)
   if (result.ok) {
     dirty.add(relativePath)
     scheduleSave(relativePath)
@@ -133,7 +149,7 @@ export async function applyBatch(
       resolvedParams[key] = value
     }
 
-    const result = applyActionToDoc(doc, entry.action, resolvedParams)
+    const result = dispatchAction(doc, entry.action, resolvedParams)
     if (!result.ok) {
       results.push(entry.ref ? { ...result, ref: entry.ref } : result)
       return results
