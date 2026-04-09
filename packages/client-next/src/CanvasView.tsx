@@ -10,8 +10,9 @@ import {
   type CanvasRef,
   type ResizeDirection,
 } from '@luminous/cactus';
-import { getDocument, postAction, type Document, type Note } from './api';
+import { getDocument, postAction, type Document, type Note, type Node, type NoteNode as NoteNodeType, type PortalNode as PortalNodeType } from './api';
 import { NoteNode } from './NoteNode';
+import { PortalNode } from './PortalNode';
 import { FreeformEdge } from './FreeformEdge';
 import { CanvasToolbar } from './CanvasToolbar';
 import { theme, toggleTheme } from './theme';
@@ -80,7 +81,7 @@ function CanvasContent(props: CanvasContentProps) {
     const y = Math.round(center.y - 75);
 
     const tempId = `temp-${Date.now()}`;
-    const newNote: Note = { id: tempId, title: 'New Note', body: '', parentId: null, x, y, w: 200, h: 150 };
+    const newNote: Note = { id: tempId, type: 'note', title: 'New Note', body: '', parentId: null, x, y, w: 200, h: 150 };
 
     props.setDoc('current', produce((d) => {
       if (d) d.notes[tempId] = newNote;
@@ -285,7 +286,7 @@ function CanvasContent(props: CanvasContentProps) {
 
   const handleUpdateBody = (id: string, body: string) => {
     props.setDoc('current', produce((d) => {
-      if (d) d.notes[id].body = body;
+      if (d) (d.notes[id] as any).body = body;
     }));
     postAction('note/update', { path: props.documentPath, id, body }).catch(() => props.loadDoc());
   };
@@ -333,18 +334,18 @@ function CanvasContent(props: CanvasContentProps) {
 
     props.setDoc('current', produce((d) => {
       if (!d) return;
-      const newChild: Note = { id: tempId, title, body, parentId: parentNoteId, x: childX, y: childY, w: childW, h: childH };
-      const parentBody = d.notes[parentNoteId].body;
+      const newChild: Note = { id: tempId, type: 'note', title, body, parentId: parentNoteId, x: childX, y: childY, w: childW, h: childH };
+      const parentBody = (d.notes[parentNoteId] as any).body as string;
       const updatedParentBody = parentBody.slice(0, selectionFrom) + parentBody.slice(selectionTo);
       d.notes[tempId] = newChild;
-      d.notes[parentNoteId].body = updatedParentBody;
+      (d.notes[parentNoteId] as any).body = updatedParentBody;
     }));
 
     postAction('note/create', { path: props.documentPath, title, body, x: childX, y: childY, w: childW, h: childH })
       .then((result) => {
         if (!result.ok || !result.id) throw new Error('create failed');
         const realId = result.id;
-        const updatedParentBody = props.doc.notes[parentNoteId].body;
+        const updatedParentBody = (props.doc.notes[parentNoteId] as any).body as string;
         return Promise.all([
           postAction('nest', { path: props.documentPath, parentId: parentNoteId, childId: realId }),
           postAction('node/move', { path: props.documentPath, id: realId, x: childX, y: childY }),
@@ -367,7 +368,7 @@ function CanvasContent(props: CanvasContentProps) {
 
   // Build children map
   const childrenMap = () => {
-    const map: Record<string, Note[]> = {};
+    const map: Record<string, Node[]> = {};
     for (const note of Object.values(props.doc.notes)) {
       if (note.parentId) {
         if (!map[note.parentId]) map[note.parentId] = [];
@@ -377,12 +378,28 @@ function CanvasContent(props: CanvasContentProps) {
     return map;
   };
 
-  function renderNote(note: Note): any {
+  function renderNote(note: Node): any {
     const nestedChildren = childrenMap()[note.id] ?? [];
+
+    if (note.type === 'portal') {
+      return (
+        <PortalNode
+          node={note as PortalNodeType}
+          mergedNotes={props.mergedNotes}
+          onDragPointerDown={onDragPointerDown}
+          onResizePointerDown={onResizePointerDown}
+          onDelete={handleDeleteNote}
+        >
+          <For each={nestedChildren}>
+            {(child) => renderNote(child)}
+          </For>
+        </PortalNode>
+      );
+    }
 
     return (
       <NoteNode
-        note={note}
+        note={note as NoteNodeType}
         mergedNotes={props.mergedNotes}
         onDragPointerDown={onDragPointerDown}
         onResizePointerDown={onResizePointerDown}

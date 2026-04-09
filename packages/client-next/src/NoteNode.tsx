@@ -1,14 +1,14 @@
 import { createSignal, createEffect, Show, type JSX } from 'solid-js';
 import { NodeContainer, DragHandle, ResizeHandle, ConnectionHandle, useCanvasContext } from '@luminous/cactus';
 import type { ResizeDirection } from '@luminous/cactus';
-import type { Note } from './api';
+import type { Note, NoteNode as NoteNodeType } from './api';
 import { MarkdownEditor } from './MarkdownEditor';
 import type { MarkdownEditorHandle } from './MarkdownEditor';
 import { ContextMenu } from './ContextMenu';
 import type { MenuItem } from './ContextMenu';
 
 interface NoteNodeProps {
-  note: Note;
+  note: NoteNodeType;
   mergedNotes: () => Record<string, Note>;
   onDragPointerDown: (nodeId: string, event: PointerEvent) => void;
   onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void;

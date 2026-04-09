@@ -24,7 +24,14 @@ function emptyDoc(): Document {
 async function loadDocument(filePath: string): Promise<Document> {
   try {
     const raw = await readFile(filePath, "utf-8")
-    return JSON.parse(raw) as Document
+    const doc = JSON.parse(raw) as Document
+    // Normalize legacy nodes that lack a type field
+    for (const node of Object.values(doc.notes)) {
+      if (!(node as any).type) {
+        (node as any).type = 'note'
+      }
+    }
+    return doc
   } catch (err) {
     console.error(`[store] failed to load document: ${filePath}`, err)
     return emptyDoc()

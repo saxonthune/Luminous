@@ -1,13 +1,28 @@
-export interface Note {
+export interface NodeBase {
   id: string
-  title: string
-  body: string
-  parentId: string | null
   x: number
   y: number
   w: number
   h: number
+  parentId: string | null
 }
+
+export interface NoteNode extends NodeBase {
+  type: 'note'
+  title: string
+  body: string
+}
+
+export interface PortalNode extends NodeBase {
+  type: 'portal'
+  title: string
+  canvasRef: string
+}
+
+export type Node = NoteNode | PortalNode
+
+/** Backward-compat alias — use Node for new code */
+export type Note = Node
 
 export interface Edge {
   id: string
@@ -17,7 +32,7 @@ export interface Edge {
 }
 
 export interface Document {
-  notes: Record<string, Note>
+  notes: Record<string, Node>
   edges: Record<string, Edge>
 }
 

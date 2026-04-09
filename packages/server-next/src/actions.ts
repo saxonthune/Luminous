@@ -18,6 +18,7 @@ export function applyActionToDoc(
       const id = randomUUID()
       doc.notes[id] = {
         id,
+        type: 'note',
         title: (params.title as string) ?? "",
         body: unescapeText((params.body as string) ?? ""),
         parentId: (params.parentId as string | null) ?? null,
@@ -29,12 +30,33 @@ export function applyActionToDoc(
       return { ok: true, id }
     }
 
+    case "portal/create": {
+      const id = randomUUID()
+      doc.notes[id] = {
+        id,
+        type: 'portal',
+        title: (params.title as string) ?? "",
+        canvasRef: (params.canvasRef as string) ?? "",
+        parentId: (params.parentId as string | null) ?? null,
+        x: (params.x as number) ?? 0,
+        y: (params.y as number) ?? 0,
+        w: (params.w as number) ?? 400,
+        h: (params.h as number) ?? 300,
+      }
+      return { ok: true, id }
+    }
+
     case "note/update": {
       const id = params.id as string
-      const note = doc.notes[id]
-      if (!note) return { ok: false, error: "not found" }
-      if (params.title !== undefined) note.title = params.title as string
-      if (params.body !== undefined) note.body = unescapeText(params.body as string)
+      const node = doc.notes[id]
+      if (!node) return { ok: false, error: "not found" }
+      if (node.type === 'note') {
+        if (params.title !== undefined) node.title = params.title as string
+        if (params.body !== undefined) node.body = unescapeText(params.body as string)
+      } else if (node.type === 'portal') {
+        if (params.title !== undefined) node.title = params.title as string
+        if (params.canvasRef !== undefined) node.canvasRef = params.canvasRef as string
+      }
       return { ok: true }
     }
 
