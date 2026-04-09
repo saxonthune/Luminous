@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Tailwind v4 auto-detects content in the current package only.
+   Cactus is a sibling workspace package, so its class names need to be
+   sourced explicitly or its `bottom-0`/`right-0`/etc. emit no CSS. */
+@source "../../cactus/src/**/*.{ts,tsx}";
+
 :root,
 [data-theme="light"] {
   --bg-canvas: #ffffff;

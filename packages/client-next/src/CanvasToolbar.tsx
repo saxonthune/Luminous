@@ -51,7 +51,7 @@ export function CanvasToolbar(props: CanvasToolbarProps) {
           ⊙
         </button>
         {dropdownOpen() && (
-          <div class="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-md border border-gray-200 py-1 min-w-max">
+          <div class="absolute left-full top-0 pl-1 bg-white rounded-lg shadow-md border border-gray-200 py-1 min-w-max">
             <button
               onClick={() => { props.onTreeLayout(); setDropdownOpen(false); }}
               class="w-full px-3 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
