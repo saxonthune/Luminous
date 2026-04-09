@@ -22,6 +22,7 @@ import {
 } from 'node:fs';
 import { resolve, relative, dirname, extname, join, basename } from 'node:path';
 import { createHash } from 'node:crypto';
+import { tidyLayout } from '../packages/cactus/src/tidyLayout.js';
 
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
 
@@ -1015,14 +1016,6 @@ function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
   // Layout
   // ---------------------------------------------------------------------------
 
-  // Group nodes by parent
-  const childrenOf = new Map<string | null, string[]>();
-  for (const [id, node] of Object.entries(notes)) {
-    const p = node.parentId;
-    if (!childrenOf.has(p)) childrenOf.set(p, []);
-    childrenOf.get(p)!.push(id);
-  }
-
   function kindOrder(kind: string | undefined): number {
     if (!kind) return 5;
     if (kind === 'signal' || kind === 'store') return 0;
@@ -1033,67 +1026,31 @@ function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
     return 5;
   }
 
-  /** Layout children inside a parent node. Returns the needed w/h. */
-  function layoutChildren(parentId: string): { w: number; h: number } {
-    const children = childrenOf.get(parentId) ?? [];
-    if (children.length === 0) return { w: COL_WIDTH + 20, h: HEADER_H + 20 };
-
-    // Sort children by kind
-    children.sort((a, b) => kindOrder(notes[a]?.kind) - kindOrder(notes[b]?.kind));
-
-    // Column assignment
-    const cols: string[][] = [[], [], [], [], []];
-    for (const cid of children) {
-      cols[kindOrder(notes[cid]?.kind)].push(cid);
+  // Pre-sort nodes so that tidyLayout preserves kind order within each parent.
+  // Root nodes: components first, then hooks, then other.
+  // Child nodes: by kindOrder.
+  const sortedNodes = Object.values(notes).sort((a, b) => {
+    // Sort by parentId group first (null roots together), then by kind
+    const aIsRoot = a.parentId === null;
+    const bIsRoot = b.parentId === null;
+    if (aIsRoot && bIsRoot) {
+      const aOrder = a.kind === 'component' ? 0 : a.kind === 'hook' ? 1 : 2;
+      const bOrder = b.kind === 'component' ? 0 : b.kind === 'hook' ? 1 : 2;
+      return aOrder - bOrder;
     }
+    return kindOrder(a.kind) - kindOrder(b.kind);
+  });
 
-    // For each column, position items and first recursively layout their children
-    const colXs = [10, 10 + COL_WIDTH + COL_GAP, 10 + 2 * (COL_WIDTH + COL_GAP), 10 + 3 * (COL_WIDTH + COL_GAP), 10 + 4 * (COL_WIDTH + COL_GAP)];
-    let maxColH = HEADER_H;
-
-    for (let col = 0; col < 5; col++) {
-      let y = HEADER_H + ROW_GAP;
-      for (const cid of cols[col]) {
-        const child = notes[cid];
-        // Recursively layout this child's children
-        const inner = layoutChildren(cid);
-        child.w = inner.w;
-        child.h = inner.h;
-        child.x = colXs[col];
-        child.y = y;
-        y += child.h + ROW_GAP;
-      }
-      maxColH = Math.max(maxColH, y);
-    }
-
-    const maxCols = cols.filter((c) => c.length > 0).length;
-    const totalW = maxCols > 0 ? colXs[maxCols - 1] + COL_WIDTH + 10 : COL_WIDTH + 20;
-
-    return { w: Math.max(totalW, COL_WIDTH + 20), h: maxColH + 10 };
-  }
-
-  // Layout root nodes (parentId = null) in a grid
-  const rootIds = childrenOf.get(null) ?? [];
-
-  // Separate components from other root nodes, sort components first
-  const rootComponents = rootIds.filter((id) => notes[id]?.kind === 'component');
-  const rootHooks = rootIds.filter((id) => notes[id]?.kind === 'hook');
-  const rootOther = rootIds.filter(
-    (id) => notes[id]?.kind !== 'component' && notes[id]?.kind !== 'hook'
+  const layoutResult = tidyLayout(
+    sortedNodes.map((n) => ({ id: n.id, w: n.w, h: n.h, parentId: n.parentId ?? null })),
+    { padding: 10, headerHeight: HEADER_H, gap: ROW_GAP, maxWidth: 1400, rootGap: 60 },
   );
 
-  const orderedRoots = [...rootComponents, ...rootHooks, ...rootOther];
-
-  let rootX = 0;
-  const ROOT_GAP = 60;
-
-  for (const rid of orderedRoots) {
-    const inner = layoutChildren(rid);
-    notes[rid].w = inner.w;
-    notes[rid].h = inner.h;
-    notes[rid].x = rootX;
-    notes[rid].y = 0;
-    rootX += inner.w + ROOT_GAP;
+  for (const [id, rect] of layoutResult) {
+    notes[id].x = rect.x;
+    notes[id].y = rect.y;
+    notes[id].w = rect.w;
+    notes[id].h = rect.h;
   }
 
   // ---------------------------------------------------------------------------

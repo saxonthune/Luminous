@@ -6,6 +6,7 @@ interface CanvasToolbarProps {
   onFitView: () => void;
   onTreeLayout: () => void;
   onForceLayout: () => void;
+  onTidyLayout: () => void;
 }
 
 export function CanvasToolbar(props: CanvasToolbarProps) {
@@ -62,6 +63,12 @@ export function CanvasToolbar(props: CanvasToolbarProps) {
               class="w-full px-3 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
             >
               Force Layout
+            </button>
+            <button
+              onClick={() => { props.onTidyLayout(); setDropdownOpen(false); }}
+              class="w-full px-3 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+            >
+              Tidy Layout
             </button>
           </div>
         )}

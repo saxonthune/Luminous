@@ -7,6 +7,7 @@ import {
   useCanvasContext,
   forceDirectedLayout,
   treeLayout,
+  tidyLayout,
   type CanvasRef,
   type ResizeDirection,
 } from '@luminous/cactus';
@@ -724,6 +725,29 @@ export function CanvasView(props: CanvasViewProps) {
     }
   };
 
+  const arrangeTidyLayout = () => {
+    const d = doc.current;
+    if (!d) return;
+
+    const tidyNodes = Object.values(d.notes).map((n) => ({
+      id: n.id, w: n.w, h: n.h, parentId: n.parentId ?? null,
+    }));
+
+    const result = tidyLayout(tidyNodes);
+
+    for (const [id, rect] of result) {
+      setDoc('current', produce((d) => {
+        if (!d) return;
+        d.notes[id].x = rect.x;
+        d.notes[id].y = rect.y;
+        d.notes[id].w = rect.w;
+        d.notes[id].h = rect.h;
+      }));
+      postAction('node/move', { path: props.documentPath, id, x: rect.x, y: rect.y }).catch(() => loadDoc());
+      postAction('node/resize', { path: props.documentPath, id, w: rect.w, h: rect.h }).catch(() => loadDoc());
+    }
+  };
+
   return (
     <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
       <div class="flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
@@ -800,6 +824,7 @@ export function CanvasView(props: CanvasViewProps) {
                 onFitView={() => canvasRef?.fitView(getNodeRects())}
                 onTreeLayout={arrangeTreeLayout}
                 onForceLayout={arrangeForceLayout}
+                onTidyLayout={arrangeTidyLayout}
               />
             </>
           )}

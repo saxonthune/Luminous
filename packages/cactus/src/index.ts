@@ -37,6 +37,8 @@ export { forceDirectedLayout } from './layout.js';
 export type { LayoutNode, LayoutEdge, LayoutResult } from './layout.js';
 export { treeLayout } from './treeLayout.js';
 export type { TreeLayoutOptions } from './treeLayout.js';
+export { tidyLayout } from './tidyLayout.js';
+export type { TidyNode, TidyLayoutOptions, TidyResult } from './tidyLayout.js';
 export { traceCallback, observeLongTasks, markInteraction } from './perf.js';
 export { createPerformanceMonitor } from './createPerformanceMonitor.js';
 export type { PerformanceMonitorOptions, PerformanceMonitorResult } from './createPerformanceMonitor.js';
