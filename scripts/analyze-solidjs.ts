@@ -1016,6 +1016,7 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
     w: n.geometry.w,
     h: n.geometry.h,
     parentId: n.parent,
+    category: n.schemaName,
   }));
 
   // Pre-sort by (parent, order) so tidyLayout sees siblings in the right order
@@ -1030,7 +1031,15 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
 
   const layoutResult = tidyLayout(
     tidyInput,
-    { padding: 10, headerHeight: HEADER_H, gap: ROW_GAP, maxWidth: 1400, rootGap: 60 },
+    {
+      padding: 10,
+      headerHeight: HEADER_H,
+      gap: ROW_GAP,
+      maxWidth: 1400,
+      rootGap: 60,
+      categoryOrder: ['component', 'hook', 'signal', 'store', 'memo', 'effect', 'datasource', 'container'],
+      rowGap: 120,
+    },
   );
 
   for (const [id, rect] of layoutResult) {
