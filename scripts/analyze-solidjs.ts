@@ -21,8 +21,50 @@ import {
   existsSync,
 } from 'node:fs';
 import { resolve, relative, dirname, extname, join, basename } from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { tidyLayout } from '../packages/cactus/src/tidyLayout.js';
+import type {
+  Schema,
+  NodeStructure,
+  NodeContent,
+  DocumentV2,
+  Edge,
+} from '../packages/server-next/src/types.js';
+
+// ---------------------------------------------------------------------------
+// v2 schemas — embedded in the emitted canvas file
+// ---------------------------------------------------------------------------
+
+const ENTITY_PRIMITIVES = [
+  { type: 'drag-bar' },
+  { type: 'title',    bind: 'title' },
+  { type: 'markdown', bind: 'body' },
+] as const;
+
+const componentSchema: Schema = { name: 'component', label: 'Component', primitives: [...ENTITY_PRIMITIVES] };
+const hookSchema: Schema      = { name: 'hook',      label: 'Hook',      primitives: [...ENTITY_PRIMITIVES] };
+const signalSchema: Schema    = { name: 'signal',    label: 'Signal',    primitives: [...ENTITY_PRIMITIVES] };
+const storeSchema: Schema     = { name: 'store',     label: 'Store',     primitives: [...ENTITY_PRIMITIVES] };
+const memoSchema: Schema      = { name: 'memo',      label: 'Memo',      primitives: [...ENTITY_PRIMITIVES] };
+const effectSchema: Schema    = { name: 'effect',    label: 'Effect',    primitives: [...ENTITY_PRIMITIVES] };
+const datasourceSchema: Schema = { name: 'datasource', label: 'Data Source', primitives: [...ENTITY_PRIMITIVES] };
+
+const containerSchema: Schema = {
+  name: 'container',
+  label: 'Container',
+  primitives: [{ type: 'title', bind: 'label' }],
+};
+
+const PIPELINE_SCHEMAS: Record<string, Schema> = {
+  component:  componentSchema,
+  hook:       hookSchema,
+  signal:     signalSchema,
+  store:      storeSchema,
+  memo:       memoSchema,
+  effect:     effectSchema,
+  datasource: datasourceSchema,
+  container:  containerSchema,
+};
 
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
 
@@ -751,31 +793,6 @@ function detectReactiveReadsAndHookCalls(
 // Phase 2: Transform to canvas format
 // ---------------------------------------------------------------------------
 
-interface CanvasNode {
-  id: string;
-  type: 'note';
-  title: string;
-  body: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  parentId: string | null;
-  kind?: string;
-}
-
-interface CanvasEdge {
-  id: string;
-  fromId: string;
-  toId: string;
-  label: string | null;
-}
-
-interface CanvasDocument {
-  notes: Record<string, CanvasNode>;
-  edges: Record<string, CanvasEdge>;
-}
-
 // Layout constants
 const COL_WIDTH = 300;
 const COL_GAP = 40;
@@ -784,17 +801,50 @@ const HEADER_H = 60;
 const ITEM_H_BASE = 80;
 const ITEM_H_LARGE = 100;
 
-function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
-  const notes: Record<string, CanvasNode> = {};
-  const edges: Record<string, CanvasEdge> = {};
+function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
+  const structure: Record<string, NodeStructure> = {};
+  const content: Record<string, NodeContent> = {};
+  const edges: Record<string, Edge> = {};
 
-  // Helper to add a note
-  function addNote(n: CanvasNode) {
-    notes[n.id] = n;
+  const entityIdMap = new Map<string, string>();
+
+  const orderCounters = new Map<string | null, number>();
+  function nextOrder(parent: string | null): string {
+    const n = orderCounters.get(parent) ?? 0;
+    orderCounters.set(parent, n + 1);
+    return 'a' + n.toString().padStart(6, '0');
   }
 
-  // Build a lookup of entity IDs by name for edges
-  const entityIdMap = new Map<string, string>(); // name -> id
+  function addNode(
+    id: string,
+    schemaName: string,
+    parent: string | null,
+    title: string,
+    body: string,
+  ) {
+    structure[id] = {
+      id,
+      schemaName,
+      parent,
+      order: nextOrder(parent),
+      geometry: { x: 0, y: 0, w: COL_WIDTH, h: ITEM_H_BASE },
+    };
+    content[id] = { title, body };
+  }
+
+  function addContainer(id: string, parent: string, label: string) {
+    structure[id] = {
+      id,
+      schemaName: 'container',
+      parent,
+      order: nextOrder(parent),
+      geometry: { x: 0, y: 0, w: COL_WIDTH, h: 40 },
+    };
+    content[id] = { label };
+  }
+
+  // Map from componentId → { children: containerId, members: containerId }
+  const componentContainers = new Map<string, { children: string; members: string }>();
 
   // --- Components ---
   for (const comp of analysis.components) {
@@ -807,37 +857,20 @@ function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
     ]
       .filter(Boolean)
       .join('\n');
+    addNode(id, 'component', null, comp.name, body);
 
-    addNote({
-      id,
-      type: 'note',
-      title: `[Component] ${comp.name}`,
-      body,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null, // will be set in layout phase
-      kind: 'component',
-    });
+    const childrenContainerId = randomUUID();
+    const membersContainerId = randomUUID();
+    addContainer(childrenContainerId, id, 'Components');
+    addContainer(membersContainerId, id, 'Members');
+    componentContainers.set(id, { children: childrenContainerId, members: membersContainerId });
   }
 
   // --- Hooks ---
   for (const hook of analysis.hooks) {
     const id = entityId('hook', hook.name, hook.sourceFile);
     entityIdMap.set(hook.name, id);
-    addNote({
-      id,
-      type: 'note',
-      title: `[Hook] ${hook.name}`,
-      body: `Source: \`${hook.sourceFile}\``,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null,
-      kind: 'hook',
-    });
+    addNode(id, 'hook', null, hook.name, `Source: \`${hook.sourceFile}\``);
   }
 
   // --- Signals ---
@@ -851,72 +884,28 @@ function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
     ]
       .filter(Boolean)
       .join('\n');
-    addNote({
-      id,
-      type: 'note',
-      title: `[Signal] ${sig.name}`,
-      body,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null,
-      kind: 'signal',
-    });
+    addNode(id, 'signal', null, sig.name, body);
   }
 
   // --- Stores ---
   for (const store of analysis.stores) {
     const id = entityId('store', store.name, store.sourceFile);
     entityIdMap.set(store.name, id);
-    addNote({
-      id,
-      type: 'note',
-      title: `[Store] ${store.name}`,
-      body: `Source: \`${store.sourceFile}\`\nOwner: ${store.owner}`,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null,
-      kind: 'store',
-    });
+    addNode(id, 'store', null, store.name, `Source: \`${store.sourceFile}\`\nOwner: ${store.owner}`);
   }
 
   // --- Memos ---
   for (const memo of analysis.memos) {
     const id = entityId('memo', memo.name, memo.sourceFile);
     entityIdMap.set(memo.name, id);
-    addNote({
-      id,
-      type: 'note',
-      title: `[Memo] ${memo.name}`,
-      body: `Source: \`${memo.sourceFile}\`\nOwner: ${memo.owner}`,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null,
-      kind: 'memo',
-    });
+    addNode(id, 'memo', null, memo.name, `Source: \`${memo.sourceFile}\`\nOwner: ${memo.owner}`);
   }
 
   // --- Effects ---
   for (const effect of analysis.effects) {
     const id = entityId('effect', effect.name, effect.sourceFile);
     entityIdMap.set(effect.name, id);
-    addNote({
-      id,
-      type: 'note',
-      title: `[Effect:${effect.kind}] ${effect.name}`,
-      body: `Source: \`${effect.sourceFile}\`\nOwner: ${effect.owner}`,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null,
-      kind: `effect-${effect.kind}`,
-    });
+    addNode(id, 'effect', null, effect.name, `Source: \`${effect.sourceFile}\`\nOwner: ${effect.owner}`);
   }
 
   // --- DataSources ---
@@ -924,133 +913,128 @@ function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
     const dsKey = `${ds.kind}:${ds.name}`;
     const id = entityId('datasource', dsKey, ds.sourceFile);
     entityIdMap.set(dsKey, id);
-    addNote({
-      id,
-      type: 'note',
-      title: `[DataSource:${ds.kind}] ${ds.name}`,
-      body: `Source: \`${ds.sourceFile}\`\nOwner: ${ds.owner}`,
-      x: 0,
-      y: 0,
-      w: COL_WIDTH,
-      h: ITEM_H_BASE,
-      parentId: null,
-      kind: `datasource-${ds.kind}`,
-    });
+    addNode(id, 'datasource', null, ds.name, `Source: \`${ds.sourceFile}\`\nOwner: ${ds.owner}`);
   }
 
   // ---------------------------------------------------------------------------
-  // Set parentId relationships
+  // Set parent pointers (relationships pass)
   // ---------------------------------------------------------------------------
 
-  // Component rendered in JSX → parentId = rendering component (first renderer wins)
+  // Component rendered in JSX → parent = renderer's children container (first renderer wins)
   for (const comp of analysis.components) {
     for (const childName of comp.renderedChildren) {
       const childId = entityIdMap.get(childName);
-      const parentId = entityIdMap.get(comp.name);
-      if (childId && parentId && notes[childId] && notes[childId].parentId === null) {
-        notes[childId].parentId = parentId;
+      const parentCompId = entityIdMap.get(comp.name);
+      if (childId && parentCompId && structure[childId] && structure[childId].parent === null) {
+        const containers = componentContainers.get(parentCompId);
+        if (containers) {
+          structure[childId].parent = containers.children;
+          structure[childId].order = nextOrder(containers.children);
+        }
       }
     }
   }
 
-  // Component parent (inner components — defined lexically inside another component)
+  // Component parent (lexically inner) → parent = enclosing component's children container
   for (const comp of analysis.components) {
     if (comp.parent) {
       const compId = entityIdMap.get(comp.name);
-      const parentId = entityIdMap.get(comp.parent);
-      if (compId && parentId && notes[compId]) {
-        notes[compId].parentId = parentId;
+      const parentCompId = entityIdMap.get(comp.parent);
+      if (compId && parentCompId && structure[compId]) {
+        const containers = componentContainers.get(parentCompId);
+        if (containers) {
+          structure[compId].parent = containers.children;
+          structure[compId].order = nextOrder(containers.children);
+        }
       }
     }
   }
 
-  // Hook → calling component
+  // Hook → calling component's members container
   for (const hook of analysis.hooks) {
     if (hook.calledBy) {
       const hookId = entityIdMap.get(hook.name);
-      const parentId = entityIdMap.get(hook.calledBy);
-      if (hookId && parentId && notes[hookId]) {
-        notes[hookId].parentId = parentId;
+      const parentCompId = entityIdMap.get(hook.calledBy);
+      if (hookId && parentCompId && structure[hookId]) {
+        const containers = componentContainers.get(parentCompId);
+        if (containers) {
+          structure[hookId].parent = containers.members;
+          structure[hookId].order = nextOrder(containers.members);
+        }
       }
     }
   }
 
-  // Signal/Store/Memo/Effect → their owner
-  function setOwnerParent(name: string, owner: string, file: string) {
-    if (owner === '__module__') return; // module-level, no parent
+  // Signal/Store/Memo/Effect → their owner (component's members container, or hook directly)
+  function setOwnerParent(name: string, owner: string) {
+    if (owner === '__module__') return;
     const itemId = entityIdMap.get(name);
-    if (!itemId || !notes[itemId]) return;
-    // Owner could be a component, hook, or effect
+    if (!itemId || !structure[itemId]) return;
     const ownerCompId = entityIdMap.get(owner);
-    if (ownerCompId && notes[ownerCompId]) {
-      notes[itemId].parentId = ownerCompId;
+    if (!ownerCompId || !structure[ownerCompId]) return;
+    const containers = componentContainers.get(ownerCompId);
+    if (containers) {
+      // Owner is a component — use members container
+      structure[itemId].parent = containers.members;
+      structure[itemId].order = nextOrder(containers.members);
+    } else {
+      // Owner is a hook — nest directly into hook node
+      structure[itemId].parent = ownerCompId;
+      structure[itemId].order = nextOrder(ownerCompId);
     }
   }
 
-  for (const sig of analysis.signals) {
-    setOwnerParent(sig.name, sig.owner, sig.sourceFile);
-  }
-  for (const store of analysis.stores) {
-    setOwnerParent(store.name, store.owner, store.sourceFile);
-  }
-  for (const memo of analysis.memos) {
-    setOwnerParent(memo.name, memo.owner, memo.sourceFile);
-  }
-  for (const effect of analysis.effects) {
-    setOwnerParent(effect.name, effect.owner, effect.sourceFile);
-  }
+  for (const sig of analysis.signals) setOwnerParent(sig.name, sig.owner);
+  for (const store of analysis.stores) setOwnerParent(store.name, store.owner);
+  for (const memo of analysis.memos) setOwnerParent(memo.name, memo.owner);
+  for (const effect of analysis.effects) setOwnerParent(effect.name, effect.owner);
 
   // DataSource → owner (effect or component)
   for (const ds of analysis.dataSources) {
     const dsKey = `${ds.kind}:${ds.name}`;
     const dsId = entityIdMap.get(dsKey);
-    if (!dsId || !notes[dsId]) continue;
+    if (!dsId || !structure[dsId]) continue;
     if (ds.owner === '__module__') continue;
     const ownerEffectId = entityIdMap.get(ds.owner);
-    if (ownerEffectId && notes[ownerEffectId]) {
-      notes[dsId].parentId = ownerEffectId;
+    if (!ownerEffectId || !structure[ownerEffectId]) continue;
+    const containers = componentContainers.get(ownerEffectId);
+    if (containers) {
+      structure[dsId].parent = containers.members;
+      structure[dsId].order = nextOrder(containers.members);
+    } else {
+      structure[dsId].parent = ownerEffectId;
+      structure[dsId].order = nextOrder(ownerEffectId);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Layout
+  // Layout pass — call cactus's tidyLayout with v2→v1 field name translation
   // ---------------------------------------------------------------------------
 
-  function kindOrder(kind: string | undefined): number {
-    if (!kind) return 5;
-    if (kind === 'signal' || kind === 'store') return 0;
-    if (kind === 'memo') return 1;
-    if (kind.startsWith('effect') || kind.startsWith('datasource')) return 2;
-    if (kind === 'hook') return 3;
-    if (kind === 'component') return 4;
-    return 5;
-  }
+  const tidyInput = Object.values(structure).map((n) => ({
+    id: n.id,
+    w: n.geometry.w,
+    h: n.geometry.h,
+    parentId: n.parent,
+  }));
 
-  // Pre-sort nodes so that tidyLayout preserves kind order within each parent.
-  // Root nodes: components first, then hooks, then other.
-  // Child nodes: by kindOrder.
-  const sortedNodes = Object.values(notes).sort((a, b) => {
-    // Sort by parentId group first (null roots together), then by kind
-    const aIsRoot = a.parentId === null;
-    const bIsRoot = b.parentId === null;
-    if (aIsRoot && bIsRoot) {
-      const aOrder = a.kind === 'component' ? 0 : a.kind === 'hook' ? 1 : 2;
-      const bOrder = b.kind === 'component' ? 0 : b.kind === 'hook' ? 1 : 2;
-      return aOrder - bOrder;
-    }
-    return kindOrder(a.kind) - kindOrder(b.kind);
+  // Pre-sort by (parent, order) so tidyLayout sees siblings in the right order
+  tidyInput.sort((a, b) => {
+    const pa = a.parentId ?? '';
+    const pb = b.parentId ?? '';
+    if (pa !== pb) return pa < pb ? -1 : 1;
+    const oa = structure[a.id].order;
+    const ob = structure[b.id].order;
+    return oa < ob ? -1 : oa > ob ? 1 : 0;
   });
 
   const layoutResult = tidyLayout(
-    sortedNodes.map((n) => ({ id: n.id, w: n.w, h: n.h, parentId: n.parentId ?? null })),
+    tidyInput,
     { padding: 10, headerHeight: HEADER_H, gap: ROW_GAP, maxWidth: 1400, rootGap: 60 },
   );
 
   for (const [id, rect] of layoutResult) {
-    notes[id].x = rect.x;
-    notes[id].y = rect.y;
-    notes[id].w = rect.w;
-    notes[id].h = rect.h;
+    structure[id].geometry = { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
   }
 
   // ---------------------------------------------------------------------------
@@ -1070,7 +1054,13 @@ function buildCanvas(analysis: SolidAnalysis): CanvasDocument {
     };
   }
 
-  return { notes, edges };
+  return {
+    version: 2,
+    schemas: PIPELINE_SCHEMAS,
+    structure,
+    content,
+    edges,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1157,10 +1147,12 @@ function main() {
   console.log('Phase 2: Generating canvas...');
 
   const canvas = buildCanvas(analysis);
-  const nodeCount = Object.keys(canvas.notes).length;
+  const componentCount = Object.values(canvas.structure).filter((n) => n.schemaName === 'component').length;
+  const containerCount = Object.values(canvas.structure).filter((n) => n.schemaName === 'container').length;
+  const totalNodes = Object.keys(canvas.structure).length;
   const edgeCount = Object.keys(canvas.edges).length;
 
-  console.log(`  Nodes: ${nodeCount}, Edges: ${edgeCount}`);
+  console.log(`  Components: ${componentCount}, Containers: ${containerCount}, Total nodes: ${totalNodes}, Edges: ${edgeCount}`);
 
   // Ensure output directory exists
   const outDir = dirname(outputPath);

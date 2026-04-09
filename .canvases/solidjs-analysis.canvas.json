@@ -1,1168 +1,2338 @@
 {
-  "notes": {
+  "version": 2,
+  "schemas": {
+    "component": {
+      "name": "component",
+      "label": "Component",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "hook": {
+      "name": "hook",
+      "label": "Hook",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "signal": {
+      "name": "signal",
+      "label": "Signal",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "store": {
+      "name": "store",
+      "label": "Store",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "memo": {
+      "name": "memo",
+      "label": "Memo",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "effect": {
+      "name": "effect",
+      "label": "Effect",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "datasource": {
+      "name": "datasource",
+      "label": "Data Source",
+      "primitives": [
+        {
+          "type": "drag-bar"
+        },
+        {
+          "type": "title",
+          "bind": "title"
+        },
+        {
+          "type": "markdown",
+          "bind": "body"
+        }
+      ]
+    },
+    "container": {
+      "name": "container",
+      "label": "Container",
+      "primitives": [
+        {
+          "type": "title",
+          "bind": "label"
+        }
+      ]
+    }
+  },
+  "structure": {
     "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526": {
       "id": "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526",
-      "type": "note",
-      "title": "[Component] App",
-      "body": "multithreadedmultithreadedmultithreadedSource: `packages/client-next/src/App.tsx`",
-      "x": 1016.4268020407193,
-      "y": 752.3703063930965,
-      "w": 1480,
-      "h": 3098.685972258258,
-      "parentId": null,
-      "kind": "component"
+      "schemaName": "component",
+      "parent": null,
+      "order": "a000000",
+      "geometry": {
+        "x": 0,
+        "y": 0,
+        "w": 1480,
+        "h": 4260
+      }
+    },
+    "b6dadb17-7924-4a38-8649-4dcb3509372a": {
+      "id": "b6dadb17-7924-4a38-8649-4dcb3509372a",
+      "schemaName": "container",
+      "parent": "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 1460,
+        "h": 4000
+      }
+    },
+    "38a51d44-7cd9-4bf9-803b-346a38c8b408": {
+      "id": "38a51d44-7cd9-4bf9-803b-346a38c8b408",
+      "schemaName": "container",
+      "parent": "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 4090,
+        "w": 320,
+        "h": 160
+      }
     },
     "c6e18bf2-d1fc-966c-2f4a-1e69234547a9": {
       "id": "c6e18bf2-d1fc-966c-2f4a-1e69234547a9",
-      "type": "note",
-      "title": "[Component] CanvasToolbar",
-      "body": "Source: `packages/client-next/src/CanvasToolbar.tsx`\nProps: CanvasToolbarProps",
-      "x": 82.22461592766085,
-      "y": 115.87238685023752,
-      "w": 340,
-      "h": 160,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b71eefd2-ac36-4416-91a8-a210bc7290f1",
+      "order": "a000003",
+      "geometry": {
+        "x": 10,
+        "y": 2890,
+        "w": 660,
+        "h": 240
+      }
+    },
+    "8572c829-60e8-4304-ae0e-3a092dad0a24": {
+      "id": "8572c829-60e8-4304-ae0e-3a092dad0a24",
+      "schemaName": "container",
+      "parent": "c6e18bf2-d1fc-966c-2f4a-1e69234547a9",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "e8cd5ca7-fd03-4999-8825-03baf6c56957": {
+      "id": "e8cd5ca7-fd03-4999-8825-03baf6c56957",
+      "schemaName": "container",
+      "parent": "c6e18bf2-d1fc-966c-2f4a-1e69234547a9",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 320,
+        "h": 160
+      }
     },
     "c7133a1e-e79e-4200-d8e1-30fb712a0f27": {
       "id": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "type": "note",
-      "title": "[Component] CanvasContent",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nProps: CanvasContentProps",
-      "x": 10.975984656016875,
-      "y": 362.2410233568007,
-      "w": 1440,
-      "h": 1320,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b71eefd2-ac36-4416-91a8-a210bc7290f1",
+      "order": "a000002",
+      "geometry": {
+        "x": 10,
+        "y": 1070,
+        "w": 1400,
+        "h": 1800
+      }
+    },
+    "19ce0ce0-cd42-4e84-8d30-4a14643b6409": {
+      "id": "19ce0ce0-cd42-4e84-8d30-4a14643b6409",
+      "schemaName": "container",
+      "parent": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 1380,
+        "h": 1460
+      }
+    },
+    "aaa46444-0295-4e93-baa7-769f9f437afe": {
+      "id": "aaa46444-0295-4e93-baa7-769f9f437afe",
+      "schemaName": "container",
+      "parent": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 1550,
+        "w": 1320,
+        "h": 240
+      }
     },
     "b04d7454-f679-6458-9443-2e685e06778f": {
       "id": "b04d7454-f679-6458-9443-2e685e06778f",
-      "type": "note",
-      "title": "[Component] CanvasView",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nProps: CanvasContentPropsSource: `packages/client-next/src/CanvasView.tsx`\nProps: CanvasViewProps",
-      "x": 10,
-      "y": 70,
-      "w": 1460,
-      "h": 2738.685972258258,
-      "parentId": "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b6dadb17-7924-4a38-8649-4dcb3509372a",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 390,
+        "w": 1440,
+        "h": 3600
+      }
+    },
+    "b71eefd2-ac36-4416-91a8-a210bc7290f1": {
+      "id": "b71eefd2-ac36-4416-91a8-a210bc7290f1",
+      "schemaName": "container",
+      "parent": "b04d7454-f679-6458-9443-2e685e06778f",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 1420,
+        "h": 3140
+      }
+    },
+    "66b67336-2dd8-4552-b7a4-9d02f4a7c286": {
+      "id": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "schemaName": "container",
+      "parent": "b04d7454-f679-6458-9443-2e685e06778f",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 3230,
+        "w": 1280,
+        "h": 360
+      }
     },
     "3c7c205d-339c-e52a-725c-ec8e3d222ab9": {
       "id": "3c7c205d-339c-e52a-725c-ec8e3d222ab9",
-      "type": "note",
-      "title": "[Component] ContextMenu",
-      "body": "Source: `packages/client-next/src/ContextMenu.tsx`\nProps: ContextMenuProps",
-      "x": 141.96510547382272,
-      "y": 127.96951154137312,
-      "w": 447.188199810139,
-      "h": 167.02349997228725,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b71eefd2-ac36-4416-91a8-a210bc7290f1",
+      "order": "a000004",
+      "geometry": {
+        "x": 690,
+        "y": 2890,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "2308689a-d245-4c28-9a5a-e11663b5e865": {
+      "id": "2308689a-d245-4c28-9a5a-e11663b5e865",
+      "schemaName": "container",
+      "parent": "3c7c205d-339c-e52a-725c-ec8e3d222ab9",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "542bfbc0-79cc-4f6c-b5de-2140a7ca285b": {
+      "id": "542bfbc0-79cc-4f6c-b5de-2140a7ca285b",
+      "schemaName": "container",
+      "parent": "3c7c205d-339c-e52a-725c-ec8e3d222ab9",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "a2703f5e-ca11-8f08-e84f-a0b7897b8bab": {
       "id": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
-      "type": "note",
-      "title": "[Component] DocumentPicker",
-      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nProps: DocumentPickerProps",
-      "x": 10,
-      "y": 2828.685972258258,
-      "w": 1360,
-      "h": 160,
-      "parentId": "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b6dadb17-7924-4a38-8649-4dcb3509372a",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 1300,
+        "h": 300
+      }
+    },
+    "ceee8121-1d58-4339-b9f8-d94ea9df9630": {
+      "id": "ceee8121-1d58-4339-b9f8-d94ea9df9630",
+      "schemaName": "container",
+      "parent": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "90d4284d-7f95-4be3-a9b0-5cefc080a5b8": {
+      "id": "90d4284d-7f95-4be3-a9b0-5cefc080a5b8",
+      "schemaName": "container",
+      "parent": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 130,
+        "w": 1280,
+        "h": 160
+      }
     },
     "00828649-0b0e-c009-51c9-6addd10e9ad5": {
       "id": "00828649-0b0e-c009-51c9-6addd10e9ad5",
-      "type": "note",
-      "title": "[Component] FreeformEdge",
-      "body": "Source: `packages/client-next/src/FreeformEdge.tsx`\nProps: FreeformEdgeProps",
-      "x": 10,
-      "y": 1590,
-      "w": 680,
-      "h": 160,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b71eefd2-ac36-4416-91a8-a210bc7290f1",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 980,
+        "h": 240
+      }
+    },
+    "bcfe2b0d-238e-449f-8e2a-ba8e66c53b79": {
+      "id": "bcfe2b0d-238e-449f-8e2a-ba8e66c53b79",
+      "schemaName": "container",
+      "parent": "00828649-0b0e-c009-51c9-6addd10e9ad5",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "34c82b66-5273-461c-9dad-c4d73b45153c": {
+      "id": "34c82b66-5273-461c-9dad-c4d73b45153c",
+      "schemaName": "container",
+      "parent": "00828649-0b0e-c009-51c9-6addd10e9ad5",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 640,
+        "h": 160
+      }
     },
     "23121e4d-ec17-7c5d-aeb3-905c2e277741": {
       "id": "23121e4d-ec17-7c5d-aeb3-905c2e277741",
-      "type": "note",
-      "title": "[Component] MarkdownEditor",
-      "body": "Source: `packages/client-next/src/MarkdownEditor.tsx`\nProps: MarkdownEditorProps",
-      "x": 850.7525048074875,
-      "y": 164.41376386321775,
-      "w": 1400,
-      "h": 500,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "01154952-4e86-4aa7-8af6-bae4557fa31a",
+      "order": "a000002",
+      "geometry": {
+        "x": 10,
+        "y": 210,
+        "w": 1320,
+        "h": 500
+      }
+    },
+    "897310cd-7b22-4d95-b60c-4c4c785c1735": {
+      "id": "897310cd-7b22-4d95-b60c-4c4c785c1735",
+      "schemaName": "container",
+      "parent": "23121e4d-ec17-7c5d-aeb3-905c2e277741",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "6546f527-f6d5-477b-ab33-fbf8f30c7e98": {
+      "id": "6546f527-f6d5-477b-ab33-fbf8f30c7e98",
+      "schemaName": "container",
+      "parent": "23121e4d-ec17-7c5d-aeb3-905c2e277741",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 980,
+        "h": 420
+      }
     },
     "8afb8c02-dcb0-1165-97de-c1fd5900830b": {
       "id": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "type": "note",
-      "title": "[Component] NoteNode",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nProps: CanvasContentPropsSource: `packages/client-next/src/NoteNode.tsx`\nProps: NoteNodeProps",
-      "x": 2722.5032722839433,
-      "y": 167.81838424946974,
-      "w": 1420,
-      "h": 967.0234999722873,
-      "parentId": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "19ce0ce0-cd42-4e84-8d30-4a14643b6409",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 330,
+        "w": 1360,
+        "h": 1120
+      }
+    },
+    "01154952-4e86-4aa7-8af6-bae4557fa31a": {
+      "id": "01154952-4e86-4aa7-8af6-bae4557fa31a",
+      "schemaName": "container",
+      "parent": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 1340,
+        "h": 860
+      }
+    },
+    "741edb2c-5202-4842-93a8-28bdac488683": {
+      "id": "741edb2c-5202-4842-93a8-28bdac488683",
+      "schemaName": "container",
+      "parent": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 950,
+        "w": 320,
+        "h": 160
+      }
     },
     "29810632-4836-ce25-79b1-685829888d7a": {
       "id": "29810632-4836-ce25-79b1-685829888d7a",
-      "type": "note",
-      "title": "[Component] PortalNode",
-      "body": "Source: `packages/client-next/src/PortalNode.tsx`\nProps: PortalNodeProps",
-      "x": 10,
-      "y": 970,
-      "w": 680,
-      "h": 160,
-      "parentId": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "19ce0ce0-cd42-4e84-8d30-4a14643b6409",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 980,
+        "h": 240
+      }
+    },
+    "b6bf6675-0489-4302-8151-dec91d590dcc": {
+      "id": "b6bf6675-0489-4302-8151-dec91d590dcc",
+      "schemaName": "container",
+      "parent": "29810632-4836-ce25-79b1-685829888d7a",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "31122ad0-e5b5-4857-8506-dfbfd0542dc8": {
+      "id": "31122ad0-e5b5-4857-8506-dfbfd0542dc8",
+      "schemaName": "container",
+      "parent": "29810632-4836-ce25-79b1-685829888d7a",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 640,
+        "h": 160
+      }
     },
     "78e8440c-0bf0-dd4e-8589-20d633bc569b": {
       "id": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "type": "note",
-      "title": "[Component] Canvas",
-      "body": "Source: `packages/cactus/src/Canvas.tsx`\nProps: CanvasProps",
-      "x": 69.44174793094082,
-      "y": 1709.415127041241,
-      "w": 1400,
-      "h": 658.6859722582582,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "b71eefd2-ac36-4416-91a8-a210bc7290f1",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 330,
+        "w": 1360,
+        "h": 720
+      }
+    },
+    "034da766-0b63-4037-9e1e-068cb95c6135": {
+      "id": "034da766-0b63-4037-9e1e-068cb95c6135",
+      "schemaName": "container",
+      "parent": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 660,
+        "h": 200
+      }
+    },
+    "4b080aad-1a99-4e6e-a320-a264e255dc82": {
+      "id": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "schemaName": "container",
+      "parent": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 290,
+        "w": 1340,
+        "h": 420
+      }
     },
     "eee92e02-202a-c03e-b690-e0f65ae1384c": {
       "id": "eee92e02-202a-c03e-b690-e0f65ae1384c",
-      "type": "note",
-      "title": "[Component] ConnectionHandle",
-      "body": "Source: `packages/cactus/src/ConnectionHandle.tsx`\nProps: ConnectionHandleProps",
-      "x": 43.15020718694695,
-      "y": 774.7372499166511,
-      "w": 320,
-      "h": 80,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "01154952-4e86-4aa7-8af6-bae4557fa31a",
+      "order": "a000003",
+      "geometry": {
+        "x": 10,
+        "y": 730,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "062880c4-8843-4c6a-a2f9-141113a4d219": {
+      "id": "062880c4-8843-4c6a-a2f9-141113a4d219",
+      "schemaName": "container",
+      "parent": "eee92e02-202a-c03e-b690-e0f65ae1384c",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "944e3384-a8b6-4481-a8ab-2cdc38fb43cb": {
+      "id": "944e3384-a8b6-4481-a8ab-2cdc38fb43cb",
+      "schemaName": "container",
+      "parent": "eee92e02-202a-c03e-b690-e0f65ae1384c",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "e3e29b56-0ce9-9102-0f0c-1553aeb7f7e2": {
       "id": "e3e29b56-0ce9-9102-0f0c-1553aeb7f7e2",
-      "type": "note",
-      "title": "[Component] ConnectionPreview",
-      "body": "Source: `packages/cactus/src/ConnectionPreview.tsx`\nProps: ConnectionPreviewProps",
-      "x": 685.8333129882812,
-      "y": 205,
-      "w": 413.3333435058594,
-      "h": 190,
-      "parentId": null,
-      "kind": "component"
+      "schemaName": "component",
+      "parent": null,
+      "order": "a000012",
+      "geometry": {
+        "x": 1540,
+        "y": 0,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "b2e6a7b4-081e-4871-a1d1-9129014ce44b": {
+      "id": "b2e6a7b4-081e-4871-a1d1-9129014ce44b",
+      "schemaName": "container",
+      "parent": "e3e29b56-0ce9-9102-0f0c-1553aeb7f7e2",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "a7a33c39-fbc0-4b3c-a85e-5689859ba405": {
+      "id": "a7a33c39-fbc0-4b3c-a85e-5689859ba405",
+      "schemaName": "container",
+      "parent": "e3e29b56-0ce9-9102-0f0c-1553aeb7f7e2",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "9c913f0e-e016-a380-ca85-c9c4e4dfe7c4": {
       "id": "9c913f0e-e016-a380-ca85-c9c4e4dfe7c4",
-      "type": "note",
-      "title": "[Component] CrossGrid",
-      "body": "Source: `packages/cactus/src/CrossGrid.tsx`\nProps: CrossGridProps",
-      "x": 1100,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "component"
+      "schemaName": "component",
+      "parent": null,
+      "order": "a000013",
+      "geometry": {
+        "x": 2240,
+        "y": 0,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "89322e8e-6109-43f7-9938-5acea0b98d08": {
+      "id": "89322e8e-6109-43f7-9938-5acea0b98d08",
+      "schemaName": "container",
+      "parent": "9c913f0e-e016-a380-ca85-c9c4e4dfe7c4",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "f5cc9877-5f2a-4551-83e4-bf0af9f50cae": {
+      "id": "f5cc9877-5f2a-4551-83e4-bf0af9f50cae",
+      "schemaName": "container",
+      "parent": "9c913f0e-e016-a380-ca85-c9c4e4dfe7c4",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "059a3285-ad00-3b27-ecdd-f1b01916c19b": {
       "id": "059a3285-ad00-3b27-ecdd-f1b01916c19b",
-      "type": "note",
-      "title": "[Component] DotGrid",
-      "body": "Source: `packages/cactus/src/DotGrid.tsx`\nProps: DotGridProps",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "034da766-0b63-4037-9e1e-068cb95c6135",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "02e114b2-d591-43e8-a27c-6406ecdc3f04": {
+      "id": "02e114b2-d591-43e8-a27c-6406ecdc3f04",
+      "schemaName": "container",
+      "parent": "059a3285-ad00-3b27-ecdd-f1b01916c19b",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "5359c6cc-010a-49d1-8709-fe58781d974d": {
+      "id": "5359c6cc-010a-49d1-8709-fe58781d974d",
+      "schemaName": "container",
+      "parent": "059a3285-ad00-3b27-ecdd-f1b01916c19b",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "49ed6f78-6422-6dc7-2d0f-c80398948de5": {
       "id": "49ed6f78-6422-6dc7-2d0f-c80398948de5",
-      "type": "note",
-      "title": "[Component] DragHandle",
-      "body": "Source: `packages/cactus/src/DragHandle.tsx`\nProps: DragHandleProps",
-      "x": 350,
-      "y": 777.0234999722873,
-      "w": 320,
-      "h": 80,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "01154952-4e86-4aa7-8af6-bae4557fa31a",
+      "order": "a000001",
+      "geometry": {
+        "x": 670,
+        "y": 70,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "7d424c91-f4dc-4bba-8cc3-35278c80d945": {
+      "id": "7d424c91-f4dc-4bba-8cc3-35278c80d945",
+      "schemaName": "container",
+      "parent": "49ed6f78-6422-6dc7-2d0f-c80398948de5",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "cb6a4fd0-3ea0-4a68-bdc1-e9320fa86f30": {
+      "id": "cb6a4fd0-3ea0-4a68-bdc1-e9320fa86f30",
+      "schemaName": "container",
+      "parent": "49ed6f78-6422-6dc7-2d0f-c80398948de5",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "351f08a3-b21c-34e4-b892-eb102da9e203": {
       "id": "351f08a3-b21c-34e4-b892-eb102da9e203",
-      "type": "note",
-      "title": "[Component] EdgeLabel",
-      "body": "Source: `packages/cactus/src/EdgeLabel.tsx`\nProps: EdgeLabelProps",
-      "x": 1480,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "component"
+      "schemaName": "component",
+      "parent": null,
+      "order": "a000016",
+      "geometry": {
+        "x": 2940,
+        "y": 0,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "44828e1f-23b8-4963-bc00-ca8e247bd321": {
+      "id": "44828e1f-23b8-4963-bc00-ca8e247bd321",
+      "schemaName": "container",
+      "parent": "351f08a3-b21c-34e4-b892-eb102da9e203",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "672b74f5-01d2-4778-8d70-89a2a6355a64": {
+      "id": "672b74f5-01d2-4778-8d70-89a2a6355a64",
+      "schemaName": "container",
+      "parent": "351f08a3-b21c-34e4-b892-eb102da9e203",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "d23a886f-73ab-1675-bd94-ec52f2b4fd6c": {
       "id": "d23a886f-73ab-1675-bd94-ec52f2b4fd6c",
-      "type": "note",
-      "title": "[Component] NodeContainer",
-      "body": "Source: `packages/cactus/src/NodeContainer.tsx`\nProps: NodeContainerProps",
-      "x": 690,
-      "y": 777.0234999722873,
-      "w": 320,
-      "h": 80,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "01154952-4e86-4aa7-8af6-bae4557fa31a",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "175320d7-eb79-4edf-89bf-ed81038434ab": {
+      "id": "175320d7-eb79-4edf-89bf-ed81038434ab",
+      "schemaName": "container",
+      "parent": "d23a886f-73ab-1675-bd94-ec52f2b4fd6c",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "9ca18a76-17ef-4c66-8bcd-8230baf8ee55": {
+      "id": "9ca18a76-17ef-4c66-8bcd-8230baf8ee55",
+      "schemaName": "container",
+      "parent": "d23a886f-73ab-1675-bd94-ec52f2b4fd6c",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "9174a082-62a1-89ab-ed3d-9b214079c059": {
       "id": "9174a082-62a1-89ab-ed3d-9b214079c059",
-      "type": "note",
-      "title": "[Component] NodeShell",
-      "body": "Source: `packages/cactus/src/NodeShell.tsx`\nProps: NodeShellProps",
-      "x": 1860,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "component"
+      "schemaName": "component",
+      "parent": null,
+      "order": "a000018",
+      "geometry": {
+        "x": 3640,
+        "y": 0,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "a4847651-4013-4f45-9280-da1a23534d79": {
+      "id": "a4847651-4013-4f45-9280-da1a23534d79",
+      "schemaName": "container",
+      "parent": "9174a082-62a1-89ab-ed3d-9b214079c059",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "29f3af04-d431-4d8a-be3c-ae7d5e8461c7": {
+      "id": "29f3af04-d431-4d8a-be3c-ae7d5e8461c7",
+      "schemaName": "container",
+      "parent": "9174a082-62a1-89ab-ed3d-9b214079c059",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
     },
     "76a8c028-939e-abe7-d691-33ab4435d7c3": {
       "id": "76a8c028-939e-abe7-d691-33ab4435d7c3",
-      "type": "note",
-      "title": "[Component] ResizeHandle",
-      "body": "Source: `packages/cactus/src/ResizeHandle.tsx`\nProps: ResizeHandleProps",
-      "x": 1030,
-      "y": 777.0234999722873,
-      "w": 320,
-      "h": 80,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "component"
+      "schemaName": "component",
+      "parent": "01154952-4e86-4aa7-8af6-bae4557fa31a",
+      "order": "a000004",
+      "geometry": {
+        "x": 670,
+        "y": 730,
+        "w": 640,
+        "h": 120
+      }
+    },
+    "9b0676fb-e98d-4a87-a0d8-81458868847d": {
+      "id": "9b0676fb-e98d-4a87-a0d8-81458868847d",
+      "schemaName": "container",
+      "parent": "76a8c028-939e-abe7-d691-33ab4435d7c3",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "49cc97dd-8070-4a25-8bdc-47b4dc20ce09": {
+      "id": "49cc97dd-8070-4a25-8bdc-47b4dc20ce09",
+      "schemaName": "container",
+      "parent": "76a8c028-939e-abe7-d691-33ab4435d7c3",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 40
+      }
+    },
+    "98a55444-7614-7206-5334-e286376c39c9": {
+      "id": "98a55444-7614-7206-5334-e286376c39c9",
+      "schemaName": "hook",
+      "parent": null,
+      "order": "a000020",
+      "geometry": {
+        "x": 4340,
+        "y": 0,
+        "w": 320,
+        "h": 160
+      }
     },
     "457f6e38-07ae-626a-493a-7f40e33bbed2": {
       "id": "457f6e38-07ae-626a-493a-7f40e33bbed2",
-      "type": "note",
-      "title": "[Hook] createCompartmentExtension",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`",
-      "x": 10,
-      "y": 70,
-      "w": 340,
-      "h": 160,
-      "parentId": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": null,
+      "order": "a000021",
+      "geometry": {
+        "x": 4720,
+        "y": 0,
+        "w": 320,
+        "h": 160
+      }
     },
     "d8b27e56-cc0f-8313-2d57-4c6ebad43898": {
       "id": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
-      "type": "note",
-      "title": "[Hook] createCodeMirror",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`",
-      "x": 836.0539279595864,
-      "y": 70,
-      "w": 1380,
-      "h": 240,
-      "parentId": "23121e4d-ec17-7c5d-aeb3-905c2e277741",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "6546f527-f6d5-477b-ab33-fbf8f30c7e98",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 960,
+        "h": 160
+      }
     },
     "38640ccd-d41d-5ed0-ba95-9ef099a5bff5": {
       "id": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
-      "type": "note",
-      "title": "[Hook] createEditorControlledValue",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`",
-      "x": 10,
-      "y": 330,
-      "w": 1020,
-      "h": 160,
-      "parentId": "23121e4d-ec17-7c5d-aeb3-905c2e277741",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "6546f527-f6d5-477b-ab33-fbf8f30c7e98",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 250,
+        "w": 960,
+        "h": 160
+      }
     },
     "5e80c645-fab2-4536-c26c-6282327eb8fd": {
       "id": "5e80c645-fab2-4536-c26c-6282327eb8fd",
-      "type": "note",
-      "title": "[Hook] useCanvasContext",
-      "body": "Source: `packages/cactus/src/CanvasContext.ts`",
-      "x": 710,
-      "y": 970,
-      "w": 320,
-      "h": 80,
-      "parentId": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "aaa46444-0295-4e93-baa7-769f9f437afe",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "ecaf6c07-dcd6-204f-ac04-84300a6d2be4": {
       "id": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
-      "type": "note",
-      "title": "[Hook] createPerformanceMonitor",
-      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`",
-      "x": 2135.976920189865,
-      "y": 182.8977857660729,
-      "w": 1430.9575710079719,
-      "h": 371.5340694696274,
-      "parentId": null,
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": null,
+      "order": "a000025",
+      "geometry": {
+        "x": 5100,
+        "y": 0,
+        "w": 1280,
+        "h": 160
+      }
     },
     "3af0b10b-926c-b17d-22a0-99bb903f4934": {
       "id": "3af0b10b-926c-b17d-22a0-99bb903f4934",
-      "type": "note",
-      "title": "[Hook] useBoxSelect",
-      "body": "Source: `packages/cactus/src/useBoxSelect.ts`",
-      "x": 350,
-      "y": 70,
-      "w": 680,
-      "h": 160,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 640,
+        "h": 160
+      }
     },
     "516857cd-0164-39f8-5dbb-1dd74ce5361c": {
       "id": "516857cd-0164-39f8-5dbb-1dd74ce5361c",
-      "type": "note",
-      "title": "[Hook] useConnectionDrag",
-      "body": "Source: `packages/cactus/src/useConnectionDrag.ts`",
-      "x": 1050,
-      "y": 70,
-      "w": 340,
-      "h": 160,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "order": "a000001",
+      "geometry": {
+        "x": 670,
+        "y": 70,
+        "w": 320,
+        "h": 160
+      }
     },
     "19354d72-1cce-2ad9-58fb-d5971814d34c": {
       "id": "19354d72-1cce-2ad9-58fb-d5971814d34c",
-      "type": "note",
-      "title": "[Hook] useKeyboardShortcuts",
-      "body": "Source: `packages/cactus/src/useKeyboardShortcuts.ts`",
-      "x": 2603.9964170584576,
-      "y": 42.295102754547266,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": null,
+      "order": "a000028",
+      "geometry": {
+        "x": 6440,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "5e203f07-e951-a999-0a2e-675feee281d4": {
       "id": "5e203f07-e951-a999-0a2e-675feee281d4",
-      "type": "note",
-      "title": "[Hook] useNodeDrag",
-      "body": "Source: `packages/cactus/src/useNodeDrag.ts`",
-      "x": 1050,
-      "y": 970,
-      "w": 340,
-      "h": 160,
-      "parentId": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "aaa46444-0295-4e93-baa7-769f9f437afe",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 320,
+        "h": 160
+      }
     },
     "1a3d0899-bce5-a196-c328-869ce0663d17": {
       "id": "1a3d0899-bce5-a196-c328-869ce0663d17",
-      "type": "note",
-      "title": "[Hook] useNodeResize",
-      "body": "Source: `packages/cactus/src/useNodeResize.ts`",
-      "x": 10,
-      "y": 1150,
-      "w": 340,
-      "h": 160,
-      "parentId": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "aaa46444-0295-4e93-baa7-769f9f437afe",
+      "order": "a000002",
+      "geometry": {
+        "x": 670,
+        "y": 70,
+        "w": 320,
+        "h": 160
+      }
     },
     "e924326f-bc63-06ac-116a-bc38cbe88970": {
       "id": "e924326f-bc63-06ac-116a-bc38cbe88970",
-      "type": "note",
-      "title": "[Hook] useSelection",
-      "body": "Source: `packages/cactus/src/useSelection.ts`",
-      "x": 10,
-      "y": 250,
-      "w": 452.31609975988715,
-      "h": 298.6859722582582,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "order": "a000002",
+      "geometry": {
+        "x": 1010,
+        "y": 70,
+        "w": 320,
+        "h": 160
+      }
     },
     "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9": {
       "id": "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9",
-      "type": "note",
-      "title": "[Hook] useViewport",
-      "body": "Source: `packages/cactus/src/useViewport.ts`",
-      "x": 482.31609975988715,
-      "y": 250,
-      "w": 680,
-      "h": 160,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "hook"
+      "schemaName": "hook",
+      "parent": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "order": "a000003",
+      "geometry": {
+        "x": 10,
+        "y": 250,
+        "w": 640,
+        "h": 160
+      }
     },
     "3aebd475-3a69-e67b-8f6b-a806338e258b": {
       "id": "3aebd475-3a69-e67b-8f6b-a806338e258b",
-      "type": "note",
-      "title": "[Signal] view",
-      "body": "Source: `packages/client-next/src/App.tsx`\nInitial: `{ state: 'picker' }`\nOwner: App",
-      "x": 10,
-      "y": 3008.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "38a51d44-7cd9-4bf9-803b-346a38c8b408",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "0d06912e-740f-829f-136d-932551aab67f": {
       "id": "0d06912e-740f-829f-136d-932551aab67f",
-      "type": "note",
-      "title": "[Signal] dropdownOpen",
-      "body": "Source: `packages/client-next/src/CanvasToolbar.tsx`\nInitial: `false`\nOwner: CanvasToolbar",
-      "x": 9.02397960148492,
-      "y": 108.06433088961148,
-      "w": 320,
-      "h": 80,
-      "parentId": "c6e18bf2-d1fc-966c-2f4a-1e69234547a9",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "e8cd5ca7-fd03-4999-8825-03baf6c56957",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "de827ee8-6e0e-1be5-eb3c-01f3b07808e1": {
       "id": "de827ee8-6e0e-1be5-eb3c-01f3b07808e1",
-      "type": "note",
-      "title": "[Signal] loading",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nInitial: `true`\nOwner: CanvasView",
-      "x": 3000,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": null,
+      "order": "a000035",
+      "geometry": {
+        "x": 6800,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "070b79d7-8aec-0ce5-d548-87ae75a8254b": {
       "id": "070b79d7-8aec-0ce5-d548-87ae75a8254b",
-      "type": "note",
-      "title": "[Signal] error",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nInitial: `null`\nOwner: CanvasView",
-      "x": 10,
-      "y": 2448.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
+    },
+    "bd61b4b7-f64a-0a35-b4e8-d8785b860bbf": {
+      "id": "bd61b4b7-f64a-0a35-b4e8-d8785b860bbf",
+      "schemaName": "signal",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000002",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "8d09db89-8134-6908-24e6-37ad9c6e6e52": {
       "id": "8d09db89-8134-6908-24e6-37ad9c6e6e52",
-      "type": "note",
-      "title": "[Signal] documents",
-      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `[]`\nOwner: DocumentPicker",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "90d4284d-7f95-4be3-a9b0-5cefc080a5b8",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "2f853f2f-d24c-48dd-ee64-debec862448b": {
       "id": "2f853f2f-d24c-48dd-ee64-debec862448b",
-      "type": "note",
-      "title": "[Signal] loading",
-      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `true`\nOwner: DocumentPicker",
-      "x": 350,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "90d4284d-7f95-4be3-a9b0-5cefc080a5b8",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "b45fa3da-5c6e-e1a2-c780-7429aae9985e": {
       "id": "b45fa3da-5c6e-e1a2-c780-7429aae9985e",
-      "type": "note",
-      "title": "[Signal] newName",
-      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `''`\nOwner: DocumentPicker",
-      "x": 690,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "90d4284d-7f95-4be3-a9b0-5cefc080a5b8",
+      "order": "a000002",
+      "geometry": {
+        "x": 650,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "e5accd68-a0a7-fe42-c67e-33b88fbeb9f1": {
       "id": "e5accd68-a0a7-fe42-c67e-33b88fbeb9f1",
-      "type": "note",
-      "title": "[Signal] creating",
-      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `false`\nOwner: DocumentPicker",
-      "x": 1030,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "a2703f5e-ca11-8f08-e84f-a0b7897b8bab",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "90d4284d-7f95-4be3-a9b0-5cefc080a5b8",
+      "order": "a000003",
+      "geometry": {
+        "x": 970,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "ba7d2024-a0d0-bfce-8285-feaf9889505e": {
       "id": "ba7d2024-a0d0-bfce-8285-feaf9889505e",
-      "type": "note",
-      "title": "[Signal] editing",
-      "body": "Source: `packages/client-next/src/FreeformEdge.tsx`\nInitial: `false`\nOwner: FreeformEdge",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "00828649-0b0e-c009-51c9-6addd10e9ad5",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "34c82b66-5273-461c-9dad-c4d73b45153c",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "8d136ceb-434d-a6ab-1a93-31356f2a88c2": {
       "id": "8d136ceb-434d-a6ab-1a93-31356f2a88c2",
-      "type": "note",
-      "title": "[Signal] editValue",
-      "body": "Source: `packages/client-next/src/FreeformEdge.tsx`\nInitial: `''`\nOwner: FreeformEdge",
-      "x": 350,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "00828649-0b0e-c009-51c9-6addd10e9ad5",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "34c82b66-5273-461c-9dad-c4d73b45153c",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "32a70ded-81a2-495e-b810-ab576d9ce969": {
       "id": "32a70ded-81a2-495e-b810-ab576d9ce969",
-      "type": "note",
-      "title": "[Signal] localTitle",
-      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nInitial: `props.note.title`\nOwner: NoteNode",
-      "x": 230.62040934033664,
-      "y": 955.8981640662469,
-      "w": 320,
-      "h": 80,
-      "parentId": "8afb8c02-dcb0-1165-97de-c1fd5900830b",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "741edb2c-5202-4842-93a8-28bdac488683",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "f7494f74-ab5f-145d-e6f2-540c0005e9d4": {
       "id": "f7494f74-ab5f-145d-e6f2-540c0005e9d4",
-      "type": "note",
-      "title": "[Signal] contextMenu",
-      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nInitial: `null`\nOwner: NoteNode",
-      "x": 3380,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": null,
+      "order": "a000045",
+      "geometry": {
+        "x": 7160,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "fc0132a4-ce56-084c-77a1-69c2f8464c67": {
       "id": "fc0132a4-ce56-084c-77a1-69c2f8464c67",
-      "type": "note",
-      "title": "[Signal] contextMenu",
-      "body": "Source: `packages/client-next/src/PortalNode.tsx`\nInitial: `null`\nOwner: PortalNode",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "29810632-4836-ce25-79b1-685829888d7a",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "31122ad0-e5b5-4857-8506-dfbfd0542dc8",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "24708ef8-e794-9f68-1906-d1462eae40c8": {
       "id": "24708ef8-e794-9f68-1906-d1462eae40c8",
-      "type": "note",
-      "title": "[Signal] ref",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror",
-      "x": 375.68004370858944,
-      "y": 102.62432910270472,
-      "w": 320,
-      "h": 80,
-      "parentId": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "68e821e2-fd5c-7459-3262-918d84130391": {
       "id": "68e821e2-fd5c-7459-3262-918d84130391",
-      "type": "note",
-      "title": "[Signal] editorView",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror",
-      "x": 710,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "e9d5ca53-c716-4574-b080-2c47e0374190": {
       "id": "e9d5ca53-c716-4574-b080-2c47e0374190",
-      "type": "note",
-      "title": "[Signal] theme",
-      "body": "Source: `packages/client-next/src/theme.ts`\nInitial: `initial`\nOwner: __module__",
-      "x": 3577.170366365787,
-      "y": 739.9225076539676,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": null,
+      "order": "a000049",
+      "geometry": {
+        "x": 7520,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "1c6065cc-aaf1-0816-ec2d-1711b71f5709": {
       "id": "1c6065cc-aaf1-0816-ec2d-1711b71f5709",
-      "type": "note",
-      "title": "[Signal] ctrlHeld",
-      "body": "Source: `packages/cactus/src/Canvas.tsx`\nInitial: `false`\nOwner: Canvas",
-      "x": 10,
-      "y": 568.6859722582582,
-      "w": 320,
-      "h": 80,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "order": "a000004",
+      "geometry": {
+        "x": 670,
+        "y": 250,
+        "w": 300,
+        "h": 80
+      }
     },
     "b497bf6a-922a-de5a-2946-2a862f9843d3": {
       "id": "b497bf6a-922a-de5a-2946-2a862f9843d3",
-      "type": "note",
-      "title": "[Signal] factor",
-      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `initialFactor`\nOwner: createPerformanceMonitor",
-      "x": 21.431166554225385,
-      "y": 154.59024737107205,
-      "w": 320,
-      "h": 80,
-      "parentId": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "3fe299d2-97b1-bda5-0153-a6e762ce5485": {
       "id": "3fe299d2-97b1-bda5-0153-a6e762ce5485",
-      "type": "note",
-      "title": "[Signal] fps",
-      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `0`\nOwner: createPerformanceMonitor",
-      "x": 359.1448327746336,
-      "y": 124.8693315436239,
-      "w": 320,
-      "h": 80,
-      "parentId": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "d74f082c-dfce-4d44-f172-bcc05fa18a0b": {
       "id": "d74f082c-dfce-4d44-f172-bcc05fa18a0b",
-      "type": "note",
-      "title": "[Signal] refreshRate",
-      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `60`\nOwner: createPerformanceMonitor",
-      "x": 717.4345820478563,
-      "y": 130.5848729587588,
-      "w": 320,
-      "h": 80,
-      "parentId": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
+      "order": "a000002",
+      "geometry": {
+        "x": 650,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "6db973c5-5361-851f-bde5-d0c58c6c323a": {
       "id": "6db973c5-5361-851f-bde5-d0c58c6c323a",
-      "type": "note",
-      "title": "[Signal] active",
-      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `false`\nOwner: createPerformanceMonitor",
-      "x": 1080.2968314323516,
-      "y": 168.30753839500022,
-      "w": 320,
-      "h": 80,
-      "parentId": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "ecaf6c07-dcd6-204f-ac04-84300a6d2be4",
+      "order": "a000003",
+      "geometry": {
+        "x": 970,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "1ae9fac1-df2c-3c28-f133-76497584a036": {
       "id": "1ae9fac1-df2c-3c28-f133-76497584a036",
-      "type": "note",
-      "title": "[Signal] selectedIds",
-      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nInitial: `[]`\nOwner: useBoxSelect",
-      "x": 4140,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": null,
+      "order": "a000055",
+      "geometry": {
+        "x": 7880,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "f51fe32d-5da9-2976-7175-aaececc1e732": {
       "id": "f51fe32d-5da9-2976-7175-aaececc1e732",
-      "type": "note",
-      "title": "[Signal] selectionRect",
-      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nInitial: `null`\nOwner: useBoxSelect",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "3af0b10b-926c-b17d-22a0-99bb903f4934",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "3af0b10b-926c-b17d-22a0-99bb903f4934",
+      "order": "a000001",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "f61158d5-f84c-2e4f-d0ad-4794ac193b89": {
       "id": "f61158d5-f84c-2e4f-d0ad-4794ac193b89",
-      "type": "note",
-      "title": "[Signal] connectionDrag",
-      "body": "Source: `packages/cactus/src/useConnectionDrag.ts`\nInitial: `null`\nOwner: useConnectionDrag",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "516857cd-0164-39f8-5dbb-1dd74ce5361c",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "516857cd-0164-39f8-5dbb-1dd74ce5361c",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "b544ff23-87c8-a20c-5f3a-7d7242936437": {
       "id": "b544ff23-87c8-a20c-5f3a-7d7242936437",
-      "type": "note",
-      "title": "[Signal] draggingNodeId",
-      "body": "Source: `packages/cactus/src/useNodeDrag.ts`\nInitial: `null`\nOwner: useNodeDrag",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "5e203f07-e951-a999-0a2e-675feee281d4",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "5e203f07-e951-a999-0a2e-675feee281d4",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "b2786e39-7c99-b790-b098-0ec577c2c907": {
       "id": "b2786e39-7c99-b790-b098-0ec577c2c907",
-      "type": "note",
-      "title": "[Signal] resizingNodeId",
-      "body": "Source: `packages/cactus/src/useNodeResize.ts`\nInitial: `null`\nOwner: useNodeResize",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "1a3d0899-bce5-a196-c328-869ce0663d17",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "1a3d0899-bce5-a196-c328-869ce0663d17",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "67603458-dc52-ed84-8434-e22e8e98ca9f": {
       "id": "67603458-dc52-ed84-8434-e22e8e98ca9f",
-      "type": "note",
-      "title": "[Signal] selectedIds",
-      "body": "Source: `packages/cactus/src/useSelection.ts`\nInitial: `[]`\nOwner: useSelection",
-      "x": 10,
-      "y": 70,
-      "w": 432.31609975988715,
-      "h": 218.6859722582582,
-      "parentId": "e924326f-bc63-06ac-116a-bc38cbe88970",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "e924326f-bc63-06ac-116a-bc38cbe88970",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "b6be3da6-024e-b463-6ac5-ebbad246e3e5": {
       "id": "b6be3da6-024e-b463-6ac5-ebbad246e3e5",
-      "type": "note",
-      "title": "[Signal] transform",
-      "body": "Source: `packages/cactus/src/useViewport.ts`\nInitial: `{ x: 0, y: 0, k: 1 }`\nOwner: useViewport",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9",
-      "kind": "signal"
+      "schemaName": "signal",
+      "parent": "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "e92e7284-bd72-ba33-7cf9-03ab9ff46479": {
       "id": "e92e7284-bd72-ba33-7cf9-03ab9ff46479",
-      "type": "note",
-      "title": "[Store] doc",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 350,
-      "y": 2448.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "store"
+      "schemaName": "store",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000003",
+      "geometry": {
+        "x": 650,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "22ca35c8-99dc-35d7-e743-c73fd12316e3": {
       "id": "22ca35c8-99dc-35d7-e743-c73fd12316e3",
-      "type": "note",
-      "title": "[Store] live",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 690,
-      "y": 2448.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "store"
+      "schemaName": "store",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000004",
+      "geometry": {
+        "x": 970,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "317587fb-8218-f79b-5d7d-f78873fc5394": {
       "id": "317587fb-8218-f79b-5d7d-f78873fc5394",
-      "type": "note",
-      "title": "[Store] sources",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 1030,
-      "y": 2448.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "store"
+      "schemaName": "store",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000005",
+      "geometry": {
+        "x": 10,
+        "y": 170,
+        "w": 300,
+        "h": 80
+      }
     },
     "c518d6c2-3803-a2a7-37f2-eff568323a46": {
       "id": "c518d6c2-3803-a2a7-37f2-eff568323a46",
-      "type": "note",
-      "title": "[Store] sourceMap",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 10,
-      "y": 2548.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "store"
+      "schemaName": "store",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000006",
+      "geometry": {
+        "x": 330,
+        "y": 170,
+        "w": 300,
+        "h": 80
+      }
+    },
+    "68543fce-0022-d437-4452-8bce85269934": {
+      "id": "68543fce-0022-d437-4452-8bce85269934",
+      "schemaName": "store",
+      "parent": "98a55444-7614-7206-5334-e286376c39c9",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "4f70fd42-9ec3-a43c-6db5-7efbb4187f31": {
       "id": "4f70fd42-9ec3-a43c-6db5-7efbb4187f31",
-      "type": "note",
-      "title": "[Memo] mergedNotes",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 350,
-      "y": 2548.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "memo"
+      "schemaName": "memo",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000007",
+      "geometry": {
+        "x": 650,
+        "y": 170,
+        "w": 300,
+        "h": 80
+      }
     },
     "ec3943ca-e596-ee35-e80e-653099b6af7b": {
       "id": "ec3943ca-e596-ee35-e80e-653099b6af7b",
-      "type": "note",
-      "title": "[Memo] edgeList",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 690,
-      "y": 2548.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "memo"
+      "schemaName": "memo",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000008",
+      "geometry": {
+        "x": 970,
+        "y": 170,
+        "w": 300,
+        "h": 80
+      }
     },
     "a2da53ca-df05-9284-7ae7-97503314a9a9": {
       "id": "a2da53ca-df05-9284-7ae7-97503314a9a9",
-      "type": "note",
-      "title": "[Memo] newAncestors",
-      "body": "Source: `packages/client-next/src/PortalNode.tsx`\nOwner: PortalNode",
-      "x": 350,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "29810632-4836-ce25-79b1-685829888d7a",
-      "kind": "memo"
+      "schemaName": "memo",
+      "parent": "31122ad0-e5b5-4857-8506-dfbfd0542dc8",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "6f57cbb6-7ffd-c522-8496-748fac81ed43": {
       "id": "6f57cbb6-7ffd-c522-8496-748fac81ed43",
-      "type": "note",
-      "title": "[Memo] memoizedCode",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createEditorControlledValue",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
-      "kind": "memo"
+      "schemaName": "memo",
+      "parent": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "f913c543-b06b-80c9-f5ea-da3492d96c04": {
       "id": "f913c543-b06b-80c9-f5ea-da3492d96c04",
-      "type": "note",
-      "title": "[Effect:mount] mount:1",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent",
-      "x": 4520,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000071",
+      "geometry": {
+        "x": 8240,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "7fa567a5-f7b5-1521-13d0-4c2f94d7f9b8": {
       "id": "7fa567a5-f7b5-1521-13d0-4c2f94d7f9b8",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent",
-      "x": 4900,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000072",
+      "geometry": {
+        "x": 8600,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "0a70035a-6fce-b54d-058c-aa631cbb82a9": {
       "id": "0a70035a-6fce-b54d-058c-aa631cbb82a9",
-      "type": "note",
-      "title": "[Effect:mount] mount:2",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent",
-      "x": 370,
-      "y": 1150,
-      "w": 320,
-      "h": 80,
-      "parentId": "c7133a1e-e79e-4200-d8e1-30fb712a0f27",
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": "aaa46444-0295-4e93-baa7-769f9f437afe",
+      "order": "a000005",
+      "geometry": {
+        "x": 1010,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "b52e243f-3427-fe57-3d75-913ce26309a4": {
       "id": "b52e243f-3427-fe57-3d75-913ce26309a4",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:2",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent",
-      "x": 5280,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000074",
+      "geometry": {
+        "x": 8960,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "b76dabfe-a94f-a2d8-c1c5-10215baa0d59": {
       "id": "b76dabfe-a94f-a2d8-c1c5-10215baa0d59",
-      "type": "note",
-      "title": "[Effect:mount] mount:3",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 1030,
-      "y": 2548.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000009",
+      "geometry": {
+        "x": 10,
+        "y": 270,
+        "w": 300,
+        "h": 80
+      }
     },
     "5865623f-a58b-cdc9-ba59-0ebf1b4ce656": {
       "id": "5865623f-a58b-cdc9-ba59-0ebf1b4ce656",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:3",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 10,
-      "y": 2648.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000010",
+      "geometry": {
+        "x": 330,
+        "y": 270,
+        "w": 300,
+        "h": 80
+      }
     },
     "f4a13352-7797-601f-148b-8cc026ad467e": {
       "id": "f4a13352-7797-601f-148b-8cc026ad467e",
-      "type": "note",
-      "title": "[Effect:mount] mount:1",
-      "body": "Source: `packages/client-next/src/ContextMenu.tsx`\nOwner: ContextMenu",
-      "x": 5660,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000077",
+      "geometry": {
+        "x": 9320,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "92876310-3408-f581-9df7-d949e9d786a5": {
       "id": "92876310-3408-f581-9df7-d949e9d786a5",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/client-next/src/ContextMenu.tsx`\nOwner: ContextMenu",
-      "x": 6044.693021196938,
-      "y": 7.572396639729462,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000078",
+      "geometry": {
+        "x": 9680,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "3a0e57f6-5e96-2de5-d059-cc73036416c3": {
       "id": "3a0e57f6-5e96-2de5-d059-cc73036416c3",
-      "type": "note",
-      "title": "[Effect:mount] mount:1",
-      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nOwner: DocumentPicker",
-      "x": 6420,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000079",
+      "geometry": {
+        "x": 10040,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "87e4bc61-8c2d-9017-b8d3-8ad4e7f568ab": {
       "id": "87e4bc61-8c2d-9017-b8d3-8ad4e7f568ab",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/client-next/src/MarkdownEditor.tsx`\nOwner: MarkdownEditor",
-      "x": 6800,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000080",
+      "geometry": {
+        "x": 10400,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "cf35bf51-d82f-58c1-4e17-57d32317b18a": {
       "id": "cf35bf51-d82f-58c1-4e17-57d32317b18a",
-      "type": "note",
-      "title": "[Effect:effect] effect:1",
-      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nOwner: NoteNode   \n\n\n",
-      "x": 7180,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-effect"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000081",
+      "geometry": {
+        "x": 10760,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "326d0ac5-4aeb-17fc-13dd-10e95e1e1200": {
       "id": "326d0ac5-4aeb-17fc-13dd-10e95e1e1200",
-      "type": "note",
-      "title": "[Effect:effect] effect:1",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCompartmentExtension",
-      "x": 7560,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-effect"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000082",
+      "geometry": {
+        "x": 11120,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "2b4b5277-5364-e428-8d70-08c11b4eff17": {
       "id": "2b4b5277-5364-e428-8d70-08c11b4eff17",
-      "type": "note",
-      "title": "[Effect:effect] effect:2",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror",
-      "x": 1050,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
-      "kind": "effect-effect"
+      "schemaName": "effect",
+      "parent": "d8b27e56-cc0f-8313-2d57-4c6ebad43898",
+      "order": "a000002",
+      "geometry": {
+        "x": 650,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "008d9a05-cf63-9666-aeb4-5f1866248904": {
       "id": "008d9a05-cf63-9666-aeb4-5f1866248904",
-      "type": "note",
-      "title": "[Effect:mount] mount:1",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror",
-      "x": 7940,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000084",
+      "geometry": {
+        "x": 11480,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "5cc27256-dc02-c845-01c3-978f527f2af1": {
       "id": "5cc27256-dc02-c845-01c3-978f527f2af1",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror",
-      "x": 8320,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000085",
+      "geometry": {
+        "x": 11840,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "81899288-8b29-a608-6c2a-c9d9132eaafd": {
       "id": "81899288-8b29-a608-6c2a-c9d9132eaafd",
-      "type": "note",
-      "title": "[Effect:effect] effect:3",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createEditorControlledValue",
-      "x": 350,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
-      "kind": "effect-effect"
+      "schemaName": "effect",
+      "parent": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "750510ff-0ac4-6079-082a-e4f9a93f0c4c": {
       "id": "750510ff-0ac4-6079-082a-e4f9a93f0c4c",
-      "type": "note",
-      "title": "[Effect:effect] effect:4",
-      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createEditorControlledValue",
-      "x": 690,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
-      "kind": "effect-effect"
+      "schemaName": "effect",
+      "parent": "38640ccd-d41d-5ed0-ba95-9ef099a5bff5",
+      "order": "a000002",
+      "geometry": {
+        "x": 650,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "daf48e51-2554-32ed-fb8a-78853945b7db": {
       "id": "daf48e51-2554-32ed-fb8a-78853945b7db",
-      "type": "note",
-      "title": "[Effect:effect] effect:1",
-      "body": "Source: `packages/client-next/src/theme.ts`\nOwner: __module__",
-      "x": 10,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "457f6e38-07ae-626a-493a-7f40e33bbed2",
-      "kind": "effect-effect"
+      "schemaName": "effect",
+      "parent": "457f6e38-07ae-626a-493a-7f40e33bbed2",
+      "order": "a000000",
+      "geometry": {
+        "x": 10,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "3ed4d8e4-520f-114d-f809-3dd63538eec1": {
       "id": "3ed4d8e4-520f-114d-f809-3dd63538eec1",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/cactus/src/Canvas.tsx`\nOwner: Canvas",
-      "x": 8700,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000089",
+      "geometry": {
+        "x": 12200,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "d36d5632-d4db-d145-8d35-59c8ee1f98f3": {
       "id": "d36d5632-d4db-d145-8d35-59c8ee1f98f3",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:2",
-      "body": "Source: `packages/cactus/src/Canvas.tsx`\nOwner: Canvas",
-      "x": 350,
-      "y": 568.6859722582582,
-      "w": 320,
-      "h": 80,
-      "parentId": "78e8440c-0bf0-dd4e-8589-20d633bc569b",
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": "4b080aad-1a99-4e6e-a320-a264e255dc82",
+      "order": "a000006",
+      "geometry": {
+        "x": 990,
+        "y": 250,
+        "w": 300,
+        "h": 80
+      }
     },
     "d6a25d70-d208-aef0-7e8a-7a531f41e550": {
       "id": "d6a25d70-d208-aef0-7e8a-7a531f41e550",
-      "type": "note",
-      "title": "[Effect:mount] mount:1",
-      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nOwner: useBoxSelect",
-      "x": 350,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "3af0b10b-926c-b17d-22a0-99bb903f4934",
-      "kind": "effect-mount"
+      "schemaName": "effect",
+      "parent": "3af0b10b-926c-b17d-22a0-99bb903f4934",
+      "order": "a000002",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "1d5a70d5-be39-a993-8192-eaa932463027": {
       "id": "1d5a70d5-be39-a993-8192-eaa932463027",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nOwner: useBoxSelect",
-      "x": 9080,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000092",
+      "geometry": {
+        "x": 12560,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "67dcaaa4-11cd-7e1b-045c-b5e0458bedb4": {
       "id": "67dcaaa4-11cd-7e1b-045c-b5e0458bedb4",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/cactus/src/useKeyboardShortcuts.ts`\nOwner: useKeyboardShortcuts",
-      "x": 9460,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": null,
+      "order": "a000093",
+      "geometry": {
+        "x": 12920,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "f1172957-2f01-2c6d-0012-88ad4ab972e0": {
       "id": "f1172957-2f01-2c6d-0012-88ad4ab972e0",
-      "type": "note",
-      "title": "[Effect:cleanup] cleanup:1",
-      "body": "Source: `packages/cactus/src/useViewport.ts`\nOwner: useViewport",
-      "x": 350,
-      "y": 70,
-      "w": 320,
-      "h": 80,
-      "parentId": "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9",
-      "kind": "effect-cleanup"
+      "schemaName": "effect",
+      "parent": "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9",
+      "order": "a000001",
+      "geometry": {
+        "x": 330,
+        "y": 70,
+        "w": 300,
+        "h": 80
+      }
     },
     "d4987186-57ca-adf7-7948-5bac28e517e2": {
       "id": "d4987186-57ca-adf7-7948-5bac28e517e2",
-      "type": "note",
-      "title": "[DataSource:websocket] wsUrl",
-      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView",
-      "x": 350,
-      "y": 2648.685972258258,
-      "w": 320,
-      "h": 80,
-      "parentId": "b04d7454-f679-6458-9443-2e685e06778f",
-      "kind": "datasource-websocket"
+      "schemaName": "datasource",
+      "parent": "66b67336-2dd8-4552-b7a4-9d02f4a7c286",
+      "order": "a000011",
+      "geometry": {
+        "x": 650,
+        "y": 270,
+        "w": 300,
+        "h": 80
+      }
     },
     "241c52a8-e049-280d-1720-57fc545a3aa3": {
       "id": "241c52a8-e049-280d-1720-57fc545a3aa3",
-      "type": "note",
-      "title": "[DataSource:fetch] /api/documents",
-      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__",
-      "x": 9840,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "datasource-fetch"
+      "schemaName": "datasource",
+      "parent": null,
+      "order": "a000096",
+      "geometry": {
+        "x": 13280,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "fe71d7f9-0c98-34a1-8c27-543daa374f86": {
       "id": "fe71d7f9-0c98-34a1-8c27-543daa374f86",
-      "type": "note",
-      "title": "[DataSource:fetch] url",
-      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__",
-      "x": 10220,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "datasource-fetch"
+      "schemaName": "datasource",
+      "parent": null,
+      "order": "a000097",
+      "geometry": {
+        "x": 13640,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "b0338a7d-c424-2c40-90c5-f32e2dac54f7": {
       "id": "b0338a7d-c424-2c40-90c5-f32e2dac54f7",
-      "type": "note",
-      "title": "[DataSource:fetch] `/api/${action}`",
-      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__",
-      "x": 10600,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "datasource-fetch"
+      "schemaName": "datasource",
+      "parent": null,
+      "order": "a000098",
+      "geometry": {
+        "x": 14000,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
     },
     "1bf9f98d-dfcb-e48d-b172-0bd8dd26fe33": {
       "id": "1bf9f98d-dfcb-e48d-b172-0bd8dd26fe33",
-      "type": "note",
-      "title": "[DataSource:fetch] /api/action/batch",
-      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__",
-      "x": 10980,
-      "y": 0,
-      "w": 320,
-      "h": 80,
-      "parentId": null,
-      "kind": "datasource-fetch"
+      "schemaName": "datasource",
+      "parent": null,
+      "order": "a000099",
+      "geometry": {
+        "x": 14360,
+        "y": 0,
+        "w": 300,
+        "h": 80
+      }
+    }
+  },
+  "content": {
+    "ecfdcaa1-e8a1-5cab-31b3-d1c68f22c526": {
+      "title": "App",
+      "body": "Source: `packages/client-next/src/App.tsx`"
+    },
+    "b6dadb17-7924-4a38-8649-4dcb3509372a": {
+      "label": "Components"
+    },
+    "38a51d44-7cd9-4bf9-803b-346a38c8b408": {
+      "label": "Members"
+    },
+    "c6e18bf2-d1fc-966c-2f4a-1e69234547a9": {
+      "title": "CanvasToolbar",
+      "body": "Source: `packages/client-next/src/CanvasToolbar.tsx`\nProps: CanvasToolbarProps"
+    },
+    "8572c829-60e8-4304-ae0e-3a092dad0a24": {
+      "label": "Components"
+    },
+    "e8cd5ca7-fd03-4999-8825-03baf6c56957": {
+      "label": "Members"
+    },
+    "c7133a1e-e79e-4200-d8e1-30fb712a0f27": {
+      "title": "CanvasContent",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nProps: CanvasContentProps"
+    },
+    "19ce0ce0-cd42-4e84-8d30-4a14643b6409": {
+      "label": "Components"
+    },
+    "aaa46444-0295-4e93-baa7-769f9f437afe": {
+      "label": "Members"
+    },
+    "b04d7454-f679-6458-9443-2e685e06778f": {
+      "title": "CanvasView",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nProps: CanvasViewProps"
+    },
+    "b71eefd2-ac36-4416-91a8-a210bc7290f1": {
+      "label": "Components"
+    },
+    "66b67336-2dd8-4552-b7a4-9d02f4a7c286": {
+      "label": "Members"
+    },
+    "3c7c205d-339c-e52a-725c-ec8e3d222ab9": {
+      "title": "ContextMenu",
+      "body": "Source: `packages/client-next/src/ContextMenu.tsx`\nProps: ContextMenuProps"
+    },
+    "2308689a-d245-4c28-9a5a-e11663b5e865": {
+      "label": "Components"
+    },
+    "542bfbc0-79cc-4f6c-b5de-2140a7ca285b": {
+      "label": "Members"
+    },
+    "a2703f5e-ca11-8f08-e84f-a0b7897b8bab": {
+      "title": "DocumentPicker",
+      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nProps: DocumentPickerProps"
+    },
+    "ceee8121-1d58-4339-b9f8-d94ea9df9630": {
+      "label": "Components"
+    },
+    "90d4284d-7f95-4be3-a9b0-5cefc080a5b8": {
+      "label": "Members"
+    },
+    "00828649-0b0e-c009-51c9-6addd10e9ad5": {
+      "title": "FreeformEdge",
+      "body": "Source: `packages/client-next/src/FreeformEdge.tsx`\nProps: FreeformEdgeProps"
+    },
+    "bcfe2b0d-238e-449f-8e2a-ba8e66c53b79": {
+      "label": "Components"
+    },
+    "34c82b66-5273-461c-9dad-c4d73b45153c": {
+      "label": "Members"
+    },
+    "23121e4d-ec17-7c5d-aeb3-905c2e277741": {
+      "title": "MarkdownEditor",
+      "body": "Source: `packages/client-next/src/MarkdownEditor.tsx`\nProps: MarkdownEditorProps"
+    },
+    "897310cd-7b22-4d95-b60c-4c4c785c1735": {
+      "label": "Components"
+    },
+    "6546f527-f6d5-477b-ab33-fbf8f30c7e98": {
+      "label": "Members"
+    },
+    "8afb8c02-dcb0-1165-97de-c1fd5900830b": {
+      "title": "NoteNode",
+      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nProps: NoteNodeProps"
+    },
+    "01154952-4e86-4aa7-8af6-bae4557fa31a": {
+      "label": "Components"
+    },
+    "741edb2c-5202-4842-93a8-28bdac488683": {
+      "label": "Members"
+    },
+    "29810632-4836-ce25-79b1-685829888d7a": {
+      "title": "PortalNode",
+      "body": "Source: `packages/client-next/src/PortalNode.tsx`\nProps: PortalNodeProps"
+    },
+    "b6bf6675-0489-4302-8151-dec91d590dcc": {
+      "label": "Components"
+    },
+    "31122ad0-e5b5-4857-8506-dfbfd0542dc8": {
+      "label": "Members"
+    },
+    "78e8440c-0bf0-dd4e-8589-20d633bc569b": {
+      "title": "Canvas",
+      "body": "Source: `packages/cactus/src/Canvas.tsx`\nProps: CanvasProps"
+    },
+    "034da766-0b63-4037-9e1e-068cb95c6135": {
+      "label": "Components"
+    },
+    "4b080aad-1a99-4e6e-a320-a264e255dc82": {
+      "label": "Members"
+    },
+    "eee92e02-202a-c03e-b690-e0f65ae1384c": {
+      "title": "ConnectionHandle",
+      "body": "Source: `packages/cactus/src/ConnectionHandle.tsx`\nProps: ConnectionHandleProps"
+    },
+    "062880c4-8843-4c6a-a2f9-141113a4d219": {
+      "label": "Components"
+    },
+    "944e3384-a8b6-4481-a8ab-2cdc38fb43cb": {
+      "label": "Members"
+    },
+    "e3e29b56-0ce9-9102-0f0c-1553aeb7f7e2": {
+      "title": "ConnectionPreview",
+      "body": "Source: `packages/cactus/src/ConnectionPreview.tsx`\nProps: ConnectionPreviewProps"
+    },
+    "b2e6a7b4-081e-4871-a1d1-9129014ce44b": {
+      "label": "Components"
+    },
+    "a7a33c39-fbc0-4b3c-a85e-5689859ba405": {
+      "label": "Members"
+    },
+    "9c913f0e-e016-a380-ca85-c9c4e4dfe7c4": {
+      "title": "CrossGrid",
+      "body": "Source: `packages/cactus/src/CrossGrid.tsx`\nProps: CrossGridProps"
+    },
+    "89322e8e-6109-43f7-9938-5acea0b98d08": {
+      "label": "Components"
+    },
+    "f5cc9877-5f2a-4551-83e4-bf0af9f50cae": {
+      "label": "Members"
+    },
+    "059a3285-ad00-3b27-ecdd-f1b01916c19b": {
+      "title": "DotGrid",
+      "body": "Source: `packages/cactus/src/DotGrid.tsx`\nProps: DotGridProps"
+    },
+    "02e114b2-d591-43e8-a27c-6406ecdc3f04": {
+      "label": "Components"
+    },
+    "5359c6cc-010a-49d1-8709-fe58781d974d": {
+      "label": "Members"
+    },
+    "49ed6f78-6422-6dc7-2d0f-c80398948de5": {
+      "title": "DragHandle",
+      "body": "Source: `packages/cactus/src/DragHandle.tsx`\nProps: DragHandleProps"
+    },
+    "7d424c91-f4dc-4bba-8cc3-35278c80d945": {
+      "label": "Components"
+    },
+    "cb6a4fd0-3ea0-4a68-bdc1-e9320fa86f30": {
+      "label": "Members"
+    },
+    "351f08a3-b21c-34e4-b892-eb102da9e203": {
+      "title": "EdgeLabel",
+      "body": "Source: `packages/cactus/src/EdgeLabel.tsx`\nProps: EdgeLabelProps"
+    },
+    "44828e1f-23b8-4963-bc00-ca8e247bd321": {
+      "label": "Components"
+    },
+    "672b74f5-01d2-4778-8d70-89a2a6355a64": {
+      "label": "Members"
+    },
+    "d23a886f-73ab-1675-bd94-ec52f2b4fd6c": {
+      "title": "NodeContainer",
+      "body": "Source: `packages/cactus/src/NodeContainer.tsx`\nProps: NodeContainerProps"
+    },
+    "175320d7-eb79-4edf-89bf-ed81038434ab": {
+      "label": "Components"
+    },
+    "9ca18a76-17ef-4c66-8bcd-8230baf8ee55": {
+      "label": "Members"
+    },
+    "9174a082-62a1-89ab-ed3d-9b214079c059": {
+      "title": "NodeShell",
+      "body": "Source: `packages/cactus/src/NodeShell.tsx`\nProps: NodeShellProps"
+    },
+    "a4847651-4013-4f45-9280-da1a23534d79": {
+      "label": "Components"
+    },
+    "29f3af04-d431-4d8a-be3c-ae7d5e8461c7": {
+      "label": "Members"
+    },
+    "76a8c028-939e-abe7-d691-33ab4435d7c3": {
+      "title": "ResizeHandle",
+      "body": "Source: `packages/cactus/src/ResizeHandle.tsx`\nProps: ResizeHandleProps"
+    },
+    "9b0676fb-e98d-4a87-a0d8-81458868847d": {
+      "label": "Components"
+    },
+    "49cc97dd-8070-4a25-8bdc-47b4dc20ce09": {
+      "label": "Members"
+    },
+    "98a55444-7614-7206-5334-e286376c39c9": {
+      "title": "createCanvasIndex",
+      "body": "Source: `packages/client-next/src/canvasIndex.ts`"
+    },
+    "457f6e38-07ae-626a-493a-7f40e33bbed2": {
+      "title": "createCompartmentExtension",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`"
+    },
+    "d8b27e56-cc0f-8313-2d57-4c6ebad43898": {
+      "title": "createCodeMirror",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`"
+    },
+    "38640ccd-d41d-5ed0-ba95-9ef099a5bff5": {
+      "title": "createEditorControlledValue",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`"
+    },
+    "5e80c645-fab2-4536-c26c-6282327eb8fd": {
+      "title": "useCanvasContext",
+      "body": "Source: `packages/cactus/src/CanvasContext.ts`"
+    },
+    "ecaf6c07-dcd6-204f-ac04-84300a6d2be4": {
+      "title": "createPerformanceMonitor",
+      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`"
+    },
+    "3af0b10b-926c-b17d-22a0-99bb903f4934": {
+      "title": "useBoxSelect",
+      "body": "Source: `packages/cactus/src/useBoxSelect.ts`"
+    },
+    "516857cd-0164-39f8-5dbb-1dd74ce5361c": {
+      "title": "useConnectionDrag",
+      "body": "Source: `packages/cactus/src/useConnectionDrag.ts`"
+    },
+    "19354d72-1cce-2ad9-58fb-d5971814d34c": {
+      "title": "useKeyboardShortcuts",
+      "body": "Source: `packages/cactus/src/useKeyboardShortcuts.ts`"
+    },
+    "5e203f07-e951-a999-0a2e-675feee281d4": {
+      "title": "useNodeDrag",
+      "body": "Source: `packages/cactus/src/useNodeDrag.ts`"
+    },
+    "1a3d0899-bce5-a196-c328-869ce0663d17": {
+      "title": "useNodeResize",
+      "body": "Source: `packages/cactus/src/useNodeResize.ts`"
+    },
+    "e924326f-bc63-06ac-116a-bc38cbe88970": {
+      "title": "useSelection",
+      "body": "Source: `packages/cactus/src/useSelection.ts`"
+    },
+    "f0d0ceef-ae40-e45b-2ddb-d6f55696e8e9": {
+      "title": "useViewport",
+      "body": "Source: `packages/cactus/src/useViewport.ts`"
+    },
+    "3aebd475-3a69-e67b-8f6b-a806338e258b": {
+      "title": "view",
+      "body": "Source: `packages/client-next/src/App.tsx`\nInitial: `{ state: 'picker' }`\nOwner: App"
+    },
+    "0d06912e-740f-829f-136d-932551aab67f": {
+      "title": "dropdownOpen",
+      "body": "Source: `packages/client-next/src/CanvasToolbar.tsx`\nInitial: `false`\nOwner: CanvasToolbar"
+    },
+    "de827ee8-6e0e-1be5-eb3c-01f3b07808e1": {
+      "title": "loading",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nInitial: `true`\nOwner: CanvasView"
+    },
+    "070b79d7-8aec-0ce5-d548-87ae75a8254b": {
+      "title": "error",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nInitial: `null`\nOwner: CanvasView"
+    },
+    "bd61b4b7-f64a-0a35-b4e8-d8785b860bbf": {
+      "title": "bgContextMenu",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nInitial: `null`\nOwner: CanvasView"
+    },
+    "8d09db89-8134-6908-24e6-37ad9c6e6e52": {
+      "title": "documents",
+      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `[]`\nOwner: DocumentPicker"
+    },
+    "2f853f2f-d24c-48dd-ee64-debec862448b": {
+      "title": "loading",
+      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `true`\nOwner: DocumentPicker"
+    },
+    "b45fa3da-5c6e-e1a2-c780-7429aae9985e": {
+      "title": "newName",
+      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `''`\nOwner: DocumentPicker"
+    },
+    "e5accd68-a0a7-fe42-c67e-33b88fbeb9f1": {
+      "title": "creating",
+      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nInitial: `false`\nOwner: DocumentPicker"
+    },
+    "ba7d2024-a0d0-bfce-8285-feaf9889505e": {
+      "title": "editing",
+      "body": "Source: `packages/client-next/src/FreeformEdge.tsx`\nInitial: `false`\nOwner: FreeformEdge"
+    },
+    "8d136ceb-434d-a6ab-1a93-31356f2a88c2": {
+      "title": "editValue",
+      "body": "Source: `packages/client-next/src/FreeformEdge.tsx`\nInitial: `''`\nOwner: FreeformEdge"
+    },
+    "32a70ded-81a2-495e-b810-ab576d9ce969": {
+      "title": "localTitle",
+      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nInitial: `props.note.title`\nOwner: NoteNode"
+    },
+    "f7494f74-ab5f-145d-e6f2-540c0005e9d4": {
+      "title": "contextMenu",
+      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nInitial: `null`\nOwner: NoteNode"
+    },
+    "fc0132a4-ce56-084c-77a1-69c2f8464c67": {
+      "title": "contextMenu",
+      "body": "Source: `packages/client-next/src/PortalNode.tsx`\nInitial: `null`\nOwner: PortalNode"
+    },
+    "24708ef8-e794-9f68-1906-d1462eae40c8": {
+      "title": "ref",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror"
+    },
+    "68e821e2-fd5c-7459-3262-918d84130391": {
+      "title": "editorView",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror"
+    },
+    "e9d5ca53-c716-4574-b080-2c47e0374190": {
+      "title": "theme",
+      "body": "Source: `packages/client-next/src/theme.ts`\nInitial: `initial`\nOwner: __module__"
+    },
+    "1c6065cc-aaf1-0816-ec2d-1711b71f5709": {
+      "title": "ctrlHeld",
+      "body": "Source: `packages/cactus/src/Canvas.tsx`\nInitial: `false`\nOwner: Canvas"
+    },
+    "b497bf6a-922a-de5a-2946-2a862f9843d3": {
+      "title": "factor",
+      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `initialFactor`\nOwner: createPerformanceMonitor"
+    },
+    "3fe299d2-97b1-bda5-0153-a6e762ce5485": {
+      "title": "fps",
+      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `0`\nOwner: createPerformanceMonitor"
+    },
+    "d74f082c-dfce-4d44-f172-bcc05fa18a0b": {
+      "title": "refreshRate",
+      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `60`\nOwner: createPerformanceMonitor"
+    },
+    "6db973c5-5361-851f-bde5-d0c58c6c323a": {
+      "title": "active",
+      "body": "Source: `packages/cactus/src/createPerformanceMonitor.ts`\nInitial: `false`\nOwner: createPerformanceMonitor"
+    },
+    "1ae9fac1-df2c-3c28-f133-76497584a036": {
+      "title": "selectedIds",
+      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nInitial: `[]`\nOwner: useBoxSelect"
+    },
+    "f51fe32d-5da9-2976-7175-aaececc1e732": {
+      "title": "selectionRect",
+      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nInitial: `null`\nOwner: useBoxSelect"
+    },
+    "f61158d5-f84c-2e4f-d0ad-4794ac193b89": {
+      "title": "connectionDrag",
+      "body": "Source: `packages/cactus/src/useConnectionDrag.ts`\nInitial: `null`\nOwner: useConnectionDrag"
+    },
+    "b544ff23-87c8-a20c-5f3a-7d7242936437": {
+      "title": "draggingNodeId",
+      "body": "Source: `packages/cactus/src/useNodeDrag.ts`\nInitial: `null`\nOwner: useNodeDrag"
+    },
+    "b2786e39-7c99-b790-b098-0ec577c2c907": {
+      "title": "resizingNodeId",
+      "body": "Source: `packages/cactus/src/useNodeResize.ts`\nInitial: `null`\nOwner: useNodeResize"
+    },
+    "67603458-dc52-ed84-8434-e22e8e98ca9f": {
+      "title": "selectedIds",
+      "body": "Source: `packages/cactus/src/useSelection.ts`\nInitial: `[]`\nOwner: useSelection"
+    },
+    "b6be3da6-024e-b463-6ac5-ebbad246e3e5": {
+      "title": "transform",
+      "body": "Source: `packages/cactus/src/useViewport.ts`\nInitial: `{ x: 0, y: 0, k: 1 }`\nOwner: useViewport"
+    },
+    "e92e7284-bd72-ba33-7cf9-03ab9ff46479": {
+      "title": "doc",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "22ca35c8-99dc-35d7-e743-c73fd12316e3": {
+      "title": "live",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "317587fb-8218-f79b-5d7d-f78873fc5394": {
+      "title": "sources",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "c518d6c2-3803-a2a7-37f2-eff568323a46": {
+      "title": "sourceMap",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "68543fce-0022-d437-4452-8bce85269934": {
+      "title": "store",
+      "body": "Source: `packages/client-next/src/canvasIndex.ts`\nOwner: createCanvasIndex"
+    },
+    "4f70fd42-9ec3-a43c-6db5-7efbb4187f31": {
+      "title": "mergedNotes",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "ec3943ca-e596-ee35-e80e-653099b6af7b": {
+      "title": "edgeList",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "a2da53ca-df05-9284-7ae7-97503314a9a9": {
+      "title": "newAncestors",
+      "body": "Source: `packages/client-next/src/PortalNode.tsx`\nOwner: PortalNode"
+    },
+    "6f57cbb6-7ffd-c522-8496-748fac81ed43": {
+      "title": "memoizedCode",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createEditorControlledValue"
+    },
+    "f913c543-b06b-80c9-f5ea-da3492d96c04": {
+      "title": "mount:1",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent"
+    },
+    "7fa567a5-f7b5-1521-13d0-4c2f94d7f9b8": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent"
+    },
+    "0a70035a-6fce-b54d-058c-aa631cbb82a9": {
+      "title": "mount:2",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent"
+    },
+    "b52e243f-3427-fe57-3d75-913ce26309a4": {
+      "title": "cleanup:2",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasContent"
+    },
+    "b76dabfe-a94f-a2d8-c1c5-10215baa0d59": {
+      "title": "mount:3",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "5865623f-a58b-cdc9-ba59-0ebf1b4ce656": {
+      "title": "cleanup:3",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "f4a13352-7797-601f-148b-8cc026ad467e": {
+      "title": "mount:1",
+      "body": "Source: `packages/client-next/src/ContextMenu.tsx`\nOwner: ContextMenu"
+    },
+    "92876310-3408-f581-9df7-d949e9d786a5": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/client-next/src/ContextMenu.tsx`\nOwner: ContextMenu"
+    },
+    "3a0e57f6-5e96-2de5-d059-cc73036416c3": {
+      "title": "mount:1",
+      "body": "Source: `packages/client-next/src/DocumentPicker.tsx`\nOwner: DocumentPicker"
+    },
+    "87e4bc61-8c2d-9017-b8d3-8ad4e7f568ab": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/client-next/src/MarkdownEditor.tsx`\nOwner: MarkdownEditor"
+    },
+    "cf35bf51-d82f-58c1-4e17-57d32317b18a": {
+      "title": "effect:1",
+      "body": "Source: `packages/client-next/src/NoteNode.tsx`\nOwner: NoteNode"
+    },
+    "326d0ac5-4aeb-17fc-13dd-10e95e1e1200": {
+      "title": "effect:1",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCompartmentExtension"
+    },
+    "2b4b5277-5364-e428-8d70-08c11b4eff17": {
+      "title": "effect:2",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror"
+    },
+    "008d9a05-cf63-9666-aeb4-5f1866248904": {
+      "title": "mount:1",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror"
+    },
+    "5cc27256-dc02-c845-01c3-978f527f2af1": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createCodeMirror"
+    },
+    "81899288-8b29-a608-6c2a-c9d9132eaafd": {
+      "title": "effect:3",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createEditorControlledValue"
+    },
+    "750510ff-0ac4-6079-082a-e4f9a93f0c4c": {
+      "title": "effect:4",
+      "body": "Source: `packages/client-next/src/createCodeMirror.ts`\nOwner: createEditorControlledValue"
+    },
+    "daf48e51-2554-32ed-fb8a-78853945b7db": {
+      "title": "effect:1",
+      "body": "Source: `packages/client-next/src/theme.ts`\nOwner: __module__"
+    },
+    "3ed4d8e4-520f-114d-f809-3dd63538eec1": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/cactus/src/Canvas.tsx`\nOwner: Canvas"
+    },
+    "d36d5632-d4db-d145-8d35-59c8ee1f98f3": {
+      "title": "cleanup:2",
+      "body": "Source: `packages/cactus/src/Canvas.tsx`\nOwner: Canvas"
+    },
+    "d6a25d70-d208-aef0-7e8a-7a531f41e550": {
+      "title": "mount:1",
+      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nOwner: useBoxSelect"
+    },
+    "1d5a70d5-be39-a993-8192-eaa932463027": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/cactus/src/useBoxSelect.ts`\nOwner: useBoxSelect"
+    },
+    "67dcaaa4-11cd-7e1b-045c-b5e0458bedb4": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/cactus/src/useKeyboardShortcuts.ts`\nOwner: useKeyboardShortcuts"
+    },
+    "f1172957-2f01-2c6d-0012-88ad4ab972e0": {
+      "title": "cleanup:1",
+      "body": "Source: `packages/cactus/src/useViewport.ts`\nOwner: useViewport"
+    },
+    "d4987186-57ca-adf7-7948-5bac28e517e2": {
+      "title": "wsUrl",
+      "body": "Source: `packages/client-next/src/CanvasView.tsx`\nOwner: CanvasView"
+    },
+    "241c52a8-e049-280d-1720-57fc545a3aa3": {
+      "title": "/api/documents",
+      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__"
+    },
+    "fe71d7f9-0c98-34a1-8c27-543daa374f86": {
+      "title": "url",
+      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__"
+    },
+    "b0338a7d-c424-2c40-90c5-f32e2dac54f7": {
+      "title": "`/api/${action}`",
+      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__"
+    },
+    "1bf9f98d-dfcb-e48d-b172-0bd8dd26fe33": {
+      "title": "/api/action/batch",
+      "body": "Source: `packages/client-next/src/api.ts`\nOwner: __module__"
     }
   },
   "edges": {
