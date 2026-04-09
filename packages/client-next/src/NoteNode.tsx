@@ -16,6 +16,7 @@ interface NoteNodeProps {
   onUpdateBody: (id: string, body: string) => void;
   onDelete: (noteId: string) => void;
   onExtract: (noteId: string, selectedText: string, selectionFrom: number, selectionTo: number) => void;
+  onTidy: (noteId: string) => void;
   children?: JSX.Element;
 }
 
@@ -40,6 +41,10 @@ export function NoteNode(props: NoteNodeProps) {
       });
       items.push({ label: '', action: () => {}, separator: true });
     }
+    items.push({
+      label: 'Tidy layout',
+      action: () => props.onTidy(props.note.id),
+    });
     items.push({
       label: 'Delete note',
       action: () => props.onDelete(props.note.id),
@@ -69,19 +74,26 @@ export function NoteNode(props: NoteNodeProps) {
       }}
       onContextMenu={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
     >
       <div
-        class={`bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
+        class={`relative bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
           isSelected(props.note.id)
             ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
             : 'border border-[var(--border-default)]'
         }`}
         style={{ 'box-shadow': 'var(--shadow-sm)', width: '100%', 'min-height': 'inherit', ...kindStyle() }}
       >
-        <DragHandle class="h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+        <DragHandle class="relative h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0">
           <div class="w-8 h-0.5 bg-[var(--text-tertiary)] rounded-full" />
+          <span
+            class="absolute right-2 text-[10px] font-mono text-[var(--text-tertiary)] opacity-70 pointer-events-none"
+            title={props.note.id}
+          >
+            {props.note.id.slice(0, 8)}
+          </span>
         </DragHandle>
 
         <input
@@ -126,6 +138,7 @@ export function NoteNode(props: NoteNodeProps) {
           <ContextMenu
             x={menu().x}
             y={menu().y}
+            header={`${props.note.title || 'Untitled'} · ${props.note.id.slice(0, 8)}`}
             items={buildMenuItems()}
             onClose={() => setContextMenu(null)}
           />

@@ -12,6 +12,7 @@ interface PortalNodeProps {
   onDragPointerDown: (nodeId: string, event: PointerEvent) => void;
   onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void;
   onDelete: (nodeId: string) => void;
+  onTidy: (nodeId: string) => void;
   // Multi-source portal loading
   sources: Record<string, Document>;
   onSourceLoaded: (path: string, doc: Document) => void;
@@ -63,6 +64,7 @@ export function PortalNode(props: PortalNodeProps) {
   };
 
   const buildMenuItems = (): MenuItem[] => [
+    { label: 'Tidy layout', action: () => props.onTidy(props.node.id) },
     { label: 'Delete portal', action: () => props.onDelete(props.node.id) },
   ];
 
@@ -79,19 +81,26 @@ export function PortalNode(props: PortalNodeProps) {
       }}
       onContextMenu={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY });
       }}
     >
       <div
-        class={`bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
+        class={`relative bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
           isSelected(props.node.id)
             ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
             : 'border border-dashed border-[var(--border-default)]'
         }`}
         style={{ 'box-shadow': 'var(--shadow-sm)', width: '100%', 'min-height': 'inherit' }}
       >
-        <DragHandle class="h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+        <DragHandle class="relative h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0">
           <div class="w-8 h-0.5 bg-[var(--text-tertiary)] rounded-full" />
+          <span
+            class="absolute right-2 text-[10px] font-mono text-[var(--text-tertiary)] opacity-70 pointer-events-none"
+            title={props.node.id}
+          >
+            {props.node.id.slice(0, 8)}
+          </span>
         </DragHandle>
 
         <div class="px-2 py-1 font-semibold text-sm border-b border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center gap-2">
@@ -164,6 +173,7 @@ export function PortalNode(props: PortalNodeProps) {
           <ContextMenu
             x={menu().x}
             y={menu().y}
+            header={`${props.node.title || 'Untitled Portal'} · ${props.node.id.slice(0, 8)}`}
             items={buildMenuItems()}
             onClose={() => setContextMenu(null)}
           />

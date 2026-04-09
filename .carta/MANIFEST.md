@@ -47,12 +47,12 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 |-----|------|---------|------|------|------|
 
 | doc01.02.00 | `02-design/00-index.md` | Product and software design — architecture decisions, concept inventory, API contracts, engine internals | design | — | — |
-| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.01.03, doc01.02.01, doc01.02.02, doc01.02.05.01, doc01.02.06.01, doc01.03.01, doc01.03.02, doc01.03.03 |
+| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.01.03, doc01.02.01, doc01.02.02, doc01.02.05.01, doc01.02.06.01, doc01.03.01, doc01.03.02, doc01.03.03, doc01.03.04 |
 | doc01.02.02 | `02-design/02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc01.02.01, doc01.02.01 | doc01.02.03, doc01.02.04, doc01.03.02, doc01.03.03 |
 | doc01.02.03 | `02-design/03-api-contract.md` | Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern. | api, http, actions, server, contract | doc01.02.02 | doc01.02.04 |
 | doc01.02.04 | `02-design/04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc01.02.02, doc01.02.03 | — |
 | doc01.02.05.00 | `02-design/05-cactus/00-index.md` |  |  | — | — |
-| doc01.02.05.01 | `02-design/05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc01.02.01 | doc01.02.05.02 |
+| doc01.02.05.01 | `02-design/05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc01.02.01 | doc01.02.05.02, doc01.03.04 |
 | doc01.02.05.02 | `02-design/05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc01.02.05.01 | — |
 | doc01.02.06.00 | `02-design/06-adr/00-index.md` | Significant architecture decisions with context, rationale, and consequences | adr, architecture | — | — |
 | doc01.02.06.01 | `02-design/06-adr/01-solid-migration.md` | Architecture decision record for migrating Luminous client-next and cactus from React to Solid.js | adr, architecture, solid, react, performance, reactivity | doc01.02.01, doc01.02.05 | — |
@@ -67,6 +67,7 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 | doc01.03.01 | `03-research-sessions/01-declarative-paradigms-synthesis.md` | Research session on how declarative/structured software paradigms (Solid.js, ECS, Rust, SQL, etc.) align with the mission of making software artifacts legible to both humans and AI | research, solid, architecture, reactive, ecs | doc01.01.01, doc01.02.01 | — |
 | doc01.03.02 | `03-research-sessions/02-modeling-workbench.md` | Research session exploring how Luminous evolves from concept-driven design to a general modeling workbench — vocabulary building, progressive formalization, and verification across multiple modeling formalisms | research, modeling, concepts, formalization, verification, vocabulary | doc01.01.01, doc01.02.01, doc01.02.02 | — |
 | doc01.03.03 | `03-research-sessions/03-modeling-workbench.md` | Research session exploring how Luminous evolves from concept-driven design to a general modeling workbench — vocabulary building, progressive formalization, and verification across multiple modeling formalisms | research, modeling, concepts, formalization, verification, vocabulary | doc01.01.01, doc01.02.01, doc01.02.02 | — |
+| doc01.03.04 | `03-research-sessions/04-node-data-architecture.md` | Research session deriving Luminous's node data model from prior art (tldraw, Notion, Excalidraw, React Flow, Bevy ECS) — separation of structure/content/schema, flat storage with parent pointers, and graceful schema degradation | research, architecture, data-model, ecs, bevy, tldraw, notion, schema, nodes | doc01.02.01, doc01.02.05.01 | — |
 
 ## Tag Index
 
@@ -79,8 +80,9 @@ Quick lookup for file-path→doc mapping:
 | `ai` | doc00.04, doc01.02.04 |
 | `ai-context` | doc01.01.01 |
 | `api` | doc01.02.03, doc01.02.04, doc01.02.05.02 |
-| `architecture` | doc01.02.01, doc01.02.04, doc01.02.05.01, doc01.02.06.00, doc01.02.06.01, doc01.03.01 |
+| `architecture` | doc01.02.01, doc01.02.04, doc01.02.05.01, doc01.02.06.00, doc01.02.06.01, doc01.03.01, doc01.03.04 |
 | `background` | doc01.01.02 |
+| `bevy` | doc01.03.04 |
 | `cactus` | doc01.02.05.01, doc01.02.05.02 |
 | `canvas` | doc01.01.01, doc01.02.05.01, doc01.02.05.02 |
 | `carta` | doc01.01.02 |
@@ -89,9 +91,10 @@ Quick lookup for file-path→doc mapping:
 | `contract` | doc01.02.03 |
 | `conventions` | doc00.03 |
 | `crystallization` | doc01.02.01 |
+| `data-model` | doc01.03.04 |
 | `design` | doc01.02.00, doc01.02.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04 |
-| `ecs` | doc01.03.01 |
+| `ecs` | doc01.03.01, doc01.03.04 |
 | `engine` | doc01.02.05.01 |
 | `exploration` | doc01.03.00 |
 | `formalization` | doc01.02.02, doc01.03.02, doc01.03.03 |
@@ -106,6 +109,8 @@ Quick lookup for file-path→doc mapping:
 | `milestone-1` | doc01.02.07 |
 | `milestones` | doc01.01.03 |
 | `modeling` | doc01.03.02, doc01.03.03 |
+| `nodes` | doc01.03.04 |
+| `notion` | doc01.03.04 |
 | `overview` | doc01.02.05.01 |
 | `pdr` | doc01.02.01 |
 | `performance` | doc01.02.06.01 |
@@ -114,15 +119,17 @@ Quick lookup for file-path→doc mapping:
 | `react` | doc01.02.06.01 |
 | `reactive` | doc01.03.01 |
 | `reactivity` | doc01.02.06.01 |
-| `research` | doc01.03.00, doc01.03.01, doc01.03.02, doc01.03.03 |
+| `research` | doc01.03.00, doc01.03.01, doc01.03.02, doc01.03.03, doc01.03.04 |
 | `retrieval` | doc00.04 |
 | `roadmap` | doc01.01.03 |
+| `schema` | doc01.03.04 |
 | `server` | doc01.02.03 |
 | `software-design` | doc01.01.01 |
 | `solid` | doc01.02.06.01, doc01.02.07, doc01.03.01 |
 | `split` | doc01.01.02 |
 | `static-analysis` | doc01.01.03, doc01.02.07 |
 | `theory` | doc00.01 |
+| `tldraw` | doc01.03.04 |
 | `tools` | doc01.02.04 |
 | `types` | doc01.02.05.02 |
 | `unfolding` | doc01.02.01, doc01.02.02 |

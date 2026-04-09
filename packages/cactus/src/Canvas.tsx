@@ -31,6 +31,11 @@ export interface CanvasProps {
   children: JSX.Element;
   patternId?: string;
   onBackgroundPointerDown?: (event: PointerEvent) => void;
+  /**
+   * Fires on right-click when the target is not inside a node (i.e. the canvas background).
+   * The handler receives the raw MouseEvent. preventDefault() is called automatically.
+   */
+  onBackgroundContextMenu?: (event: MouseEvent) => void;
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element;
   ref?: (handle: CanvasRef) => void;
 }
@@ -128,6 +133,14 @@ export function Canvas(props: CanvasProps) {
               props.onBackgroundPointerDown(e);
             }
           }
+        }}
+        onContextMenu={(e) => {
+          if (!props.onBackgroundContextMenu) return;
+          const target = e.target as HTMLElement;
+          // If the right-click landed on (or inside) a node, let the node handle it.
+          if (target.closest?.('[data-container-id]')) return;
+          e.preventDefault();
+          props.onBackgroundContextMenu(e);
         }}
       >
         {props.renderBackground

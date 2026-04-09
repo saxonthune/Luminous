@@ -16,6 +16,7 @@ import { NoteNode } from './NoteNode';
 import { PortalNode } from './PortalNode';
 import { FreeformEdge } from './FreeformEdge';
 import { CanvasToolbar } from './CanvasToolbar';
+import { ContextMenu, type MenuItem } from './ContextMenu';
 import { theme, toggleTheme } from './theme';
 
 interface CanvasViewProps {
@@ -66,6 +67,7 @@ interface CanvasContentProps {
   setSources: SetStoreFunction<Record<string, Document>>;
   sourceMap: Record<string, string>;
   onSourceLoaded: (path: string, doc: Document) => void;
+  onTidyNode: (nodeId: string) => void;
 }
 
 function CanvasContent(props: CanvasContentProps) {
@@ -443,6 +445,7 @@ function CanvasContent(props: CanvasContentProps) {
           onDragPointerDown={onDragPointerDown}
           onResizePointerDown={onResizePointerDown}
           onDelete={handleDeleteNote}
+          onTidy={props.onTidyNode}
           sources={props.sources}
           onSourceLoaded={props.onSourceLoaded}
           ancestorSources={ancestors}
@@ -465,6 +468,7 @@ function CanvasContent(props: CanvasContentProps) {
         onUpdateBody={handleUpdateBody}
         onDelete={handleDeleteNote}
         onExtract={handleExtract}
+        onTidy={props.onTidyNode}
       >
         <For each={nestedChildren}>
           {(child) => renderNote(child, sourcePath, ancestors)}
@@ -725,7 +729,7 @@ export function CanvasView(props: CanvasViewProps) {
     }
   };
 
-  const arrangeTidyLayout = () => {
+  const arrangeTidyLayout = (rootId?: string) => {
     const d = doc.current;
     if (!d) return;
 
@@ -733,20 +737,33 @@ export function CanvasView(props: CanvasViewProps) {
       id: n.id, w: n.w, h: n.h, parentId: n.parentId ?? null,
     }));
 
-    const result = tidyLayout(tidyNodes);
+    const result = tidyLayout(tidyNodes, rootId ? { rootId } : undefined);
 
     for (const [id, rect] of result) {
+      // In subtree mode, the root's x/y from tidyLayout are sentinels — only apply w/h.
+      const isSubtreeRoot = rootId === id;
       setDoc('current', produce((d) => {
         if (!d) return;
-        d.notes[id].x = rect.x;
-        d.notes[id].y = rect.y;
+        if (!isSubtreeRoot) {
+          d.notes[id].x = rect.x;
+          d.notes[id].y = rect.y;
+        }
         d.notes[id].w = rect.w;
         d.notes[id].h = rect.h;
       }));
-      postAction('node/move', { path: props.documentPath, id, x: rect.x, y: rect.y }).catch(() => loadDoc());
+      if (!isSubtreeRoot) {
+        postAction('node/move', { path: props.documentPath, id, x: rect.x, y: rect.y }).catch(() => loadDoc());
+      }
       postAction('node/resize', { path: props.documentPath, id, w: rect.w, h: rect.h }).catch(() => loadDoc());
     }
   };
+
+  // Background right-click context menu (canvas-level)
+  const [bgContextMenu, setBgContextMenu] = createSignal<{ x: number; y: number } | null>(null);
+
+  const bgMenuItems = (): MenuItem[] => [
+    { label: 'Tidy canvas', action: () => arrangeTidyLayout() },
+  ];
 
   return (
     <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
@@ -802,6 +819,7 @@ export function CanvasView(props: CanvasViewProps) {
                 )}
                 boxSelect={{ getNodeRects }}
                 onBackgroundPointerDown={() => clearSelectionFn()}
+                onBackgroundContextMenu={(e) => setBgContextMenu({ x: e.clientX, y: e.clientY })}
               >
                 <CanvasContent
                   doc={currentDoc()}
@@ -816,6 +834,7 @@ export function CanvasView(props: CanvasViewProps) {
                   setSources={setSources}
                   sourceMap={sourceMap}
                   onSourceLoaded={handleSourceLoaded}
+                  onTidyNode={arrangeTidyLayout}
                 />
               </Canvas>
               <CanvasToolbar
@@ -824,8 +843,19 @@ export function CanvasView(props: CanvasViewProps) {
                 onFitView={() => canvasRef?.fitView(getNodeRects())}
                 onTreeLayout={arrangeTreeLayout}
                 onForceLayout={arrangeForceLayout}
-                onTidyLayout={arrangeTidyLayout}
+                onTidyLayout={() => arrangeTidyLayout()}
               />
+              <Show when={bgContextMenu()}>
+                {(menu) => (
+                  <ContextMenu
+                    x={menu().x}
+                    y={menu().y}
+                    header={`Canvas · ${props.documentPath}`}
+                    items={bgMenuItems()}
+                    onClose={() => setBgContextMenu(null)}
+                  />
+                )}
+              </Show>
             </>
           )}
         </Show>
