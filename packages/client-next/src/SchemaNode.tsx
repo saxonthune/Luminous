@@ -69,7 +69,9 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                 style={{
                   'box-shadow': 'var(--shadow-sm)',
                   width: '100%',
-                  'min-height': 'inherit',
+                  // h=0 means "auto-size me" — omit min-height so content drives the height.
+                  // h>0 means a measured or user-set height — enforce it via min-height.
+                  ...(n().geometry.h > 0 ? { 'min-height': 'inherit' } : {}),
                   ...kindStyle(n().schemaName),
                 }}
               >

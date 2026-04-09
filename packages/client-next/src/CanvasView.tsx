@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, Show, For, type JSX } from 'solid-js';
+import { createSignal, createEffect, onMount, onCleanup, Show, For, type JSX } from 'solid-js';
 import {
   Canvas,
   useNodeDrag,
@@ -70,6 +70,8 @@ interface CanvasContentProps {
   loadDoc: () => void;
   onClearSelectionReady: (fn: () => void) => void;
   onCreateNoteReady: (fn: () => void) => void;
+  /** Tidy a subtree rooted at rootId; provided by CanvasView (measureAndTidy). */
+  onTidy: (rootId: string) => void;
 }
 
 function CanvasContent(props: CanvasContentProps): JSX.Element {
@@ -290,36 +292,6 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
   };
 
   // ---------------------------------------------------------------------------
-  // Tidy layout (from context menu)
-  // ---------------------------------------------------------------------------
-
-  const handleTidy = (rootId: string) => {
-    const tidyNodes = Object.entries(props.index.doc().structure).map(([id, n]) => ({
-      id,
-      w: n.geometry.w,
-      h: n.geometry.h,
-      parentId: n.parent,
-    }));
-
-    const result = tidyLayout(tidyNodes, { rootId });
-
-    for (const [id, rect] of result) {
-      const isSubtreeRoot = rootId === id;
-      const node = props.index.getNode(id);
-      if (!node) continue;
-      const newGeo: Geometry = isSubtreeRoot
-        ? { ...node.geometry, w: rect.w, h: rect.h }
-        : { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
-      props.index.setGeometry(id, newGeo);
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id,
-        geometry: newGeo,
-      }).catch(() => props.loadDoc());
-    }
-  };
-
-  // ---------------------------------------------------------------------------
   // New note creation (wired from toolbar via onCreateNoteReady)
   // ---------------------------------------------------------------------------
 
@@ -368,7 +340,7 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
           onDragPointerDown={onDragPointerDown}
           onResizePointerDown={onResizePointerDown}
           onDelete={handleDelete}
-          onTidy={handleTidy}
+          onTidy={props.onTidy}
         />
       )}
     </For>
@@ -383,6 +355,7 @@ export function CanvasView(props: CanvasViewProps) {
   const [index, setIndex] = createSignal<CanvasIndex | null>(null);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [firstTidyDone, setFirstTidyDone] = createSignal(false);
 
   let clearSelectionFn: () => void = () => {};
   let createNoteFn: () => void = () => {};
@@ -501,19 +474,55 @@ export function CanvasView(props: CanvasViewProps) {
   // Layout helpers
   // ---------------------------------------------------------------------------
 
-  const arrangeTidyLayout = (rootId?: string) => {
+  const measureAndTidy = (rootId?: string) => {
     const idx = index();
     if (!idx) return;
+    const doc = idx.doc();
 
-    const tidyNodes = Object.entries(idx.doc().structure).map(([id, n]) => ({
+    // 1. Snapshot offsetHeight of every node's inner div in one DOM pass.
+    // SchemaNode renders the inner div as a child of NodeContainer, which has
+    // data-node-id="{id}". The first child of that element is the inner div.
+    const measured = new Map<string, number>();
+    const nodeEls = document.querySelectorAll<HTMLElement>('[data-node-id]');
+    for (const el of nodeEls) {
+      const id = el.dataset.nodeId;
+      if (!id || !doc.structure[id]) continue;
+      const inner = el.firstElementChild as HTMLElement | null;
+      if (!inner) continue;
+      measured.set(id, inner.offsetHeight);
+    }
+
+    // 2. Build TidyNode[] using measured heights (fall back to geometry.h if unmeasured).
+    // `category` lets cactus group root nodes into stacked rows by schemaName.
+    const tidyNodes = Object.entries(doc.structure).map(([id, n]) => ({
       id,
       w: n.geometry.w,
-      h: n.geometry.h,
+      h: measured.get(id) ?? n.geometry.h,
       parentId: n.parent,
+      category: n.schemaName,
     }));
+    // Sort by (parent, order) so siblings pack in declared order.
+    tidyNodes.sort((a, b) => {
+      const pa = a.parentId ?? '';
+      const pb = b.parentId ?? '';
+      if (pa !== pb) return pa < pb ? -1 : 1;
+      const oa = doc.structure[a.id].order;
+      const ob = doc.structure[b.id].order;
+      return oa < ob ? -1 : oa > ob ? 1 : 0;
+    });
 
-    const result = tidyLayout(tidyNodes, rootId ? { rootId } : undefined);
+    // 3. Run tidyLayout. categoryOrder enables bucketed root layout (one row per kind).
+    const result = tidyLayout(
+      tidyNodes,
+      rootId
+        ? { rootId }
+        : {
+            categoryOrder: ['component', 'hook', 'signal', 'store', 'memo', 'effect', 'datasource', 'container'],
+            rowGap: 120,
+          },
+    );
 
+    // 4. Apply results: update index + post to server.
     for (const [id, rect] of result) {
       const isSubtreeRoot = rootId === id;
       const node = idx.getNode(id);
@@ -529,6 +538,21 @@ export function CanvasView(props: CanvasViewProps) {
       }).catch(() => loadDoc());
     }
   };
+
+  // First-load auto-tidy: after the doc loads and Solid has flushed the DOM,
+  // measure all nodes and apply tidy layout. The double-RAF ensures we see the
+  // post-flush DOM. Guarded by firstTidyDone so reconnects don't re-tidy.
+  createEffect(() => {
+    const idx = index();
+    if (!idx) return;
+    if (firstTidyDone()) return;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        measureAndTidy();
+        setFirstTidyDone(true);
+      })
+    );
+  });
 
   const arrangeForceLayout = () => {
     const idx = index();
@@ -628,7 +652,7 @@ export function CanvasView(props: CanvasViewProps) {
   // Background context menu
   const [bgContextMenu, setBgContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const bgMenuItems = (): MenuItem[] => [
-    { label: 'Tidy canvas', action: () => arrangeTidyLayout() },
+    { label: 'Tidy canvas', action: () => measureAndTidy() },
   ];
 
   return (
@@ -693,6 +717,7 @@ export function CanvasView(props: CanvasViewProps) {
                   loadDoc={loadDoc}
                   onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
                   onCreateNoteReady={(fn) => (createNoteFn = fn)}
+                  onTidy={(rootId) => measureAndTidy(rootId)}
                 />
               </Canvas>
               <CanvasToolbar
@@ -701,7 +726,7 @@ export function CanvasView(props: CanvasViewProps) {
                 onFitView={() => canvasRef?.fitView(getNodeRects())}
                 onTreeLayout={arrangeTreeLayout}
                 onForceLayout={arrangeForceLayout}
-                onTidyLayout={() => arrangeTidyLayout()}
+                onTidyLayout={() => measureAndTidy()}
               />
               <Show when={bgContextMenu()}>
                 {(menu) => (

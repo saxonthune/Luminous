@@ -1,6 +1,13 @@
 export interface TidyNode {
   id: string
   w: number
+  /**
+   * Own content height.
+   * - For leaf nodes: total node height.
+   * - For parent nodes: the header area before children pack below (i.e. the
+   *   height of the node's own primitives stack, not including nested children).
+   *   tidyLayout packs children starting at `h + padding`.
+   */
   h: number
   parentId: string | null
   /**
@@ -13,7 +20,6 @@ export interface TidyNode {
 
 export interface TidyLayoutOptions {
   padding?: number
-  headerHeight?: number
   gap?: number
   maxWidth?: number
   rootGap?: number
@@ -50,13 +56,15 @@ export type TidyResult = Map<string, { x: number; y: number; w: number; h: numbe
  * compute positions and sizes for all nodes. Containers are sized to fit
  * their children. Leaf nodes keep their original w/h.
  *
+ * `TidyNode.h` is the node's own content height. For parent nodes this is the
+ * header area; children are packed below it starting at `h + padding`.
+ *
  * Input order is preserved — caller pre-sorts if ordering matters.
  *
  * When `options.rootId` is set, only that node's subtree is laid out.
  */
 export function tidyLayout(nodes: TidyNode[], options?: TidyLayoutOptions): TidyResult {
   const padding = options?.padding ?? 10;
-  const headerHeight = options?.headerHeight ?? 60;
   const gap = options?.gap ?? 20;
   const maxWidth = options?.maxWidth ?? 1400;
   const rootGap = options?.rootGap ?? 60;
@@ -99,10 +107,11 @@ export function tidyLayout(nodes: TidyNode[], options?: TidyLayoutOptions): Tidy
     }
 
     // Pack children in a wrapping grid, positions relative to parent
+    // curY starts below the parent's own content (header area) + padding
+    const node = nodeMap.get(nodeId)!;
     let curX = padding;
-    let curY = headerHeight + padding;
+    let curY = node.h + padding;
     let rowMaxH = 0;
-    let rowStartX = padding;
     let maxRowWidth = 0;
 
     for (const childId of children) {

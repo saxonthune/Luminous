@@ -22,7 +22,6 @@ import {
 } from 'node:fs';
 import { resolve, relative, dirname, extname, join, basename } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { tidyLayout } from '../packages/cactus/src/tidyLayout.js';
 import type {
   Schema,
   NodeStructure,
@@ -795,11 +794,6 @@ function detectReactiveReadsAndHookCalls(
 
 // Layout constants
 const COL_WIDTH = 300;
-const COL_GAP = 40;
-const ROW_GAP = 20;
-const HEADER_H = 60;
-const ITEM_H_BASE = 80;
-const ITEM_H_LARGE = 100;
 
 function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
   const structure: Record<string, NodeStructure> = {};
@@ -827,7 +821,7 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
       schemaName,
       parent,
       order: nextOrder(parent),
-      geometry: { x: 0, y: 0, w: COL_WIDTH, h: ITEM_H_BASE },
+      geometry: { x: 0, y: 0, w: COL_WIDTH, h: 0 },
     };
     content[id] = { title, body };
   }
@@ -838,7 +832,7 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
       schemaName: 'container',
       parent,
       order: nextOrder(parent),
-      geometry: { x: 0, y: 0, w: COL_WIDTH, h: 40 },
+      geometry: { x: 0, y: 0, w: COL_WIDTH, h: 0 },
     };
     content[id] = { label };
   }
@@ -1005,45 +999,6 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
       structure[dsId].parent = ownerEffectId;
       structure[dsId].order = nextOrder(ownerEffectId);
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Layout pass — call cactus's tidyLayout with v2→v1 field name translation
-  // ---------------------------------------------------------------------------
-
-  const tidyInput = Object.values(structure).map((n) => ({
-    id: n.id,
-    w: n.geometry.w,
-    h: n.geometry.h,
-    parentId: n.parent,
-    category: n.schemaName,
-  }));
-
-  // Pre-sort by (parent, order) so tidyLayout sees siblings in the right order
-  tidyInput.sort((a, b) => {
-    const pa = a.parentId ?? '';
-    const pb = b.parentId ?? '';
-    if (pa !== pb) return pa < pb ? -1 : 1;
-    const oa = structure[a.id].order;
-    const ob = structure[b.id].order;
-    return oa < ob ? -1 : oa > ob ? 1 : 0;
-  });
-
-  const layoutResult = tidyLayout(
-    tidyInput,
-    {
-      padding: 10,
-      headerHeight: HEADER_H,
-      gap: ROW_GAP,
-      maxWidth: 1400,
-      rootGap: 60,
-      categoryOrder: ['component', 'hook', 'signal', 'store', 'memo', 'effect', 'datasource', 'container'],
-      rowGap: 120,
-    },
-  );
-
-  for (const [id, rect] of layoutResult) {
-    structure[id].geometry = { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
   }
 
   // ---------------------------------------------------------------------------
