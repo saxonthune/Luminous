@@ -10,6 +10,14 @@ deps: [doc01.01.03]
 
 This is the specification for a pipeline that produces specifications — a static analysis script that reads Solid.js source code and emits a `.canvas.json` summarizing the codebase's component architecture, reactive data flow, and external dependencies.
 
+## What Pipelines Are
+
+A pipeline is a compiler whose target architecture is human spatial cognition. Traditional compilers transform source → AST → IR → machine code. Pipelines transform source → AST → semantic graph → canvas. The intermediate representation (the semantic graph) is analogous to a compiler's IR. Layout is code generation. The "instruction set" is nodes, edges, and nesting — the primitives the human visual system can process.
+
+The crucial difference: compiler output runs deterministically; canvas output is a starting point for reasoning. The pipeline compiles code into **mental model scaffolding** — not the mental model itself, but a spatial structure that supports building one. The human rearranges it, stares at it, and has the eureka moment. This is Alexander's generative process: the pipeline produces a seed, the human differentiates it through adaptation.
+
+This clarifies what "correct" means for a pipeline. A compiler is correct when the output executes the same semantics as the source. A pipeline is correct when the output **enables insight** — when the topology supports the arrangements the user needs to see patterns.
+
 ## Design Principles
 
 **parentId for containment, edges for cross-boundary flow.** The canvas has two traversal mechanisms that serve different purposes. `parentId` answers "what contains what" — spatial, always a tree. Edges answer "how do things relate across that structure" — semantic, can be a graph. When a relationship is pure containment (component renders child), parentId is sufficient. When a relationship crosses containment boundaries (signal created in A, read in B), use an edge.
