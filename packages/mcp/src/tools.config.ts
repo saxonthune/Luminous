@@ -174,6 +174,32 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
       },
     },
   },
+
+  diag: {
+    description: "Read-only diagnostics for canvas debugging. 'roots' returns per-category root summaries (count, max height, x/y range). 'bbox' returns one node's geometry plus the bounding box of its descendants — useful for catching container/descendant size disagreements. 'outliers' lists nodes with implausible geometry (e.g. h > 5000, w > 4000) — catches measurement bugs. 'subtree' returns one node and all its descendants with their geometries.",
+    actions: {
+      roots: {
+        method: 'GET',
+        path: '/api/diag/roots/:path',
+        params: { path: 'string' },
+      },
+      bbox: {
+        method: 'GET',
+        path: '/api/diag/bbox/:path/:id',
+        params: { path: 'string', id: 'string' },
+      },
+      outliers: {
+        method: 'GET',
+        path: '/api/diag/outliers/:path',
+        params: { path: 'string' },
+      },
+      subtree: {
+        method: 'GET',
+        path: '/api/diag/subtree/:path/:id',
+        params: { path: 'string', id: 'string' },
+      },
+    },
+  },
 }
 
 export const batchToolConfig: BatchToolConfig = {

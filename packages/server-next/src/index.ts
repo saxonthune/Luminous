@@ -4,6 +4,7 @@ import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments } from "./workspace.js"
 import { getDocument, applyAction, applyBatch, flushAll, setRootDir, watchDocuments } from "./store.js"
+import { roots as diagRoots, bbox as diagBbox, outliers as diagOutliers, subtree as diagSubtree } from "./diag.js"
 
 const port = Number(process.env.PORT ?? 4080)
 
@@ -136,6 +137,78 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     console.log(`[api] GET document: ${docPath}`)
     const doc = await getDocument(docPath)
     sendJson(res, 200, doc)
+    return
+  }
+
+  // GET /api/diag/roots/:path
+  if (url.startsWith("/api/diag/roots/") && req.method === "GET") {
+    const docPath = decodeURIComponent(url.slice("/api/diag/roots/".length))
+    if (!docPath || hasTraversal(docPath)) {
+      sendJson(res, 400, { error: "invalid path" })
+      return
+    }
+    const doc = await getDocument(docPath)
+    sendJson(res, 200, diagRoots(doc))
+    return
+  }
+
+  // GET /api/diag/outliers/:path
+  if (url.startsWith("/api/diag/outliers/") && req.method === "GET") {
+    const docPath = decodeURIComponent(url.slice("/api/diag/outliers/".length))
+    if (!docPath || hasTraversal(docPath)) {
+      sendJson(res, 400, { error: "invalid path" })
+      return
+    }
+    const doc = await getDocument(docPath)
+    sendJson(res, 200, diagOutliers(doc))
+    return
+  }
+
+  // GET /api/diag/bbox/:path/:id  — split on last slash to extract id
+  if (url.startsWith("/api/diag/bbox/") && req.method === "GET") {
+    const raw = decodeURIComponent(url.slice("/api/diag/bbox/".length))
+    const lastSlash = raw.lastIndexOf("/")
+    if (lastSlash === -1) {
+      sendJson(res, 400, { error: "missing id" })
+      return
+    }
+    const docPath = raw.slice(0, lastSlash)
+    const nodeId = raw.slice(lastSlash + 1)
+    if (!docPath || hasTraversal(docPath) || !nodeId) {
+      sendJson(res, 400, { error: "invalid path or id" })
+      return
+    }
+    const doc = await getDocument(docPath)
+    const result = diagBbox(doc, nodeId)
+    if (result === null) {
+      sendJson(res, 404, { error: "node not found" })
+      return
+    }
+    sendJson(res, 200, result)
+    return
+  }
+
+  // GET /api/diag/subtree/:path/:id  — split on last slash to extract id
+  if (url.startsWith("/api/diag/subtree/") && req.method === "GET") {
+    const raw = decodeURIComponent(url.slice("/api/diag/subtree/".length))
+    const lastSlash = raw.lastIndexOf("/")
+    if (lastSlash === -1) {
+      sendJson(res, 400, { error: "missing id" })
+      return
+    }
+    const docPath = raw.slice(0, lastSlash)
+    const nodeId = raw.slice(lastSlash + 1)
+    if (!docPath || hasTraversal(docPath) || !nodeId) {
+      sendJson(res, 400, { error: "invalid path or id" })
+      return
+    }
+    const doc = await getDocument(docPath)
+    const result = diagSubtree(doc, nodeId)
+    if (result === null) {
+      sendJson(res, 404, { error: "node not found" })
+      return
+    }
+    sendJson(res, 200, result)
     return
   }
 
