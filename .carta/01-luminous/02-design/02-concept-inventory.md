@@ -103,8 +103,8 @@ Universal: any node can contain children, any node can be nested. Nesting surviv
 | | |
 |---|---|
 | **State** | viewport `{x, y, zoom}`, node positions `{id → {x, y, w, h}}` |
-| **Actions** | `pan`, `zoom`, `moveNode`, `resizeNode` |
-| **OP** | User places notes on an infinite surface. Zooms out to see the whole tree, zooms in to work on one branch. Spatial proximity conveys relatedness. The arrangement *is* the reasoning — not decoration of it. |
+| **Actions** | `pan`, `zoom`, `moveNode`, `resizeNode`, `arrangeLayout(algorithm)` |
+| **OP** | User places notes on an infinite surface. Zooms out to see the whole tree, zooms in to work on one branch. Spatial proximity conveys relatedness. When edges imply structure the eye can't see, user hits "tree layout" — nodes reposition to reveal the hierarchy. The arrangement *is* the reasoning — not decoration of it. |
 
 Canvas is the ground concept. All other concepts exist on the canvas. The engine is called cactus (`@luminous/cactus`): custom, domain-agnostic, uses d3-zoom and DOM data-attribute hit-testing.
 
@@ -187,3 +187,17 @@ Verification synchronizes the canvas with external concept inventories. It's the
 **Existence coupling:** When a note is deleted, edges referencing it must be disconnected, and children must be unnested (or deleted). This is the only mandatory synchronization in the seed.
 
 **No overloading:** Note and Schema are deliberately separate concepts even though a formalized node participates in both. This avoids the anti-pattern of an overloaded concept serving two purposes. The formalization action is the explicit synchronization point.
+
+---
+
+## Direction: Polymorphic Nodes and Modeling Formalisms
+
+*Research session doc01.03.02 explores this in depth.*
+
+The concepts above describe Luminous's own behavior — what the user interacts with (Jackson's domain). But the *content* users create on the canvas often doesn't fit the concept framework. State machines, component trees, transformation pipelines, and resource dependency graphs are structural models, not behavioral concepts. Forcing them into Jackson's template (purpose, actions, operational principle) produces decoration rather than insight.
+
+**Concepts for the tool, formalisms for the content.** The concept inventory describes how Luminous works. Modeling formalisms — state machines, flowcharts, DAGs, decision tables — are what users build *on* Luminous. Each formalism is a configuration of the same primitives: typed nodes + typed edges + structural constraints.
+
+**Polymorphic node model.** The Note concept (above) is one node variant, not the only one. The data model evolves toward a discriminated union: every node shares base properties (position, size, nesting) and a `type` field that determines its rendering and behavior. Notes render title + body. Portals render another canvas's contents. Future types (promoted/schema-bound nodes, custom model nodes) follow the same pattern.
+
+**Progressive structure.** The lifecycle of content on a canvas is: freeform (vocabulary) → typed (formalization) → constrained (model definition) → verified (gap detection). Each layer is useful alone. Users stop where the forces stop.

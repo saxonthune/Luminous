@@ -5,7 +5,7 @@
       "title": "API Contract",
       "body": "Action-based HTTP API for @luminous/server. Endpoints map 1:1 to concept actions. POST /api/{concept}/{action} pattern.",
       "parentId": null,
-      "x": 0,
+      "x": -145.9317100580781,
       "y": 0,
       "w": 300,
       "h": 100
@@ -15,8 +15,8 @@
       "title": "Workspace",
       "body": "GET /api/documents → list all canvases\nGET /api/document/:path → load full document\nGET /api/health → server status",
       "parentId": null,
-      "x": 971,
-      "y": 230,
+      "x": 1268.2187788001024,
+      "y": -364.43758211479246,
       "w": 200,
       "h": 150
     },
@@ -25,8 +25,8 @@
       "title": "Note",
       "body": "POST /api/note/create { path, title, body? } → { ok, id }\nPOST /api/note/update { path, id, title?, body? } → { ok }\nPOST /api/note/delete { path, id } → { ok }\n\n### yikes\n\n**oof**\n*foo*\n\n# wow\nttt\njjjj\n##### jjjjj\n\n\n\n\n",
       "parentId": null,
-      "x": 396,
-      "y": 230,
+      "x": 417.42114056073785,
+      "y": 378.6093894000513,
       "w": 200,
       "h": 150
     },
@@ -35,8 +35,8 @@
       "title": "Edge",
       "body": "POST /api/edge/connect { path, fromId, toId, label? } → { ok, id }\nPOST /api/edge/disconnect { path, id } → { ok }\nPOST /api/edge/relabel { path, id, label } → { ok }",
       "parentId": null,
-      "x": 1531,
-      "y": 230,
+      "x": 1722.451670521527,
+      "y": 523.2023088163173,
       "w": 200,
       "h": 150
     },
@@ -45,8 +45,8 @@
       "title": "Nesting",
       "body": "POST /api/nest { path, parentId, childId } → { ok }\nPOST /api/unnest { path, childId } → { ok }\n\nTop-level — synchronizes Note and Canvas concepts.   dfdfdffdfdfdfdfdfdffdfdfdfdfdfdf\niklkkl\nhhhh\nh\nh\nh\nh\nh\nh",
       "parentId": null,
-      "x": 380,
-      "y": 0,
+      "x": 339.8353001621483,
+      "y": -203.50117853123166,
       "w": 231.232223842504,
       "h": 80
     },
@@ -55,8 +55,8 @@
       "title": "Canvas (Position)",
       "body": "POST /api/node/move { path, id, x, y } → { ok }\nPOST /api/node/resize { path, id, w, h } → { ok }",
       "parentId": null,
-      "x": 691,
-      "y": 0,
+      "x": 678.9505900486445,
+      "y": -239.6493593561236,
       "w": 200,
       "h": 150
     },
@@ -65,8 +65,8 @@
       "title": "Watch (WebSocket)",
       "body": "WS /ws/watch\n\nMessages: { event: \"changed\", path } when backing file changes on disk.",
       "parentId": null,
-      "x": 971,
-      "y": 0,
+      "x": 959.3020818705902,
+      "y": 87.95724173697224,
       "w": 200,
       "h": 150
     },
@@ -75,8 +75,8 @@
       "title": "Response Envelope",
       "body": "Success: { ok: true, id? }\nFailure: { ok: false, error: string }\n\nReads return data directly (no envelope).",
       "parentId": null,
-      "x": 396,
-      "y": 460,
+      "x": 855.2163687933214,
+      "y": 608.6093894000512,
       "w": 200,
       "h": 150
     },
@@ -85,8 +85,8 @@
       "title": "Future: Schema",
       "body": "POST /api/schema/define { name, fields } → { ok }\nPOST /api/schema/edit { name, fields } → { ok }\nPOST /api/schema/delete { name } → { ok }",
       "parentId": null,
-      "x": 1251,
-      "y": 230,
+      "x": 1489.310617743486,
+      "y": 342.46115954598474,
       "w": 200,
       "h": 150
     },
@@ -95,8 +95,8 @@
       "title": "Future: Formalization",
       "body": "POST /api/formalize { noteIds[], schemaName, mapping? } → { ok }\nPOST /api/informalize { nodeId } → { ok }\n\nTop-level — synchronizes Note and Schema.",
       "parentId": null,
-      "x": 1251,
-      "y": 0,
+      "x": 1297.8587511052608,
+      "y": 56.23057977299238,
       "w": 200,
       "h": 150
     },
@@ -105,8 +105,8 @@
       "title": "Future: Schema-Pair",
       "body": "POST /api/schema-pair/describe { from, to, description } → { ok }\nPOST /api/schema-pair/remove { from, to } → { ok }\n\nSynchronizes Edge and Schema.",
       "parentId": null,
-      "x": 1531,
-      "y": 0,
+      "x": 1780.0211389946805,
+      "y": 83.00707901767657,
       "w": 200,
       "h": 150
     }

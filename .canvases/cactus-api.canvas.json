@@ -1,0 +1,765 @@
+{
+  "notes": {
+    "656cfc49-faba-7ea6-8870-fb0e3e6a7f29": {
+      "id": "656cfc49-faba-7ea6-8870-fb0e3e6a7f29",
+      "title": "Components",
+      "body": "",
+      "parentId": null,
+      "x": 0,
+      "y": 0,
+      "w": 340,
+      "h": 60
+    },
+    "4dd29955-462e-28f8-4e2f-54a38fc92c74": {
+      "id": "4dd29955-462e-28f8-4e2f-54a38fc92c74",
+      "title": "Canvas",
+      "body": "```ts\nexport function Canvas(props: CanvasProps)\n```\n\nSource: `Canvas.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 80,
+      "w": 340,
+      "h": 120
+    },
+    "69d3682a-2561-1b20-3476-0514d48d7243": {
+      "id": "69d3682a-2561-1b20-3476-0514d48d7243",
+      "title": "NodeShell",
+      "body": "```ts\nexport function NodeShell(props: NodeShellProps): JSX.Element\n```\n\nSource: `NodeShell.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 220,
+      "w": 340,
+      "h": 120
+    },
+    "a1a53297-1e38-3250-0816-ac05681cd3c8": {
+      "id": "a1a53297-1e38-3250-0816-ac05681cd3c8",
+      "title": "NodeContainer",
+      "body": "```ts\nexport function NodeContainer(props: NodeContainerProps): JSX.Element\n```\n\nSource: `NodeContainer.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 360,
+      "w": 340,
+      "h": 120
+    },
+    "da67526a-d385-45ed-65e3-bfeead5a8dcf": {
+      "id": "da67526a-d385-45ed-65e3-bfeead5a8dcf",
+      "title": "ConnectionHandle",
+      "body": "```ts\nexport function ConnectionHandle(props: ConnectionHandleProps): JSX.Element\n```\n\nSource: `ConnectionHandle.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 500,
+      "w": 340,
+      "h": 120
+    },
+    "e6cdcefb-5da2-c548-7ffc-c31e804d2e7d": {
+      "id": "e6cdcefb-5da2-c548-7ffc-c31e804d2e7d",
+      "title": "DragHandle",
+      "body": "```ts\nexport function DragHandle(props: DragHandleProps): JSX.Element\n```\n\nSource: `DragHandle.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 640,
+      "w": 340,
+      "h": 120
+    },
+    "0aec074c-1963-b3dc-1565-f075eb5d7636": {
+      "id": "0aec074c-1963-b3dc-1565-f075eb5d7636",
+      "title": "ResizeHandle",
+      "body": "```ts\nexport function ResizeHandle(props: ResizeHandleProps): JSX.Element\n```\n\nSource: `ResizeHandle.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 780,
+      "w": 340,
+      "h": 120
+    },
+    "6dc8e516-1fac-35e9-77bc-9cfac699da3d": {
+      "id": "6dc8e516-1fac-35e9-77bc-9cfac699da3d",
+      "title": "DotGrid",
+      "body": "```ts\nexport function DotGrid(props: DotGridProps): JSX.Element\n```\n\nSource: `DotGrid.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 920,
+      "w": 340,
+      "h": 120
+    },
+    "8737aec1-4dee-627b-f7af-447510da1cb6": {
+      "id": "8737aec1-4dee-627b-f7af-447510da1cb6",
+      "title": "CrossGrid",
+      "body": "```ts\nexport function CrossGrid(props: CrossGridProps): JSX.Element\n```\n\nSource: `CrossGrid.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 1060,
+      "w": 340,
+      "h": 120
+    },
+    "7a837b8b-17c5-b0e6-054f-a9676b9b7e24": {
+      "id": "7a837b8b-17c5-b0e6-054f-a9676b9b7e24",
+      "title": "EdgeLabel",
+      "body": "```ts\nexport function EdgeLabel(props: EdgeLabelProps): JSX.Element\n```\n\nSource: `EdgeLabel.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 1200,
+      "w": 340,
+      "h": 120
+    },
+    "b6713872-c28e-efd6-d5da-dcd0c9487d84": {
+      "id": "b6713872-c28e-efd6-d5da-dcd0c9487d84",
+      "title": "ConnectionPreview",
+      "body": "```ts\nexport function ConnectionPreview(props: ConnectionPreviewProps): JSX.Element\n```\n\nSource: `ConnectionPreview.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 1340,
+      "w": 340,
+      "h": 120
+    },
+    "691d0729-39f1-9c44-82e8-e91b6add6033": {
+      "id": "691d0729-39f1-9c44-82e8-e91b6add6033",
+      "title": "NodeShellProps",
+      "body": "```ts\nexport interface NodeShellProps {\n  nodeId: string;\n  x: () => number;\n  y: () => number;\n  w: () => number;\n  h: () => number;\n  onDragPointerDown: (nodeId: string, event: PointerEvent) => void;\n  onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void;\n  onContextMenu?: (event: MouseEvent) => void;\n  children?: JSX.Element;\n}\n```\n\nSource: `NodeShell.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 1480,
+      "w": 340,
+      "h": 280
+    },
+    "472eb15c-3f0a-59a6-6ce3-96e6ce9ef823": {
+      "id": "472eb15c-3f0a-59a6-6ce3-96e6ce9ef823",
+      "title": "NodeContainerProps",
+      "body": "```ts\nexport interface NodeContainerProps {\n  nodeId: string;\n  x: () => number;\n  y: () => number;\n  w: () => number;\n  h: () => number;\n  onPointerDown?: (e: PointerEvent) => void;\n  onContextMenu?: (e: MouseEvent) => void;\n  children?: JSX.Element;\n}\n```\n\nSource: `NodeContainer.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 1780,
+      "w": 340,
+      "h": 264
+    },
+    "89d3e006-534f-8020-5272-b20686e9320e": {
+      "id": "89d3e006-534f-8020-5272-b20686e9320e",
+      "title": "DragHandleProps",
+      "body": "```ts\nexport interface DragHandleProps {\n  class?: string;\n  style?: JSX.CSSProperties;\n  children?: JSX.Element;\n}\n```\n\nSource: `DragHandle.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 2064,
+      "w": 340,
+      "h": 184
+    },
+    "c649d7df-ae1e-cb29-ac7b-9b68efc85a23": {
+      "id": "c649d7df-ae1e-cb29-ac7b-9b68efc85a23",
+      "title": "ResizeHandleProps",
+      "body": "```ts\nexport interface ResizeHandleProps {\n  nodeId: string;\n  direction?: ResizeDirection;\n  onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void;\n}\n```\n\nSource: `ResizeHandle.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 2268,
+      "w": 340,
+      "h": 184
+    },
+    "fb2f0ebc-a0f9-6938-715c-af5fbac32aee": {
+      "id": "fb2f0ebc-a0f9-6938-715c-af5fbac32aee",
+      "title": "CrossGridProps",
+      "body": "```ts\nexport interface CrossGridProps {\n  transform: Transform;\n  patternId?: string;\n  spacing?: number;\n  strokeColor?: string;\n  strokeWidth?: number;\n  crossSize?: number;\n  backgroundColor?: string;\n  rotation?: number;\n}\n```\n\nSource: `CrossGrid.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 2472,
+      "w": 340,
+      "h": 264
+    },
+    "ffeb2e21-c5bf-e009-b4fa-d69b4bedb712": {
+      "id": "ffeb2e21-c5bf-e009-b4fa-d69b4bedb712",
+      "title": "CanvasProps",
+      "body": "```ts\nexport interface CanvasProps {\n  viewportOptions?: UseViewportOptions;\n  connectionDrag?: {\n    onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;\n    isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean;\n  };\n  boxSelect?: {\n    getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;\n  };\n  renderEdges?: (transform: Transform) => JSX.Element;\n  renderConnectionPreview?: (coords: ConnectionPrevie\n  // ...\n```\n\nSource: `Canvas.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 2756,
+      "w": 340,
+      "h": 296
+    },
+    "25850c3e-36d6-f902-a9ce-310e48ba7bab": {
+      "id": "25850c3e-36d6-f902-a9ce-310e48ba7bab",
+      "title": "CanvasRef",
+      "body": "```ts\nexport interface CanvasRef {\n  fitView: (rects: Array<{ x: number; y: number; width: number; height: number }>, padding?: number) => void;\n  screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };\n  getTransform: () => Transform;\n  zoomIn: () => void;\n  zoomOut: () => void;\n  clearSelection: () => void;\n}\n```\n\nSource: `Canvas.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 3072,
+      "w": 340,
+      "h": 232
+    },
+    "11deb3c5-867d-66f7-f2b5-147ecba3f312": {
+      "id": "11deb3c5-867d-66f7-f2b5-147ecba3f312",
+      "title": "ConnectionPreviewCoords",
+      "body": "```ts\nexport interface ConnectionPreviewCoords {\n  sourceNodeId: string;\n  sourceHandle: string | null;\n  startX: number;\n  startY: number;\n  currentX: number;\n  currentY: number;\n}\n```\n\nSource: `Canvas.tsx`",
+      "parentId": null,
+      "x": 0,
+      "y": 3324,
+      "w": 340,
+      "h": 232
+    },
+    "9af6c61c-0c10-0c21-542f-e5926a63de13": {
+      "id": "9af6c61c-0c10-0c21-542f-e5926a63de13",
+      "title": "Hooks",
+      "body": "",
+      "parentId": null,
+      "x": 400,
+      "y": 0,
+      "w": 340,
+      "h": 60
+    },
+    "95af9a99-5b76-1726-e746-7ec9ad683188": {
+      "id": "95af9a99-5b76-1726-e746-7ec9ad683188",
+      "title": "useViewport",
+      "body": "```ts\nexport function useViewport(options: UseViewportOptions = {}): UseViewportResult\n```\n\nSource: `useViewport.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 80,
+      "w": 340,
+      "h": 120
+    },
+    "45c92806-fabe-7210-f7b6-344190b8203a": {
+      "id": "45c92806-fabe-7210-f7b6-344190b8203a",
+      "title": "useConnectionDrag",
+      "body": "```ts\nexport function useConnectionDrag({\n  onConnect,\n  isValidConnection,\n  screenToCanvas,\n}: UseConnectionDragOptions): UseConnectionDragResult\n```\n\nSource: `useConnectionDrag.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 220,
+      "w": 340,
+      "h": 184
+    },
+    "29b27682-a259-1318-6a9f-aebb431aa0f4": {
+      "id": "29b27682-a259-1318-6a9f-aebb431aa0f4",
+      "title": "useNodeDrag",
+      "body": "```ts\nexport function useNodeDrag(options: UseNodeDragOptions): UseNodeDragResult\n```\n\nSource: `useNodeDrag.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 424,
+      "w": 340,
+      "h": 120
+    },
+    "18051d10-bb99-d831-00c4-3505645fef6f": {
+      "id": "18051d10-bb99-d831-00c4-3505645fef6f",
+      "title": "useNodeResize",
+      "body": "```ts\nexport function useNodeResize(options: UseNodeResizeOptions): UseNodeResizeResult\n```\n\nSource: `useNodeResize.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 564,
+      "w": 340,
+      "h": 120
+    },
+    "9e9abee8-260c-3513-2f07-f3bc7cfa6a89": {
+      "id": "9e9abee8-260c-3513-2f07-f3bc7cfa6a89",
+      "title": "useKeyboardShortcuts",
+      "body": "```ts\nexport function useKeyboardShortcuts({ shortcuts, disabled = false }: UseKeyboardShortcutsOptions): void\n```\n\nSource: `useKeyboardShortcuts.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 704,
+      "w": 340,
+      "h": 120
+    },
+    "20ec8f38-1e1c-ff8d-2c27-d88b8ea52c21": {
+      "id": "20ec8f38-1e1c-ff8d-2c27-d88b8ea52c21",
+      "title": "useBoxSelect",
+      "body": "```ts\nexport function useBoxSelect(options: UseBoxSelectOptions): UseBoxSelectResult\n```\n\nSource: `useBoxSelect.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 844,
+      "w": 340,
+      "h": 120
+    },
+    "f4a7756b-1008-474b-ba38-5c94d226544e": {
+      "id": "f4a7756b-1008-474b-ba38-5c94d226544e",
+      "title": "useSelection",
+      "body": "```ts\nexport function useSelection(options: UseSelectionOptions): UseSelectionResult\n```\n\nSource: `useSelection.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 984,
+      "w": 340,
+      "h": 120
+    },
+    "f909e74d-ec30-9936-73b1-fae81bbf553f": {
+      "id": "f909e74d-ec30-9936-73b1-fae81bbf553f",
+      "title": "useNodeLinks",
+      "body": "```ts\nexport function useNodeLinks(options: UseNodeLinksOptions): UseNodeLinksResult\n```\n\nSource: `useNodeLinks.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 1124,
+      "w": 340,
+      "h": 120
+    },
+    "98c9b95c-5df3-7ea7-0001-6ffa5cc8a68b": {
+      "id": "98c9b95c-5df3-7ea7-0001-6ffa5cc8a68b",
+      "title": "Transform",
+      "body": "```ts\nexport interface Transform {\n  x: number;\n  y: number;\n  k: number;\n}\n```\n\nSource: `useViewport.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 1264,
+      "w": 340,
+      "h": 184
+    },
+    "6d2a8310-42ee-1730-5b63-bf30aeb558e6": {
+      "id": "6d2a8310-42ee-1730-5b63-bf30aeb558e6",
+      "title": "NodeLink",
+      "body": "```ts\nexport interface NodeLink {\n  id: string;\n  leader: string;\n  follower: string;\n}\n```\n\nSource: `useNodeLinks.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 1468,
+      "w": 340,
+      "h": 184
+    },
+    "5e75bd19-db80-322b-e9f7-6a2c4495819e": {
+      "id": "5e75bd19-db80-322b-e9f7-6a2c4495819e",
+      "title": "FollowerDragDecision",
+      "body": "```ts\nexport type FollowerDragDecision = 'allow' | 'block' | 'redirect-to-leader';\n```\n\nSource: `useNodeLinks.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 1672,
+      "w": 340,
+      "h": 120
+    },
+    "80507df1-ec14-b86d-94b8-3148b37331dd": {
+      "id": "80507df1-ec14-b86d-94b8-3148b37331dd",
+      "title": "UseNodeLinksOptions",
+      "body": "```ts\nexport interface UseNodeLinksOptions {\n  links: NodeLink[];\n  onFollowerDragAttempt?: (link: NodeLink, followerId: string) => FollowerDragDecision;\n}\n```\n\nSource: `useNodeLinks.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 1812,
+      "w": 340,
+      "h": 168
+    },
+    "845a1c67-87a0-04ff-e7a4-f9fe9a430768": {
+      "id": "845a1c67-87a0-04ff-e7a4-f9fe9a430768",
+      "title": "UseNodeLinksResult",
+      "body": "```ts\nexport interface UseNodeLinksResult {\n  getFollowers: (leaderId: string) => string[];\n  isFollower: (nodeId: string) => boolean;\n  checkFollowerDrag: (nodeId: string) => FollowerDragDecision;\n  getLeader: (followerId: string) => string | undefined;\n}\n```\n\nSource: `useNodeLinks.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 2000,
+      "w": 340,
+      "h": 200
+    },
+    "08e17d5d-2031-17d0-6862-5145eff1b04c": {
+      "id": "08e17d5d-2031-17d0-6862-5145eff1b04c",
+      "title": "ResizeDirection",
+      "body": "```ts\nexport interface ResizeDirection {\n  horizontal: 'left' | 'right' | 'none';\n  vertical: 'top' | 'bottom' | 'none';\n}\n```\n\nSource: `useNodeResize.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 2220,
+      "w": 340,
+      "h": 168
+    },
+    "9d539659-a9b5-041d-b194-a2b7567e76f3": {
+      "id": "9d539659-a9b5-041d-b194-a2b7567e76f3",
+      "title": "NodeResizeCallbacks",
+      "body": "```ts\nexport interface NodeResizeCallbacks {\n  onResizeStart?: (nodeId: string, direction: ResizeDirection) => void;\n  onResize?: (nodeId: string, deltaWidth: number, deltaHeight: number, direction: ResizeDirection) => void;\n  onResizeEnd?: (nodeId: string) => void;\n}\n```\n\nSource: `useNodeResize.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 2408,
+      "w": 340,
+      "h": 184
+    },
+    "d53731f9-7b5c-1447-2694-0f5bbaf4be8e": {
+      "id": "d53731f9-7b5c-1447-2694-0f5bbaf4be8e",
+      "title": "UseNodeResizeOptions",
+      "body": "```ts\nexport interface UseNodeResizeOptions {\n  /** Current zoom scale — accessor for reactive updates */\n  zoomScale: () => number;\n  callbacks: NodeResizeCallbacks;\n}\n```\n\nSource: `useNodeResize.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 2612,
+      "w": 340,
+      "h": 184
+    },
+    "fc7f715a-9a3b-9d9b-5694-91313f02f0c8": {
+      "id": "fc7f715a-9a3b-9d9b-5694-91313f02f0c8",
+      "title": "UseNodeResizeResult",
+      "body": "```ts\nexport interface UseNodeResizeResult {\n  resizingNodeId: () => string | null;\n  onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void;\n}\n```\n\nSource: `useNodeResize.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 2816,
+      "w": 340,
+      "h": 168
+    },
+    "eb065eea-edf9-bc36-a791-5cca2fc5cf15": {
+      "id": "eb065eea-edf9-bc36-a791-5cca2fc5cf15",
+      "title": "UseSelectionOptions",
+      "body": "```ts\nexport interface UseSelectionOptions {\n  onSelectionChange?: (selectedIds: string[]) => void;\n}\n```\n\nSource: `useSelection.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 3004,
+      "w": 340,
+      "h": 152
+    },
+    "17ae8016-c766-91e9-95b0-8dba46fa92f4": {
+      "id": "17ae8016-c766-91e9-95b0-8dba46fa92f4",
+      "title": "UseSelectionResult",
+      "body": "```ts\nexport interface UseSelectionResult {\n  selectedIds: () => string[];\n  setSelectedIds: (ids: string[]) => void;\n  isSelected: (id: string) => boolean;\n  onNodePointerDown: (nodeId: string, event: PointerEvent) => void;\n  clearSelection: () => void;\n  mergeBoxSelection: (ids: string[]) => void;\n}\n```\n\nSource: `useSelection.ts`",
+      "parentId": null,
+      "x": 400,
+      "y": 3176,
+      "w": 340,
+      "h": 232
+    },
+    "6fad62df-c701-020d-581c-6a94a245ba8d": {
+      "id": "6fad62df-c701-020d-581c-6a94a245ba8d",
+      "title": "Context",
+      "body": "",
+      "parentId": null,
+      "x": 800,
+      "y": 0,
+      "w": 340,
+      "h": 60
+    },
+    "c4bb1dc6-7268-0c50-7466-72249d3ff24e": {
+      "id": "c4bb1dc6-7268-0c50-7466-72249d3ff24e",
+      "title": "CanvasContext",
+      "body": "```ts\nexport const CanvasContext = createContext<CanvasContextValue>();\n```\n\nSource: `CanvasContext.ts`",
+      "parentId": null,
+      "x": 800,
+      "y": 80,
+      "w": 340,
+      "h": 120
+    },
+    "38d038ff-beb0-f68b-0928-6dbd8689d55d": {
+      "id": "38d038ff-beb0-f68b-0928-6dbd8689d55d",
+      "title": "useCanvasContext",
+      "body": "```ts\nexport function useCanvasContext(): CanvasContextValue\n```\n\nSource: `CanvasContext.ts`",
+      "parentId": null,
+      "x": 800,
+      "y": 220,
+      "w": 340,
+      "h": 120
+    },
+    "1ccc0dba-2caa-a84b-4259-e6bceae6a595": {
+      "id": "1ccc0dba-2caa-a84b-4259-e6bceae6a595",
+      "title": "CanvasContextValue",
+      "body": "```ts\nexport interface CanvasContextValue {\n  /** Current viewport transform { x, y, k } — signal accessor */\n  transform: () => Transform;\n  /** Convert screen coordinates to canvas coordinates */\n  screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };\n  /** Start a connection drag from a source handle */\n  startConnection: (nodeId: string, handleId: string | null, clientX: number, clientY: number) => void;\n  /** Current connection drag state, or null — signal accessor */\n  connectionDrag: () => ConnectionDragState | null;\n  /** Currently selected node IDs — signal accesso\n  // ...\n```\n\nSource: `CanvasContext.ts`",
+      "parentId": null,
+      "x": 800,
+      "y": 360,
+      "w": 340,
+      "h": 280
+    },
+    "9535409c-a0c0-4728-662c-16f3461ee4ee": {
+      "id": "9535409c-a0c0-4728-662c-16f3461ee4ee",
+      "title": "Layout",
+      "body": "",
+      "parentId": null,
+      "x": 1200,
+      "y": 0,
+      "w": 340,
+      "h": 60
+    },
+    "58a15117-0fcc-c9d1-23cd-1a4f7c6089fb": {
+      "id": "58a15117-0fcc-c9d1-23cd-1a4f7c6089fb",
+      "title": "forceDirectedLayout",
+      "body": "```ts\nexport function forceDirectedLayout(\n  nodes: LayoutNode[],\n  edges: LayoutEdge[],\n  options?: { iterations?: number; padding?: number }\n): LayoutResult\n```\n\nSource: `layout.ts`",
+      "parentId": null,
+      "x": 1200,
+      "y": 80,
+      "w": 340,
+      "h": 184
+    },
+    "5d76cf0f-a84a-432b-95c7-28eeb258e7ff": {
+      "id": "5d76cf0f-a84a-432b-95c7-28eeb258e7ff",
+      "title": "treeLayout",
+      "body": "```ts\nexport function treeLayout(\n  nodes: LayoutNode[],\n  edges: LayoutEdge[],\n  options?: TreeLayoutOptions\n): LayoutResult\n```\n\nSource: `treeLayout.ts`",
+      "parentId": null,
+      "x": 1200,
+      "y": 284,
+      "w": 340,
+      "h": 184
+    },
+    "188cff2e-e31b-874e-dec7-13c138d4a330": {
+      "id": "188cff2e-e31b-874e-dec7-13c138d4a330",
+      "title": "LayoutNode",
+      "body": "```ts\nexport type LayoutNode = { id: string; x: number; y: number; width: number; height: number }\n```\n\nSource: `layout.ts`",
+      "parentId": null,
+      "x": 1200,
+      "y": 488,
+      "w": 340,
+      "h": 120
+    },
+    "1a11c1cf-7fb5-896d-e484-231041fe0510": {
+      "id": "1a11c1cf-7fb5-896d-e484-231041fe0510",
+      "title": "LayoutEdge",
+      "body": "```ts\nexport type LayoutEdge = { source: string; target: string }\n```\n\nSource: `layout.ts`",
+      "parentId": null,
+      "x": 1200,
+      "y": 628,
+      "w": 340,
+      "h": 120
+    },
+    "1be22d74-fa5a-b3d9-81f6-f1fe49953db3": {
+      "id": "1be22d74-fa5a-b3d9-81f6-f1fe49953db3",
+      "title": "LayoutResult",
+      "body": "```ts\nexport type LayoutResult = Map<string, { x: number; y: number }>\n```\n\nSource: `layout.ts`",
+      "parentId": null,
+      "x": 1200,
+      "y": 768,
+      "w": 340,
+      "h": 120
+    },
+    "d08e278b-c543-da31-2659-66c58c8e54c7": {
+      "id": "d08e278b-c543-da31-2659-66c58c8e54c7",
+      "title": "TreeLayoutOptions",
+      "body": "```ts\nexport interface TreeLayoutOptions {\n  /** Horizontal gap between sibling nodes. Default: 40 */\n  horizontalGap?: number\n  /** Vertical gap between ranks (layers). Default: 80 */\n  verticalGap?: number\n  /** Layout direction. Default: 'top-down' */\n  direction?: 'top-down' | 'left-right'\n}\n```\n\nSource: `treeLayout.ts`",
+      "parentId": null,
+      "x": 1200,
+      "y": 908,
+      "w": 340,
+      "h": 232
+    },
+    "f0efffa8-c231-9fe9-dc3a-6cfe3667c763": {
+      "id": "f0efffa8-c231-9fe9-dc3a-6cfe3667c763",
+      "title": "Geometry",
+      "body": "",
+      "parentId": null,
+      "x": 1600,
+      "y": 0,
+      "w": 340,
+      "h": 60
+    },
+    "8714101b-3b65-6394-d31d-d2698da3ee79": {
+      "id": "8714101b-3b65-6394-d31d-d2698da3ee79",
+      "title": "computeBounds",
+      "body": "```ts\nexport function computeBounds(children: Rect[], options?: ComputeBoundsOptions): Rect\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 80,
+      "w": 340,
+      "h": 120
+    },
+    "a2668cc6-c1ee-dee6-3ec8-416643117bf7": {
+      "id": "a2668cc6-c1ee-dee6-3ec8-416643117bf7",
+      "title": "isPointInRect",
+      "body": "```ts\nexport function isPointInRect(point: { x: number; y: number }, rect: Rect): boolean\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 220,
+      "w": 340,
+      "h": 120
+    },
+    "58e5fdd2-a894-411d-9eff-fa3aabc086c5": {
+      "id": "58e5fdd2-a894-411d-9eff-fa3aabc086c5",
+      "title": "findContainerAt",
+      "body": "```ts\nexport function findContainerAt(screenX: number, screenY: number): string | null\n```\n\nSource: `containment.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 360,
+      "w": 340,
+      "h": 120
+    },
+    "f46611ea-1442-2a59-87e5-5f65c323532c": {
+      "id": "f46611ea-1442-2a59-87e5-5f65c323532c",
+      "title": "resolveAbsolutePosition",
+      "body": "```ts\nexport function resolveAbsolutePosition(\n  nodeId: string,\n  nodes: ContainerNode[]\n): { x: number; y: number }\n```\n\nSource: `containerOps.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 500,
+      "w": 340,
+      "h": 168
+    },
+    "f6e0ed57-4ad5-1182-d5dc-100bd9efc6d3": {
+      "id": "f6e0ed57-4ad5-1182-d5dc-100bd9efc6d3",
+      "title": "computeAttach",
+      "body": "```ts\nexport function computeAttach(\n  nodeId: string,\n  containerId: string,\n  nodes: ContainerNode[]\n): { x: number; y: number }\n```\n\nSource: `containerOps.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 688,
+      "w": 340,
+      "h": 184
+    },
+    "1d02d4ab-3d20-1311-cc8b-9e9b58de9c68": {
+      "id": "1d02d4ab-3d20-1311-cc8b-9e9b58de9c68",
+      "title": "computeDetach",
+      "body": "```ts\nexport function computeDetach(\n  nodeId: string,\n  nodes: ContainerNode[]\n): { x: number; y: number }\n```\n\nSource: `containerOps.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 892,
+      "w": 340,
+      "h": 168
+    },
+    "867bf50a-66e3-4f63-49ad-ced0d241eb9d": {
+      "id": "867bf50a-66e3-4f63-49ad-ced0d241eb9d",
+      "title": "computeContainerFit",
+      "body": "```ts\nexport function computeContainerFit(\n  childGeometries: NodeGeometry[],\n  config?: ContainerFitConfig\n): OrganizerFitResult\n```\n\nSource: `containerOps.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 1080,
+      "w": 340,
+      "h": 168
+    },
+    "c95ccb41-1838-50ae-96e7-227c84763bd1": {
+      "id": "c95ccb41-1838-50ae-96e7-227c84763bd1",
+      "title": "toRelativePosition",
+      "body": "```ts\nexport function toRelativePosition(nodePos: Position, parentPos: Position): Position\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 1268,
+      "w": 340,
+      "h": 120
+    },
+    "e44a253d-7ee9-bf18-03ba-730e4e8aa127": {
+      "id": "e44a253d-7ee9-bf18-03ba-730e4e8aa127",
+      "title": "DEFAULT_ORGANIZER_LAYOUT",
+      "body": "```ts\nexport const DEFAULT_ORGANIZER_LAYOUT: OrganizerLayoutConfig = {\n  padding: 20,\n  headerHeight: 40,\n};\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 1408,
+      "w": 340,
+      "h": 168
+    },
+    "1ea9b0fc-202a-0022-d8b9-f616d8337590": {
+      "id": "1ea9b0fc-202a-0022-d8b9-f616d8337590",
+      "title": "ContainerNode",
+      "body": "```ts\nexport interface ContainerNode {\n  id: string;\n  parentId?: string;\n  position: { x: number; y: number };\n}\n```\n\nSource: `containerOps.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 1596,
+      "w": 340,
+      "h": 184
+    },
+    "b70ac1ae-b1e8-9134-4f91-a4c98e8019bd": {
+      "id": "b70ac1ae-b1e8-9134-4f91-a4c98e8019bd",
+      "title": "ContainerFitConfig",
+      "body": "```ts\nexport interface ContainerFitConfig {\n  layout?: OrganizerLayoutConfig;\n}\n```\n\nSource: `containerOps.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 1800,
+      "w": 340,
+      "h": 152
+    },
+    "369a0f44-3769-4b19-9385-768269cfb8ec": {
+      "id": "369a0f44-3769-4b19-9385-768269cfb8ec",
+      "title": "Rect",
+      "body": "```ts\nexport interface Rect {\n  x: number;\n  y: number;\n  width: number;\n  height: number;\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 1972,
+      "w": 340,
+      "h": 200
+    },
+    "583cdb4d-de3b-6c9f-7991-680943be64ee": {
+      "id": "583cdb4d-de3b-6c9f-7991-680943be64ee",
+      "title": "ComputeBoundsOptions",
+      "body": "```ts\nexport interface ComputeBoundsOptions {\n  padding?: number;\n  minWidth?: number;\n  minHeight?: number;\n  pinnedSize?: { width: number; height: number } | null;\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 2192,
+      "w": 340,
+      "h": 200
+    },
+    "3c281824-0e0b-060b-4fc8-797b03aeac59": {
+      "id": "3c281824-0e0b-060b-4fc8-797b03aeac59",
+      "title": "Position",
+      "body": "```ts\nexport interface Position {\n  x: number;\n  y: number;\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 2412,
+      "w": 340,
+      "h": 168
+    },
+    "5399c32c-d99a-a50c-ceb7-f2ec456be6cb": {
+      "id": "5399c32c-d99a-a50c-ceb7-f2ec456be6cb",
+      "title": "Size",
+      "body": "```ts\nexport interface Size {\n  width: number;\n  height: number;\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 2600,
+      "w": 340,
+      "h": 168
+    },
+    "3240c116-c76f-036d-4784-def33ea118dc": {
+      "id": "3240c116-c76f-036d-4784-def33ea118dc",
+      "title": "NodeGeometry",
+      "body": "```ts\nexport interface NodeGeometry {\n  position: Position;\n  width?: number;\n  height?: number;\n  measured?: { width?: number; height?: number };\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 2788,
+      "w": 340,
+      "h": 200
+    },
+    "981b3ee9-e8c9-8ad5-5d5f-097c2afe3cd7": {
+      "id": "981b3ee9-e8c9-8ad5-5d5f-097c2afe3cd7",
+      "title": "OrganizerLayoutConfig",
+      "body": "```ts\nexport interface OrganizerLayoutConfig {\n  padding: number;\n  headerHeight: number;\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 3008,
+      "w": 340,
+      "h": 168
+    },
+    "d0893192-a930-d7e3-6fa7-7ba07ebbb1f3": {
+      "id": "d0893192-a930-d7e3-6fa7-7ba07ebbb1f3",
+      "title": "OrganizerFitResult",
+      "body": "```ts\nexport interface OrganizerFitResult {\n  /** How much to shift the organizer's position (negative = move left/up) */\n  positionDelta: Position;\n  /** New size for the organizer after accounting for the shift */\n  size: Size;\n  /** Delta to apply to ALL children's positions (= -positionDelta) */\n  childPositionDelta: Position;\n}\n```\n\nSource: `geometry.ts`",
+      "parentId": null,
+      "x": 1600,
+      "y": 3196,
+      "w": 340,
+      "h": 232
+    },
+    "67690efe-a23d-ce5d-2316-083161db83ea": {
+      "id": "67690efe-a23d-ce5d-2316-083161db83ea",
+      "title": "Performance",
+      "body": "",
+      "parentId": null,
+      "x": 2000,
+      "y": 0,
+      "w": 340,
+      "h": 60
+    },
+    "360f895a-a657-e52e-f65b-4a305f9fb268": {
+      "id": "360f895a-a657-e52e-f65b-4a305f9fb268",
+      "title": "traceCallback",
+      "body": "```ts\nexport function traceCallback<T extends (...args: any[]) => any>(name: string, fn: T): T\n```\n\nSource: `perf.ts`",
+      "parentId": null,
+      "x": 2000,
+      "y": 80,
+      "w": 340,
+      "h": 120
+    },
+    "0d977fbb-12ac-d6d0-ba45-a1714007da24": {
+      "id": "0d977fbb-12ac-d6d0-ba45-a1714007da24",
+      "title": "observeLongTasks",
+      "body": "```ts\nexport function observeLongTasks(): () => void\n```\n\nSource: `perf.ts`",
+      "parentId": null,
+      "x": 2000,
+      "y": 220,
+      "w": 340,
+      "h": 120
+    },
+    "4c2ab290-93d8-8cdd-342c-d6ea2d68bc26": {
+      "id": "4c2ab290-93d8-8cdd-342c-d6ea2d68bc26",
+      "title": "markInteraction",
+      "body": "```ts\nexport function markInteraction(name: string): { end: () => void }\n```\n\nSource: `perf.ts`",
+      "parentId": null,
+      "x": 2000,
+      "y": 360,
+      "w": 340,
+      "h": 120
+    },
+    "ce9c3a46-8331-a4e9-5449-ffd0776ff15e": {
+      "id": "ce9c3a46-8331-a4e9-5449-ffd0776ff15e",
+      "title": "createPerformanceMonitor",
+      "body": "```ts\nexport function createPerformanceMonitor(\n  options: PerformanceMonitorOptions = {},\n): PerformanceMonitorResult\n```\n\nSource: `createPerformanceMonitor.ts`",
+      "parentId": null,
+      "x": 2000,
+      "y": 500,
+      "w": 340,
+      "h": 152
+    },
+    "a308d2e9-2130-741b-98b3-462b56826156": {
+      "id": "a308d2e9-2130-741b-98b3-462b56826156",
+      "title": "PerformanceMonitorOptions",
+      "body": "```ts\nexport interface PerformanceMonitorOptions {\n  /** FPS sampling window in ms (default: 250) */\n  ms?: number;\n  /** Number of FPS averages to collect before evaluating (default: 10) */\n  iterations?: number;\n  /** Fraction of iterations that must agree for incline/decline (default: 0.75) */\n  threshold?: number;\n  /** Given detected refresh rate, return [lower, upper] FPS bounds (default: [hz*0.8, hz*0.95]) */\n  bounds?: (refreshRate: number) => [lower: number, upper: number];\n  /** Max incline/decline oscillations before triggering fallback (default: Infinity) */\n  flipflops?: number;\n  /** I\n  // ...\n```\n\nSource: `createPerformanceMonitor.ts`",
+      "parentId": null,
+      "x": 2000,
+      "y": 672,
+      "w": 340,
+      "h": 312
+    },
+    "f978c691-aa60-a050-bdf6-199de6a56d87": {
+      "id": "f978c691-aa60-a050-bdf6-199de6a56d87",
+      "title": "PerformanceMonitorResult",
+      "body": "```ts\nexport interface PerformanceMonitorResult {\n  /** Reactive quality factor 0-1. 1 = full quality, 0 = minimum quality */\n  factor: () => number;\n  /** Current measured FPS (reactive) */\n  fps: () => number;\n  /** Detected device refresh rate (reactive, starts at 60) */\n  refreshRate: () => number;\n  /** Start sampling — call when an interaction begins */\n  start: () => void;\n  /** Stop sampling — call when an interaction ends */\n  stop: () => void;\n  /** Whether currently sampling (reactive) */\n  active: () => boolean;\n  /** Reset factor to initial value and clear history */\n  reset: () => void\n  // ...\n```\n\nSource: `createPerformanceMonitor.ts`",
+      "parentId": null,
+      "x": 2000,
+      "y": 1004,
+      "w": 340,
+      "h": 360
+    }
+  },
+  "edges": {}
+}

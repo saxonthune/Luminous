@@ -35,8 +35,8 @@
       "title": "CanvasContent",
       "body": "Inner component inside <Canvas> provider. Owns drag/resize callbacks, delete handler, extract-to-note. Renders notes and edges.",
       "parentId": null,
-      "x": 375,
-      "y": 660,
+      "x": 379.57241638731676,
+      "y": 640.5671675609369,
       "w": 240,
       "h": 120
     },
@@ -55,18 +55,18 @@
       "title": "CanvasToolbar",
       "body": "Floating toolbar. Zoom in/out, fit view, untangle (layout).",
       "parentId": null,
-      "x": 535,
-      "y": 460,
-      "w": 200,
-      "h": 100
+      "x": 650.8333129882812,
+      "y": 473.33331298828125,
+      "w": 321.66668701171875,
+      "h": 155.83331298828125
     },
     "b3a274b5-2090-4c4d-bb11-acb1c30bbd23": {
       "id": "b3a274b5-2090-4c4d-bb11-acb1c30bbd23",
       "title": "NoteNode",
       "body": "Individual note on the canvas. Title input, MarkdownEditor, context menu. Will use NodeShell from cactus after extraction refactor.\n\n\n\n",
       "parentId": null,
-      "x": 240,
-      "y": 860,
+      "x": 240.00008372395558,
+      "y": 832.5654179521437,
       "w": 240,
       "h": 120
     },
@@ -75,8 +75,8 @@
       "title": "FreeformEdge",
       "body": "SVG line between two notes. Resolves absolute positions from note hierarchy. Double-click to edit label.",
       "parentId": null,
-      "x": 520,
-      "y": 860,
+      "x": 731.4755765657023,
+      "y": 835.9946674496646,
       "w": 220,
       "h": 100
     },

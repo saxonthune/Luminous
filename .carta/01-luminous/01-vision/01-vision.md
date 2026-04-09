@@ -20,6 +20,8 @@ This is what makes Luminous a *design* tool rather than a diagramming tool. Diag
 
 The specific artifacts that belong on the canvas — and how they are best represented — will be decided within the context of practice, not prescribed upfront. The canvas engine, data model, and editor tools exist to serve this exploration. What matters is that whatever appears on the canvas is simultaneously legible to a human eye and consumable as structured context.
 
+In practice, software design involves many kinds of structural model: state machines, component trees, resource dependency graphs, transformation pipelines, decision tables. These are all constrained graphs — nodes with types, edges with types, structural rules. Luminous doesn't prescribe which formalisms to use. It provides the substrate (canvas, typed nodes, typed edges) and lets users progressively add structure as their understanding deepens. Vocabulary first, types when patterns emerge, constraints when verification becomes valuable.
+
 ## The Name
 
 The name comes from Christopher Alexander's *The Luminous Ground* — the quality of life in a built environment comes from the relationships between its parts, not from any single part alone. Software production has the same quality: the fit between product expectations and source code is determined by the relationships between all the artifacts in between.
