@@ -30,6 +30,10 @@ geometry → schema → document → server
 
 These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.02.01) for the migration plan.
 
+## Current Milestone
+
+**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.carta/01-luminous/01-vision/03-milestones.md` for the full roadmap.
+
 ## Development Philosophy
 
 - **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Living software starts small and develops centers and ornamentation as feature complexity evolves.
@@ -40,11 +44,12 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Architecture Direction
 
-See `.carta/01-luminous/03-pdr-unfolding-architecture.md` for full details. Key decisions:
+See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full details. Key decisions:
 
-- **Notes are the fundamental node type.** Markdown title + body. Schemas come from crystallization, not upfront definition.
+- **Polymorphic nodes.** Notes are the primary node type, but the data model is a discriminated union — portals, pipeline-generated nodes (components, signals), and future types share base properties (position, size, nesting) and differ by `type` field.
 - **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
 - **Server is storage, client is intelligence.** Server serves files and syncs Yjs. Client owns all domain logic.
+- **Diagram pipelines.** Scripts that read source code via static analysis and emit `.canvas.json`. The pipeline is the reusable artifact — shareable across projects and communities. Each pipeline defines its own node types from the forces of its domain; we don't pre-build a universal schema of typed nodes.
 - **Willing to delete.** No backward compatibility with features nobody uses.
 
 ## Canvas Engine
