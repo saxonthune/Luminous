@@ -1,26 +1,5 @@
 import { createSignal, Show } from 'solid-js';
-import type { Note, Edge } from './api';
-
-function getAbsoluteTopLeft(
-  noteId: string,
-  notes: Record<string, Note>
-): { x: number; y: number } {
-  const note = notes[noteId];
-  if (!note) return { x: 0, y: 0 };
-  if (!note.parentId) return { x: note.x, y: note.y };
-  const parentAbs = getAbsoluteTopLeft(note.parentId, notes);
-  return { x: parentAbs.x + note.x, y: parentAbs.y + note.y };
-}
-
-function getAbsoluteRect(
-  noteId: string,
-  notes: Record<string, Note>
-): { x: number; y: number; w: number; h: number } {
-  const note = notes[noteId];
-  if (!note) return { x: 0, y: 0, w: 0, h: 0 };
-  const topLeft = getAbsoluteTopLeft(noteId, notes);
-  return { x: topLeft.x, y: topLeft.y, w: note.w, h: note.h };
-}
+import type { Edge } from './api';
 
 function rectBorderIntersection(
   rect: { x: number; y: number; w: number; h: number },
@@ -64,7 +43,8 @@ function rectBorderIntersection(
 
 interface FreeformEdgeProps {
   edge: Edge;
-  notes: Record<string, Note>;
+  /** Returns the absolute canvas rect for a node id, or undefined if not found. */
+  getAbsoluteRect: (id: string) => { x: number; y: number; w: number; h: number } | undefined;
   onUpdateLabel?: (edgeId: string, label: string | null) => void;
 }
 
@@ -72,18 +52,28 @@ export function FreeformEdge(props: FreeformEdgeProps) {
   const [editing, setEditing] = createSignal(false);
   const [editValue, setEditValue] = createSignal('');
 
-  const fromRect = () => getAbsoluteRect(props.edge.fromId, props.notes);
-  const toRect = () => getAbsoluteRect(props.edge.toId, props.notes);
+  const fromRect = () => props.getAbsoluteRect(props.edge.fromId);
+  const toRect = () => props.getAbsoluteRect(props.edge.toId);
   const fromCenter = () => {
     const r = fromRect();
+    if (!r) return { x: 0, y: 0 };
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   };
   const toCenter = () => {
     const r = toRect();
+    if (!r) return { x: 0, y: 0 };
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   };
-  const from = () => rectBorderIntersection(fromRect(), fromCenter(), toCenter());
-  const to = () => rectBorderIntersection(toRect(), toCenter(), fromCenter());
+  const from = () => {
+    const r = fromRect();
+    if (!r) return { x: 0, y: 0 };
+    return rectBorderIntersection(r, fromCenter(), toCenter());
+  };
+  const to = () => {
+    const r = toRect();
+    if (!r) return { x: 0, y: 0 };
+    return rectBorderIntersection(r, toCenter(), fromCenter());
+  };
   const midX = () => (from().x + to().x) / 2;
   const midY = () => (from().y + to().y) / 2;
 
@@ -103,7 +93,7 @@ export function FreeformEdge(props: FreeformEdgeProps) {
   }
 
   return (
-    <Show when={props.notes[props.edge.fromId] && props.notes[props.edge.toId]}>
+    <Show when={fromRect() && toRect()}>
       <g style={{ "pointer-events": 'auto' }}>
         <line
           x1={from().x} y1={from().y} x2={to().x} y2={to().y}

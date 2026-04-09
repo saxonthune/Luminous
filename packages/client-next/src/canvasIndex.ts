@@ -1,6 +1,6 @@
 import { createStore, produce } from 'solid-js/store'
 import type {
-  DocumentV2,
+  Document,
   NodeStructure,
   NodeContent,
   Schema,
@@ -17,7 +17,7 @@ export interface Warning {
 
 export interface CanvasIndex {
   // Source of truth (reactive accessor)
-  doc: () => DocumentV2
+  doc: () => Document
 
   // Derived indices (NOT reactive — read-only snapshots, kept in sync on writes)
   // Root nodes are stored under the sentinel key '__root__'
@@ -41,7 +41,7 @@ export interface CanvasIndex {
   registerSchema: (schema: Schema) => void
 
   // Bulk replace (used on canvas reload)
-  replace: (newDoc: DocumentV2) => void
+  replace: (newDoc: Document) => void
 
   // Diagnostics
   warnings: () => readonly Warning[]
@@ -54,8 +54,8 @@ function compareOrder(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-export function createCanvasIndex(initialDoc: DocumentV2): CanvasIndex {
-  const [store, setStore] = createStore<{ doc: DocumentV2 }>({ doc: initialDoc })
+export function createCanvasIndex(initialDoc: Document): CanvasIndex {
+  const [store, setStore] = createStore<{ doc: Document }>({ doc: initialDoc })
 
   // Derived state — built once, updated incrementally on writes
   const parentToChildren = new Map<string, string[]>()
@@ -185,7 +185,7 @@ export function createCanvasIndex(initialDoc: DocumentV2): CanvasIndex {
   // ---------------------------------------------------------------------------
 
   function createNode(structure: NodeStructure, content: NodeContent) {
-    setStore('doc', produce((d: DocumentV2) => {
+    setStore('doc', produce((d: Document) => {
       d.structure[structure.id] = structure
       d.content[structure.id] = content
     }))
@@ -218,7 +218,7 @@ export function createCanvasIndex(initialDoc: DocumentV2): CanvasIndex {
     // Re-parent children to null (root)
     const children = parentToChildren.get(id) ? [...(parentToChildren.get(id)!)] : []
     if (children.length > 0) {
-      setStore('doc', produce((d: DocumentV2) => {
+      setStore('doc', produce((d: Document) => {
         for (const childId of children) {
           if (d.structure[childId]) {
             d.structure[childId].parent = null
@@ -233,7 +233,7 @@ export function createCanvasIndex(initialDoc: DocumentV2): CanvasIndex {
     }
 
     // Remove edges referencing id
-    setStore('doc', produce((d: DocumentV2) => {
+    setStore('doc', produce((d: Document) => {
       for (const [edgeId, edge] of Object.entries(d.edges)) {
         if (edge.fromId === id || edge.toId === id) {
           delete d.edges[edgeId]
@@ -312,7 +312,7 @@ export function createCanvasIndex(initialDoc: DocumentV2): CanvasIndex {
     }
   }
 
-  function replace(newDoc: DocumentV2) {
+  function replace(newDoc: Document) {
     setStore('doc', newDoc)
     parentToChildren.clear()
     schemaForNode.clear()

@@ -1,12 +1,12 @@
 import { watch } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
-import type { Document, DocumentV2 } from "./types.js"
-import { applyActionToDoc, applyV2ActionToDoc } from "./actions.js"
+import type { Document } from "./types.js"
+import { applyActionToDoc } from "./actions.js"
 
 type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
 
-const cache = new Map<string, Document | DocumentV2>()
+const cache = new Map<string, Document>()
 const dirty = new Set<string>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const recentWrites = new Map<string, number>()
@@ -18,32 +18,25 @@ export function setRootDir(dir: string): void {
 }
 
 function emptyDoc(): Document {
-  return { notes: {}, edges: {} }
+  return { version: 2, schemas: {}, structure: {}, content: {}, edges: {} }
 }
 
-async function loadDocument(filePath: string): Promise<Document | DocumentV2> {
+async function loadDocument(filePath: string): Promise<Document> {
   try {
     const raw = await readFile(filePath, "utf-8")
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && parsed.version === 2) {
-      // v2 — return as DocumentV2; trust the shape (no validation for now)
-      return parsed as DocumentV2
+      return parsed as Document
     }
-    // v1 — apply existing normalization (legacy nodes lacking type get type='note')
-    const doc = parsed as Document
-    for (const node of Object.values(doc.notes ?? {})) {
-      if (!(node as any).type) {
-        (node as any).type = 'note'
-      }
-    }
-    return doc
+    // v1 document — not supported; return raw so client can detect and show error
+    return parsed as unknown as Document
   } catch (err) {
     console.error(`[store] failed to load document: ${filePath}`, err)
     return emptyDoc()
   }
 }
 
-async function saveDocument(filePath: string, doc: Document | DocumentV2): Promise<void> {
+async function saveDocument(filePath: string, doc: Document): Promise<void> {
   await writeFile(filePath, JSON.stringify(doc, null, 2), "utf-8")
   // Record after write completes so the timestamp reflects when fs.watch will fire
   recentWrites.set(filePath, Date.now())
@@ -83,7 +76,7 @@ export async function flushAll(): Promise<void> {
   dirty.clear()
 }
 
-export async function getDocument(relativePath: string): Promise<Document | DocumentV2> {
+export async function getDocument(relativePath: string): Promise<Document> {
   if (cache.has(relativePath)) {
     return cache.get(relativePath)!
   }
@@ -93,24 +86,13 @@ export async function getDocument(relativePath: string): Promise<Document | Docu
   return doc
 }
 
-function dispatchAction(
-  doc: Document | DocumentV2,
-  action: string,
-  params: Record<string, unknown>
-): ActionResult {
-  if ((doc as DocumentV2).version === 2) {
-    return applyV2ActionToDoc(doc as DocumentV2, action, params)
-  }
-  return applyActionToDoc(doc as Document, action, params)
-}
-
 export async function applyAction(
   relativePath: string,
   action: string,
   params: Record<string, unknown>
 ): Promise<ActionResult> {
   const doc = await getDocument(relativePath)
-  const result = dispatchAction(doc, action, params)
+  const result = applyActionToDoc(doc, action, params)
   if (result.ok) {
     dirty.add(relativePath)
     scheduleSave(relativePath)
@@ -149,7 +131,7 @@ export async function applyBatch(
       resolvedParams[key] = value
     }
 
-    const result = dispatchAction(doc, entry.action, resolvedParams)
+    const result = applyActionToDoc(doc, entry.action, resolvedParams)
     if (!result.ok) {
       results.push(entry.ref ? { ...result, ref: entry.ref } : result)
       return results
@@ -179,8 +161,6 @@ export function watchDocuments(
     const absPath = resolve(watchRootDir, normalized)
     const lastWrite = recentWrites.get(absPath)
     if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {
-      // Don't delete the entry — fs.watch fires multiple events per write.
-      // Let it expire naturally by timestamp comparison.
       return
     }
     recentWrites.delete(absPath)
