@@ -1,7 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { toolConfig, batchToolConfig, type ActionConfig, type ToolGroupConfig } from './tools.config.js'
+import { toolConfig, batchToolConfig, type ActionConfig, type ToolGroupConfig, type ParamType } from './tools.config.js'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -10,8 +10,32 @@ const server = new Server(
   { capabilities: { tools: {} } }
 )
 
+function paramToJsonSchema(param: ParamType): object {
+  if (typeof param === 'string') {
+    return { type: param }
+  }
+  if (param.type === 'object') {
+    const properties: Record<string, object> = {}
+    for (const [key, value] of Object.entries(param.properties)) {
+      properties[key] = paramToJsonSchema(value)
+    }
+    return {
+      type: 'object',
+      properties,
+      ...(param.required ? { required: param.required } : {}),
+    }
+  }
+  if (param.type === 'array') {
+    return {
+      type: 'array',
+      items: paramToJsonSchema(param.items),
+    }
+  }
+  throw new Error(`Unknown param type: ${JSON.stringify(param)}`)
+}
+
 function buildInputSchema(group: ToolGroupConfig): object {
-  const allParams = new Map<string, 'string' | 'number'>()
+  const allParams = new Map<string, ParamType>()
 
   for (const action of Object.values(group.actions)) {
     for (const [key, type] of Object.entries(action.params)) {
@@ -20,24 +44,23 @@ function buildInputSchema(group: ToolGroupConfig): object {
     }
   }
 
-  const properties: Record<string, { type: string }> = {
+  const properties: Record<string, object> = {
     action: {
       type: 'string',
+      enum: Object.keys(group.actions),
     },
   }
-
-  for (const [name, type] of allParams) {
-    properties[name] = { type }
+  for (const [name, param] of allParams) {
+    properties[name] = paramToJsonSchema(param)
   }
 
-  // Required: 'action' plus any param that appears in ALL actions without '?' suffix
+  // Required: 'action' plus any param that appears in EVERY action without '?' suffix
   const actionNames = Object.keys(group.actions)
   const requiredParams: string[] = []
 
-  for (const [baseName] of allParams) {
-    const isRequiredInAll = actionNames.every(actionName => {
+  for (const baseName of allParams.keys()) {
+    const isRequiredInAll = actionNames.every((actionName) => {
       const action = group.actions[actionName]
-      // param is required in this action if it exists without '?' suffix
       return baseName in action.params
     })
     if (isRequiredInAll) {
@@ -47,15 +70,7 @@ function buildInputSchema(group: ToolGroupConfig): object {
 
   return {
     type: 'object',
-    properties: {
-      action: {
-        type: 'string',
-        enum: actionNames,
-      },
-      ...Object.fromEntries(
-        [...allParams.entries()].map(([name, type]) => [name, { type }])
-      ),
-    },
+    properties,
     required: ['action', ...requiredParams],
   }
 }
