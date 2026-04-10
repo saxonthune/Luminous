@@ -52,6 +52,8 @@ export interface NodeSchema {
   primitives: PrimitiveDef[]
   /** For container schemas: which child schemaNames are allowed inside. Absent = any. */
   accepts?: string[]
+  /** Short description shown in the legend modal. */
+  legendDescription?: string
 }
 
 /** A schema describing an edge kind: its directionality and layout role. */
@@ -72,6 +74,8 @@ export interface EdgeSchema {
   acceptsSource?: string[]
   /** Node schemaNames legal at toId (UI hint only, not enforced). */
   acceptsTarget?: string[]
+  /** Short description shown in the legend modal. */
+  legendDescription?: string
 }
 
 /** A schema declares what a kind of node or edge "is". */
@@ -110,6 +114,12 @@ export interface NodeStructure {
 /** Content for a node — type-specific field values, addressed by primitive `bind`. */
 export type NodeContent = Record<string, unknown>
 
+/** Optional legend metadata for a canvas document. */
+export interface Legend {
+  /** Markdown blurb describing the canvas. */
+  blurb: string
+}
+
 /** v2 canvas document. Four flat hashtables keyed by id. */
 export interface Document {
   version: 2
@@ -117,4 +127,6 @@ export interface Document {
   structure: Record<string, NodeStructure>
   content:   Record<string, NodeContent>
   edges:     Record<string, Edge>
+  /** Optional legend — when present, the viewer shows an info button. */
+  legend?:   Legend
 }

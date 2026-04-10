@@ -18,8 +18,9 @@ import { defaultSchemas } from './schemas';
 import { FreeformEdge } from './FreeformEdge';
 import { CanvasToolbar } from './CanvasToolbar';
 import { ContextMenu, type MenuItem } from './ContextMenu';
-import { theme, setTheme, THEMES } from './theme';
+import { theme, setTheme, THEMES, cycleTheme } from './theme';
 import { AboutModal } from './AboutModal';
+import { LegendModal } from './LegendModal';
 import { APP_NAME, APP_VERSION } from './version';
 
 interface CanvasViewProps {
@@ -148,6 +149,17 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
         props.index.deleteNode(id);
         props.persistence.save('node/delete', { id });
       }
+    };
+    window.addEventListener('keydown', handler);
+    onCleanup(() => window.removeEventListener('keydown', handler));
+  });
+
+  // F2 — cycle theme
+  onMount(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'F2') return;
+      e.preventDefault();
+      cycleTheme();
     };
     window.addEventListener('keydown', handler);
     onCleanup(() => window.removeEventListener('keydown', handler));
@@ -931,6 +943,8 @@ export function CanvasView(props: CanvasViewProps) {
   // Theme dropdown
   const [themeMenuOpen, setThemeMenuOpen] = createSignal(false);
   const [aboutOpen, setAboutOpen] = createSignal(false);
+  const [legendOpen, setLegendOpen] = createSignal(false);
+  const hasLegend = () => !!index()?.doc().legend;
   let themeMenuRef: HTMLDivElement | undefined;
   onMount(() => {
     const onDocMouseDown = (e: MouseEvent) => {
@@ -1076,6 +1090,15 @@ export function CanvasView(props: CanvasViewProps) {
             </>
           }}
         </Show>
+        <Show when={hasLegend()}>
+          <button
+            onClick={() => setLegendOpen(true)}
+            class="absolute top-3 right-3 w-8 h-8 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] flex items-center justify-center text-sm font-serif font-bold z-10 cursor-pointer"
+            title="Canvas legend"
+          >
+            i
+          </button>
+        </Show>
         <button
           onClick={() => setAboutOpen(true)}
           class="absolute bottom-0 left-0 px-2 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-surface)] border-t border-r border-[var(--border-subtle)] z-10 cursor-pointer"
@@ -1085,6 +1108,15 @@ export function CanvasView(props: CanvasViewProps) {
       </div>
       <Show when={aboutOpen()}>
         <AboutModal onClose={() => setAboutOpen(false)} />
+      </Show>
+      <Show when={legendOpen() && index()?.doc().legend}>
+        {(legend) => (
+          <LegendModal
+            legend={legend()}
+            schemas={index()!.doc().schemas}
+            onClose={() => setLegendOpen(false)}
+          />
+        )}
       </Show>
     </div>
   );

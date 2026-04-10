@@ -14,6 +14,11 @@ const initial: Theme = stored && ids.includes(stored) ? stored : 'light';
 
 export const [theme, setTheme] = createSignal<Theme>(initial);
 
+export function cycleTheme() {
+  const current = ids.indexOf(theme());
+  setTheme(ids[(current + 1) % ids.length]);
+}
+
 createEffect(() => {
   const t = theme();
   document.documentElement.dataset.theme = t;
