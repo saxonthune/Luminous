@@ -10,8 +10,20 @@ deps: [doc01.02.01]
 
 Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses d3-zoom for viewport control, DOM data-attributes for hit-testing, and composable Solid primitives for interaction. The engine provides primitives; the domain layer above it (in `client-next`) decides what nodes mean, how edges behave, and what gestures do.
 
-**Location:** `packages/web-client/src/cactus/`
+**Location:** `packages/cactus/src/`
 **Consumer:** `packages/client-next/` (the active Luminous client)
+
+## Data Contract
+
+Cactus is "domain-agnostic" in a precise sense: the boundary is defined by which fields it reads and which it ignores.
+
+**Nodes.** Cactus reads `id`, `schemaName` (as an opaque string tag — never interpreted), `parent` (for containment rendering), and `geometry` (`{x, y, w, h}`). It does not read `content`, does not know what `title`, `body`, or any schema-specific field means, does not interpret `schemaName` values, and does not validate schemas.
+
+**Edges.** Cactus reads `id`, `fromId`, `toId`, and optionally `schemaName` (again as an opaque tag). It does not interpret edge schemas and does not filter edges by schema — filtering is the caller's job. Edge direction is a visual hint for the renderer, not a semantic constraint cactus enforces.
+
+**Schemas.** Cactus reads nothing from `doc.schemas`. The schemas table is entirely the domain layer's concern. Cactus receives opaque `schemaName` strings on nodes and edges and uses them only as data attributes for CSS styling and hit-testing.
+
+If new code in cactus starts reading content, interpreting schema names, or knowing what specific strings like `'component'` or `'renders'` mean, it belongs in the domain layer above cactus, not in cactus itself.
 
 ## Design Principles
 

@@ -30,6 +30,19 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
       onContextMenu={props.onContextMenu}
     >
       {props.children}
+      {/* Universal drag gripper — bottom-left corner, always present */}
+      <div
+        data-drag-handle="true"
+        data-no-pan="true"
+        class="absolute bottom-0 left-0 w-4 h-4 cursor-grab active:cursor-grabbing opacity-30 hover:opacity-70 transition-opacity rounded-bl-lg"
+        style={{ 'pointer-events': 'auto' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" style={{ 'pointer-events': 'none' }}>
+          <line x1="3" y1="8" x2="8" y2="3" stroke="var(--color-resize-handle, #888)" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="3" y1="12" x2="12" y2="3" stroke="var(--color-resize-handle, #888)" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="7" y1="12" x2="12" y2="7" stroke="var(--color-resize-handle, #888)" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </div>
     </div>
   );
 }

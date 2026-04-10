@@ -148,14 +148,6 @@ export function Canvas(props: CanvasProps) {
           : <DotGrid transform={transform()} patternId={props.patternId} />
         }
 
-        <Show when={props.renderEdges}>
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
-            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              {props.renderEdges!(transform())}
-            </g>
-          </svg>
-        </Show>
-
         <div
           style={{
             transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
@@ -166,6 +158,14 @@ export function Canvas(props: CanvasProps) {
         >
           {props.children}
         </div>
+
+        <Show when={props.renderEdges}>
+          <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
+              {props.renderEdges!(transform())}
+            </g>
+          </svg>
+        </Show>
 
         <Show when={connectionDragState() && props.renderConnectionPreview}>
           <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>

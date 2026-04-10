@@ -123,6 +123,7 @@ const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
 // Intermediate types
 // ---------------------------------------------------------------------------
 
+/** @pipeline-shape: A Solid.js component — function with JSX and a capitalized name */
 interface ComponentInfo {
   name: string;
   sourceFile: string; // relative path from ROOT
@@ -131,12 +132,14 @@ interface ComponentInfo {
   parent: string | null; // enclosing component for inner components
 }
 
+/** @pipeline-shape: A custom hook — calls reactive primitives, use/create prefix, no JSX */
 interface HookInfo {
   name: string;
   sourceFile: string;
   calledBy: string | null; // component that invokes this hook
 }
 
+/** @pipeline-shape: A reactive signal created via createSignal */
 interface SignalInfo {
   name: string; // getter name
   sourceFile: string;
@@ -144,6 +147,7 @@ interface SignalInfo {
   initialValue?: string;
 }
 
+/** @pipeline-shape: A reactive store created via createStore */
 interface StoreInfo {
   name: string;
   sourceFile: string;
@@ -151,12 +155,14 @@ interface StoreInfo {
   shape?: string[];
 }
 
+/** @pipeline-shape: A derived computation created via createMemo */
 interface MemoInfo {
   name: string;
   sourceFile: string;
   owner: string;
 }
 
+/** @pipeline-shape: A side effect — createEffect, onMount, or onCleanup */
 interface EffectInfo {
   name: string; // 'effect:N', 'mount:N', 'cleanup:N'
   kind: 'effect' | 'mount' | 'cleanup';
@@ -164,13 +170,24 @@ interface EffectInfo {
   owner: string;
 }
 
+/** @pipeline-shape: An external data dependency — fetch() or new WebSocket() */
 interface DataSourceInfo {
   name: string; // URL or label
   kind: 'fetch' | 'websocket';
   sourceFile: string;
   owner: string;
+  exportedFn: string | null; // if owner is __module__, the exported function containing this call
 }
 
+/** @pipeline-shape: A component/hook calling an imported function from a datasource-bearing module */
+interface FnCallRecord {
+  caller: string;        // component/hook name
+  calledFn: string;      // imported function name (local alias)
+  importedName: string;  // original exported name
+  resolvedSource: string; // absolute path of the source module
+}
+
+/** @pipeline-shape: A detected data-flow edge — one entity reading another */
 interface ReactiveRead {
   producer: string; // signal/store/memo/datasource key
   consumer: string; // effect/memo/component/hook name
@@ -178,12 +195,14 @@ interface ReactiveRead {
   schemaClass: 'datasource-read' | 'store-access' | 'effect-dependency' | 'cross-component-read';
 }
 
+/** @pipeline-shape: A resolved import — local alias mapped to source module */
 interface ImportRecord {
   localName: string;
   importedName: string;
   sourcePath: string; // resolved absolute path (or original if not resolved)
 }
 
+/** @pipeline-shape: The accumulated analysis — all entities and relationships found across all files */
 interface SolidAnalysis {
   components: ComponentInfo[];
   hooks: HookInfo[];
@@ -193,6 +212,7 @@ interface SolidAnalysis {
   effects: EffectInfo[];
   dataSources: DataSourceInfo[];
   reactiveReads: ReactiveRead[];
+  fnCalls: FnCallRecord[];
 }
 
 // Solid.js reactive primitives — NOT treated as hooks
@@ -214,6 +234,7 @@ const SOLID_PRIMITIVES = new Set([
 // File discovery
 // ---------------------------------------------------------------------------
 
+/** @pipeline: Discover all .ts/.tsx source files in target directories */
 function findSourceFiles(dir: string): string[] {
   const files: string[] = [];
   function walk(d: string) {
@@ -346,6 +367,7 @@ function extractProps(
 // Phase 1: Per-file AST analysis
 // ---------------------------------------------------------------------------
 
+/** @pipeline: Walk one file's AST to extract components, hooks, signals, effects, and datasources */
 function analyzeFile(
   filePath: string,
   relPath: string,
@@ -386,6 +408,9 @@ function analyzeFile(
   let effectCount = 0;
   let mountCount = 0;
   let cleanupCount = 0;
+
+  // Track when we're inside a module-level exported function (for datasource attribution)
+  let currentExportedFn: string | null = null;
 
   function visitNode(node: ts.Node) {
     // Import declarations
@@ -447,6 +472,21 @@ function analyzeFile(
     ts.forEachChild(node, visitNode);
   }
 
+  function isExportedFunction(node: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression): boolean {
+    if (ts.isFunctionDeclaration(node)) {
+      return node.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+    }
+    // Arrow/function expression: check if parent variable statement has `export`
+    let parent = node.parent;
+    while (parent && !ts.isVariableStatement(parent) && !ts.isSourceFile(parent)) {
+      parent = parent.parent;
+    }
+    if (parent && ts.isVariableStatement(parent)) {
+      return parent.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+    }
+    return false;
+  }
+
   function processFunctionNode(
     node: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression,
     name: string
@@ -478,6 +518,12 @@ function analyzeFile(
       .reverse()
       .find((c) => c.kind === 'component')?.name ?? null;
 
+    // Track module-level exported functions for datasource attribution
+    const prevExportedFn = currentExportedFn;
+    if (contextStack.length === 0 && isExportedFunction(node)) {
+      currentExportedFn = name;
+    }
+
     if (isComponent) {
       const renderedChildren = extractJsxComponentNames(body, source);
       const props = extractProps(node);
@@ -502,6 +548,8 @@ function analyzeFile(
       ts.forEachChild(body, visitBodyNode);
       contextStack.pop();
     }
+
+    currentExportedFn = prevExportedFn;
   }
 
   function visitBodyNode(node: ts.Node) {
@@ -566,6 +614,7 @@ function analyzeFile(
           kind: 'fetch',
           sourceFile: relPath,
           owner: currentOwner(),
+          exportedFn: currentOwner() === '__module__' ? currentExportedFn : null,
         });
       }
     }
@@ -581,6 +630,7 @@ function analyzeFile(
           kind: 'websocket',
           sourceFile: relPath,
           owner: currentOwner(),
+          exportedFn: currentOwner() === '__module__' ? currentExportedFn : null,
         });
       }
     }
@@ -673,6 +723,7 @@ function analyzeFile(
 // Phase 1b: Cross-file resolution
 // ---------------------------------------------------------------------------
 
+/** @pipeline: Resolve a relative import specifier to an absolute file path */
 function resolveImportPath(from: string, importedFrom: string): string | null {
   if (importedFrom.startsWith('.')) {
     const base = resolve(dirname(from), importedFrom);
@@ -722,6 +773,7 @@ function crossFileResolution(
 // Second pass: detect reactive reads and hook call sites
 // ---------------------------------------------------------------------------
 
+/** @pipeline: Second AST walk — detect signal reads, hook call sites, and calls to datasource-bearing imports */
 function detectReactiveReadsAndHookCalls(
   filePath: string,
   relPath: string,
@@ -729,6 +781,33 @@ function detectReactiveReadsAndHookCalls(
 ): void {
   const source = readFileSync(filePath, 'utf-8');
   const sf = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+  // Parse imports for this file (needed for fn-call tracing)
+  const localImportMap = new Map<string, { importedName: string; resolvedSource: string }>();
+  ts.forEachChild(sf, (node) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const from = node.moduleSpecifier.text;
+      const resolved = resolveImportPath(filePath, from);
+      if (!resolved) return;
+      const clause = node.importClause;
+      if (!clause) return;
+      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+        for (const el of clause.namedBindings.elements) {
+          const localName = el.name.text;
+          const importedName = el.propertyName ? el.propertyName.text : el.name.text;
+          localImportMap.set(localName, { importedName, resolvedSource: resolved });
+        }
+      }
+    }
+  });
+
+  // Build set of exported function names that contain __module__ datasources
+  const dsExportedFns = new Set<string>();
+  for (const ds of analysis.dataSources) {
+    if (ds.owner === '__module__' && ds.exportedFn) {
+      dsExportedFns.add(ds.exportedFn);
+    }
+  }
 
   const signalNames = new Set(analysis.signals.map((s) => s.name));
   const memoNames = new Set(analysis.memos.map((m) => m.name));
@@ -860,6 +939,27 @@ function detectReactiveReadsAndHookCalls(
         }
       }
 
+      // Imported function calls — trace calls to exported functions that contain datasources
+      if (callName && localImportMap.has(callName)) {
+        const owner = currentOwner();
+        if (owner !== '__module__') {
+          const imp = localImportMap.get(callName)!;
+          if (dsExportedFns.has(imp.importedName)) {
+            const exists = analysis.fnCalls.some(
+              (fc) => fc.caller === owner && fc.importedName === imp.importedName && fc.resolvedSource === imp.resolvedSource
+            );
+            if (!exists) {
+              analysis.fnCalls.push({
+                caller: owner,
+                calledFn: callName,
+                importedName: imp.importedName,
+                resolvedSource: imp.resolvedSource,
+              });
+            }
+          }
+        }
+      }
+
       // createEffect/onMount callbacks — push effect context, recurse, pop
       if (callName === 'createEffect' || callName === 'onMount') {
         const callback = node.arguments[0];
@@ -943,6 +1043,7 @@ function detectReactiveReadsAndHookCalls(
 // Layout constants
 const COL_WIDTH = 300;
 
+/** @pipeline: Transform the accumulated analysis into a canvas document — nodes, nesting, and edges */
 function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
   const structure: Record<string, NodeStructure> = {};
   const content: Record<string, NodeContent> = {};
@@ -1154,6 +1255,22 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
   }
 
   // ---------------------------------------------------------------------------
+  // Drop orphan effects — effects that failed to nest under their owner
+  // (caused by entityIdMap name collisions on generic names like mount:1)
+  // ---------------------------------------------------------------------------
+
+  const orphanEffects: string[] = [];
+  for (const [id, node] of Object.entries(structure)) {
+    if (node.schemaName === 'effect' && node.parent === null) {
+      orphanEffects.push(id);
+    }
+  }
+  for (const id of orphanEffects) {
+    delete structure[id];
+    delete content[id];
+  }
+
+  // ---------------------------------------------------------------------------
   // Edges: ReactiveRead cross-boundary
   // ---------------------------------------------------------------------------
 
@@ -1184,6 +1301,7 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
 // Main
 // ---------------------------------------------------------------------------
 
+/** @pipeline: Orchestrator — file discovery, Phase 1/1b, proxy resolution, canvas generation, output */
 function main() {
   const args = process.argv.slice(2);
 
@@ -1224,6 +1342,7 @@ function main() {
     effects: [],
     dataSources: [],
     reactiveReads: [],
+    fnCalls: [],
   };
 
   const fileImportMaps = new Map<string, Map<string, ImportRecord[]>>();
@@ -1260,6 +1379,41 @@ function main() {
   }
 
   console.log(`  Reactive reads detected: ${analysis.reactiveReads.length}`);
+  console.log(`  Fn calls to datasource modules: ${analysis.fnCalls.length}`);
+
+  // Resolve proxy datasource-read edges: component calls exported fn → fn contains fetch
+  for (const fc of analysis.fnCalls) {
+    const resolvedRel = relative(ROOT, fc.resolvedSource);
+    // Find all __module__ datasources in that source file whose exportedFn matches
+    const matchingDs = analysis.dataSources.filter(
+      (ds) => ds.owner === '__module__' && ds.exportedFn === fc.importedName && ds.sourceFile === resolvedRel
+    );
+    for (const ds of matchingDs) {
+      const dsKey = `${ds.kind}:${ds.name}`;
+      const exists = analysis.reactiveReads.some(
+        (r) => r.producer === dsKey && r.consumer === fc.caller
+      );
+      if (!exists) {
+        analysis.reactiveReads.push({
+          producer: dsKey,
+          consumer: fc.caller,
+          context: 'unknown',
+          schemaClass: 'datasource-read',
+        });
+      }
+    }
+  }
+
+  if (analysis.fnCalls.length > 0) {
+    console.log(`  Reactive reads after proxy resolution: ${analysis.reactiveReads.length}`);
+  }
+
+  // Filter out __module__ effects — they have no owner and produce canvas noise
+  const moduleLevelEffects = analysis.effects.filter((e) => e.owner === '__module__');
+  if (moduleLevelEffects.length > 0) {
+    console.log(`  Dropping ${moduleLevelEffects.length} module-level effects (no component owner)`);
+    analysis.effects = analysis.effects.filter((e) => e.owner !== '__module__');
+  }
 
   console.log('Phase 2: Generating canvas...');
 

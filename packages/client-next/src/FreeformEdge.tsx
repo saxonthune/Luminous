@@ -1,5 +1,7 @@
 import { createSignal, Show } from 'solid-js';
+import { useCanvasContext } from '@luminous/cactus';
 import type { Edge } from './api';
+import { ContextMenu, type MenuItem } from './ContextMenu';
 
 function rectBorderIntersection(
   rect: { x: number; y: number; w: number; h: number },
@@ -49,8 +51,10 @@ interface FreeformEdgeProps {
 }
 
 export function FreeformEdge(props: FreeformEdgeProps) {
+  const { setSelectedIds } = useCanvasContext();
   const [editing, setEditing] = createSignal(false);
   const [editValue, setEditValue] = createSignal('');
+  const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
 
   const fromRect = () => props.getAbsoluteRect(props.edge.fromId);
   const toRect = () => props.getAbsoluteRect(props.edge.toId);
@@ -92,8 +96,59 @@ export function FreeformEdge(props: FreeformEdgeProps) {
     setEditing(false);
   }
 
+  function handleContextMenu(screenX: number, screenY: number) {
+    setContextMenu({ x: screenX, y: screenY });
+  }
+
+  const debugInfo = () => {
+    const fr = fromRect();
+    const tr = toRect();
+    const f = from();
+    const t = to();
+    const fc = fromCenter();
+    const tc = toCenter();
+    return { fr, tr, f, t, fc, tc };
+  };
+
+  const debugMenuItems = (): MenuItem[] => {
+    const { fr, tr, f, t, fc, tc } = debugInfo();
+    return [
+      { label: 'Select connected nodes', action: () => setSelectedIds([props.edge.fromId, props.edge.toId]) },
+      { label: 'Copy debug to clipboard', action: () => {
+        const dump = JSON.stringify({
+          edge: { id: props.edge.id, fromId: props.edge.fromId, toId: props.edge.toId, label: props.edge.label, schemaName: props.edge.schemaName },
+          from: { rect: fr, center: fc, endpoint: f },
+          to: { rect: tr, center: tc, endpoint: t },
+        }, null, 2);
+        navigator.clipboard.writeText(dump);
+      }},
+      { label: '', action: () => {}, separator: true },
+      { label: `from rect: (${fr ? `${Math.round(fr.x)},${Math.round(fr.y)} ${Math.round(fr.w)}×${Math.round(fr.h)}` : 'missing'})`, action: () => {}, disabled: true },
+      { label: `from center: (${Math.round(fc.x)},${Math.round(fc.y)})`, action: () => {}, disabled: true },
+      { label: `from endpoint: (${Math.round(f.x)},${Math.round(f.y)})`, action: () => {}, disabled: true },
+      { label: '', action: () => {}, separator: true },
+      { label: `to rect: (${tr ? `${Math.round(tr.x)},${Math.round(tr.y)} ${Math.round(tr.w)}×${Math.round(tr.h)}` : 'missing'})`, action: () => {}, disabled: true },
+      { label: `to center: (${Math.round(tc.x)},${Math.round(tc.y)})`, action: () => {}, disabled: true },
+      { label: `to endpoint: (${Math.round(t.x)},${Math.round(t.y)})`, action: () => {}, disabled: true },
+    ];
+  };
+
+  // Estimate label width for the stadium background
+  const labelWidth = () => (props.edge.label?.length ?? 0) * 6.5 + 16;
+
   return (
     <Show when={fromRect() && toRect()}>
+      <defs>
+        <marker
+          id={`arrow-${props.edge.id}`}
+          viewBox="0 0 10 10"
+          refX="10" refY="5"
+          markerWidth="8" markerHeight="8"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--color-edge)" />
+        </marker>
+      </defs>
       <g style={{ "pointer-events": 'auto' }}>
         <line
           x1={from().x} y1={from().y} x2={to().x} y2={to().y}
@@ -104,16 +159,30 @@ export function FreeformEdge(props: FreeformEdgeProps) {
         <line
           x1={from().x} y1={from().y} x2={to().x} y2={to().y}
           stroke="var(--color-edge)" stroke-width={2} stroke-linecap="round"
+          marker-end={`url(#arrow-${props.edge.id})`}
           style={{ "pointer-events": 'none' }}
         />
         <Show when={editing()} fallback={
           <Show when={props.edge.label}>
+            {/* Stadium pill background behind edge label */}
+            <rect
+              x={midX() - labelWidth() / 2} y={midY() - 9}
+              width={labelWidth()} height={18}
+              rx={9} ry={9}
+              fill="var(--bg-surface)" stroke="var(--border-subtle)" stroke-width={1}
+              style={{ "pointer-events": 'none' }}
+            />
             <text
               x={midX()} y={midY()}
-              text-anchor="middle" dominant-baseline="middle"
-              font-size="12" fill="var(--color-edge-label)"
+              text-anchor="middle" dominant-baseline="central"
+              font-size="11" fill="var(--color-edge-label)"
               style={{ cursor: 'pointer', "user-select": 'none' }}
               onDblClick={startEditing}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleContextMenu(e.clientX, e.clientY);
+              }}
             >
               {props.edge.label}
             </text>
@@ -148,6 +217,17 @@ export function FreeformEdge(props: FreeformEdgeProps) {
           </foreignObject>
         </Show>
       </g>
+      <Show when={contextMenu()}>
+        {(menu) => (
+          <ContextMenu
+            x={menu().x}
+            y={menu().y}
+            header={`${props.edge.schemaName ?? 'edge'} · ${props.edge.id.slice(0, 8)}`}
+            items={debugMenuItems()}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
+      </Show>
     </Show>
   );
 }

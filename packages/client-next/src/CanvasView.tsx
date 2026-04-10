@@ -7,6 +7,7 @@ import {
   forceDirectedLayout,
   treeLayout,
   tidyLayout,
+  dagLayout,
   type CanvasRef,
   type ResizeDirection,
 } from '@luminous/cactus';
@@ -26,6 +27,16 @@ interface CanvasViewProps {
 
 function isDocumentV2(doc: unknown): doc is Document {
   return !!doc && typeof doc === 'object' && (doc as Document).version === 2;
+}
+
+/** Check if `ancestorId` is an ancestor of `nodeId` in the nesting tree. */
+function isAncestorOf(ancestorId: string, nodeId: string, index: CanvasIndex): boolean {
+  let current = index.getNode(nodeId)?.parent ?? null;
+  while (current) {
+    if (current === ancestorId) return true;
+    current = index.getNode(current)?.parent ?? null;
+  }
+  return false;
 }
 
 /** Walk up parent pointers via the index to compute absolute canvas position. */
@@ -64,6 +75,12 @@ function nextOrder(parent: string | null, index: CanvasIndex): string {
 // CanvasContent — rendered inside <Canvas>, can call useCanvasContext()
 // ---------------------------------------------------------------------------
 
+export interface AncestorEdgeInfo {
+  label: string;
+  targetName: string;
+  direction: 'up' | 'down';
+}
+
 interface CanvasContentProps {
   index: CanvasIndex;
   documentPath: string;
@@ -72,6 +89,8 @@ interface CanvasContentProps {
   onCreateNoteReady: (fn: () => void) => void;
   /** Tidy a subtree rooted at rootId; provided by CanvasView (measureAndTidy). */
   onTidy: (rootId: string) => void;
+  /** Ancestor edges keyed by descendant node ID — rendered inline instead of as lines. */
+  ancestorEdges: () => Map<string, AncestorEdgeInfo[]>;
 }
 
 function CanvasContent(props: CanvasContentProps): JSX.Element {
@@ -341,6 +360,7 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
           onResizePointerDown={onResizePointerDown}
           onDelete={handleDelete}
           onTidy={props.onTidy}
+          ancestorEdges={props.ancestorEdges}
         />
       )}
     </For>
@@ -360,6 +380,52 @@ export function CanvasView(props: CanvasViewProps) {
   let clearSelectionFn: () => void = () => {};
   let createNoteFn: () => void = () => {};
   let canvasRef: CanvasRef | undefined;
+
+  // -------------------------------------------------------------------------
+  // Node dimension cache — ResizeObserver tracks actual rendered sizes so
+  // edges can compute accurate border intersection points even when
+  // geometry.h is 0 (auto-sized nodes).
+  // -------------------------------------------------------------------------
+  const nodeMeasureCache = new Map<string, { w: number; h: number }>();
+  let canvasWrapperEl!: HTMLDivElement;
+
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const el = entry.target as HTMLElement;
+      const nodeId = el.dataset.nodeId;
+      if (!nodeId) continue;
+      const rect = entry.contentRect;
+      nodeMeasureCache.set(nodeId, { w: rect.width, h: rect.height });
+    }
+  });
+
+  const mutationObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const added of m.addedNodes) {
+        if (!(added instanceof HTMLElement)) continue;
+        if (added.dataset.nodeId) resizeObserver.observe(added);
+        for (const el of added.querySelectorAll<HTMLElement>('[data-node-id]')) {
+          resizeObserver.observe(el);
+        }
+      }
+      for (const removed of m.removedNodes) {
+        if (!(removed instanceof HTMLElement)) continue;
+        if (removed.dataset.nodeId) {
+          resizeObserver.unobserve(removed);
+          nodeMeasureCache.delete(removed.dataset.nodeId);
+        }
+        for (const el of removed.querySelectorAll<HTMLElement>('[data-node-id]')) {
+          resizeObserver.unobserve(el);
+          if (el.dataset.nodeId) nodeMeasureCache.delete(el.dataset.nodeId);
+        }
+      }
+    }
+  });
+
+  onCleanup(() => {
+    resizeObserver.disconnect();
+    mutationObserver.disconnect();
+  });
 
   let loadDocTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -712,6 +778,78 @@ export function CanvasView(props: CanvasViewProps) {
   };
 
   // ---------------------------------------------------------------------------
+  // DAG layout: topological ordering using ALL directed edges
+  // ---------------------------------------------------------------------------
+
+  const arrangeDagLayout = () => {
+    // Pass 1: measure and tidy to get accurate sizes
+    measureAndTidy();
+
+    const idx = index();
+    if (!idx) return;
+    const doc = idx.doc();
+
+    // Measure primitive stacks for header heights (same as measureAndTidy)
+    const measured = new Map<string, number>();
+    const nodeEls = document.querySelectorAll<HTMLElement>('[data-node-id]');
+    for (const el of nodeEls) {
+      const id = el.dataset.nodeId;
+      if (!id || !doc.structure[id]) continue;
+      const stack = el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
+      if (!stack) continue;
+      measured.set(id, stack.offsetHeight);
+    }
+
+    // Build TidyNode[] for dagLayout (it runs tidyLayout internally for sizing)
+    const tidyNodes = Object.entries(doc.structure).map(([id, n]) => ({
+      id,
+      w: n.geometry.w,
+      h: measured.get(id) ?? n.geometry.h,
+      parentId: n.parent,
+      category: n.schemaName,
+    }));
+    tidyNodes.sort((a, b) => {
+      const pa = a.parentId ?? '';
+      const pb = b.parentId ?? '';
+      if (pa !== pb) return pa < pb ? -1 : 1;
+      const oa = doc.structure[a.id].order;
+      const ob = doc.structure[b.id].order;
+      return oa < ob ? -1 : oa > ob ? 1 : 0;
+    });
+
+    // Collect all edges whose schema has directed: true
+    const directedEdges = Object.values(doc.edges)
+      .filter((e) => {
+        if (!e.schemaName) return false;
+        const schema = doc.schemas[e.schemaName];
+        return schema?.kind === 'edge' && schema.directed === true;
+      })
+      .map((e) => ({ source: e.fromId, target: e.toId }));
+
+    if (directedEdges.length === 0) {
+      console.log('[dag] no directed edges in this canvas — tidy pass only');
+      return;
+    }
+
+    console.log(`[dag] laying out ${tidyNodes.length} nodes with ${directedEdges.length} directed edges`);
+
+    const result = dagLayout(tidyNodes, directedEdges);
+
+    for (const [id, pos] of result) {
+      const node = idx.getNode(id);
+      if (!node) continue;
+      // For nodes with children, keep the dagLayout-computed size too
+      const newGeo: Geometry = { ...node.geometry, x: pos.x, y: pos.y };
+      idx.setGeometry(id, newGeo);
+      postAction('node/setGeometry', {
+        path: props.documentPath,
+        id,
+        geometry: newGeo,
+      }).catch(() => loadDoc());
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // Derived helpers used by Canvas
   // ---------------------------------------------------------------------------
 
@@ -730,13 +868,45 @@ export function CanvasView(props: CanvasViewProps) {
     const node = idx.getNode(id);
     if (!node) return undefined;
     const pos = getAbsolutePos(id, idx);
-    return { x: pos.x, y: pos.y, w: node.geometry.w, h: node.geometry.h };
+    // Use measured DOM dimensions when geometry.h is 0 (auto-sized nodes)
+    const measured = nodeMeasureCache.get(id);
+    const w = node.geometry.w > 0 ? node.geometry.w : (measured?.w ?? node.geometry.w);
+    const h = node.geometry.h > 0 ? node.geometry.h : (measured?.h ?? node.geometry.h);
+    return { x: pos.x, y: pos.y, w, h };
+  };
+
+  /** Edges where one endpoint is an ancestor of the other — rendered inline, not as lines. */
+  const ancestorEdgeMap = () => {
+    const idx = index();
+    if (!idx) return new Map<string, Array<{ label: string; targetName: string; direction: 'up' | 'down' }>>();
+    const map = new Map<string, Array<{ label: string; targetName: string; direction: 'up' | 'down' }>>();
+    for (const edge of Object.values(idx.doc().edges)) {
+      const fromIsAncestor = isAncestorOf(edge.fromId, edge.toId, idx);
+      const toIsAncestor = isAncestorOf(edge.toId, edge.fromId, idx);
+      if (!fromIsAncestor && !toIsAncestor) continue;
+      // Attach to the deeper node (the descendant)
+      const descendantId = fromIsAncestor ? edge.toId : edge.fromId;
+      const ancestorId = fromIsAncestor ? edge.fromId : edge.toId;
+      const ancestorContent = idx.getContent(ancestorId);
+      const ancestorName = String(ancestorContent?.title ?? ancestorContent?.label ?? ancestorId.slice(0, 8));
+      const direction = fromIsAncestor ? 'down' : 'up';
+      if (!map.has(descendantId)) map.set(descendantId, []);
+      map.get(descendantId)!.push({
+        label: edge.label ?? '',
+        targetName: ancestorName,
+        direction,
+      });
+    }
+    return map;
   };
 
   const renderEdges = () => {
     const idx = index();
     if (!idx) return null;
-    const edges = Object.values(idx.doc().edges);
+    const edges = Object.values(idx.doc().edges).filter((edge) => {
+      // Suppress edges where one endpoint is an ancestor of the other
+      return !isAncestorOf(edge.fromId, edge.toId, idx) && !isAncestorOf(edge.toId, edge.fromId, idx);
+    });
     return (
       <For each={edges}>
         {(edge) => (
@@ -757,6 +927,7 @@ export function CanvasView(props: CanvasViewProps) {
     { label: 'Tree layout', action: () => arrangeTreeLayout() },
     { label: 'Force layout', action: () => arrangeForceLayout() },
     { label: 'Composite layout', action: () => arrangeCompositeLayout() },
+    { label: 'DAG layout (arrows down)', action: () => arrangeDagLayout() },
   ];
 
   // Theme dropdown
@@ -841,8 +1012,15 @@ export function CanvasView(props: CanvasViewProps) {
           </div>
         </Show>
         <Show when={!loading() && !error() && index()}>
-          {(idx) => (
-            <>
+          {(idx) => {
+            onMount(() => {
+              mutationObserver.observe(canvasWrapperEl, { childList: true, subtree: true });
+              for (const el of canvasWrapperEl.querySelectorAll<HTMLElement>('[data-node-id]')) {
+                resizeObserver.observe(el);
+              }
+            });
+            return <>
+              <div ref={canvasWrapperEl} class="w-full h-full">
               <Canvas
                 ref={(ref) => { canvasRef = ref; }}
                 class="w-full h-full"
@@ -867,8 +1045,10 @@ export function CanvasView(props: CanvasViewProps) {
                   onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
                   onCreateNoteReady={(fn) => (createNoteFn = fn)}
                   onTidy={(rootId) => measureAndTidy(rootId)}
+                  ancestorEdges={ancestorEdgeMap}
                 />
               </Canvas>
+              </div>
               <CanvasToolbar
                 onZoomIn={() => canvasRef?.zoomIn()}
                 onZoomOut={() => canvasRef?.zoomOut()}
@@ -889,7 +1069,7 @@ export function CanvasView(props: CanvasViewProps) {
                 )}
               </Show>
             </>
-          )}
+          }}
         </Show>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { primitiveRenderers } from './primitives'
 import type { CanvasIndex } from './canvasIndex'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { isNodeSchema } from './api'
+import type { AncestorEdgeInfo } from './CanvasView'
 
 export interface SchemaNodeProps {
   nodeId: string
@@ -17,6 +18,8 @@ export interface SchemaNodeProps {
   /** Action wiring — provided by the canvas-level integrator. */
   onDelete: (id: string) => void
   onTidy: (id: string) => void
+  /** Ancestor edges for inline rendering — keyed by node ID. */
+  ancestorEdges?: () => Map<string, AncestorEdgeInfo[]>
 }
 
 export function SchemaNode(props: SchemaNodeProps): JSX.Element {
@@ -99,6 +102,25 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                   </For>
                 </div>
 
+                {/* Ancestor edges rendered inline */}
+                <Show when={props.ancestorEdges?.().get(props.nodeId)}>
+                  {(edgeInfos) => (
+                    <div class="mx-2 mb-2 flex flex-wrap gap-1">
+                      <For each={edgeInfos()}>
+                        {(info) => (
+                          <span
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border-subtle)] bg-[var(--bg-surface-alt)] text-[var(--text-secondary)]"
+                            title={`${info.direction === 'up' ? '↑' : '↓'} ${info.label} ${info.targetName}`}
+                          >
+                            <span class="opacity-60">{info.direction === 'up' ? '↑' : '↓'}</span>
+                            {info.label ? `${info.label} ` : ''}{info.targetName}
+                          </span>
+                        )}
+                      </For>
+                    </div>
+                  )}
+                </Show>
+
                 {/* Default child region — render children of this node, recursively */}
                 <Show when={children().length > 0}>
                   <For each={children()}>
@@ -111,6 +133,7 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                         onResizePointerDown={props.onResizePointerDown}
                         onDelete={props.onDelete}
                         onTidy={props.onTidy}
+                        ancestorEdges={props.ancestorEdges}
                       />
                     )}
                   </For>
