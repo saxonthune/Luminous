@@ -79,47 +79,49 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                   ...kindStyle(n().schemaName),
                 }}
               >
-                {/* Render each primitive in the schema — wrapped for measurement only */}
-                <div data-primitive-stack="true">
-                  <For each={(() => { const sc = s(); return isNodeSchema(sc) ? sc.primitives : [] })()}>
-                    {(primitive) => {
-                      const Renderer = primitiveRenderers[primitive.type] ?? UnknownPrimitiveRenderer
-                      const value = primitive.bind ? content()[primitive.bind] : undefined
-                      return (
-                        <Renderer
-                          primitive={primitive}
-                          nodeId={props.nodeId}
-                          schemaName={s().name}
-                          value={value}
-                          onChange={(next) => {
-                            if (primitive.bind) {
-                              props.index.setContent(props.nodeId, { [primitive.bind]: next })
-                            }
-                          }}
-                        />
-                      )
-                    }}
-                  </For>
-                </div>
+                {/* Node's own content (primitives + inline edges) — measured for tidy layout */}
+                <div data-node-header="true">
+                  <div data-primitive-stack="true">
+                    <For each={(() => { const sc = s(); return isNodeSchema(sc) ? sc.primitives : [] })()}>
+                      {(primitive) => {
+                        const Renderer = primitiveRenderers[primitive.type] ?? UnknownPrimitiveRenderer
+                        const value = primitive.bind ? content()[primitive.bind] : undefined
+                        return (
+                          <Renderer
+                            primitive={primitive}
+                            nodeId={props.nodeId}
+                            schemaName={s().name}
+                            value={value}
+                            onChange={(next) => {
+                              if (primitive.bind) {
+                                props.index.setContent(props.nodeId, { [primitive.bind]: next })
+                              }
+                            }}
+                          />
+                        )
+                      }}
+                    </For>
+                  </div>
 
-                {/* Ancestor edges rendered inline */}
-                <Show when={props.ancestorEdges?.().get(props.nodeId)}>
-                  {(edgeInfos) => (
-                    <div class="mx-2 mb-2 flex flex-wrap gap-1">
-                      <For each={edgeInfos()}>
-                        {(info) => (
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border-subtle)] bg-[var(--bg-surface-alt)] text-[var(--text-secondary)]"
-                            title={`${info.direction === 'up' ? '↑' : '↓'} ${info.label} ${info.targetName}`}
-                          >
-                            <span class="opacity-60">{info.direction === 'up' ? '↑' : '↓'}</span>
-                            {info.label ? `${info.label} ` : ''}{info.targetName}
-                          </span>
-                        )}
-                      </For>
-                    </div>
-                  )}
-                </Show>
+                  {/* Ancestor edges rendered inline */}
+                  <Show when={props.ancestorEdges?.().get(props.nodeId)}>
+                    {(edgeInfos) => (
+                      <div class="mx-2 mb-2 flex flex-wrap gap-1">
+                        <For each={edgeInfos()}>
+                          {(info) => (
+                            <span
+                              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border-subtle)] bg-[var(--bg-surface-alt)] text-[var(--text-secondary)]"
+                              title={`${info.direction === 'up' ? '↑' : '↓'} ${info.label} ${info.targetName}`}
+                            >
+                              <span class="opacity-60">{info.direction === 'up' ? '↑' : '↓'}</span>
+                              {info.label ? `${info.label} ` : ''}{info.targetName}
+                            </span>
+                          )}
+                        </For>
+                      </div>
+                    )}
+                  </Show>
+                </div>
 
                 {/* Default child region — render children of this node, recursively */}
                 <Show when={children().length > 0}>

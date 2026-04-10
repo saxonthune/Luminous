@@ -123,6 +123,24 @@ export function applyActionToDoc(
       return { ok: true }
     }
 
+    case "edge/setRouting": {
+      const { id, routing } = params
+      if (id === undefined) return { ok: false, error: "missing param: id" }
+      const edge = doc.edges[id as string]
+      if (!edge) return { ok: false, error: "not found" }
+      edge.routing = routing as import("./types.js").EdgeRouting
+      return { ok: true }
+    }
+
+    case "edge/clearRouting": {
+      const { id } = params
+      if (id === undefined) return { ok: false, error: "missing param: id" }
+      const edge = doc.edges[id as string]
+      if (!edge) return { ok: false, error: "not found" }
+      delete edge.routing
+      return { ok: true }
+    }
+
     case "schema/define": {
       const { schema } = params
       if (schema === undefined) return { ok: false, error: "missing param: schema" }

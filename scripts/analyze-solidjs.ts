@@ -21,6 +21,7 @@ import {
   existsSync,
 } from 'node:fs';
 import { resolve, relative, dirname, extname, join, basename } from 'node:path';
+import { dagLayout } from '../packages/cactus/src/dagLayout.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type {
   Schema,
@@ -1424,6 +1425,36 @@ function main() {
   const edgeCount = Object.keys(canvas.edges).length;
 
   console.log(`  Components: ${componentCount}, Containers: ${containerCount}, Total nodes: ${totalNodes}, Edges: ${edgeCount}`);
+
+  // Phase 3: DAG layout — position nodes so directed edges flow downward.
+  // Heights are left at 0; the viewer's measureAndTidy pass fixes them from DOM measurements.
+  console.log('Phase 3: DAG layout...');
+  const layoutNodes = Object.entries(canvas.structure).map(([id, n]) => ({
+    id,
+    w: n.geometry.w,
+    h: 0,
+    parentId: n.parent,
+    category: n.schemaName,
+  }));
+  const layoutEdges = Object.values(canvas.edges)
+    .filter((e) => {
+      const schema = canvas.schemas[e.schemaName ?? ''];
+      return schema && 'directed' in schema && schema.directed === true;
+    })
+    .map((e) => ({ source: e.fromId, target: e.toId }));
+
+  if (layoutEdges.length > 0) {
+    const positions = dagLayout(layoutNodes, layoutEdges);
+    for (const [id, pos] of positions) {
+      if (canvas.structure[id]) {
+        canvas.structure[id].geometry.x = pos.x;
+        canvas.structure[id].geometry.y = pos.y;
+      }
+    }
+    console.log(`  Positioned ${positions.size} nodes across ${new Set([...positions.values()].map((p) => p.y)).size} ranks`);
+  } else {
+    console.log('  No directed edges — skipping DAG layout');
+  }
 
   // Ensure output directory exists
   const outDir = dirname(outputPath);

@@ -555,9 +555,10 @@ export function CanvasView(props: CanvasViewProps) {
     for (const el of nodeEls) {
       const id = el.dataset.nodeId;
       if (!id || !doc.structure[id]) continue;
-      const stack = el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
-      if (!stack) continue;
-      measured.set(id, stack.offsetHeight);
+      const header = el.querySelector<HTMLElement>(':scope > * > [data-node-header]')
+        ?? el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
+      if (!header) continue;
+      measured.set(id, header.offsetHeight);
     }
 
     // 2. Build TidyNode[] using measured heights (fall back to geometry.h if unmeasured).
@@ -795,9 +796,10 @@ export function CanvasView(props: CanvasViewProps) {
     for (const el of nodeEls) {
       const id = el.dataset.nodeId;
       if (!id || !doc.structure[id]) continue;
-      const stack = el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
-      if (!stack) continue;
-      measured.set(id, stack.offsetHeight);
+      const header = el.querySelector<HTMLElement>(':scope > * > [data-node-header]')
+        ?? el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
+      if (!header) continue;
+      measured.set(id, header.offsetHeight);
     }
 
     // Build TidyNode[] for dagLayout (it runs tidyLayout internally for sizing)
@@ -900,11 +902,84 @@ export function CanvasView(props: CanvasViewProps) {
     return map;
   };
 
+  // -------------------------------------------------------------------------
+  // Edge routing — declarative: writes routing.exitSide/enterSide to edges
+  // -------------------------------------------------------------------------
+
+  /** Compute routing sides for all directed edges and write to document. */
+  const applyEdgeRouting = () => {
+    const idx = index();
+    if (!idx) return;
+    const doc = idx.doc();
+    let updated = 0;
+
+    for (const edge of Object.values(doc.edges)) {
+      // Skip ancestor edges (rendered inline, not as lines)
+      if (isAncestorOf(edge.fromId, edge.toId, idx) || isAncestorOf(edge.toId, edge.fromId, idx)) continue;
+
+      const fromNode = idx.getNode(edge.fromId);
+      const toNode = idx.getNode(edge.toId);
+      if (!fromNode || !toNode) continue;
+
+      const fromPos = getAbsolutePos(edge.fromId, idx);
+      const toPos = getAbsolutePos(edge.toId, idx);
+      const fromCx = fromPos.x + fromNode.geometry.w / 2;
+      const fromCy = fromPos.y + fromNode.geometry.h / 2;
+      const toCx = toPos.x + toNode.geometry.w / 2;
+      const toCy = toPos.y + toNode.geometry.h / 2;
+
+      const dx = toCx - fromCx;
+      const dy = toCy - fromCy;
+
+      // Pick exit/enter sides based on relative position
+      let exitSide: 'top' | 'bottom' | 'left' | 'right';
+      let enterSide: 'top' | 'bottom' | 'left' | 'right';
+
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        // Primarily vertical
+        exitSide = dy > 0 ? 'bottom' : 'top';
+        enterSide = dy > 0 ? 'top' : 'bottom';
+      } else {
+        // Primarily horizontal
+        exitSide = dx > 0 ? 'right' : 'left';
+        enterSide = dx > 0 ? 'left' : 'right';
+      }
+
+      // Write routing to document
+      postAction('edge/setRouting', {
+        path: props.documentPath,
+        id: edge.id,
+        routing: { exitSide, enterSide },
+      }).catch(() => loadDoc());
+
+      // Update local index immediately for responsiveness
+      idx.setEdgeRouting(edge.id, { exitSide, enterSide });
+      updated++;
+    }
+    console.log(`[routing] applied declarative routing to ${updated} edges`);
+  };
+
+  /** Remove routing from all edges, reverting to straight lines. */
+  const clearEdgeRouting = () => {
+    const idx = index();
+    if (!idx) return;
+    const doc = idx.doc();
+    for (const edge of Object.values(doc.edges)) {
+      if (edge.routing) {
+        postAction('edge/clearRouting', {
+          path: props.documentPath,
+          id: edge.id,
+        }).catch(() => loadDoc());
+        idx.setEdgeRouting(edge.id, undefined);
+      }
+    }
+    console.log('[routing] cleared all edge routing');
+  };
+
   const renderEdges = () => {
     const idx = index();
     if (!idx) return null;
     const edges = Object.values(idx.doc().edges).filter((edge) => {
-      // Suppress edges where one endpoint is an ancestor of the other
       return !isAncestorOf(edge.fromId, edge.toId, idx) && !isAncestorOf(edge.toId, edge.fromId, idx);
     });
     return (
@@ -928,6 +1003,9 @@ export function CanvasView(props: CanvasViewProps) {
     { label: 'Force layout', action: () => arrangeForceLayout() },
     { label: 'Composite layout', action: () => arrangeCompositeLayout() },
     { label: 'DAG layout (arrows down)', action: () => arrangeDagLayout() },
+    { label: '', action: () => {}, separator: true },
+    { label: 'Route edges (orthogonal)', action: () => applyEdgeRouting() },
+    { label: 'Clear edge routing', action: () => clearEdgeRouting() },
   ];
 
   // Theme dropdown
@@ -1056,6 +1134,7 @@ export function CanvasView(props: CanvasViewProps) {
                 onTreeLayout={arrangeTreeLayout}
                 onForceLayout={arrangeForceLayout}
                 onTidyLayout={() => measureAndTidy()}
+                onRouteEdges={applyEdgeRouting}
               />
               <Show when={bgContextMenu()}>
                 {(menu) => (

@@ -251,9 +251,10 @@ export function StaticCanvasView(props: StaticCanvasViewProps) {
     for (const el of nodeEls) {
       const id = el.dataset.nodeId;
       if (!id || !doc.structure[id]) continue;
-      const stack = el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
-      if (!stack) continue;
-      measured.set(id, stack.offsetHeight);
+      const header = el.querySelector<HTMLElement>(':scope > * > [data-node-header]')
+        ?? el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
+      if (!header) continue;
+      measured.set(id, header.offsetHeight);
     }
 
     const tidyNodes = Object.entries(doc.structure).map(([id, n]) => ({
@@ -379,9 +380,10 @@ export function StaticCanvasView(props: StaticCanvasViewProps) {
     for (const el of nodeEls) {
       const id = el.dataset.nodeId;
       if (!id || !doc.structure[id]) continue;
-      const stack = el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
-      if (!stack) continue;
-      measured.set(id, stack.offsetHeight);
+      const header = el.querySelector<HTMLElement>(':scope > * > [data-node-header]')
+        ?? el.querySelector<HTMLElement>(':scope > * > [data-primitive-stack]');
+      if (!header) continue;
+      measured.set(id, header.offsetHeight);
     }
 
     const tidyNodes = Object.entries(doc.structure).map(([id, n]) => ({

@@ -4,6 +4,13 @@ export interface DocumentMeta {
   lastModified: number
 }
 
+export type EdgeSide = 'top' | 'bottom' | 'left' | 'right'
+
+export interface EdgeRouting {
+  exitSide: EdgeSide
+  enterSide: EdgeSide
+}
+
 export interface Edge {
   id: string
   fromId: string
@@ -11,6 +18,8 @@ export interface Edge {
   label: string | null
   /** Optional reference to an edge schema. Forward-looking; safe to ignore. */
   schemaName?: string
+  /** Declarative routing — which side to exit/enter. If absent, straight line. */
+  routing?: EdgeRouting
 }
 
 // ===========================================================================

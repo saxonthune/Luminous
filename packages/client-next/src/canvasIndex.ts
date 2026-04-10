@@ -1,6 +1,7 @@
 import { createStore, produce } from 'solid-js/store'
 import type {
   Document,
+  EdgeRouting,
   NodeStructure,
   NodeContent,
   Schema,
@@ -38,6 +39,7 @@ export interface CanvasIndex {
   setGeometry: (id: string, geometry: Geometry) => void
   setParent: (id: string, parent: string | null, order: string) => void
   setOrder: (id: string, order: string) => void
+  setEdgeRouting: (edgeId: string, routing: EdgeRouting | undefined) => void
   registerSchema: (schema: Schema) => void
 
   // Bulk replace (used on canvas reload)
@@ -296,6 +298,15 @@ export function createCanvasIndex(initialDoc: Document): CanvasIndex {
     sortChildList(parentKey)
   }
 
+  function setEdgeRouting(edgeId: string, routing: EdgeRouting | undefined) {
+    if (!store.doc.edges[edgeId]) return
+    if (routing) {
+      setStore('doc', 'edges', edgeId, 'routing', routing)
+    } else {
+      setStore('doc', 'edges', edgeId, 'routing', undefined)
+    }
+  }
+
   function registerSchema(schema: Schema) {
     setStore('doc', 'schemas', schema.name, schema)
 
@@ -357,6 +368,7 @@ export function createCanvasIndex(initialDoc: Document): CanvasIndex {
     setGeometry,
     setParent,
     setOrder,
+    setEdgeRouting,
     registerSchema,
     replace,
     warnings: () => _warnings,

@@ -7,6 +7,7 @@ interface CanvasToolbarProps {
   onTreeLayout: () => void;
   onForceLayout: () => void;
   onTidyLayout: () => void;
+  onRouteEdges?: () => void;
 }
 
 export function CanvasToolbar(props: CanvasToolbarProps) {
@@ -70,6 +71,14 @@ export function CanvasToolbar(props: CanvasToolbarProps) {
             >
               Tidy Layout
             </button>
+            {props.onRouteEdges && (
+              <button
+                onClick={() => { props.onRouteEdges!(); setDropdownOpen(false); }}
+                class="w-full px-3 py-1 text-left text-sm text-gray-600 hover:bg-gray-100"
+              >
+                Route Edges
+              </button>
+            )}
           </div>
         )}
       </div>
