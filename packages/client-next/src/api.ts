@@ -178,3 +178,50 @@ export async function postBatch(
   }
   return result
 }
+
+// ===========================================================================
+// Persistence adapter
+// ===========================================================================
+
+export interface CanvasPersistence {
+  /** Persist a mutation. No-op in static mode. */
+  save(action: string, params: Record<string, unknown>): void
+  /** If present, watch for external changes and call onChange. Returns cleanup function. */
+  watch?(onChange: () => void): () => void
+  /** Whether mutation UI (new note, delete, connect, edge relabel) should be shown. */
+  allowMutations: boolean
+}
+
+export function serverPersistence(documentPath: string, loadDoc: () => void): CanvasPersistence {
+  return {
+    save(action, params) {
+      postAction(action, { path: documentPath, ...params }).catch(loadDoc)
+    },
+    watch(onChange) {
+      const wsUrl = `ws://${location.host}/ws/watch`
+      let ws: WebSocket
+      let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+      function connect() {
+        ws = new WebSocket(wsUrl)
+        ws.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data as string)
+            if (data.event === 'changed' && data.path === documentPath) onChange()
+          } catch {}
+        }
+        ws.onclose = () => { reconnectTimer = setTimeout(connect, 2000) }
+      }
+      connect()
+      return () => {
+        if (reconnectTimer !== null) clearTimeout(reconnectTimer)
+        ws?.close()
+      }
+    },
+    allowMutations: true,
+  }
+}
+
+export const staticPersistence: CanvasPersistence = {
+  save() {},
+  allowMutations: false,
+}
