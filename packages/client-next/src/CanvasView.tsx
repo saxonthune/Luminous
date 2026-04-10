@@ -17,7 +17,7 @@ import { defaultSchemas } from './schemas';
 import { FreeformEdge } from './FreeformEdge';
 import { CanvasToolbar } from './CanvasToolbar';
 import { ContextMenu, type MenuItem } from './ContextMenu';
-import { theme, toggleTheme } from './theme';
+import { theme, setTheme, THEMES } from './theme';
 
 interface CanvasViewProps {
   documentPath: string;
@@ -702,6 +702,19 @@ export function CanvasView(props: CanvasViewProps) {
     { label: 'Tidy canvas', action: () => measureAndTidy() },
   ];
 
+  // Theme dropdown
+  const [themeMenuOpen, setThemeMenuOpen] = createSignal(false);
+  let themeMenuRef: HTMLDivElement | undefined;
+  onMount(() => {
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (themeMenuRef && !themeMenuRef.contains(e.target as Node)) {
+        setThemeMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', onDocMouseDown);
+    onCleanup(() => window.removeEventListener('mousedown', onDocMouseDown));
+  });
+
   return (
     <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
       <div class="flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
@@ -713,12 +726,44 @@ export function CanvasView(props: CanvasViewProps) {
         </button>
         <span class="text-sm text-[var(--text-secondary)]">{props.documentPath}</span>
         <div class="flex-1" />
-        <button
-          onClick={toggleTheme}
-          class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
-        >
-          {theme() === 'light' ? '☀' : '☾'}
-        </button>
+        <div ref={themeMenuRef} class="relative">
+          <button
+            onClick={() => setThemeMenuOpen((o) => !o)}
+            class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+            aria-haspopup="menu"
+            aria-expanded={themeMenuOpen()}
+          >
+            {THEMES.find((t) => t.id === theme())?.icon}
+          </button>
+          <Show when={themeMenuOpen()}>
+            <div
+              class="absolute right-0 top-full mt-1 rounded-md border border-[var(--border-default)] bg-[var(--bg-overlay)] py-1 text-sm z-50"
+              style={{ "box-shadow": "var(--shadow-lg)", "min-width": "120px" }}
+              role="menu"
+            >
+              <For each={THEMES}>
+                {(t) => (
+                  <button
+                    role="menuitemradio"
+                    aria-checked={theme() === t.id}
+                    class={`w-full text-left px-3 py-1.5 flex items-center gap-2 transition-colors ${
+                      theme() === t.id
+                        ? 'bg-[var(--bg-surface-alt)] text-[var(--text-primary)]'
+                        : 'text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                    }`}
+                    onClick={() => {
+                      setTheme(t.id);
+                      setThemeMenuOpen(false);
+                    }}
+                  >
+                    <span class="w-4 text-center">{t.icon}</span>
+                    <span>{t.label}</span>
+                  </button>
+                )}
+              </For>
+            </div>
+          </Show>
+        </div>
         <button
           onClick={() => createNoteFn()}
           class="rounded-md bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--color-accent-hover)]"

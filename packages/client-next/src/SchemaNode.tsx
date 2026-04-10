@@ -85,6 +85,7 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                         <Renderer
                           primitive={primitive}
                           nodeId={props.nodeId}
+                          schemaName={s().name}
                           value={value}
                           onChange={(next) => {
                             if (primitive.bind) {

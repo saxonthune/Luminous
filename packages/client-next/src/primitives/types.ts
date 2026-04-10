@@ -8,12 +8,14 @@ import type { PrimitiveDef } from '../api'
  *   For structural primitives (drag-bar, container) they may be undefined.
  * - `nodeId` is the id of the node this primitive belongs to. Used by drag-bar
  *   to display the id badge and by container to identify which children to render.
+ * - `schemaName` is the key of the node's schema. Used by drag-bar to label the node.
  * - `children` is a Solid JSX fragment passed by the caller, used by container
  *   primitives to render the node's actual children.
  */
 export interface PrimitiveProps {
   primitive: PrimitiveDef
   nodeId: string
+  schemaName: string
   value?: unknown
   onChange?: (next: unknown) => void
   children?: import('solid-js').JSX.Element
