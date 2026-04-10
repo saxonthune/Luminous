@@ -176,7 +176,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
   },
 
   diag: {
-    description: "Read-only diagnostics for canvas debugging. 'roots' returns per-category root summaries (count, max height, x/y range). 'bbox' returns one node's geometry plus the bounding box of its descendants — useful for catching container/descendant size disagreements. 'outliers' lists nodes with implausible geometry (e.g. h > 5000, w > 4000) — catches measurement bugs. 'subtree' returns one node and all its descendants with their geometries.",
+    description: "Read-only diagnostics and structural queries for canvas comprehension. 'roots' returns per-category root summaries (count, max height, x/y range). 'bbox' returns one node's geometry plus the bounding box of its descendants. 'outliers' lists nodes with implausible geometry. 'subtree' returns one node and all its descendants with geometries. 'outline' returns the nesting tree as nested JSON with titles — use this to comprehend overall canvas structure. 'outlineFrom' returns the nesting tree from a specific node. 'summary' returns counts by schema, edge count, max depth, and bounding box — use this for a cheap top-level overview. 'query' filters and projects nodes by type/parent/ids with selectable fields — use this to find specific subsets.",
     actions: {
       roots: {
         method: 'GET',
@@ -197,6 +197,38 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         method: 'GET',
         path: '/api/diag/subtree/:path/:id',
         params: { path: 'string', id: 'string' },
+      },
+      outline: {
+        method: 'GET',
+        path: '/api/diag/outline/:path',
+        params: { path: 'string' },
+      },
+      outlineFrom: {
+        method: 'GET',
+        path: '/api/diag/outline/:path/:id',
+        params: { path: 'string', id: 'string' },
+      },
+      summary: {
+        method: 'GET',
+        path: '/api/diag/summary/:path',
+        params: { path: 'string' },
+      },
+      query: {
+        method: 'POST',
+        path: '/api/diag/query',
+        params: {
+          path: 'string',
+          filter: {
+            type: 'object',
+            properties: {
+              type: 'string',
+              parent: 'string',
+              ids: { type: 'array', items: 'string' },
+              root: 'boolean',
+            },
+          },
+          'fields?': { type: 'array', items: 'string' },
+        },
       },
     },
   },

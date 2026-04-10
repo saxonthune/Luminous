@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { roots, bbox, outliers, subtree } from '../src/diag.js'
+import { roots, bbox, outliers, subtree, outline, summary, query } from '../src/diag.js'
 import type { Document } from '../src/types.js'
 
 // ---------------------------------------------------------------------------
@@ -207,5 +207,339 @@ describe('subtree', () => {
   it('returns null for unknown node id', () => {
     const doc = makeDoc()
     expect(subtree(doc, 'nonexistent')).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// outline
+// ---------------------------------------------------------------------------
+
+describe('outline', () => {
+  it('walks all roots when rootId is null — returns forest', () => {
+    const r1 = nextId()
+    const r2 = nextId()
+    const child = nextId()
+
+    const doc = makeDoc({
+      schemas: {
+        component: { name: 'component', label: 'Component', primitives: [] },
+      },
+      structure: {
+        [r1]:    { id: r1,    schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+        [r2]:    { id: r2,    schemaName: 'component', parent: null, order: 'a1', geometry: { x: 200, y: 0, w: 100, h: 100 } },
+        [child]: { id: child, schemaName: 'component', parent: r1,  order: 'a0', geometry: { x: 0, y: 0, w: 50, h: 50 } },
+      },
+    })
+
+    const result = outline(doc, null)
+    expect(result.rootId).toBeNull()
+    expect(result.nodes).toHaveLength(2)
+    expect(result.nodes[0].id).toBe(r1)
+    expect(result.nodes[0].children).toHaveLength(1)
+    expect(result.nodes[0].children[0].id).toBe(child)
+    expect(result.nodes[1].id).toBe(r2)
+    expect(result.truncated).toBeUndefined()
+  })
+
+  it('walks a single subtree when rootId is a node id', () => {
+    const rootId = nextId()
+    const child1 = nextId()
+    const child2 = nextId()
+    const grand1 = nextId()
+
+    const doc = makeDoc({
+      schemas: {
+        component: { name: 'component', label: 'Component', primitives: [] },
+      },
+      structure: {
+        [rootId]: { id: rootId, schemaName: 'component', parent: null,   order: 'a0', geometry: { x: 0, y: 0, w: 500, h: 500 } },
+        [child1]: { id: child1, schemaName: 'component', parent: rootId, order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+        [child2]: { id: child2, schemaName: 'component', parent: rootId, order: 'a1', geometry: { x: 0, y: 100, w: 100, h: 100 } },
+        [grand1]: { id: grand1, schemaName: 'component', parent: child1, order: 'a0', geometry: { x: 0, y: 0, w: 50, h: 50 } },
+      },
+    })
+
+    const result = outline(doc, rootId)
+    expect(result.rootId).toBe(rootId)
+    expect(result.nodes).toHaveLength(1)
+    expect(result.nodes[0].id).toBe(rootId)
+    expect(result.nodes[0].depth).toBe(0)
+    expect(result.nodes[0].children).toHaveLength(2)
+    expect(result.nodes[0].children[0].children[0].id).toBe(grand1)
+    expect(result.nodes[0].children[0].children[0].depth).toBe(2)
+  })
+
+  it('resolves title from schema and content', () => {
+    const nodeId = nextId()
+
+    const doc = makeDoc({
+      schemas: {
+        note: { name: 'note', label: 'Note', primitives: [{ type: 'title', bind: 'title' }] },
+      },
+      structure: {
+        [nodeId]: { id: nodeId, schemaName: 'note', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 200, h: 100 } },
+      },
+      content: {
+        [nodeId]: { title: 'Hello World' },
+      },
+    })
+
+    const result = outline(doc, null)
+    expect(result.nodes[0].title).toBe('Hello World')
+  })
+
+  it('returns null title when schema has no title primitive', () => {
+    const nodeId = nextId()
+
+    const doc = makeDoc({
+      schemas: {
+        component: { name: 'component', label: 'Component', primitives: [{ type: 'drag-bar' }] },
+      },
+      structure: {
+        [nodeId]: { id: nodeId, schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+      },
+    })
+
+    const result = outline(doc, null)
+    expect(result.nodes[0].title).toBeNull()
+  })
+
+  it('returns null title when content is missing the bound field', () => {
+    const nodeId = nextId()
+
+    const doc = makeDoc({
+      schemas: {
+        note: { name: 'note', label: 'Note', primitives: [{ type: 'title', bind: 'title' }] },
+      },
+      structure: {
+        [nodeId]: { id: nodeId, schemaName: 'note', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+      },
+      // no content entry for nodeId
+    })
+
+    const result = outline(doc, null)
+    expect(result.nodes[0].title).toBeNull()
+  })
+
+  it('returns empty nodes when rootId references a missing node', () => {
+    const doc = makeDoc()
+    const result = outline(doc, 'nonexistent')
+    expect(result.nodes).toHaveLength(0)
+    expect(result.truncated).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// summary
+// ---------------------------------------------------------------------------
+
+describe('summary', () => {
+  it('totalNodes counts all nodes including nested', () => {
+    const r1 = nextId()
+    const child = nextId()
+    const grand = nextId()
+
+    const doc = makeDoc({
+      structure: {
+        [r1]:    { id: r1,    schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 400, h: 400 } },
+        [child]: { id: child, schemaName: 'signal',    parent: r1,   order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+        [grand]: { id: grand, schemaName: 'hook',      parent: child, order: 'a0', geometry: { x: 0, y: 0, w: 50, h: 50 } },
+      },
+    })
+
+    const result = summary(doc)
+    expect(result.totalNodes).toBe(3)
+    expect(result.rootCount).toBe(1)
+  })
+
+  it('schemaCounts counts ALL nodes by schemaName, not just roots', () => {
+    const r1 = nextId()
+    const child1 = nextId()
+    const child2 = nextId()
+
+    const doc = makeDoc({
+      structure: {
+        [r1]:     { id: r1,     schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 400, h: 400 } },
+        [child1]: { id: child1, schemaName: 'signal',    parent: r1,   order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+        [child2]: { id: child2, schemaName: 'signal',    parent: r1,   order: 'a1', geometry: { x: 0, y: 100, w: 100, h: 100 } },
+      },
+    })
+
+    const result = summary(doc)
+    expect(result.schemaCounts['component']).toBe(1)
+    expect(result.schemaCounts['signal']).toBe(2)
+  })
+
+  it('edgeCount reflects doc.edges size', () => {
+    const doc = makeDoc({
+      edges: {
+        'e1': { id: 'e1', fromId: 'a', toId: 'b', label: null },
+        'e2': { id: 'e2', fromId: 'b', toId: 'c', label: null },
+      },
+    })
+
+    const result = summary(doc)
+    expect(result.edgeCount).toBe(2)
+  })
+
+  it('maxDepth is 0 for a flat doc with only roots', () => {
+    const r1 = nextId()
+    const r2 = nextId()
+
+    const doc = makeDoc({
+      structure: {
+        [r1]: { id: r1, schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+        [r2]: { id: r2, schemaName: 'component', parent: null, order: 'a1', geometry: { x: 200, y: 0, w: 100, h: 100 } },
+      },
+    })
+
+    expect(summary(doc).maxDepth).toBe(0)
+  })
+
+  it('maxDepth is 2 for a 3-level tree', () => {
+    const r = nextId()
+    const c = nextId()
+    const g = nextId()
+
+    const doc = makeDoc({
+      structure: {
+        [r]: { id: r, schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 500, h: 500 } },
+        [c]: { id: c, schemaName: 'component', parent: r,    order: 'a0', geometry: { x: 0, y: 0, w: 200, h: 200 } },
+        [g]: { id: g, schemaName: 'signal',    parent: c,    order: 'a0', geometry: { x: 0, y: 0, w: 100, h: 100 } },
+      },
+    })
+
+    expect(summary(doc).maxDepth).toBe(2)
+  })
+
+  it('bbox is null for a doc with no roots', () => {
+    const doc = makeDoc()
+    expect(summary(doc).bbox).toBeNull()
+  })
+
+  it('bbox spans the root-level nodes', () => {
+    const r1 = nextId()
+    const r2 = nextId()
+
+    const doc = makeDoc({
+      structure: {
+        [r1]: { id: r1, schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0,   y: 0,  w: 100, h: 100 } },
+        [r2]: { id: r2, schemaName: 'component', parent: null, order: 'a1', geometry: { x: 200, y: 50, w: 100, h: 100 } },
+      },
+    })
+
+    const result = summary(doc)
+    expect(result.bbox).not.toBeNull()
+    expect(result.bbox!.minX).toBe(0)
+    expect(result.bbox!.minY).toBe(0)
+    expect(result.bbox!.maxX).toBe(300) // 200 + 100
+    expect(result.bbox!.maxY).toBe(150) // 50 + 100
+  })
+})
+
+// ---------------------------------------------------------------------------
+// query
+// ---------------------------------------------------------------------------
+
+describe('query', () => {
+  function makeQueryDoc() {
+    const r1 = nextId()
+    const r2 = nextId()
+    const c1 = nextId()
+    const c2 = nextId()
+
+    const doc = makeDoc({
+      schemas: {
+        component: { name: 'component', label: 'Component', primitives: [{ type: 'title', bind: 'title' }] },
+        signal:    { name: 'signal',    label: 'Signal',    primitives: [{ type: 'title', bind: 'title' }] },
+      },
+      structure: {
+        [r1]: { id: r1, schemaName: 'component', parent: null, order: 'a0', geometry: { x: 0, y: 0, w: 200, h: 200 } },
+        [r2]: { id: r2, schemaName: 'component', parent: null, order: 'a1', geometry: { x: 300, y: 0, w: 200, h: 200 } },
+        [c1]: { id: c1, schemaName: 'signal',    parent: r1,   order: 'a0', geometry: { x: 0, y: 0, w: 50, h: 50 } },
+        [c2]: { id: c2, schemaName: 'signal',    parent: r1,   order: 'a1', geometry: { x: 0, y: 60, w: 50, h: 50 } },
+      },
+      content: {
+        [r1]: { title: 'Root One' },
+        [r2]: { title: 'Root Two' },
+        [c1]: { title: 'Signal A' },
+        [c2]: { title: 'Signal B' },
+      },
+    })
+    return { doc, r1, r2, c1, c2 }
+  }
+
+  it('filter by type returns only nodes with that schemaName', () => {
+    const { doc } = makeQueryDoc()
+    const result = query(doc, { type: 'signal' })
+    expect(result.nodes.every(n => n.schemaName === 'signal')).toBe(true)
+    expect(result.nodes).toHaveLength(2)
+  })
+
+  it('filter by parent: null returns only roots', () => {
+    const { doc, r1, r2 } = makeQueryDoc()
+    const result = query(doc, { parent: null })
+    const ids = result.nodes.map(n => n.id)
+    expect(ids).toContain(r1)
+    expect(ids).toContain(r2)
+    expect(result.nodes).toHaveLength(2)
+  })
+
+  it('filter by parent: <id> returns only direct children', () => {
+    const { doc, r1, c1, c2 } = makeQueryDoc()
+    const result = query(doc, { parent: r1 })
+    const ids = result.nodes.map(n => n.id)
+    expect(ids).toContain(c1)
+    expect(ids).toContain(c2)
+    expect(result.nodes).toHaveLength(2)
+  })
+
+  it('filter by ids returns only those ids', () => {
+    const { doc, r1, c1 } = makeQueryDoc()
+    const result = query(doc, { ids: [r1, c1] })
+    expect(result.nodes).toHaveLength(2)
+    const ids = result.nodes.map(n => n.id)
+    expect(ids).toContain(r1)
+    expect(ids).toContain(c1)
+  })
+
+  it('fields: [title, geometry] projects only those fields plus id', () => {
+    const { doc } = makeQueryDoc()
+    const result = query(doc, { type: 'component' }, ['title', 'geometry'])
+    for (const node of result.nodes) {
+      expect(node.id).toBeDefined()
+      expect(node.title).toBeDefined()
+      expect(node.geometry).toBeDefined()
+      expect(node.schemaName).toBeUndefined()
+      expect(node.parent).toBeUndefined()
+    }
+  })
+
+  it('default fields (no fields arg) projects id, title, schemaName', () => {
+    const { doc } = makeQueryDoc()
+    const result = query(doc, { type: 'component' })
+    for (const node of result.nodes) {
+      expect(node.id).toBeDefined()
+      expect(node.title).toBeDefined()
+      expect(node.schemaName).toBeDefined()
+      expect(node.geometry).toBeUndefined()
+      expect(node.parent).toBeUndefined()
+    }
+  })
+
+  it('totalMatched reflects the full count before any truncation', () => {
+    const { doc } = makeQueryDoc()
+    const result = query(doc, {})
+    expect(result.totalMatched).toBe(4)
+    expect(result.truncated).toBeUndefined()
+  })
+
+  it('filter by root: true returns only root nodes', () => {
+    const { doc, r1, r2 } = makeQueryDoc()
+    const result = query(doc, { root: true })
+    expect(result.nodes).toHaveLength(2)
+    const ids = result.nodes.map(n => n.id)
+    expect(ids).toContain(r1)
+    expect(ids).toContain(r2)
   })
 })

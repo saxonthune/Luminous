@@ -58,6 +58,51 @@ export interface SubtreeDump {
   truncated?: true
 }
 
+export interface OutlineNode {
+  id: string
+  title: string | null
+  schemaName: string
+  depth: number
+  geometry: Geometry
+  children: OutlineNode[]
+}
+
+export interface OutlineResult {
+  rootId: string | null
+  nodes: OutlineNode[]
+  truncated?: true
+}
+
+export interface SummaryResult {
+  totalNodes: number
+  rootCount: number
+  edgeCount: number
+  maxDepth: number
+  schemaCounts: Record<string, number>
+  bbox: BBoxRect | null
+}
+
+export interface QueryFilter {
+  type?: string
+  parent?: string | null
+  ids?: string[]
+  root?: boolean
+}
+
+export interface QueryResultNode {
+  id: string
+  title?: string | null
+  schemaName?: string
+  parent?: string | null
+  geometry?: Geometry
+}
+
+export interface QueryResult {
+  nodes: QueryResultNode[]
+  truncated?: true
+  totalMatched: number
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -87,6 +132,19 @@ function buildChildrenIndex(doc: Document): Map<string, string[]> {
     }
   }
   return index
+}
+
+/** Best-effort title resolver. Returns null at any failure — never throws. */
+function resolveTitle(doc: Document, nodeId: string): string | null {
+  const node = doc.structure[nodeId]
+  if (!node) return null
+  const schema = doc.schemas[node.schemaName]
+  if (!schema) return null
+  const prim = schema.primitives.find(p => p.type === 'title')
+  if (!prim || prim.bind === undefined) return null
+  const value = doc.content[nodeId]?.[prim.bind]
+  if (typeof value !== 'string') return null
+  return value
 }
 
 // ---------------------------------------------------------------------------
@@ -292,4 +350,157 @@ export function subtree(doc: Document, id: string): SubtreeDump | null {
   const result: SubtreeDump = { rootId: id, nodes }
   if (truncated) result.truncated = true
   return result
+}
+
+// ---------------------------------------------------------------------------
+// outline
+// ---------------------------------------------------------------------------
+
+export function outline(doc: Document, rootId: string | null): OutlineResult {
+  const childrenIndex = buildChildrenIndex(doc)
+  const CAP = 500
+  let count = 0
+  let truncated = false
+
+  function walkNode(nodeId: string, depth: number): OutlineNode | null {
+    if (count >= CAP) {
+      truncated = true
+      return null
+    }
+    const node = doc.structure[nodeId]
+    if (!node) return null
+    count++
+    const outlineNode: OutlineNode = {
+      id: node.id,
+      title: resolveTitle(doc, nodeId),
+      schemaName: node.schemaName,
+      depth,
+      geometry: node.geometry,
+      children: [],
+    }
+    const childIds = childrenIndex.get(nodeId) ?? []
+    for (const cid of childIds) {
+      if (count >= CAP) {
+        truncated = true
+        break
+      }
+      const child = walkNode(cid, depth + 1)
+      if (child) outlineNode.children.push(child)
+    }
+    return outlineNode
+  }
+
+  let topLevelIds: string[]
+  if (rootId === null) {
+    topLevelIds = childrenIndex.get('__root__') ?? []
+  } else {
+    if (!doc.structure[rootId]) {
+      return { rootId, nodes: [] }
+    }
+    topLevelIds = [rootId]
+  }
+
+  const nodes: OutlineNode[] = []
+  for (const id of topLevelIds) {
+    if (count >= CAP) {
+      truncated = true
+      break
+    }
+    const node = walkNode(id, 0)
+    if (node) nodes.push(node)
+  }
+
+  const result: OutlineResult = { rootId, nodes }
+  if (truncated) result.truncated = true
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// summary
+// ---------------------------------------------------------------------------
+
+export function summary(doc: Document): SummaryResult {
+  const allNodes = Object.values(doc.structure)
+  const totalNodes = allNodes.length
+  const rootNodes = allNodes.filter(n => n.parent === null)
+  const rootCount = rootNodes.length
+  const edgeCount = Object.keys(doc.edges).length
+
+  const schemaCounts: Record<string, number> = {}
+  for (const node of allNodes) {
+    schemaCounts[node.schemaName] = (schemaCounts[node.schemaName] ?? 0) + 1
+  }
+
+  const childrenIndex = buildChildrenIndex(doc)
+  let maxDepth = 0
+  const visited = new Set<string>()
+
+  type QEntry = { nodeId: string; depth: number }
+  const queue: QEntry[] = rootNodes.map(n => ({ nodeId: n.id, depth: 0 }))
+  let qi = 0
+  let walkCount = 0
+  const WALK_CAP = 500
+
+  while (qi < queue.length && walkCount < WALK_CAP) {
+    const { nodeId, depth } = queue[qi++]
+    if (visited.has(nodeId)) continue
+    visited.add(nodeId)
+    walkCount++
+    if (depth > maxDepth) maxDepth = depth
+    const children = childrenIndex.get(nodeId) ?? []
+    for (const cid of children) {
+      queue.push({ nodeId: cid, depth: depth + 1 })
+    }
+  }
+
+  let bbox: BBoxRect | null = null
+  for (const node of rootNodes) {
+    bbox = expandBbox(bbox, node.geometry)
+  }
+
+  return { totalNodes, rootCount, edgeCount, maxDepth, schemaCounts, bbox }
+}
+
+// ---------------------------------------------------------------------------
+// query
+// ---------------------------------------------------------------------------
+
+export function query(
+  doc: Document,
+  filter: QueryFilter,
+  fields?: Array<'title' | 'schemaName' | 'parent' | 'geometry'>
+): QueryResult {
+  const effectiveFields = (fields && fields.length > 0) ? fields : ['title', 'schemaName'] as Array<'title' | 'schemaName' | 'parent' | 'geometry'>
+  const CAP = 500
+
+  const allNodes = Object.values(doc.structure)
+  const matches: QueryResultNode[] = []
+  let totalMatched = 0
+  let truncated = false
+
+  for (const node of allNodes) {
+    if (filter.type !== undefined && node.schemaName !== filter.type) continue
+    if (filter.parent !== undefined && node.parent !== filter.parent) continue
+    if (filter.ids !== undefined && !filter.ids.includes(node.id)) continue
+    if (filter.root === true && node.parent !== null) continue
+
+    totalMatched++
+
+    if (matches.length < CAP) {
+      const result: QueryResultNode = { id: node.id }
+      for (const field of effectiveFields) {
+        if (field === 'title') result.title = resolveTitle(doc, node.id)
+        else if (field === 'schemaName') result.schemaName = node.schemaName
+        else if (field === 'parent') result.parent = node.parent
+        else if (field === 'geometry') result.geometry = node.geometry
+      }
+      matches.push(result)
+    } else {
+      truncated = true
+    }
+  }
+
+  const queryResult: QueryResult = { nodes: matches, totalMatched }
+  if (truncated) queryResult.truncated = true
+  return queryResult
 }
