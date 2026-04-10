@@ -1,9 +1,9 @@
 import { render } from 'solid-js/web';
 import { createSignal, Show } from 'solid-js';
 import './index.css';
-import { type Document } from './api';
+import { staticPersistence, type Document } from './api';
 import { defaultSchemas } from './schemas';
-import { StaticCanvasView } from './StaticCanvasView';
+import { CanvasView } from './CanvasView';
 
 function isDocumentV2(doc: unknown): doc is Document {
   return !!doc && typeof doc === 'object' && (doc as Document).version === 2;
@@ -70,7 +70,7 @@ function ViewerApp() {
         </div>
       }
     >
-      {(d) => <StaticCanvasView document={d()} src={src} />}
+      {(d) => <CanvasView initialDocument={d()} persistence={staticPersistence} />}
     </Show>
   );
 }

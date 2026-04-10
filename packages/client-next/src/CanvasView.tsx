@@ -11,7 +11,7 @@ import {
   type CanvasRef,
   type ResizeDirection,
 } from '@luminous/cactus';
-import { getDocument, postAction, type Document, type NodeStructure, type Geometry } from './api';
+import { getDocument, type CanvasPersistence, type Document, type NodeStructure, type Geometry } from './api';
 import { SchemaNode } from './SchemaNode';
 import { createCanvasIndex, type CanvasIndex } from './canvasIndex';
 import { defaultSchemas } from './schemas';
@@ -23,8 +23,10 @@ import { AboutModal } from './AboutModal';
 import { APP_NAME, APP_VERSION } from './version';
 
 interface CanvasViewProps {
-  documentPath: string;
-  onBack: () => void;
+  documentPath?: string;
+  initialDocument?: Document;
+  persistence: CanvasPersistence;
+  onBack?: () => void;
 }
 
 function isDocumentV2(doc: unknown): doc is Document {
@@ -85,8 +87,7 @@ export interface AncestorEdgeInfo {
 
 interface CanvasContentProps {
   index: CanvasIndex;
-  documentPath: string;
-  loadDoc: () => void;
+  persistence: CanvasPersistence;
   onClearSelectionReady: (fn: () => void) => void;
   onCreateNoteReady: (fn: () => void) => void;
   /** Tidy a subtree rooted at rootId; provided by CanvasView (measureAndTidy). */
@@ -107,15 +108,11 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
 
   props.onClearSelectionReady(clearSelection);
 
-  // Wrap index.setContent to also fire node/setContent server action
+  // Wrap index.setContent to also fire node/setContent persistence action
   const originalSetContent = props.index.setContent.bind(props.index);
   props.index.setContent = (id: string, patch: Record<string, unknown>) => {
     originalSetContent(id, patch);
-    postAction('node/setContent', {
-      path: props.documentPath,
-      id,
-      fields: patch,
-    }).catch(() => props.loadDoc());
+    props.persistence.save('node/setContent', { id, fields: patch });
   };
 
   // Live tracking state — base values captured at drag/resize start
@@ -135,6 +132,7 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
   onMount(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (!props.persistence.allowMutations) return;
       const active = document.activeElement;
       if (
         active &&
@@ -148,7 +146,7 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
       clearSelection();
       for (const id of ids) {
         props.index.deleteNode(id);
-        postAction('node/delete', { path: props.documentPath, id }).catch(() => props.loadDoc());
+        props.persistence.save('node/delete', { id });
       }
     };
     window.addEventListener('keydown', handler);
@@ -203,19 +201,8 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
           props.index.setParent(nodeId, dropTargetId, order);
           props.index.setGeometry(nodeId, relGeometry);
 
-          Promise.all([
-            postAction('node/setParent', {
-              path: props.documentPath,
-              id: nodeId,
-              parent: dropTargetId,
-              order,
-            }),
-            postAction('node/setGeometry', {
-              path: props.documentPath,
-              id: nodeId,
-              geometry: relGeometry,
-            }),
-          ]).catch(() => props.loadDoc());
+          props.persistence.save('node/setParent', { id: nodeId, parent: dropTargetId, order });
+          props.persistence.save('node/setGeometry', { id: nodeId, geometry: relGeometry });
           return;
         }
 
@@ -232,29 +219,14 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
           props.index.setParent(nodeId, null, order);
           props.index.setGeometry(nodeId, topLevelGeo);
 
-          Promise.all([
-            postAction('node/setParent', {
-              path: props.documentPath,
-              id: nodeId,
-              parent: null,
-              order,
-            }),
-            postAction('node/setGeometry', {
-              path: props.documentPath,
-              id: nodeId,
-              geometry: topLevelGeo,
-            }),
-          ]).catch(() => props.loadDoc());
+          props.persistence.save('node/setParent', { id: nodeId, parent: null, order });
+          props.persistence.save('node/setGeometry', { id: nodeId, geometry: topLevelGeo });
           return;
         }
       }
 
       // Plain move within current parent — geometry already updated, just persist
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id: nodeId,
-        geometry: newGeometry,
-      }).catch(() => props.loadDoc());
+      props.persistence.save('node/setGeometry', { id: nodeId, geometry: newGeometry });
     },
   };
 
@@ -290,11 +262,7 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
       resizeBaseMap.delete(nodeId);
       const node = props.index.getNode(nodeId);
       if (!node) return;
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id: nodeId,
-        geometry: node.geometry,
-      }).catch(() => props.loadDoc());
+      props.persistence.save('node/setGeometry', { id: nodeId, geometry: node.geometry });
     },
   };
 
@@ -309,7 +277,7 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
 
   const handleDelete = (id: string) => {
     props.index.deleteNode(id);
-    postAction('node/delete', { path: props.documentPath, id }).catch(() => props.loadDoc());
+    props.persistence.save('node/delete', { id });
   };
 
   // ---------------------------------------------------------------------------
@@ -335,15 +303,14 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
 
     props.index.createNode(newStructure, newContent);
 
-    postAction('node/create', {
-      path: props.documentPath,
+    props.persistence.save('node/create', {
       id: newId,
       schemaName: 'note',
       parent: null,
       order: newStructure.order,
       geometry: newStructure.geometry,
       content: newContent,
-    }).catch(() => props.loadDoc());
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -439,7 +406,7 @@ export function CanvasView(props: CanvasViewProps) {
     const delay = isInitial ? 0 : 300;
     loadDocTimer = setTimeout(() => {
       loadDocTimer = null;
-      getDocument(props.documentPath)
+      getDocument(props.documentPath!)
         .then((raw) => {
           if (!isDocumentV2(raw)) {
             setError(
@@ -473,35 +440,22 @@ export function CanvasView(props: CanvasViewProps) {
   };
 
   onMount(() => {
-    loadDoc();
-
-    // WebSocket watch — reload when an external process edits this file
-    const wsUrl = `ws://${location.host}/ws/watch`;
-    let ws: WebSocket;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-    function connect() {
-      ws = new WebSocket(wsUrl);
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data as string);
-          if (data.event === 'changed' && data.path === props.documentPath) {
-            loadDoc();
-          }
-        } catch {
-          // ignore malformed frames
-        }
+    if (props.initialDocument) {
+      // Static mode — document already fetched; skip network call
+      const docWithDefaults: Document = {
+        ...props.initialDocument,
+        schemas: { ...defaultSchemas, ...props.initialDocument.schemas },
       };
-      ws.onclose = () => {
-        reconnectTimer = setTimeout(connect, 2000);
-      };
+      setIndex(createCanvasIndex(docWithDefaults));
+      setLoading(false);
+    } else {
+      loadDoc();
     }
-    connect();
 
+    const watchCleanup = props.persistence.watch?.(loadDoc);
     onCleanup(() => {
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      if (watchCleanup) watchCleanup();
       if (loadDocTimer !== null) clearTimeout(loadDocTimer);
-      ws?.close();
     });
   });
 
@@ -518,14 +472,7 @@ export function CanvasView(props: CanvasViewProps) {
     // Optimistically add edge to index
     idx.doc().edges[edgeId] = { id: edgeId, fromId: source, toId: target, label: null };
 
-    postAction('edge/connect', {
-      path: props.documentPath,
-      id: edgeId,
-      fromId: source,
-      toId: target,
-    })
-      .then((result) => { if (!result.ok) loadDoc(); })
-      .catch(() => loadDoc());
+    props.persistence.save('edge/connect', { id: edgeId, fromId: source, toId: target });
   };
 
   const handleUpdateEdgeLabel = (edgeId: string, label: string | null) => {
@@ -533,9 +480,7 @@ export function CanvasView(props: CanvasViewProps) {
     if (!idx) return;
     const doc = idx.doc();
     if (doc.edges[edgeId]) doc.edges[edgeId].label = label;
-    postAction('edge/relabel', { path: props.documentPath, id: edgeId, label }).catch(() =>
-      loadDoc()
-    );
+    props.persistence.save('edge/relabel', { id: edgeId, label });
   };
 
   // ---------------------------------------------------------------------------
@@ -647,11 +592,7 @@ export function CanvasView(props: CanvasViewProps) {
         ? { ...node.geometry, w: rect.w, h: rect.h }
         : { x: rect.x, y: rect.y, w: rect.w, h: rect.h };
       idx.setGeometry(id, newGeo);
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id,
-        geometry: newGeo,
-      }).catch(() => loadDoc());
+      props.persistence.save('node/setGeometry', { id, geometry: newGeo });
     }
   };
 
@@ -690,11 +631,7 @@ export function CanvasView(props: CanvasViewProps) {
       if (!node) continue;
       const newGeo: Geometry = { ...node.geometry, x: pos.x, y: pos.y };
       idx.setGeometry(id, newGeo);
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id,
-        geometry: newGeo,
-      }).catch(() => loadDoc());
+      props.persistence.save('node/setGeometry', { id, geometry: newGeo });
     }
   };
 
@@ -718,11 +655,7 @@ export function CanvasView(props: CanvasViewProps) {
       if (!node) continue;
       const newGeo: Geometry = { ...node.geometry, x: pos.x, y: pos.y };
       idx.setGeometry(id, newGeo);
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id,
-        geometry: newGeo,
-      }).catch(() => loadDoc());
+      props.persistence.save('node/setGeometry', { id, geometry: newGeo });
     }
   };
 
@@ -772,11 +705,7 @@ export function CanvasView(props: CanvasViewProps) {
       if (!node) continue;
       const newGeo: Geometry = { ...node.geometry, x: pos.x, y: pos.y };
       idx.setGeometry(id, newGeo);
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id,
-        geometry: newGeo,
-      }).catch(() => loadDoc());
+      props.persistence.save('node/setGeometry', { id, geometry: newGeo });
     }
   };
 
@@ -845,11 +774,7 @@ export function CanvasView(props: CanvasViewProps) {
       // For nodes with children, keep the dagLayout-computed size too
       const newGeo: Geometry = { ...node.geometry, x: pos.x, y: pos.y };
       idx.setGeometry(id, newGeo);
-      postAction('node/setGeometry', {
-        path: props.documentPath,
-        id,
-        geometry: newGeo,
-      }).catch(() => loadDoc());
+      props.persistence.save('node/setGeometry', { id, geometry: newGeo });
     }
   };
 
@@ -948,11 +873,7 @@ export function CanvasView(props: CanvasViewProps) {
       }
 
       // Write routing to document
-      postAction('edge/setRouting', {
-        path: props.documentPath,
-        id: edge.id,
-        routing: { exitSide, enterSide },
-      }).catch(() => loadDoc());
+      props.persistence.save('edge/setRouting', { id: edge.id, routing: { exitSide, enterSide } });
 
       // Update local index immediately for responsiveness
       idx.setEdgeRouting(edge.id, { exitSide, enterSide });
@@ -968,10 +889,7 @@ export function CanvasView(props: CanvasViewProps) {
     const doc = idx.doc();
     for (const edge of Object.values(doc.edges)) {
       if (edge.routing) {
-        postAction('edge/clearRouting', {
-          path: props.documentPath,
-          id: edge.id,
-        }).catch(() => loadDoc());
+        props.persistence.save('edge/clearRouting', { id: edge.id });
         idx.setEdgeRouting(edge.id, undefined);
       }
     }
@@ -990,7 +908,7 @@ export function CanvasView(props: CanvasViewProps) {
           <FreeformEdge
             edge={edge}
             getAbsoluteRect={getAbsoluteRect}
-            onUpdateLabel={handleUpdateEdgeLabel}
+            onUpdateLabel={props.persistence.allowMutations ? handleUpdateEdgeLabel : undefined}
           />
         )}
       </For>
@@ -1027,12 +945,14 @@ export function CanvasView(props: CanvasViewProps) {
   return (
     <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
       <div class="relative flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
-        <button
-          onClick={props.onBack}
-          class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
-        >
-          ← Back
-        </button>
+        <Show when={props.onBack}>
+          <button
+            onClick={() => props.onBack?.()}
+            class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+          >
+            ← Back
+          </button>
+        </Show>
         <span class="text-sm text-[var(--text-secondary)]">{props.documentPath}</span>
         <div class="flex-1" />
         <span class="absolute left-1/2 -translate-x-1/2 text-xl font-semibold tracking-wide text-[var(--text-primary)]">{APP_NAME}</span>
@@ -1075,12 +995,14 @@ export function CanvasView(props: CanvasViewProps) {
             </div>
           </Show>
         </div>
-        <button
-          onClick={() => createNoteFn()}
-          class="rounded-md bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--color-accent-hover)]"
-        >
-          + New Note
-        </button>
+        <Show when={props.persistence.allowMutations}>
+          <button
+            onClick={() => createNoteFn()}
+            class="rounded-md bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--color-accent-hover)]"
+          >
+            + New Note
+          </button>
+        </Show>
       </div>
 
       <div class="flex-1 overflow-hidden relative">
@@ -1107,7 +1029,7 @@ export function CanvasView(props: CanvasViewProps) {
               <Canvas
                 ref={(ref) => { canvasRef = ref; }}
                 class="w-full h-full"
-                connectionDrag={{ onConnect: handleConnect }}
+                connectionDrag={props.persistence.allowMutations ? { onConnect: handleConnect } : undefined}
                 renderEdges={renderEdges}
                 renderConnectionPreview={(coords) => (
                   <line
@@ -1123,8 +1045,7 @@ export function CanvasView(props: CanvasViewProps) {
               >
                 <CanvasContent
                   index={idx()}
-                  documentPath={props.documentPath}
-                  loadDoc={loadDoc}
+                  persistence={props.persistence}
                   onClearSelectionReady={(fn) => (clearSelectionFn = fn)}
                   onCreateNoteReady={(fn) => (createNoteFn = fn)}
                   onTidy={(rootId) => measureAndTidy(rootId)}
