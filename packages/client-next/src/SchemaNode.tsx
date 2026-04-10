@@ -4,6 +4,7 @@ import type { ResizeDirection } from '@luminous/cactus'
 import { primitiveRenderers } from './primitives'
 import type { CanvasIndex } from './canvasIndex'
 import { ContextMenu, type MenuItem } from './ContextMenu'
+import { isNodeSchema } from './api'
 
 export interface SchemaNodeProps {
   nodeId: string
@@ -77,7 +78,7 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
               >
                 {/* Render each primitive in the schema — wrapped for measurement only */}
                 <div data-primitive-stack="true">
-                  <For each={s().primitives}>
+                  <For each={(() => { const sc = s(); return isNodeSchema(sc) ? sc.primitives : [] })()}>
                     {(primitive) => {
                       const Renderer = primitiveRenderers[primitive.type] ?? UnknownPrimitiveRenderer
                       const value = primitive.bind ? content()[primitive.bind] : undefined

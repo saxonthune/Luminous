@@ -39,6 +39,8 @@ export { treeLayout } from './treeLayout.js';
 export type { TreeLayoutOptions } from './treeLayout.js';
 export { tidyLayout } from './tidyLayout.js';
 export type { TidyNode, TidyLayoutOptions, TidyResult } from './tidyLayout.js';
+export { compositeLayout } from './compositeLayout.js';
+export type { CompositeLayoutOptions } from './compositeLayout.js';
 export { traceCallback, observeLongTasks, markInteraction } from './perf.js';
 export { createPerformanceMonitor } from './createPerformanceMonitor.js';
 export type { PerformanceMonitorOptions, PerformanceMonitorResult } from './createPerformanceMonitor.js';

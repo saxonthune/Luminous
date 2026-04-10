@@ -26,7 +26,15 @@ async function loadDocument(filePath: string): Promise<Document> {
     const raw = await readFile(filePath, "utf-8")
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && parsed.version === 2) {
-      return parsed as Document
+      const doc = parsed as Document
+      // Backwards-compat: schemas written before the discriminated union have no `kind` field.
+      // Inject `kind: 'node'` so all existing canvases load correctly.
+      for (const schema of Object.values(doc.schemas)) {
+        if (schema.kind === undefined) {
+          (schema as any).kind = 'node'
+        }
+      }
+      return doc
     }
     // v1 document — not supported; return raw so client can detect and show error
     return parsed as unknown as Document

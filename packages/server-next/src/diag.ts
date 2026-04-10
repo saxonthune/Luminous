@@ -1,4 +1,5 @@
 import type { Document, Geometry } from "./types.js"
+import { isNodeSchema } from "./types.js"
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -140,6 +141,7 @@ function resolveTitle(doc: Document, nodeId: string): string | null {
   if (!node) return null
   const schema = doc.schemas[node.schemaName]
   if (!schema) return null
+  if (!isNodeSchema(schema)) return null
   const prim = schema.primitives.find(p => p.type === 'title')
   if (!prim || prim.bind === undefined) return null
   const value = doc.content[nodeId]?.[prim.bind]
