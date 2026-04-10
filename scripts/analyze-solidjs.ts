@@ -91,6 +91,16 @@ const effectDependencySchema: EdgeSchema = {
   acceptsTarget: ['signal', 'memo', 'store', 'datasource'],
 };
 
+const rendersSchema: EdgeSchema = {
+  kind: 'edge',
+  name: 'renders',
+  label: 'Renders',
+  directed: true,
+  layoutRole: 'tree',
+  acceptsSource: ['component'],
+  acceptsTarget: ['component'],
+};
+
 const PIPELINE_SCHEMAS: Record<string, Schema> = {
   component:               componentSchema,
   hook:                    hookSchema,
@@ -104,6 +114,7 @@ const PIPELINE_SCHEMAS: Record<string, Schema> = {
   'store-access':          storeAccessSchema,
   'datasource-read':       datasourceReadSchema,
   'effect-dependency':     effectDependencySchema,
+  'renders':               rendersSchema,
 };
 
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
@@ -990,11 +1001,9 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
       .join('\n');
     addNode(id, 'component', null, comp.name, body);
 
-    const childrenContainerId = randomUUID();
     const membersContainerId = randomUUID();
-    addContainer(childrenContainerId, id, 'Components');
     addContainer(membersContainerId, id, 'Members');
-    componentContainers.set(id, { children: childrenContainerId, members: membersContainerId });
+    componentContainers.set(id, { children: '', members: membersContainerId });
   }
 
   // --- Hooks ---
@@ -1051,32 +1060,38 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
   // Set parent pointers (relationships pass)
   // ---------------------------------------------------------------------------
 
-  // Component rendered in JSX → parent = renderer's children container (first renderer wins)
+  // Component rendered in JSX → emit a `renders` edge (parent → child)
   for (const comp of analysis.components) {
     for (const childName of comp.renderedChildren) {
       const childId = entityIdMap.get(childName);
       const parentCompId = entityIdMap.get(comp.name);
       if (childId && parentCompId && structure[childId] && structure[childId].parent === null) {
-        const containers = componentContainers.get(parentCompId);
-        if (containers) {
-          structure[childId].parent = containers.children;
-          structure[childId].order = nextOrder(containers.children);
-        }
+        const edgeId = toUUID(deterministicId(`edge:${comp.name}->renders->${childName}`));
+        edges[edgeId] = {
+          id: edgeId,
+          fromId: parentCompId,
+          toId: childId,
+          label: 'renders',
+          schemaName: 'renders',
+        };
       }
     }
   }
 
-  // Component parent (lexically inner) → parent = enclosing component's children container
+  // Component parent (lexically inner) → emit a `renders` edge (enclosing → inner)
   for (const comp of analysis.components) {
     if (comp.parent) {
       const compId = entityIdMap.get(comp.name);
       const parentCompId = entityIdMap.get(comp.parent);
-      if (compId && parentCompId && structure[compId]) {
-        const containers = componentContainers.get(parentCompId);
-        if (containers) {
-          structure[compId].parent = containers.children;
-          structure[compId].order = nextOrder(containers.children);
-        }
+      if (compId && parentCompId && structure[compId] && structure[compId].parent === null) {
+        const edgeId = toUUID(deterministicId(`edge:${comp.parent}->renders->${comp.name}`));
+        edges[edgeId] = {
+          id: edgeId,
+          fromId: parentCompId,
+          toId: compId,
+          label: 'renders',
+          schemaName: 'renders',
+        };
       }
     }
   }
