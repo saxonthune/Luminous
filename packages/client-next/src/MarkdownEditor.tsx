@@ -18,7 +18,7 @@ interface MarkdownEditorProps {
   ref?: (handle: MarkdownEditorHandle) => void;
 }
 
-export function MarkdownEditor(props: MarkdownEditorProps) {
+export default function MarkdownEditor(props: MarkdownEditorProps) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const { editorView, ref, createExtension } = createCodeMirror({

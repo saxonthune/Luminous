@@ -20,6 +20,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GIT_COMMIT__: JSON.stringify(gitCommit),
+    __GITHUB_PAGES__: JSON.stringify(!!process.env.GITHUB_PAGES),
   },
   server: {
     port: 5200,

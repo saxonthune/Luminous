@@ -11,25 +11,11 @@ function isDocumentV2(doc: unknown): doc is Document {
 
 function ViewerApp() {
   const params = new URLSearchParams(window.location.search);
-  const src = params.get('src');
+  const src = params.get('src') ?? `${import.meta.env.BASE_URL}canvases/solidjs-analysis.canvas.json`;
 
   const [doc, setDoc] = createSignal<Document | null>(null);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
-
-  if (!src) {
-    return (
-      <div class="flex h-screen items-center justify-center p-8 text-center">
-        <div>
-          <p class="text-lg font-medium text-[var(--text-primary)] mb-2">Missing <code>src</code> parameter</p>
-          <p class="text-sm text-[var(--text-secondary)]">
-            Expected URL format:{' '}
-            <code>viewer.html?src=https://raw.githubusercontent.com/owner/repo/main/path/to/file.canvas.json</code>
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   // Kick off fetch immediately (outside reactive tracking)
   fetch(src)
