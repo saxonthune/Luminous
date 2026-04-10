@@ -41,6 +41,8 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
       .scaleExtent([minZoom, maxZoom])
       .filter((event) => {
         if (event.type === 'wheel') return true;
+        // Middle mouse (button 1) always pans, regardless of target
+        if (event.type === 'mousedown' && event.button === 1) return true;
         const target = event.target as HTMLElement;
         if (target.closest?.('[data-no-pan]')) return false;
         if (event.type === 'mousedown') return true;

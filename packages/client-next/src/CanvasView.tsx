@@ -657,6 +657,60 @@ export function CanvasView(props: CanvasViewProps) {
     }
   };
 
+  // Composite layout: measure+tidy for correct sizing, then treeLayout on
+  // top-level nodes using edges whose schema declares layoutRole === 'tree'.
+  // If no tree-role edges exist, the tidy pass is still applied.
+  //
+  // This does not call cactus's compositeLayout directly because that
+  // function returns positions-only (Map<id, {x,y}>), which would discard
+  // the parent-fits-children sizes that the internal tidy pass computes.
+  // Running measureAndTidy here writes sizes back to the index via
+  // setGeometry, and the subsequent treeLayout pass uses those sizes for
+  // top-level positioning.
+  const arrangeCompositeLayout = () => {
+    // Pass 1: size and tidy-position all nodes (updates the index).
+    measureAndTidy();
+
+    // Pass 2: re-position top-level nodes using tree structure.
+    const idx = index();
+    if (!idx) return;
+    const doc = idx.doc();
+
+    const layoutNodes = idx.getChildren(null).map((id) => {
+      const n = idx.getNode(id)!;
+      return { id, x: n.geometry.x, y: n.geometry.y, width: n.geometry.w, height: n.geometry.h };
+    });
+
+    // Filter edges to those whose schema declares layoutRole === 'tree'.
+    // Cactus stays agnostic — the filter lives here in the domain layer.
+    const treeEdges = Object.values(doc.edges)
+      .filter((e) => {
+        if (!e.schemaName) return false;
+        const schema = doc.schemas[e.schemaName];
+        return schema?.kind === 'edge' && schema.layoutRole === 'tree';
+      })
+      .map((e) => ({ source: e.fromId, target: e.toId }));
+
+    if (treeEdges.length === 0) {
+      console.log('[composite] no tree-role edges in this canvas — tidy pass only');
+      return;
+    }
+
+    const result = treeLayout(layoutNodes, treeEdges);
+
+    for (const [id, pos] of result) {
+      const node = idx.getNode(id);
+      if (!node) continue;
+      const newGeo: Geometry = { ...node.geometry, x: pos.x, y: pos.y };
+      idx.setGeometry(id, newGeo);
+      postAction('node/setGeometry', {
+        path: props.documentPath,
+        id,
+        geometry: newGeo,
+      }).catch(() => loadDoc());
+    }
+  };
+
   // ---------------------------------------------------------------------------
   // Derived helpers used by Canvas
   // ---------------------------------------------------------------------------
@@ -700,6 +754,9 @@ export function CanvasView(props: CanvasViewProps) {
   const [bgContextMenu, setBgContextMenu] = createSignal<{ x: number; y: number } | null>(null);
   const bgMenuItems = (): MenuItem[] => [
     { label: 'Tidy canvas', action: () => measureAndTidy() },
+    { label: 'Tree layout', action: () => arrangeTreeLayout() },
+    { label: 'Force layout', action: () => arrangeForceLayout() },
+    { label: 'Composite layout', action: () => arrangeCompositeLayout() },
   ];
 
   // Theme dropdown
