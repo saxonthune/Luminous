@@ -1,6 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 import { DocumentPicker } from './DocumentPicker';
 import { CanvasView } from './CanvasView';
+import { serverPersistence } from './api';
 
 type View =
   | { state: 'picker' }
@@ -21,6 +22,7 @@ export function App() {
       {(canvasView) => (
         <CanvasView
           documentPath={canvasView().path}
+          persistence={serverPersistence(canvasView().path, () => {})}
           onBack={() => setView({ state: 'picker' })}
         />
       )}
