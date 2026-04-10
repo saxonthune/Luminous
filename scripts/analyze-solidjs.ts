@@ -24,6 +24,7 @@ import { resolve, relative, dirname, extname, join, basename } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type {
   Schema,
+  EdgeSchema,
   NodeStructure,
   NodeContent,
   DocumentV2,
@@ -54,15 +55,55 @@ const containerSchema: Schema = {
   primitives: [{ type: 'title', bind: 'label' }],
 };
 
+const crossComponentReadSchema: EdgeSchema = {
+  kind: 'edge',
+  name: 'cross-component-read',
+  label: 'Cross-component read',
+  directed: true,
+  acceptsSource: ['component', 'hook'],
+  acceptsTarget: ['signal', 'memo'],
+};
+
+const storeAccessSchema: EdgeSchema = {
+  kind: 'edge',
+  name: 'store-access',
+  label: 'Store access',
+  directed: true,
+  acceptsSource: ['component', 'hook', 'effect'],
+  acceptsTarget: ['store'],
+};
+
+const datasourceReadSchema: EdgeSchema = {
+  kind: 'edge',
+  name: 'datasource-read',
+  label: 'Datasource read',
+  directed: true,
+  acceptsSource: ['component', 'hook', 'effect'],
+  acceptsTarget: ['datasource'],
+};
+
+const effectDependencySchema: EdgeSchema = {
+  kind: 'edge',
+  name: 'effect-dependency',
+  label: 'Effect dependency',
+  directed: true,
+  acceptsSource: ['effect', 'memo'],
+  acceptsTarget: ['signal', 'memo', 'store', 'datasource'],
+};
+
 const PIPELINE_SCHEMAS: Record<string, Schema> = {
-  component:  componentSchema,
-  hook:       hookSchema,
-  signal:     signalSchema,
-  store:      storeSchema,
-  memo:       memoSchema,
-  effect:     effectSchema,
-  datasource: datasourceSchema,
-  container:  containerSchema,
+  component:               componentSchema,
+  hook:                    hookSchema,
+  signal:                  signalSchema,
+  store:                   storeSchema,
+  memo:                    memoSchema,
+  effect:                  effectSchema,
+  datasource:              datasourceSchema,
+  container:               containerSchema,
+  'cross-component-read':  crossComponentReadSchema,
+  'store-access':          storeAccessSchema,
+  'datasource-read':       datasourceReadSchema,
+  'effect-dependency':     effectDependencySchema,
 };
 
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
@@ -120,9 +161,10 @@ interface DataSourceInfo {
 }
 
 interface ReactiveRead {
-  producer: string; // signal/store/memo name
-  consumer: string; // component/effect/memo name
+  producer: string; // signal/store/memo/datasource key
+  consumer: string; // effect/memo/component/hook name
   context: 'jsx' | 'effect' | 'memo' | 'unknown';
+  schemaClass: 'datasource-read' | 'store-access' | 'effect-dependency' | 'cross-component-read';
 }
 
 interface ImportRecord {
@@ -677,12 +719,13 @@ function detectReactiveReadsAndHookCalls(
   const source = readFileSync(filePath, 'utf-8');
   const sf = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
-  // All known signal getter names
   const signalNames = new Set(analysis.signals.map((s) => s.name));
   const memoNames = new Set(analysis.memos.map((m) => m.name));
   const hookNames = new Set(analysis.hooks.map((h) => h.name));
+  const storeNames = new Set(analysis.stores.map((s) => s.name));
 
-  const contextStack: Array<{ name: string; kind: 'component' | 'hook' | 'effect' | 'other' }> = [];
+  const contextStack: Array<{ name: string; kind: 'component' | 'hook' | 'effect' | 'memo' | 'other' }> = [];
+  let jsxDepth = 0;
 
   function currentOwner(): string {
     for (let i = contextStack.length - 1; i >= 0; i--) {
@@ -699,15 +742,73 @@ function detectReactiveReadsAndHookCalls(
     return null;
   }
 
+  function memoContext(): string | null {
+    for (let i = contextStack.length - 1; i >= 0; i--) {
+      if (contextStack[i].kind === 'memo') return contextStack[i].name;
+    }
+    return null;
+  }
+
+  // Consumer = innermost effect/memo if inside one, else component/hook
+  function currentConsumer(): string {
+    const eff = effectContext();
+    if (eff) return eff;
+    const mem = memoContext();
+    if (mem) return mem;
+    return currentOwner();
+  }
+
   function isInsideJsx(): boolean {
-    // Walk up — if the nearest context is a component, we might be in JSX
-    // This is a rough heuristic; we check if we're in a JSX expression
-    return false; // simplified — will mark as 'unknown'
+    return jsxDepth > 0;
+  }
+
+  function classifyRead(
+    producerName: string,
+    componentOwner: string // currentOwner() = component/hook, for cross-component check
+  ): 'datasource-read' | 'store-access' | 'effect-dependency' | 'cross-component-read' | null {
+    if (storeNames.has(producerName)) return 'store-access';
+    if (effectContext() !== null || memoContext() !== null) return 'effect-dependency';
+    const sig = analysis.signals.find((s) => s.name === producerName);
+    const memo = analysis.memos.find((m) => m.name === producerName);
+    const producer = sig || memo;
+    if (producer && producer.owner !== componentOwner) return 'cross-component-read';
+    return null; // local read — elide
+  }
+
+  function addReactiveRead(producerName: string) {
+    const owner = currentOwner();
+    if (owner === '__module__') return;
+    const consumer = currentConsumer();
+    const schemaClass = classifyRead(producerName, owner);
+    if (schemaClass === null) return;
+    const effectCtx = effectContext();
+    const memoCtx = memoContext();
+    const context: ReactiveRead['context'] = effectCtx ? 'effect' : memoCtx ? 'memo' : isInsideJsx() ? 'jsx' : 'unknown';
+    const exists = analysis.reactiveReads.some(
+      (r) => r.producer === producerName && r.consumer === consumer
+    );
+    if (!exists) {
+      analysis.reactiveReads.push({ producer: producerName, consumer, context, schemaClass });
+    }
   }
 
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node)) return;
 
+    // JSX depth tracking — increment before recursing, decrement after
+    if (
+      ts.isJsxElement(node) ||
+      ts.isJsxSelfClosingElement(node) ||
+      ts.isJsxFragment(node) ||
+      ts.isJsxExpression(node)
+    ) {
+      jsxDepth++;
+      ts.forEachChild(node, visit);
+      jsxDepth--;
+      return;
+    }
+
+    // Function declarations — push context, recurse into body, pop
     if (ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
       const name = getFunctionName(node, source);
       if (name) {
@@ -734,26 +835,12 @@ function detectReactiveReadsAndHookCalls(
       const callee = node.expression;
       const callName = ts.isIdentifier(callee) ? callee.text : null;
 
-      // Detect reactive reads: signal() or memo()
+      // Reactive reads: signal() or memo()
       if (callName && (signalNames.has(callName) || memoNames.has(callName))) {
-        const owner = currentOwner();
-        const sig = analysis.signals.find((s) => s.name === callName);
-        const memo = analysis.memos.find((m) => m.name === callName);
-        const producer = sig || memo;
-        if (producer && producer.owner !== owner && owner !== '__module__') {
-          const effectCtx = effectContext();
-          const context = effectCtx ? 'effect' : 'unknown';
-          // Check if already recorded
-          const exists = analysis.reactiveReads.some(
-            (r) => r.producer === callName && r.consumer === owner
-          );
-          if (!exists) {
-            analysis.reactiveReads.push({ producer: callName, consumer: owner, context });
-          }
-        }
+        addReactiveRead(callName);
       }
 
-      // Detect hook call sites
+      // Hook call sites
       if (callName && hookNames.has(callName)) {
         const owner = currentOwner();
         const hook = analysis.hooks.find((h) => h.name === callName);
@@ -762,7 +849,7 @@ function detectReactiveReadsAndHookCalls(
         }
       }
 
-      // createEffect/onMount callbacks — push effect context
+      // createEffect/onMount callbacks — push effect context, recurse, pop
       if (callName === 'createEffect' || callName === 'onMount') {
         const callback = node.arguments[0];
         if (callback) {
@@ -780,12 +867,62 @@ function detectReactiveReadsAndHookCalls(
           }
         }
       }
+
+      // createMemo callbacks — push memo context, recurse, pop
+      if (callName === 'createMemo') {
+        const callback = node.arguments[0];
+        if (callback) {
+          const memoName = analysis.memos.find(
+            (m) => m.sourceFile === relPath && m.owner === currentOwner()
+          )?.name ?? null;
+          if (memoName) {
+            contextStack.push({ name: memoName, kind: 'memo' });
+            ts.forEachChild(callback, visit);
+            contextStack.pop();
+            return;
+          }
+        }
+      }
+    }
+
+    // Store property access detection: state.field, store.a.b, state['key']
+    if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+      let expr: ts.Expression = node.expression;
+      while (ts.isPropertyAccessExpression(expr) || ts.isElementAccessExpression(expr)) {
+        expr = expr.expression;
+      }
+      if (ts.isIdentifier(expr) && storeNames.has(expr.text)) {
+        const owner = currentOwner();
+        if (owner !== '__module__') {
+          addReactiveRead(expr.text);
+        }
+      }
+      // Fall through to ts.forEachChild
     }
 
     ts.forEachChild(node, visit);
   }
 
   ts.forEachChild(sf, visit);
+
+  // Datasource reads: every datasource owned by a component/hook in this file is a datasource-read
+  for (const ds of analysis.dataSources) {
+    if (ds.sourceFile !== relPath) continue;
+    if (ds.owner === '__module__') continue;
+    const dsKey = `${ds.kind}:${ds.name}`;
+    const consumer = ds.owner;
+    const exists = analysis.reactiveReads.some(
+      (r) => r.producer === dsKey && r.consumer === consumer
+    );
+    if (!exists) {
+      analysis.reactiveReads.push({
+        producer: dsKey,
+        consumer,
+        context: 'unknown',
+        schemaClass: 'datasource-read',
+      });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1006,15 +1143,16 @@ function buildCanvas(analysis: SolidAnalysis): DocumentV2 {
   // ---------------------------------------------------------------------------
 
   for (const read of analysis.reactiveReads) {
-    const fromId = entityIdMap.get(read.producer);
-    const toId = entityIdMap.get(read.consumer);
+    const fromId = entityIdMap.get(read.consumer); // consumer = component/hook/effect doing the read
+    const toId = entityIdMap.get(read.producer);   // producer = signal/store/memo/datasource being read
     if (!fromId || !toId) continue;
-    const edgeId = toUUID(deterministicId(`edge:${read.producer}->${read.consumer}`));
+    const edgeId = toUUID(deterministicId(`edge:${read.consumer}->${read.producer}`));
     edges[edgeId] = {
       id: edgeId,
       fromId,
       toId,
       label: `reads in ${read.context}`,
+      schemaName: read.schemaClass,
     };
   }
 
