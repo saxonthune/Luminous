@@ -1,0 +1,75 @@
+import type { JSX } from 'solid-js';
+import { APP_NAME, APP_VERSION } from './version';
+
+interface AboutModalProps {
+  onClose: () => void;
+}
+
+export function AboutModal(props: AboutModalProps): JSX.Element {
+  return (
+    <div
+      class="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ "backdrop-filter": "blur(4px)", "background": "rgba(0,0,0,0.3)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
+    >
+      <div
+        class="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 w-80"
+        style={{ "box-shadow": "var(--shadow-lg)" }}
+      >
+        <h2 class="text-lg font-semibold text-[var(--text-primary)] mb-4">{APP_NAME}</h2>
+
+        <div class="text-sm space-y-1.5 text-[var(--text-primary)]">
+          <div class="flex justify-between">
+            <span>Version</span>
+            <span>{APP_VERSION}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Released</span>
+            <span>2026-04-10</span>
+          </div>
+          <p>
+            &copy; 2025&ndash;2026{' '}
+            <a
+              href="https://computation.saxon.zone"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline hover:text-[var(--color-accent)]"
+            >
+              Saxon Thune
+            </a>
+          </p>
+          <p>
+            Licensed under{' '}
+            <a
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline hover:text-[var(--color-accent)]"
+            >
+              AGPL-3.0
+            </a>
+          </p>
+          <p>
+            <a
+              href="https://github.com/saxonthune/Luminous"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline hover:text-[var(--color-accent)]"
+            >
+              GitHub
+            </a>
+          </p>
+        </div>
+
+        <div class="mt-5 text-right">
+          <button
+            onClick={props.onClose}
+            class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

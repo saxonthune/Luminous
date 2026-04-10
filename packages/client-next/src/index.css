@@ -5,6 +5,10 @@
    sourced explicitly or its `bottom-0`/`right-0`/etc. emit no CSS. */
 @source "../../cactus/src/**/*.{ts,tsx}";
 
+body {
+  color: var(--text-primary);
+}
+
 :root,
 [data-theme="light"] {
   --bg-canvas: #ffffff;

@@ -1,7 +1,7 @@
 ---
 title: Edge Schemas
 status: active
-summary: Design of the edge schema system: discriminated union with NodeSchema, layoutRole for tree-participation, connection constraints, and the runtime filter pattern that keeps cactus agnostic
+summary: Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern
 tags: [edges, schemas, design, cactus-boundary]
 deps: [doc01.03.04, doc01.02.05.01, doc01.02.06.02, doc01.02.07]
 ---
@@ -72,7 +72,35 @@ The Solid.js pipeline (`scripts/analyze-solidjs.ts`) declares four edge schemas 
 
 All four carry `kind: 'edge'` and `directed: true`. None set `layoutRole: 'tree'` — they are semantic annotations on the graph, not layout drivers. See doc01.02.07 for the pipeline's classification rules.
 
-A tree-edge schema for component hierarchy (e.g., `renders`) is planned but not yet implemented.
+A fifth edge schema, **`renders`**, carries `directed: true` and `layoutRole: 'tree'`. It represents component-renders-component relationships detected from JSX usage. This is the only schema that drives the tree layout pass in `compositeLayout`.
+
+## Declarative Edge Routing
+
+Edges support an optional `routing` field that controls how the edge path is drawn:
+
+```ts
+export interface EdgeRouting {
+  exitSide: 'top' | 'bottom' | 'left' | 'right'
+  enterSide: 'top' | 'bottom' | 'left' | 'right'
+}
+```
+
+When `routing` is present, the edge renderer computes a reactive orthogonal (right-angle) path: exit from the named side of the source node, jog through a midpoint, enter the named side of the target node. The path recomputes automatically when either node moves — the sides are declarative constraints, not absolute coordinates.
+
+When `routing` is absent, the edge renders as a straight line with automatic border intersection (the original behavior).
+
+The "Route edges (orthogonal)" action in the canvas context menu computes optimal exit/enter sides for all directed edges based on relative node positions and writes the routing field to the document. "Clear edge routing" removes all routing fields, reverting to straight lines.
+
+This design was chosen over imperative waypoint caching because:
+- **Reactive**: paths update when nodes move (sides are derived from geometry, not stored coordinates)
+- **Declarative**: the document says *how* to route, not *where* — surviving layout changes
+- **Cheap**: O(1) per edge per frame (just geometry math from side constraints, no obstacle avoidance)
+
+## Ancestor Edge Suppression
+
+When one edge endpoint is an ancestor of the other in the nesting tree, the edge line is suppressed. Instead, the descendant node renders the edge information inline as a small badge (e.g. `↑ reads CanvasView`). This avoids visual clutter from edges that cross through intermediate containers to reach nested children — the nesting already communicates the containment relationship.
+
+The suppression is a rendering decision only — the edge data is unchanged in the document.
 
 ## Durability and Best-Effort Constraints
 

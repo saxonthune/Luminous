@@ -19,6 +19,8 @@ import { FreeformEdge } from './FreeformEdge';
 import { CanvasToolbar } from './CanvasToolbar';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { theme, setTheme, THEMES } from './theme';
+import { AboutModal } from './AboutModal';
+import { APP_NAME, APP_VERSION } from './version';
 
 interface CanvasViewProps {
   documentPath: string;
@@ -1010,6 +1012,7 @@ export function CanvasView(props: CanvasViewProps) {
 
   // Theme dropdown
   const [themeMenuOpen, setThemeMenuOpen] = createSignal(false);
+  const [aboutOpen, setAboutOpen] = createSignal(false);
   let themeMenuRef: HTMLDivElement | undefined;
   onMount(() => {
     const onDocMouseDown = (e: MouseEvent) => {
@@ -1023,7 +1026,7 @@ export function CanvasView(props: CanvasViewProps) {
 
   return (
     <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
-      <div class="flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
+      <div class="relative flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
         <button
           onClick={props.onBack}
           class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
@@ -1031,6 +1034,8 @@ export function CanvasView(props: CanvasViewProps) {
           ← Back
         </button>
         <span class="text-sm text-[var(--text-secondary)]">{props.documentPath}</span>
+        <div class="flex-1" />
+        <span class="absolute left-1/2 -translate-x-1/2 text-xl font-semibold tracking-wide text-[var(--text-primary)]">{APP_NAME}</span>
         <div class="flex-1" />
         <div ref={themeMenuRef} class="relative">
           <button
@@ -1150,7 +1155,16 @@ export function CanvasView(props: CanvasViewProps) {
             </>
           }}
         </Show>
+        <button
+          onClick={() => setAboutOpen(true)}
+          class="absolute bottom-0 left-0 px-2 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-surface)] border-t border-r border-[var(--border-subtle)] z-10 cursor-pointer"
+        >
+          {APP_NAME} {APP_VERSION}
+        </button>
       </div>
+      <Show when={aboutOpen()}>
+        <AboutModal onClose={() => setAboutOpen(false)} />
+      </Show>
     </div>
   );
 }

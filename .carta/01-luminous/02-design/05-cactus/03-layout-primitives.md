@@ -1,7 +1,7 @@
 ---
 title: Layout Primitives
 status: active
-summary: The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout — with their contracts and when to use each
+summary: The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each
 tags: [cactus, layout, algorithms]
 deps: [doc01.02.05.01]
 ---
@@ -102,6 +102,37 @@ function compositeLayout(
 **When to use:** When you have a containment hierarchy (nodes nested inside parents) and a separate edge graph (e.g., component renders-edges) that should drive top-level positioning. This is the standard layout for the Solid.js pipeline canvas.
 
 **What it doesn't do:** Doesn't position inner children by edges — inner layout is always tidy (wrapping grid). The outer tree only sees top-level nodes.
+
+## `dagLayout`
+
+**File:** `packages/cactus/src/dagLayout.ts`
+
+**Signature:**
+```ts
+function dagLayout(
+  nodes: TidyNode[],
+  edges: LayoutEdge[],
+  options?: DagLayoutOptions
+): LayoutResult
+// DagLayoutOptions = { tidy?: TidyLayoutOptions; horizontalGap?: number; verticalGap?: number }
+```
+
+**Input shape:** `TidyNode[]` (same as tidyLayout — nodes with `w`, `h`, `parentId`), `LayoutEdge[]` (all directed edges, not pre-filtered to tree-role only).
+
+**Output shape:** `Map` from node ID to `{x, y}`. Covers all nodes including nested children.
+
+**Algorithm:** Recursive edge-lifting DAG layout. At each nesting level, the algorithm:
+1. "Lifts" edges — an edge between two deeply nested nodes induces an ordering on their nearest non-shared ancestors at that scope level.
+2. Counts net votes between each pair of siblings: if more edges flow A→B than B→A, A ranks above B. Ties impose no constraint.
+3. Topologically sorts siblings using Kahn's algorithm on the net-direction DAG.
+4. Positions nodes by rank: same rank side-by-side, different ranks stacked vertically.
+5. Recurses into containers to order their children the same way.
+
+Pass 1 runs `tidyLayout` internally for sizing. Inner children keep their tidy-computed relative positions.
+
+**When to use:** When you want all directed edges to flow downward (or left-to-right), even when edges connect nodes in different containers. This is the "preorder" layout — the topological sort determines a global ordering that respects edge direction at every nesting level. Particularly useful for pipeline/flowchart canvases where containers (phases) don't have direct edges between them but their children do.
+
+**What it doesn't do:** Doesn't minimize edge crossings within ranks (a known Sugiyama optimization). Doesn't handle cycles gracefully beyond appending unranked nodes in original order.
 
 ## Composing Layouts
 
