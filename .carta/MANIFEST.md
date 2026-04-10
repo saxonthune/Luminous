@@ -37,9 +37,11 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 |-----|------|---------|------|------|------|
 
 | doc01.01.00 | `01-vision/00-index.md` |  |  | — | — |
-| doc01.01.01 | `01-vision/01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.01.03, doc01.03.01, doc01.03.02, doc01.03.03 |
+| doc01.01.01 | `01-vision/01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.01.03.01, doc01.03.01, doc01.03.02, doc01.03.03 |
 | doc01.01.02 | `01-vision/02-background.md` | Why Luminous was split from Carta — separation of the docs system from the visualization tools | background, history, carta, split | doc01.02.01 | — |
-| doc01.01.03 | `01-vision/03-milestones.md` | Product milestones — what Luminous must do next, defined by what a user can do | milestones, vision, roadmap, pipeline, static-analysis | doc01.01.01, doc01.02.01 | doc01.02.07 |
+| doc01.01.03.00 | `01-vision/03-milestones/00-index.md` |  |  | — | — |
+| doc01.01.03.01 | `01-vision/03-milestones/01-milestone-1.md` | Product milestones — what Luminous must do next, defined by what a user can do | milestones, vision, roadmap, pipeline, static-analysis | doc01.01.01, doc01.02.01 | — |
+| doc01.01.03.02 | `01-vision/03-milestones/02-milestone-2.md` | Use Luminous alongside a real project to validate the tool and surface friction | milestones, dogfooding, tinyforum | doc01.01.03 | — |
 
 ### Design
 
@@ -47,7 +49,7 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 |-----|------|---------|------|------|------|
 
 | doc01.02.00 | `02-design/00-index.md` | Product and software design — architecture decisions, concept inventory, API contracts, engine internals | design | — | — |
-| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.01.03, doc01.02.01, doc01.02.02, doc01.02.05.01, doc01.02.06.01, doc01.03.01, doc01.03.02, doc01.03.03, doc01.03.04 |
+| doc01.02.01 | `02-design/01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc01.02.01 | doc01.01.02, doc01.01.03.01, doc01.02.01, doc01.02.02, doc01.02.05.01, doc01.02.06.01, doc01.03.01, doc01.03.02, doc01.03.03, doc01.03.04 |
 | doc01.02.02 | `02-design/02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc01.02.01, doc01.02.01 | doc01.02.03, doc01.02.04, doc01.03.02, doc01.03.03 |
 | doc01.02.03 | `02-design/03-api-contract.md` | Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern. | api, http, actions, server, contract | doc01.02.02 | doc01.02.04 |
 | doc01.02.04 | `02-design/04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc01.02.02, doc01.02.03 | — |
@@ -100,6 +102,7 @@ Quick lookup for file-path→doc mapping:
 | `design` | doc01.02.00, doc01.02.02, doc01.02.08 |
 | `discriminant` | doc01.02.06.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04 |
+| `dogfooding` | doc01.01.03.02 |
 | `ecs` | doc01.03.01, doc01.03.04 |
 | `edges` | doc01.02.08 |
 | `engine` | doc01.02.05.01 |
@@ -115,7 +118,7 @@ Quick lookup for file-path→doc mapping:
 | `mcp` | doc01.02.04 |
 | `meta` | doc00.00, doc00.01 |
 | `milestone-1` | doc01.02.07 |
-| `milestones` | doc01.01.03 |
+| `milestones` | doc01.01.03.01, doc01.01.03.02 |
 | `modeling` | doc01.03.02, doc01.03.03 |
 | `nodes` | doc01.03.04 |
 | `notion` | doc01.03.04 |
@@ -123,26 +126,27 @@ Quick lookup for file-path→doc mapping:
 | `pdr` | doc01.02.01 |
 | `performance` | doc01.02.06.01 |
 | `philosophy` | doc00.02 |
-| `pipeline` | doc01.01.03, doc01.02.07 |
+| `pipeline` | doc01.01.03.01, doc01.02.07 |
 | `react` | doc01.02.06.01 |
 | `reactive` | doc01.03.01 |
 | `reactivity` | doc01.02.06.01 |
 | `research` | doc01.03.00, doc01.03.01, doc01.03.02, doc01.03.03, doc01.03.04 |
 | `retrieval` | doc00.04 |
-| `roadmap` | doc01.01.03 |
+| `roadmap` | doc01.01.03.01 |
 | `schema` | doc01.02.06.02, doc01.03.04 |
 | `schemas` | doc01.02.08 |
 | `server` | doc01.02.03 |
 | `software-design` | doc01.01.01 |
 | `solid` | doc01.02.06.01, doc01.02.07, doc01.03.01 |
 | `split` | doc01.01.02 |
-| `static-analysis` | doc01.01.03, doc01.02.07 |
+| `static-analysis` | doc01.01.03.01, doc01.02.07 |
 | `theory` | doc00.01 |
+| `tinyforum` | doc01.01.03.02 |
 | `tldraw` | doc01.03.04 |
 | `tools` | doc01.02.04 |
 | `types` | doc01.02.05.02, doc01.02.06.02 |
 | `unfolding` | doc01.02.01, doc01.02.02 |
 | `verification` | doc01.03.02, doc01.03.03 |
-| `vision` | doc01.01.01, doc01.01.03 |
+| `vision` | doc01.01.01, doc01.01.03.01 |
 | `visualization` | doc01.01.01 |
 | `vocabulary` | doc01.03.02, doc01.03.03 |

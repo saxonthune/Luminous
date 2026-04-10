@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js';
-import { APP_NAME, APP_VERSION } from './version';
+import { APP_NAME, APP_VERSION, GIT_COMMIT } from './version';
 
 interface AboutModalProps {
   onClose: () => void;
@@ -24,8 +24,8 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
             <span>{APP_VERSION}</span>
           </div>
           <div class="flex justify-between">
-            <span>Released</span>
-            <span>2026-04-10</span>
+            <span>Commit</span>
+            <span class="font-mono">{GIT_COMMIT}</span>
           </div>
           <p>
             &copy; 2025&ndash;2026{' '}

@@ -5,11 +5,6 @@ import { toolConfig, batchToolConfig, type ActionConfig, type ToolGroupConfig, t
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
-const server = new Server(
-  { name: 'luminous-mcp', version: '0.1.0' },
-  { capabilities: { tools: {} } }
-)
-
 function paramToJsonSchema(param: ParamType): object {
   if (typeof param === 'string') {
     return { type: param }
@@ -105,6 +100,27 @@ async function httpRequest(
   }
 }
 
+// Health check — must succeed before we register tools
+let serverCommit = 'unknown'
+try {
+  const res = await fetch(`${serverUrl}/api/health`)
+  if (!res.ok) {
+    throw new Error(`status ${res.status}`)
+  }
+  const health = await res.json() as { status: string; commit?: string }
+  serverCommit = health.commit ?? 'unknown'
+} catch {
+  process.stderr.write(
+    `Error: Cannot reach Luminous server at ${serverUrl}. Start it with: pnpm dev:next\n`
+  )
+  process.exit(1)
+}
+
+const server = new Server(
+  { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
+  { capabilities: { tools: {} } }
+)
+
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const tools = Object.entries(toolConfig).map(([name, group]) => ({
     name,
@@ -187,19 +203,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
   }
 })
-
-// Health check before starting
-try {
-  const res = await fetch(`${serverUrl}/api/health`)
-  if (!res.ok) {
-    throw new Error(`status ${res.status}`)
-  }
-} catch {
-  process.stderr.write(
-    `Error: Cannot reach Luminous server at ${serverUrl}. Start it with: pnpm dev:next\n`
-  )
-  process.exit(1)
-}
 
 const transport = new StdioServerTransport()
 await server.connect(transport)

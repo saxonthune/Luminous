@@ -10,7 +10,8 @@
     "build:all": "pnpm -r run build",
     "test": "pnpm -r --parallel test",
     "lint": "eslint .",
-    "dev:next": "pnpm --filter @luminous/server dev -- --dir $PWD/.canvases & pnpm --filter @luminous/canvas dev"
+    "dev:next": "pnpm --filter @luminous/server dev -- --dir $PWD/.canvases & pnpm --filter @luminous/canvas dev",
+    "generate:canvas": "tsx scripts/analyze-solidjs.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

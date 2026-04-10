@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { execSync } from "node:child_process"
 import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
@@ -8,6 +9,14 @@ import { roots as diagRoots, bbox as diagBbox, outliers as diagOutliers, subtree
 import type { QueryFilter } from "./diag.js"
 
 const port = Number(process.env.PORT ?? 4080)
+
+// Git commit hash — resolved once at startup
+let gitCommit = "unknown"
+try {
+  gitCommit = execSync("git rev-parse --short HEAD", { encoding: "utf-8" }).trim()
+} catch {
+  // not a git repo or git not available
+}
 
 // Parse --dir CLI arg
 const dirArgIndex = process.argv.indexOf("--dir")
@@ -117,7 +126,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // GET /api/health
   if (url === "/api/health" && req.method === "GET") {
-    sendJson(res, 200, { status: "ok" })
+    sendJson(res, 200, { status: "ok", commit: gitCommit })
     return
   }
 
