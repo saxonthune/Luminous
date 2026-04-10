@@ -404,7 +404,7 @@ export function CanvasView(props: CanvasViewProps) {
     const delay = isInitial ? 0 : 300;
     loadDocTimer = setTimeout(() => {
       loadDocTimer = null;
-      getDocument(props.documentPath)
+      getDocument(props.documentPath!)
         .then((raw) => {
           if (!isDocumentV2(raw)) {
             setError(
