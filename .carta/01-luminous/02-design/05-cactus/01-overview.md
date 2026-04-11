@@ -1,6 +1,5 @@
 ---
 title: Cactus Overview
-status: active
 summary: Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles
 tags: [cactus, canvas, engine, architecture, overview]
 deps: [doc01.02.01]

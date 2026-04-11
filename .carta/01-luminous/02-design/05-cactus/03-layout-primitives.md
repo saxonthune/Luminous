@@ -1,6 +1,5 @@
 ---
 title: Layout Primitives
-status: active
 summary: The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each
 tags: [cactus, layout, algorithms]
 deps: [doc01.02.05.01]
@@ -154,4 +153,4 @@ compositeLayout(nodes, treeEdges)  // cactus receives pre-filtered edges
 
 Cactus never sees the literal strings `'tree'` or `'renders'`. It receives an edge list and treats every edge in that list as a tree edge. Filtering is a runtime concern; geometric algorithms are cactus's concern. This is the boundary.
 
-See doc01.03.04 for the rationale behind the two-pass design.
+See doc01.03.03 for the rationale behind the two-pass design.

@@ -1,6 +1,5 @@
 ---
 title: Milestone 2: Dogfooding with tinyForum
-status: draft
 summary: Use Luminous alongside a real project to validate the tool and surface friction
 tags: [milestones, dogfooding, tinyforum]
 deps: [doc01.01.03]

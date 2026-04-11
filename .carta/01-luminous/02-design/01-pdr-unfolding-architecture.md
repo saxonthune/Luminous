@@ -1,6 +1,5 @@
 ---
 title: PDR: Unfolding Architecture
-status: draft
 summary: Product decision record for transforming Luminous from schema-first to unfolding-first
 tags: [pdr, architecture, unfolding, crystallization]
 deps: [doc01.02.01]
@@ -8,15 +7,11 @@ deps: [doc01.02.01]
 
 # PDR: Unfolding Architecture
 
-## Status
-
-Draft — under active development.
-
 ## Context
 
 Luminous is a visual canvas for software design. Its core thesis: humans reason well with spatial tools, AI performs well with structured context, and Luminous bridges this gap. The canvas is simultaneously a visual workspace for humans and a source of structured context for AI agents.
 
-The tool was extracted from the Carta monorepo as the TypeScript/React visual layer. It currently has a functional canvas editor with typed nodes (constructs), typed edges (via port schemas with polarity), organizer containers, multi-page documents, Yjs CRDT sync, and MCP tools for AI agents.
+The tool was extracted from the Carta monorepo as the TypeScript visual layer. It currently has a functional canvas editor with typed nodes (constructs), typed edges (via port schemas with polarity), organizer containers, multi-page documents, Yjs CRDT sync, and MCP tools for AI agents.
 
 ## Problem
 
@@ -34,7 +29,7 @@ The current architecture requires schemas and ports to be defined before any nod
 
 ### The canvas engine is capable but underexploited
 
-The cactus canvas engine is a custom, domain-agnostic primitive system (not React Flow). It supports free-form node placement, containment via `parentId` with relative positioning, handle-based edge drawing, and multi-select drag. But the domain layer on top restricts it:
+The cactus canvas engine is a custom, domain-agnostic primitive system. It supports free-form node placement, containment via `parentId` with relative positioning, handle-based edge drawing, and multi-select drag. But the domain layer on top restricts it:
 
 - Only organizers can be parents (the engine supports any node as container)
 - Edges require port handles (the engine's hit-testing is data-attribute based and could support node-level targets)
@@ -104,7 +99,7 @@ Batch crystallization (promote parent + children together) and deep promotion (c
 
 ## Cactus Engine Assessment
 
-The cactus canvas engine (`packages/web-client/src/cactus/`) is a custom, domain-agnostic primitive system — not React Flow. It uses d3-zoom for viewport, DOM data-attribute hit-testing, and composable hooks. The engine itself supports everything we need. The three gaps for the unfolding model are all in the **domain layer** above cactus (MapV2, organizerLogic, connectionLogic), not in the engine primitives:
+The cactus canvas engine (`packages/cactus/src/`) is a custom, domain-agnostic primitive system. It uses d3-zoom for viewport, DOM data-attribute hit-testing, and composable Solid primitives. The engine itself supports everything we need. The three gaps for the unfolding model are all in the **domain layer** above cactus, not in the engine primitives:
 
 | Need | Engine Status | Gap Location |
 |------|--------------|--------------|
@@ -126,8 +121,8 @@ Create the two new packages as seeds. No domain logic yet — just the wiring.
 - Filesystem: debounced write-back on Yjs updates, file watching for external changes
 - Dependencies: `yjs`, `y-websocket`, `y-protocols`, `ws`, `lib0` (nothing else)
 
-**`packages/client-next`** — Minimal React canvas app:
-- Vite + React + Tailwind
+**`packages/client-next`** — Minimal Solid.js canvas app:
+- Vite + Solid.js + Tailwind
 - Cactus engine (copied/inlined from web-client)
 - Yjs document as source of truth
 - Connects to server-next via WebSocket, falls back to local IndexedDB

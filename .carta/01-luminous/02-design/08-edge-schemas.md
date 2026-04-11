@@ -1,9 +1,8 @@
 ---
 title: Edge Schemas
-status: active
 summary: Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern
 tags: [edges, schemas, design, cactus-boundary]
-deps: [doc01.03.04, doc01.02.05.01, doc01.02.06.02, doc01.02.07]
+deps: [doc01.03.03, doc01.02.05.01, doc01.02.06.02, doc01.02.07]
 ---
 
 # Edge Schemas
@@ -104,4 +103,4 @@ The suppression is a rendering decision only — the edge data is unchanged in t
 
 ## Durability and Best-Effort Constraints
 
-An edge with `schemaName` referencing a missing schema still loads — it falls back to the freeform edge style. An edge violating `acceptsSource` or `acceptsTarget` still loads. Schema registration failures never block canvas loading. The durability invariant from the data architecture research (doc01.03.04) applies uniformly: storage never rejects a canvas document because a schema constraint is violated. Constraints are best-effort hints for the UI, not structural requirements enforced by the file format.
+An edge with `schemaName` referencing a missing schema still loads — it falls back to the freeform edge style. An edge violating `acceptsSource` or `acceptsTarget` still loads. Schema registration failures never block canvas loading. The durability invariant from the data architecture research (doc01.03.03) applies uniformly: storage never rejects a canvas document because a schema constraint is violated. Constraints are best-effort hints for the UI, not structural requirements enforced by the file format.

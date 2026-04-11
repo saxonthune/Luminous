@@ -1,6 +1,5 @@
 ---
 title: Solid.js Pipeline Specification
-status: draft
 summary: Node types, nesting rules, and edge semantics for the Solid.js static analysis pipeline
 tags: [pipeline, solid, static-analysis, milestone-1]
 deps: [doc01.01.03]

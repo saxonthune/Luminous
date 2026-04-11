@@ -1,6 +1,5 @@
 ---
 title: Codex
-status: active
 summary: Meta-documentation — how to read this workspace
 tags: [index, meta]
 deps: []

@@ -1,6 +1,5 @@
 ---
 title: Design
-status: active
 summary: Product and software design — architecture decisions, concept inventory, API contracts, engine internals
 tags: [design]
 deps: []

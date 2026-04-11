@@ -1,6 +1,6 @@
 ---
 title: Milestones
-status: active
+status: completed
 summary: Product milestones — what Luminous must do next, defined by what a user can do
 tags: [milestones, vision, roadmap, pipeline, static-analysis]
 deps: [doc01.01.01, doc01.02.01]

@@ -1,6 +1,5 @@
 ---
 title: Maintenance
-status: active
 summary: Doc lifecycle — unfolding philosophy, development loop, versioning, epochs
 tags: [docs, maintenance, philosophy]
 deps: []

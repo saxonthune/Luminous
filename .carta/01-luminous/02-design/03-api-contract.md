@@ -1,151 +1,129 @@
 ---
 title: API Contract
-status: draft
-summary: Action-based HTTP API — concept actions as endpoints, not REST resources. POST /api/{concept}/{action} pattern.
-tags: [api, http, actions, server, contract]
+summary: HTTP + WebSocket API for @luminous/server — document listing, reading, mutation actions, diagnostics, and change notifications
+tags: [api, http, server, contract]
 deps: [doc01.02.02]
 ---
 
 # API Contract
 
-Action-based HTTP API for `@luminous/server`. Endpoints map 1:1 to concept actions (doc01.02.02) rather than REST resources. The server is dumb storage — it applies actions to document state and persists. Domain logic lives in the client.
+HTTP + WebSocket API for `@luminous/server` (`packages/server-next`). The server is a native Node.js HTTP server (no framework). It serves a directory of `.canvas.json` files, applies mutation actions, and broadcasts changes via WebSocket.
 
-## Design Principles
+## Server Configuration
 
-- **Actions, not resources.** `POST /api/note/create` instead of `POST /api/notes`. Concepts have actions; the API exposes them directly.
-- **Concept-namespaced.** Pattern: `POST /api/{concept}/{action}`. Actions that synchronize two concepts (nesting, formalization) are top-level.
-- **Same names as MCP tools.** The HTTP API and future MCP operations share vocabulary. Same action, different transport.
-- **Event-shaped.** Every mutation is an action with params. This composes forward into undo, event sourcing, and CRDT sync when needed.
+- **Port:** 4080 (configurable via `PORT` env var)
+- **Root directory:** configurable via `--dir` CLI argument, defaults to cwd
+- **CORS:** all origins, methods GET/POST/OPTIONS
 
-## Endpoints
-
-### Workspace
+## Read Endpoints
 
 | Method | Path | Response |
 |--------|------|----------|
+| `GET` | `/api/health` | `{ status: "ok", commit: "<short-hash>" }` |
 | `GET` | `/api/documents` | `{ documents: [{ path, name, lastModified }] }` |
-| `GET` | `/api/document/:path` | `{ notes, edges, positions }` |
-| `GET` | `/api/health` | `{ status: "ok" }` |
+| `GET` | `/api/document/:path` | Full `Document` object |
 
-`GET /api/documents` scans the server's root directory for `*.canvas.json` files. Path is relative to root, name is filename without extension, lastModified is mtime from filesystem.
+`GET /api/documents` recursively scans the root directory for `.canvas.json` files. `GET /api/document/:path` returns the complete document — schemas, structure, content, edges, and legend. Paths are URL-decoded and validated against traversal (`..` and leading `/` rejected).
 
-### Note
+## Mutation Endpoints
 
-| Method | Path | Body | Response |
-|--------|------|------|----------|
-| `POST` | `/api/note/create` | `{ title, body? }` | `{ ok, id }` |
-| `POST` | `/api/note/update` | `{ id, title?, body? }` | `{ ok }` |
-| `POST` | `/api/note/delete` | `{ id }` | `{ ok }` |
+All mutations use `POST` with a JSON body containing `path` (the canvas file) and action-specific params. Response envelope: `{ ok: true, id?: string }` on success, `{ ok: false, error: string }` on failure.
 
-### Edge
+### Single action
 
-| Method | Path | Body | Response |
-|--------|------|------|----------|
-| `POST` | `/api/edge/connect` | `{ fromId, toId, label? }` | `{ ok, id }` |
-| `POST` | `/api/edge/disconnect` | `{ id }` | `{ ok }` |
-| `POST` | `/api/edge/relabel` | `{ id, label }` | `{ ok }` |
+`POST /api/{action}` — execute one action.
 
-### Nesting
+**Node actions:**
 
-Top-level — synchronizes Note and Canvas concepts.
+| Action | Params | Returns |
+|--------|--------|---------|
+| `node/create` | `schemaName`, `geometry`, `order`, `parent?`, `content?`, `id?` | `{ ok, id }` |
+| `node/setContent` | `id`, `fields` | `{ ok }` |
+| `node/setParent` | `id`, `parent?`, `order` | `{ ok }` |
+| `node/setOrder` | `id`, `order` | `{ ok }` |
+| `node/setGeometry` | `id`, `geometry: { x, y, w, h }` | `{ ok }` |
+| `node/delete` | `id` | `{ ok }` |
 
-| Method | Path | Body | Response |
-|--------|------|------|----------|
-| `POST` | `/api/nest` | `{ parentId, childId }` | `{ ok }` |
-| `POST` | `/api/unnest` | `{ childId }` | `{ ok }` |
+`node/delete` re-parents orphaned children to null and removes connected edges.
 
-### Canvas (position persistence)
+**Edge actions:**
 
-| Method | Path | Body | Response |
-|--------|------|------|----------|
-| `POST` | `/api/node/move` | `{ id, x, y }` | `{ ok }` |
-| `POST` | `/api/node/resize` | `{ id, w, h }` | `{ ok }` |
+| Action | Params | Returns |
+|--------|--------|---------|
+| `edge/connect` | `fromId`, `toId`, `label?`, `schemaName?`, `id?` | `{ ok, id }` |
+| `edge/disconnect` | `id` | `{ ok }` |
+| `edge/relabel` | `id`, `label?` | `{ ok }` |
+| `edge/setRouting` | `id`, `routing: { exitSide, enterSide }` | `{ ok }` |
+| `edge/clearRouting` | `id` | `{ ok }` |
+
+`exitSide`/`enterSide` values: `top`, `bottom`, `left`, `right`.
+
+**Schema actions:**
+
+| Action | Params | Returns |
+|--------|--------|---------|
+| `schema/define` | `schema` (NodeSchema or EdgeSchema object) | `{ ok }` |
+| `schema/delete` | `name` | `{ ok }` |
 
 ### Batch
 
-| Method | Path | Body | Response |
-|--------|------|------|----------|
-| `POST` | `/api/action/batch` | `{ path, actions[] }` | `{ ok, results[] }` |
-
-Submit an ordered array of actions in a single request. Actions execute in sequence; each can reference IDs produced by earlier actions using `$ref` syntax.
-
-**Request body:**
+`POST /api/action/batch` — execute an ordered array of actions atomically.
 
 ```json
 {
   "path": "canvas.canvas.json",
   "actions": [
-    { "action": "note/create", "params": { "title": "A" }, "ref": "a" },
-    { "action": "note/create", "params": { "title": "B" }, "ref": "b" },
+    { "action": "node/create", "params": { "schemaName": "note", "geometry": { "x": 0, "y": 0, "w": 200, "h": 100 }, "order": "a0" }, "ref": "a" },
+    { "action": "node/create", "params": { "schemaName": "note", "geometry": { "x": 300, "y": 0, "w": 200, "h": 100 }, "order": "a1" }, "ref": "b" },
     { "action": "edge/connect", "params": { "fromId": "$ref:a", "toId": "$ref:b", "label": "depends on" } }
   ]
 }
 ```
 
-- `path` — relative path to the canvas file (required, no traversal)
-- `actions` — non-empty array of action descriptors (required)
-  - `action` — action name matching the existing single-action API
-  - `params` — action parameters; string values matching `$ref:<name>` are resolved to IDs from earlier actions
-  - `ref` — optional name to register the action's returned `id` for use in subsequent `$ref` values
+- `ref` — optional name to register the action's returned `id`
+- `$ref:<name>` — in param string values, resolved to a previously registered ID
+- **Fail-fast:** processing stops at the first failed action
+- **No rollback:** successfully applied actions before a failure are persisted
+- **Partial save:** the document is only written when all actions succeed
 
-**Response (all succeeded):** HTTP 200
+## Diagnostic Endpoints
+
+All diagnostic endpoints are read-only GET requests (except `query` which is POST for complex filters).
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/diag/roots/:path` | Root-level nodes grouped by schema — counts, bounding boxes |
+| `GET` | `/api/diag/outliers/:path` | Geometry anomalies — oversized, undersized, overflow nodes (top 50) |
+| `GET` | `/api/diag/bbox/:path/:id` | Bounding box of a node and its descendants, with health assessment |
+| `GET` | `/api/diag/subtree/:path/:id` | Full subtree structure from a node (max 500 nodes) |
+| `GET` | `/api/diag/outline/:path[/:id]` | Hierarchical outline/tree view — full document or subtree (max 500 nodes) |
+| `GET` | `/api/diag/summary/:path` | Quick stats — node/edge counts, max depth, schema distribution, bounding box |
+| `POST` | `/api/diag/query` | Complex node filtering + field projection |
+
+### Query
 
 ```json
-{ "ok": true, "results": [{ "ok": true, "id": "abc" }, { "ok": true, "id": "def" }, { "ok": true, "id": "ghi" }] }
+{
+  "path": "canvas.canvas.json",
+  "filter": { "type": "component", "root": true },
+  "fields": ["title", "schemaName", "geometry"]
+}
 ```
 
-**Response (failure):** HTTP 400
+Filter fields: `type` (schema name), `parent` (ID or null for roots), `ids` (array), `root` (boolean). Selectable fields: `title`, `schemaName`, `parent`, `geometry`. Max 500 results.
 
-```json
-{ "ok": false, "results": [{ "ok": true, "id": "abc" }, { "ok": false, "error": "note not found" }] }
-```
-
-**Error semantics:**
-- **Fail-fast:** processing stops at the first failed action. Results contains only the actions processed up to and including the failure.
-- **No rollback:** successfully applied actions before the failure are persisted. The batch is not atomic.
-- **Unresolved ref:** if a `$ref:<name>` value cannot be resolved (the named ref was never set), the current action fails with `{ ok: false, error: "unresolved ref: <name>" }` and processing stops.
-- **Partial save:** the document is only marked dirty and saved when all actions succeed. If any action fails, no write occurs.
-
-**`$ref` resolution rules:**
-- Only top-level string values in `params` are scanned — nested objects are not traversed.
-- A `ref` is registered only when the action returns `{ ok: true, id }`. Actions without an `id` in their result do not produce a ref even if `ref` is declared.
-
-### Change notifications
+## Change Notifications
 
 | Protocol | Path | Purpose |
 |----------|------|---------|
 | `WS` | `/ws/watch` | Subscribe to document changes |
 
-Messages from server: `{ event: "changed", path }` when the backing file changes on disk (git pull, external edit, another client's save).
+Messages from server: `{ event: "changed", path }` when the backing file changes on disk (external edit, git pull, another client's save).
 
-## Response envelope
+## Storage
 
-All mutations return:
-
-```json
-{ "ok": true, "id": "abc123" }
-```
-
-or
-
-```json
-{ "ok": false, "error": "note not found" }
-```
-
-Reads return the data directly (no envelope).
-
-## Future endpoints
-
-These compose onto the existing contract when Structure concepts (doc01.02.02) are implemented. No existing endpoints change.
-
-```
-POST /api/schema/define         { name, fields }                    → { ok }
-POST /api/schema/edit           { name, fields }                    → { ok }
-POST /api/schema/delete         { name }                            → { ok }
-POST /api/formalize             { noteIds[], schemaName, mapping? } → { ok }
-POST /api/informalize           { nodeId }                          → { ok }
-POST /api/schema-pair/describe  { from, to, description }           → { ok }
-POST /api/schema-pair/remove    { from, to }                        → { ok }
-```
-
-`formalize` and `informalize` are top-level because they synchronize Note and Schema. `schema-pair/describe` synchronizes Edge and Schema.
+- **In-memory cache** with debounced auto-save (2-second delay after first mutation)
+- **File format:** v2 `.canvas.json` — four flat hashtables (schemas, structure, content, edges) plus optional legend
+- **Backwards compatibility:** auto-injects `kind: 'node'` on load for v1 schemas
+- **File watching:** external file changes broadcast via WebSocket after 3-second debounce
+- **Graceful shutdown:** flushes all dirty documents on SIGINT/SIGTERM

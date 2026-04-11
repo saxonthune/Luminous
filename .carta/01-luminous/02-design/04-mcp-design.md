@@ -1,6 +1,5 @@
 ---
 title: MCP Design
-status: draft
 summary: MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client.
 tags: [mcp, ai, api, tools, architecture]
 deps: [doc01.02.02, doc01.02.03]

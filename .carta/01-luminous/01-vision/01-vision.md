@@ -1,6 +1,5 @@
 ---
 title: Vision
-status: draft
 summary: Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both
 tags: [vision, visualization, canvas, software-design, ai-context]
 deps: []

@@ -1,16 +1,15 @@
 ---
 title: Concept Inventory
-status: draft
 summary: Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification
 tags: [concepts, design, jackson, formalization, unfolding]
-deps: [doc01.02.01, doc01.02.01]
+deps: [doc01.02.01, doc01.01.01]
 ---
 
 # Concept Inventory
 
 Luminous concepts analyzed using Daniel Jackson's concept-driven design framework (*The Essence of Software*). Each concept has a purpose, state, actions, and operational principle. Concepts are freestanding and composable — the seed (Milestone 0-1) needs only the first five; later concepts compose on top without breaking earlier ones.
 
-See doc01.02.01 for architectural decisions. See doc01.02.01 for the vision these concepts serve.
+See doc01.02.01 for architectural decisions. See doc01.01.01 for the vision these concepts serve.
 
 ## Dependence Diagram
 

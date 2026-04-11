@@ -1,6 +1,5 @@
 ---
 title: Declarative Paradigms and Carta+Luminous
-status: draft
 summary: Research session on how declarative/structured software paradigms (Solid.js, ECS, Rust, SQL, etc.) align with the mission of making software artifacts legible to both humans and AI
 tags: [research, solid, architecture, reactive, ecs]
 deps: [doc01.01.01, doc01.02.01]

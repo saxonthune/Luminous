@@ -1,6 +1,5 @@
 ---
 title: Architecture Decision Records
-status: active
 summary: Significant architecture decisions with context, rationale, and consequences
 tags: [adr, architecture]
 deps: []

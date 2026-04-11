@@ -1,6 +1,5 @@
 ---
 title: Cactus API Contract
-status: active
 summary: Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities
 tags: [cactus, canvas, api, components, hooks, types]
 deps: [doc01.02.05.01]

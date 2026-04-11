@@ -1,6 +1,5 @@
 ---
 title: About This Workspace
-status: active
 summary: Why this workspace exists, how to read it, two-sources-of-truth theory
 tags: [docs, meta, theory]
 deps: []

@@ -1,7 +1,7 @@
 name: Release Web
 on:
   push:
-    branches: [main, feat/260406]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

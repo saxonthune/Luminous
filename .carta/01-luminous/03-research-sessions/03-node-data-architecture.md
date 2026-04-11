@@ -1,6 +1,5 @@
 ---
 title: Node Data Architecture Research
-status: draft
 summary: Research session deriving Luminous's node data model from prior art (tldraw, Notion, Excalidraw, React Flow, Bevy ECS) — separation of structure/content/schema, flat storage with parent pointers, and graceful schema degradation
 tags: [research, architecture, data-model, ecs, bevy, tldraw, notion, schema, nodes]
 deps: [doc01.02.01, doc01.02.05.01]

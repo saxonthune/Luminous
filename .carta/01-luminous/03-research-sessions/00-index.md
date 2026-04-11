@@ -1,6 +1,5 @@
 ---
 title: Research Sessions
-status: active
 summary: Exploratory conversations and synthesis — technology evaluation, architectural thinking, cross-domain pattern recognition
 tags: [research, exploration]
 deps: []
