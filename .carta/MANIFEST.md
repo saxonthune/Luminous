@@ -72,6 +72,7 @@ Machine-readable index for AI navigation. Read this file first, then open only t
 | doc01.03.01 | `03-research-sessions/01-declarative-paradigms-synthesis.md` | Research session on how declarative/structured software paradigms (Solid.js, ECS, Rust, SQL, etc.) align with the mission of making software artifacts legible to both humans and AI | research, solid, architecture, reactive, ecs | doc01.01.01, doc01.02.01 | — |
 | doc01.03.02 | `03-research-sessions/02-modeling-workbench.md` | Research session exploring how Luminous evolves from concept-driven design to a general modeling workbench — vocabulary building, progressive formalization, and verification across multiple modeling formalisms | research, modeling, concepts, formalization, verification, vocabulary | doc01.01.01, doc01.02.01, doc01.02.02 | — |
 | doc01.03.03 | `03-research-sessions/03-node-data-architecture.md` | Research session deriving Luminous's node data model from prior art (tldraw, Notion, Excalidraw, React Flow, Bevy ECS) — separation of structure/content/schema, flat storage with parent pointers, and graceful schema degradation | research, architecture, data-model, ecs, bevy, tldraw, notion, schema, nodes | doc01.02.01, doc01.02.05.01 | doc01.02.06.02, doc01.02.08 |
+| doc01.03.04 | `03-research-sessions/04-visual-perception-research.md` | Research synthesis on cognitive load theory, Gestalt principles, node-link diagram effectiveness, and information visualization best practices — applied to Luminous canvas pipelines | research, visualization, perception, cognitive-load, gestalt, pipelines | — | — |
 
 ## Tag Index
 
@@ -91,6 +92,7 @@ Quick lookup for file-path→doc mapping:
 | `cactus-boundary` | doc01.02.08 |
 | `canvas` | doc01.01.01, doc01.02.05.01, doc01.02.05.02 |
 | `carta` | doc01.01.02 |
+| `cognitive-load` | doc01.03.04 |
 | `components` | doc01.02.05.02 |
 | `concepts` | doc01.02.02, doc01.03.02 |
 | `contract` | doc01.02.03 |
@@ -106,6 +108,7 @@ Quick lookup for file-path→doc mapping:
 | `engine` | doc01.02.05.01 |
 | `exploration` | doc01.03.00 |
 | `formalization` | doc01.02.02, doc01.03.02 |
+| `gestalt` | doc01.03.04 |
 | `history` | doc01.01.02 |
 | `hooks` | doc01.02.05.02 |
 | `http` | doc01.02.03 |
@@ -122,13 +125,15 @@ Quick lookup for file-path→doc mapping:
 | `notion` | doc01.03.03 |
 | `overview` | doc01.02.05.01 |
 | `pdr` | doc01.02.01 |
+| `perception` | doc01.03.04 |
 | `performance` | doc01.02.06.01 |
 | `philosophy` | doc00.02 |
 | `pipeline` | doc01.01.03.01, doc01.02.07 |
+| `pipelines` | doc01.03.04 |
 | `react` | doc01.02.06.01 |
 | `reactive` | doc01.03.01 |
 | `reactivity` | doc01.02.06.01 |
-| `research` | doc01.03.00, doc01.03.01, doc01.03.02, doc01.03.03 |
+| `research` | doc01.03.00, doc01.03.01, doc01.03.02, doc01.03.03, doc01.03.04 |
 | `retrieval` | doc00.04 |
 | `roadmap` | doc01.01.03.01 |
 | `schema` | doc01.02.06.02, doc01.03.03 |
@@ -146,5 +151,5 @@ Quick lookup for file-path→doc mapping:
 | `unfolding` | doc01.02.01, doc01.02.02 |
 | `verification` | doc01.03.02 |
 | `vision` | doc01.01.01, doc01.01.03.01 |
-| `visualization` | doc01.01.01 |
+| `visualization` | doc01.01.01, doc01.03.04 |
 | `vocabulary` | doc01.03.02 |
