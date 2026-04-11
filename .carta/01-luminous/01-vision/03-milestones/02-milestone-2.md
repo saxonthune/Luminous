@@ -24,14 +24,22 @@ For a project outside the Luminous repo to use Luminous, it needs:
 
 1. **A `.canvases/` directory** with `.canvas.json` files. These can be hand-authored, MCP-built, or pipeline-generated.
 
-2. **Luminous server + client running.** The server (`@luminous/server`) serves canvas files and syncs edits; the client (`@luminous/canvas`) renders them in a browser. Both always run together — the whole point is spatial visual thinking alongside AI context. Start with:
-   ```
-   luminous-server --dir /path/to/project/.canvases
-   ```
+2. **Luminous server + client running.** The consumer project has a gitignored launch script that runs Luminous from a local checkout via `npx /path/to/Luminous/packages/server-next`. This simulates the eventual `npx @luminous/server` experience without publishing. The script also starts the client. No Luminous dependency appears in the consumer's `package.json`.
 
 3. **MCP configured in Claude Code settings.** The `@luminous/mcp` package translates MCP tool calls into HTTP requests against the running server. The consumer project's `.claude/settings.json` (or the user's global settings) needs an MCP server entry pointing at the luminous-mcp binary, with `LUMINOUS_SERVER_URL` set to the running server.
 
-4. **Pipeline scripts** (optional). For code-generated canvases, the consumer runs pipeline scripts that analyze their codebase and emit `.canvas.json`. These scripts live in Luminous and are parameterized by target directory.
+4. **Claude Code skill installed.** The `@luminous/skill` package provides a skill template (`SKILL.md`) that the consumer copies into `.claude/skills/luminous/`. This gives the agent session context on what Luminous is, how canvases work, and how to write pipeline scripts — without access to the Luminous repo. The skill works alongside MCP tool descriptions: MCP tells the agent *what each tool does*, the skill tells it *what Luminous is and why*.
+
+5. **Pipeline scripts** (optional). For code-generated canvases, the consumer runs pipeline scripts that analyze their codebase and emit `.canvas.json`. These scripts live in Luminous and are parameterized by target directory.
+
+## How a consumer agent gets context
+
+The consumer agent has no access to the Luminous repo. Context arrives through two channels:
+
+- **MCP tool metadata.** Tool names, descriptions, and parameter schemas are sent during MCP tool discovery. Well-written descriptions make the tools self-documenting at the action level.
+- **Claude Code skill.** The `/luminous` skill explains what Luminous is, what canvases contain, how to use MCP tools in combination, and how to write pipeline scripts. This is the "user manual" that lives in the consumer project.
+
+These two layers complement each other: MCP descriptions are tool-level ("what does `node.create` do?"), the skill is concept-level ("what is a canvas and why would I build one?").
 
 ## Versioning
 
@@ -43,11 +51,14 @@ Luminous uses per-commit versioning for consumer debugging. No semver bumps or f
 
 A consumer can always check what version they're running from any surface — UI, MCP, or a direct health check.
 
+## Resolved questions
+
+- **Distribution.** For dogfooding: gitignored launch script in the consumer that runs Luminous via `npx /path/to/local/checkout`. No publishing required. Simulates the eventual `npx @luminous/server` experience.
+- **Skill vs. MCP.** Both. MCP for tool-level access, skill for concept-level context. The `@luminous/skill` package provides a template that consumers copy into `.claude/skills/luminous/`.
+
 ## Open questions
 
-- **Distribution.** How does a consumer install the server and MCP? Options: npm package, standalone binary, or "clone Luminous and run from there." The npm path is simplest but requires publishing. For now, running from a sibling checkout works.
 - **Canvas discovery.** Should the server scan the whole project tree for `.canvas.json` files, or only a designated `.canvases/` directory? A designated directory is cleaner — canvases are artifacts, not source code.
-- **Skill vs. MCP.** Should Luminous expose a Claude Code skill alongside or instead of MCP? A skill could bundle setup instructions, common workflows, and canvas bootstrapping into a single `/luminous` command.
 
 ## Feedback loop
 
