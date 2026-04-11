@@ -1,0 +1,66 @@
+import { render } from 'solid-js/web';
+import { createSignal, Show } from 'solid-js';
+import './index.css';
+import { staticPersistence, type Document } from './api';
+import { defaultSchemas } from './schemas';
+import { CanvasView } from './CanvasView';
+
+function isDocumentV2(doc: unknown): doc is Document {
+  return !!doc && typeof doc === 'object' && (doc as Document).version === 2;
+}
+
+function ViewerApp() {
+  const params = new URLSearchParams(window.location.search);
+  const src = params.get('src') ?? `${import.meta.env.BASE_URL}canvases/solidjs-analysis.canvas.json`;
+
+  const [doc, setDoc] = createSignal<Document | null>(null);
+  const [loading, setLoading] = createSignal(true);
+  const [error, setError] = createSignal<string | null>(null);
+
+  // Kick off fetch immediately (outside reactive tracking)
+  fetch(src)
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((raw) => {
+      if (!isDocumentV2(raw)) {
+        setError('This canvas is in the v1 format or is not a valid Luminous canvas document.');
+        setLoading(false);
+        return;
+      }
+      const docWithDefaults: Document = {
+        ...raw,
+        schemas: { ...defaultSchemas, ...raw.schemas },
+      };
+      setDoc(docWithDefaults);
+      setLoading(false);
+    })
+    .catch((err: unknown) => {
+      console.error('[viewer] failed to fetch canvas:', src, err);
+      setError(`Failed to load canvas: ${err instanceof Error ? err.message : String(err)}`);
+      setLoading(false);
+    });
+
+  return (
+    <Show
+      when={!loading() && !error() && doc()}
+      fallback={
+        <div class="flex h-screen items-center justify-center">
+          <Show when={loading()}>
+            <p class="text-sm text-[var(--text-secondary)]">Loading…</p>
+          </Show>
+          <Show when={error()}>
+            <p class="text-sm text-red-500">{error()}</p>
+          </Show>
+        </div>
+      }
+    >
+      {(d) => <CanvasView initialDocument={d()} persistence={staticPersistence} />}
+    </Show>
+  );
+}
+
+const root = document.getElementById('root');
+if (!root) throw new Error('No root element');
+render(() => <ViewerApp />, root);

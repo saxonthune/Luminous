@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/cactus/tsconfig.json" },
+    { "path": "./packages/server-next/tsconfig.json" },
+    { "path": "./packages/client-next/tsconfig.json" }
+  ]
+}

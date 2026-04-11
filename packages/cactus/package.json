@@ -1,0 +1,30 @@
+{
+  "name": "@luminous/cactus",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "d3-force": "^3.0.0",
+    "d3-selection": "^3.0.0",
+    "d3-transition": "^3.0.1",
+    "d3-zoom": "^3.0.0",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-selection": "^3.0.11",
+    "@types/d3-transition": "^3.0.9",
+    "@types/d3-zoom": "^3.0.8",
+    "jsdom": "^26.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^6.4.2",
+    "vite-plugin-solid": "^2.11.0",
+    "vitest": "^3.2.3"
+  }
+}

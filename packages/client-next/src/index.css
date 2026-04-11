@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* Tailwind v4 auto-detects content in the current package only.
+   Cactus is a sibling workspace package, so its class names need to be
+   sourced explicitly or its `bottom-0`/`right-0`/etc. emit no CSS. */
+@source "../../cactus/src/**/*.{ts,tsx}";
+
+body {
+  color: var(--text-primary);
+}
+
+:root,
+[data-theme="light"] {
+  --bg-canvas: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-alt: #f9fafb;
+  --bg-overlay: #ffffff;
+  --bg-input: transparent;
+  --border-default: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-on-accent: #ffffff;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-10: rgba(37, 99, 235, 0.1);
+  --color-accent-subtle: #3b82f6;
+  --color-edge: #94a3b8;
+  --color-edge-label: #64748b;
+  --color-dot-grid: #d1d5db;
+  --color-surface: #ffffff;
+  --color-resize-handle: #94a3b8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --cm-text: rgb(75 85 99);
+  --cm-code-bg: rgb(243 244 246);
+  --cm-checkbox: rgb(107 114 128);
+  --cm-checkbox-checked: rgb(59 130 246);
+  /* Node kind colors */
+  --kind-component-bg: #dbeafe;
+  --kind-component-border: #93c5fd;
+  --kind-signal-bg: #dcfce7;
+  --kind-signal-border: #86efac;
+  --kind-store-bg: #d1fae5;
+  --kind-store-border: #6ee7b7;
+  --kind-memo-bg: #fef3c7;
+  --kind-memo-border: #fcd34d;
+  --kind-effect-bg: #ede9fe;
+  --kind-effect-border: #c4b5fd;
+  --kind-hook-bg: #e0e7ff;
+  --kind-hook-border: #a5b4fc;
+  --kind-datasource-bg: #ffe4e6;
+  --kind-datasource-border: #fda4af;
+}
+
+[data-theme="dusk"] {
+  --bg-canvas: #1e1a17;
+  --bg-surface: #2a2420;
+  --bg-surface-alt: #342e28;
+  --bg-overlay: #2a2420;
+  --bg-input: transparent;
+  --border-default: #4a4038;
+  --border-subtle: #3a3228;
+  --text-primary: #e8e0d8;
+  --text-secondary: #a89888;
+  --text-tertiary: #786858;
+  --text-on-accent: #ffffff;
+  --color-accent: #d4915a;
+  --color-accent-hover: #c07840;
+  --color-accent-10: rgba(212, 145, 90, 0.1);
+  --color-accent-subtle: #d4915a;
+  --color-edge: #8a7a68;
+  --color-edge-label: #a89888;
+  --color-dot-grid: #3a3228;
+  --color-surface: #2a2420;
+  --color-resize-handle: #8a7a68;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+  --cm-text: #e8e0d8;
+  --cm-code-bg: #3a3228;
+  --cm-checkbox: #a89888;
+  --cm-checkbox-checked: #d4915a;
+  /* Node kind colors */
+  --kind-component-bg: #1e3a5f;
+  --kind-component-border: #2563eb;
+  --kind-signal-bg: #14532d;
+  --kind-signal-border: #22c55e;
+  --kind-store-bg: #064e3b;
+  --kind-store-border: #10b981;
+  --kind-memo-bg: #451a03;
+  --kind-memo-border: #f59e0b;
+  --kind-effect-bg: #2e1065;
+  --kind-effect-border: #8b5cf6;
+  --kind-hook-bg: #1e1b4b;
+  --kind-hook-border: #6366f1;
+  --kind-datasource-bg: #4c0519;
+  --kind-datasource-border: #f43f5e;
+}
+
+[data-theme="ground"] {
+  --tone-0: #f4ece1;
+  --tone-1: #ede2d2;
+  --tone-2: #ddcfba;
+  --tone-3: #b8a78c;
+  --tone-4: #7d6b50;
+  --tone-5: #463a28;
+  --tone-6: #1f1810;
+
+  --hue-slate: #6a7a8a;
+  --hue-moss: #6a8a6a;
+  --hue-deep-moss: #4a6a4a;
+  --hue-ochre: #b08a3a;
+  --hue-violet: #7a6a8a;
+  --hue-indigo: #6a6a8a;
+  --hue-oxide: #9a4a2a;
+
+  --bg-canvas: var(--tone-0);
+  --bg-surface: var(--tone-1);
+  --bg-surface-alt: var(--tone-2);
+  --bg-overlay: var(--tone-1);
+  --bg-input: transparent;
+  --border-default: var(--tone-3);
+  --border-subtle: color-mix(in oklch, var(--tone-2) 70%, var(--tone-3));
+  --text-primary: var(--tone-6);
+  --text-secondary: var(--tone-4);
+  --text-tertiary: var(--tone-3);
+  --text-on-accent: var(--tone-0);
+  --color-accent: var(--hue-oxide);
+  --color-accent-hover: color-mix(in oklch, var(--hue-oxide) 75%, var(--tone-6));
+  --color-accent-10: color-mix(in oklch, var(--hue-oxide) 10%, transparent);
+  --color-accent-subtle: color-mix(in oklch, var(--hue-oxide) 70%, var(--tone-2));
+  --color-edge: var(--tone-3);
+  --color-edge-label: var(--tone-4);
+  --color-dot-grid: color-mix(in oklch, var(--tone-1) 80%, var(--tone-3));
+  --color-surface: var(--tone-1);
+  --color-resize-handle: var(--tone-3);
+  --shadow-sm: 0 1px 2px rgba(31, 24, 16, 0.08);
+  --shadow-lg: 0 10px 15px rgba(31, 24, 16, 0.15);
+  --cm-text: var(--tone-5);
+  --cm-code-bg: var(--tone-2);
+  --cm-checkbox: var(--tone-4);
+  --cm-checkbox-checked: var(--hue-oxide);
+
+  --kind-component-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-slate));
+  --kind-component-border: color-mix(in oklch, var(--kind-component-bg) 55%, var(--tone-5));
+  --kind-signal-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-moss));
+  --kind-signal-border: color-mix(in oklch, var(--kind-signal-bg) 55%, var(--tone-5));
+  --kind-store-bg: color-mix(in oklch, var(--tone-2) 80%, var(--hue-deep-moss));
+  --kind-store-border: color-mix(in oklch, var(--kind-store-bg) 55%, var(--tone-5));
+  --kind-memo-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-ochre));
+  --kind-memo-border: color-mix(in oklch, var(--kind-memo-bg) 55%, var(--tone-5));
+  --kind-effect-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-violet));
+  --kind-effect-border: color-mix(in oklch, var(--kind-effect-bg) 55%, var(--tone-5));
+  --kind-hook-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-indigo));
+  --kind-hook-border: color-mix(in oklch, var(--kind-hook-bg) 55%, var(--tone-5));
+  --kind-datasource-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-oxide));
+  --kind-datasource-border: color-mix(in oklch, var(--kind-datasource-bg) 55%, var(--tone-5));
+}
