@@ -65,10 +65,10 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
           >
             {(s) => (
               <div
-                class={`relative bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
+                class={`relative bg-surface rounded-lg flex flex-col select-none ${
                   isSelected(props.nodeId)
-                    ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
-                    : 'border border-[var(--border-default)]'
+                    ? 'outline outline-2 outline-accent-subtle border-transparent'
+                    : 'border border-border'
                 }`}
                 style={{
                   'box-shadow': 'var(--shadow-sm)',
@@ -110,7 +110,7 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                         <For each={edgeInfos()}>
                           {(info) => (
                             <span
-                              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border border-[var(--border-subtle)] bg-[var(--bg-surface-alt)] text-[var(--text-secondary)]"
+                              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border border-border-subtle bg-surface-alt text-fg-muted"
                               title={`${info.direction === 'up' ? '↑' : '↓'} ${info.label} ${info.targetName}`}
                             >
                               <span class="opacity-60">{info.direction === 'up' ? '↑' : '↓'}</span>
@@ -145,7 +145,7 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
                   type="source"
                   nodeId={props.nodeId}
                   onStartConnection={startConnection}
-                  class="absolute top-1/2 w-3 h-3 rounded-full bg-[var(--color-accent-subtle)] border-2 border-[var(--bg-surface)] shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
+                  class="absolute top-1/2 w-3 h-3 rounded-full bg-accent-subtle border-2 border-surface shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
                   style={{ right: '-6px', transform: 'translateY(-50%)' }}
                 />
 
@@ -180,8 +180,8 @@ export function SchemaNode(props: SchemaNodeProps): JSX.Element {
 
 function kindStyle(schemaName: string): Record<string, string> {
   return {
-    'background-color': `var(--kind-${schemaName}-bg, var(--bg-surface))`,
-    'border-color': `var(--kind-${schemaName}-border, var(--border-default))`,
+    'background-color': `var(--color-kind-${schemaName}-bg, var(--surface))`,
+    'border-color': `var(--color-kind-${schemaName}-border, var(--border))`,
   }
 }
 

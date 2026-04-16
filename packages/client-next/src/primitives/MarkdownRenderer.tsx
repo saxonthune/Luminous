@@ -6,7 +6,7 @@ const LazyMarkdownEditor = lazy(() => import('../MarkdownEditor'))
 export const MarkdownRenderer: PrimitiveRenderer = (props) => {
   return (
     <div
-      class="mx-2 mb-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-alt)] overflow-hidden"
+      class="mx-2 mb-2 rounded border border-border-subtle bg-surface-alt overflow-hidden"
       style={{ opacity: 0.85 }}
     >
       <Suspense>

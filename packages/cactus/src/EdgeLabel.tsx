@@ -41,7 +41,7 @@ export function EdgeLabel(props: EdgeLabelProps): JSX.Element {
             "padding-right": '8px',
             "padding-top": '2px',
             "padding-bottom": '2px',
-            "background-color": 'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            "background-color": 'color-mix(in srgb, var(--surface) 85%, transparent)',
             "backdrop-filter": 'blur(4px)',
             "user-select": 'none',
             "white-space": 'nowrap',

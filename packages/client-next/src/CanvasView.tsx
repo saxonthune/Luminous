@@ -957,24 +957,24 @@ export function CanvasView(props: CanvasViewProps) {
   });
 
   return (
-    <div class="flex h-screen flex-col" style={{ background: 'var(--bg-canvas)' }}>
-      <div class="relative flex items-center gap-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 shrink-0">
+    <div class="flex h-screen flex-col bg-canvas">
+      <div class="relative flex items-center gap-3 border-b border-border bg-surface px-4 py-2 shrink-0">
         <Show when={props.onBack}>
           <button
             onClick={() => props.onBack?.()}
-            class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+            class="rounded-md border border-border px-3 py-1 text-sm font-medium text-fg hover:bg-surface-alt"
           >
             ← Back
           </button>
         </Show>
-        <span class="text-sm text-[var(--text-secondary)]">{props.documentPath}</span>
+        <span class="text-sm text-fg-muted">{props.documentPath}</span>
         <div class="flex-1" />
-        <span class="absolute left-1/2 -translate-x-1/2 text-xl font-semibold tracking-wide text-[var(--text-primary)]">{APP_NAME}</span>
+        <span class="absolute left-1/2 -translate-x-1/2 text-xl font-semibold tracking-wide text-fg">{APP_NAME}</span>
         <div class="flex-1" />
         <div ref={themeMenuRef} class="relative">
           <button
             onClick={() => setThemeMenuOpen((o) => !o)}
-            class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+            class="rounded-md border border-border px-3 py-1 text-sm font-medium text-fg hover:bg-surface-alt"
             aria-haspopup="menu"
             aria-expanded={themeMenuOpen()}
           >
@@ -982,7 +982,7 @@ export function CanvasView(props: CanvasViewProps) {
           </button>
           <Show when={themeMenuOpen()}>
             <div
-              class="absolute right-0 top-full mt-1 rounded-md border border-[var(--border-default)] bg-[var(--bg-overlay)] py-1 text-sm z-50"
+              class="absolute right-0 top-full mt-1 rounded-md border border-border bg-overlay py-1 text-sm z-50"
               style={{ "box-shadow": "var(--shadow-lg)", "min-width": "120px" }}
               role="menu"
             >
@@ -993,8 +993,8 @@ export function CanvasView(props: CanvasViewProps) {
                     aria-checked={theme() === t.id}
                     class={`w-full text-left px-3 py-1.5 flex items-center gap-2 transition-colors ${
                       theme() === t.id
-                        ? 'bg-[var(--bg-surface-alt)] text-[var(--text-primary)]'
-                        : 'text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                        ? 'bg-surface-alt text-fg'
+                        : 'text-fg hover:bg-surface-alt'
                     }`}
                     onClick={() => {
                       setTheme(t.id);
@@ -1012,7 +1012,7 @@ export function CanvasView(props: CanvasViewProps) {
         <Show when={props.persistence.allowMutations}>
           <button
             onClick={() => createNoteFn()}
-            class="rounded-md bg-[var(--color-accent)] px-3 py-1 text-sm font-medium text-[var(--text-on-accent)] hover:bg-[var(--color-accent-hover)]"
+            class="rounded-md bg-accent px-3 py-1 text-sm font-medium text-on-accent hover:bg-accent-hover"
           >
             + New Note
           </button>
@@ -1021,7 +1021,7 @@ export function CanvasView(props: CanvasViewProps) {
 
       <div class="flex-1 overflow-hidden relative">
         <Show when={loading()}>
-          <div class="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
+          <div class="flex h-full items-center justify-center text-sm text-fg-muted">
             Loading…
           </div>
         </Show>
@@ -1049,7 +1049,7 @@ export function CanvasView(props: CanvasViewProps) {
                   <line
                     x1={coords.startX} y1={coords.startY}
                     x2={coords.currentX} y2={coords.currentY}
-                    stroke="var(--color-edge)" stroke-width={2}
+                    stroke="var(--edge)" stroke-width={2}
                     stroke-dasharray="6 3" stroke-linecap="round"
                   />
                 )}
@@ -1093,7 +1093,7 @@ export function CanvasView(props: CanvasViewProps) {
         <Show when={hasLegend()}>
           <button
             onClick={() => setLegendOpen(true)}
-            class="absolute top-3 right-3 w-8 h-8 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] flex items-center justify-center text-sm font-serif font-bold z-10 cursor-pointer"
+            class="absolute top-3 right-3 w-8 h-8 rounded-full border border-border bg-surface text-fg-muted hover:text-fg hover:bg-surface-alt flex items-center justify-center text-sm font-serif font-bold z-10 cursor-pointer"
             title="Canvas legend"
           >
             i
@@ -1101,7 +1101,7 @@ export function CanvasView(props: CanvasViewProps) {
         </Show>
         <button
           onClick={() => setAboutOpen(true)}
-          class="absolute bottom-0 left-0 px-2 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-surface)] border-t border-r border-[var(--border-subtle)] z-10 cursor-pointer"
+          class="absolute bottom-0 left-0 px-2 py-1 text-xs text-fg-muted hover:text-fg bg-surface border-t border-r border-border-subtle z-10 cursor-pointer"
         >
           {APP_NAME} {APP_VERSION}
         </button>

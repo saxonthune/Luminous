@@ -5,9 +5,9 @@ export const ContainerRenderer: PrimitiveRenderer = (props) => {
   const label = () => String(props.value ?? props.primitive.name ?? '')
 
   return (
-    <div class="flex flex-col border-t border-[var(--border-subtle)]">
+    <div class="flex flex-col border-t border-border-subtle">
       <Show when={label()}>
-        <div class="px-2 py-1 text-xs font-medium text-[var(--text-secondary)] bg-[var(--bg-surface-alt)]">
+        <div class="px-2 py-1 text-xs font-medium text-fg-muted bg-surface-alt">
           {label()}
         </div>
       </Show>

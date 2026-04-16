@@ -198,8 +198,8 @@ export function Canvas(props: CanvasProps) {
                 top: `${rect().y}px`,
                 width: `${rect().width}px`,
                 height: `${rect().height}px`,
-                border: '1px solid var(--color-accent)',
-                "background-color": 'var(--color-accent-10)',
+                border: '1px solid var(--accent)',
+                "background-color": 'var(--accent-10)',
                 "pointer-events": 'none',
               }}
             />

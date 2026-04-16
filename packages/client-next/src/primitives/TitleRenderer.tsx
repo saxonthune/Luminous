@@ -14,7 +14,7 @@ export const TitleRenderer: PrimitiveRenderer = (props) => {
   return (
     <input
       data-no-pan="true"
-      class="w-full px-2 py-1 font-semibold text-sm outline-none bg-transparent border-b border-[var(--border-subtle)]"
+      class="w-full px-2 py-1 font-semibold text-sm outline-none bg-transparent border-b border-border-subtle"
       style={{ 'user-select': 'text' }}
       value={local()}
       onInput={(e) => setLocal(e.currentTarget.value)}

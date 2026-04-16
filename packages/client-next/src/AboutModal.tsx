@@ -13,12 +13,12 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
       onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
     >
       <div
-        class="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 w-80"
+        class="rounded-lg border border-border bg-surface p-6 w-80"
         style={{ "box-shadow": "var(--shadow-lg)" }}
       >
-        <h2 class="text-lg font-semibold text-[var(--text-primary)] mb-4">{APP_NAME}</h2>
+        <h2 class="text-lg font-semibold text-fg mb-4">{APP_NAME}</h2>
 
-        <div class="text-sm space-y-1.5 text-[var(--text-primary)]">
+        <div class="text-sm space-y-1.5 text-fg">
           <div class="flex justify-between">
             <span>Version</span>
             <span>{APP_VERSION}</span>
@@ -33,7 +33,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
               href="https://computation.saxon.zone"
               target="_blank"
               rel="noopener noreferrer"
-              class="underline hover:text-[var(--color-accent)]"
+              class="underline hover:text-accent"
             >
               Saxon Thune
             </a>
@@ -44,7 +44,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
               href="https://www.gnu.org/licenses/agpl-3.0.html"
               target="_blank"
               rel="noopener noreferrer"
-              class="underline hover:text-[var(--color-accent)]"
+              class="underline hover:text-accent"
             >
               AGPL-3.0
             </a>
@@ -54,7 +54,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
               href="https://github.com/saxonthune/Luminous"
               target="_blank"
               rel="noopener noreferrer"
-              class="underline hover:text-[var(--color-accent)]"
+              class="underline hover:text-accent"
             >
               GitHub
             </a>
@@ -64,7 +64,7 @@ export function AboutModal(props: AboutModalProps): JSX.Element {
         <div class="mt-5 text-right">
           <button
             onClick={props.onClose}
-            class="rounded-md border border-[var(--border-default)] px-3 py-1 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+            class="rounded-md border border-border px-3 py-1 text-sm font-medium text-fg hover:bg-surface-alt"
           >
             Close
           </button>

@@ -33,10 +33,10 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
         'min-height': `${props.h()}px`,
         'box-shadow': 'var(--shadow-sm)',
       }}
-      class={`bg-[var(--bg-surface)] rounded-lg flex flex-col select-none ${
+      class={`bg-surface rounded-lg flex flex-col select-none ${
         isSelected(props.nodeId)
-          ? 'outline outline-2 outline-[var(--color-accent-subtle)] border-transparent'
-          : 'border border-[var(--border-default)]'
+          ? 'outline outline-2 outline-accent-subtle border-transparent'
+          : 'border border-border'
       }`}
       onPointerDown={(e) => {
         onNodePointerDown(props.nodeId, e);
@@ -46,9 +46,9 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
     >
       <div
         data-drag-handle="true"
-        class="h-5 bg-[var(--bg-surface-alt)] rounded-t-lg cursor-grab active:cursor-grabbing border-b border-[var(--border-subtle)] flex items-center justify-center shrink-0"
+        class="h-5 bg-surface-alt rounded-t-lg cursor-grab active:cursor-grabbing border-b border-border-subtle flex items-center justify-center shrink-0"
       >
-        <div class="w-8 h-0.5 bg-[var(--text-tertiary)] rounded-full" />
+        <div class="w-8 h-0.5 bg-fg-subtle rounded-full" />
       </div>
 
       {props.children}
@@ -57,7 +57,7 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
         type="source"
         nodeId={props.nodeId}
         onStartConnection={startConnection}
-        class="absolute top-1/2 w-3 h-3 rounded-full bg-[var(--color-accent-subtle)] border-2 border-[var(--bg-surface)] shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
+        class="absolute top-1/2 w-3 h-3 rounded-full bg-accent-subtle border-2 border-surface shadow-sm cursor-crosshair opacity-0 hover:opacity-100 transition-opacity"
         style={{ right: '-6px', transform: 'translateY(-50%)' }}
       />
 
@@ -65,7 +65,7 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
         data-no-pan="true"
         class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize opacity-40 hover:opacity-80 transition-opacity rounded-br-lg"
         style={{
-          background: 'linear-gradient(135deg, transparent 50%, var(--color-resize-handle) 50%)',
+          background: 'linear-gradient(135deg, transparent 50%, var(--resize-handle) 50%)',
         }}
         onPointerDown={(e) => {
           e.stopPropagation();

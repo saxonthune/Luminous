@@ -199,7 +199,7 @@ export function FreeformEdge(props: FreeformEdgeProps) {
           markerWidth="8" markerHeight="8"
           orient="auto-start-reverse"
         >
-          <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--color-edge)" />
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--edge)" />
         </marker>
       </defs>
       <g style={{ "pointer-events": 'auto' }}>
@@ -211,7 +211,7 @@ export function FreeformEdge(props: FreeformEdgeProps) {
         />
         <path
           d={pathD()}
-          stroke="var(--color-edge)" stroke-width={2} stroke-linecap="round" stroke-linejoin="round" fill="none"
+          stroke="var(--edge)" stroke-width={2} stroke-linecap="round" stroke-linejoin="round" fill="none"
           marker-end={`url(#arrow-${props.edge.id})`}
           style={{ "pointer-events": 'none' }}
         />
@@ -221,13 +221,13 @@ export function FreeformEdge(props: FreeformEdgeProps) {
               x={midX() - labelWidth() / 2} y={midY() - 9}
               width={labelWidth()} height={18}
               rx={9} ry={9}
-              fill="var(--bg-surface)" stroke="var(--border-subtle)" stroke-width={1}
+              fill="var(--surface)" stroke="var(--border-subtle)" stroke-width={1}
               style={{ "pointer-events": 'none' }}
             />
             <text
               x={midX()} y={midY()}
               text-anchor="middle" dominant-baseline="central"
-              font-size="11" fill="var(--color-edge-label)"
+              font-size="11" fill="var(--edge-label)"
               style={{ cursor: 'pointer', "user-select": 'none' }}
               onDblClick={startEditing}
               onContextMenu={(e) => {
@@ -254,10 +254,10 @@ export function FreeformEdge(props: FreeformEdgeProps) {
                 width: '100%',
                 "font-size": '12px',
                 "text-align": 'center',
-                border: '1px solid var(--color-edge)',
+                border: '1px solid var(--edge)',
                 "border-radius": '3px',
                 padding: '2px 4px',
-                background: 'var(--bg-surface)',
+                background: 'var(--surface)',
                 outline: 'none',
               }}
             />

@@ -19,12 +19,12 @@ function isNode(s: Schema): s is NodeSchema {
 function NodeSchemaRow(props: { schema: NodeSchema }): JSX.Element {
   const s = props.schema;
   return (
-    <tr class="border-t border-[var(--border-subtle)] group">
+    <tr class="border-t border-border-subtle group">
       <td class="px-3 py-2">
         <span class="group-hover:hidden">{s.label}</span>
         <span class="hidden group-hover:inline font-mono text-xs">{s.name}</span>
       </td>
-      <td class="px-3 py-2 text-xs text-[var(--text-secondary)]">
+      <td class="px-3 py-2 text-xs text-fg-muted">
         {s.legendDescription ?? ''}
         <Show when={s.accepts}>
           <span class={s.legendDescription ? ' ml-2' : ''}>accepts: {s.accepts!.join(', ')}</span>
@@ -37,12 +37,12 @@ function NodeSchemaRow(props: { schema: NodeSchema }): JSX.Element {
 function EdgeSchemaRow(props: { schema: EdgeSchema }): JSX.Element {
   const s = props.schema;
   return (
-    <tr class="border-t border-[var(--border-subtle)] group">
+    <tr class="border-t border-border-subtle group">
       <td class="px-3 py-2">
         <span class="group-hover:hidden">{s.label}</span>
         <span class="hidden group-hover:inline font-mono text-xs">{s.name}</span>
       </td>
-      <td class="px-3 py-2 text-xs text-[var(--text-secondary)]">
+      <td class="px-3 py-2 text-xs text-fg-muted">
         {s.legendDescription ?? ''}
         <Show when={s.directed}><span class={s.legendDescription ? ' ml-2' : ''}>directed</span></Show>
         <Show when={s.layoutRole}><span class="ml-2">layout: {s.layoutRole}</span></Show>
@@ -57,7 +57,7 @@ function EdgeSchemaRow(props: { schema: EdgeSchema }): JSX.Element {
   );
 }
 
-const mdStyles = 'text-sm text-[var(--text-primary)] [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-2 [&>li]:mb-1';
+const mdStyles = 'text-sm text-fg [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:pl-5 [&>ol]:mb-2 [&>li]:mb-1';
 
 const ABOUT_CONTENT = `
 # Luminous
@@ -101,27 +101,27 @@ export function LegendModal(props: LegendModalProps): JSX.Element {
       onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
     >
       <div
-        class="rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] max-w-2xl w-full max-h-[80vh] flex flex-col"
+        class="rounded-lg border border-border bg-surface max-w-2xl w-full max-h-[80vh] flex flex-col"
         style={{ "box-shadow": "var(--shadow-lg)" }}
       >
         {/* Sticky header */}
-        <div class="flex items-center justify-between px-6 pt-3 pb-2 mb-0 border-b border-[var(--border-subtle)] shrink-0">
+        <div class="flex items-center justify-between px-6 pt-3 pb-2 mb-0 border-b border-border-subtle shrink-0">
           <div class="flex items-baseline mt-0 gap-3">
             <Show
               when={view() === 'legend'}
               fallback={
                 <button
                   onClick={() => setView('legend')}
-                  class="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  class="text-sm text-fg-muted hover:text-fg"
                 >
                   &larr; Legend
                 </button>
               }
             >
-              <h2 class="text-2xl font-bold text-[var(--text-primary)]">Legend</h2>
+              <h2 class="text-2xl font-bold text-fg">Legend</h2>
               <button
                 onClick={() => setView('about')}
-                class="text-sm text-[var(--color-accent)] hover:underline"
+                class="text-sm text-accent hover:underline"
               >
                 What is Luminous?
               </button>
@@ -129,7 +129,7 @@ export function LegendModal(props: LegendModalProps): JSX.Element {
           </div>
           <button
             onClick={props.onClose}
-            class="w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]"
+            class="w-7 h-7 flex items-center justify-center rounded-md text-fg-muted hover:text-fg hover:bg-surface-alt"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <line x1="1" y1="1" x2="13" y2="13" />
@@ -146,10 +146,10 @@ export function LegendModal(props: LegendModalProps): JSX.Element {
 
             {/* Node schemas */}
             <Show when={nodeSchemas().length > 0}>
-              <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-2">Node types</h3>
-              <table class="w-full text-sm text-left text-[var(--text-primary)] mb-4">
+              <h3 class="text-sm font-semibold text-fg mb-2">Node types</h3>
+              <table class="w-full text-sm text-left text-fg mb-4">
                 <thead>
-                  <tr class="text-xs text-[var(--text-secondary)] uppercase">
+                  <tr class="text-xs text-fg-muted uppercase">
                     <th class="px-3 py-1">Type</th>
                     <th class="px-3 py-1">Details</th>
                   </tr>
@@ -164,10 +164,10 @@ export function LegendModal(props: LegendModalProps): JSX.Element {
 
             {/* Edge schemas */}
             <Show when={edgeSchemas().length > 0}>
-              <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-2">Edge types</h3>
-              <table class="w-full text-sm text-left text-[var(--text-primary)] mb-4">
+              <h3 class="text-sm font-semibold text-fg mb-2">Edge types</h3>
+              <table class="w-full text-sm text-left text-fg mb-4">
                 <thead>
-                  <tr class="text-xs text-[var(--text-secondary)] uppercase">
+                  <tr class="text-xs text-fg-muted uppercase">
                     <th class="px-3 py-1">Type</th>
                     <th class="px-3 py-1">Details</th>
                   </tr>
@@ -182,8 +182,8 @@ export function LegendModal(props: LegendModalProps): JSX.Element {
           </Show>
 
           <Show when={view() === 'about'}>
-            <p class="text-xs italic text-[var(--text-secondary)] mb-4">This content is AI-generated. Apologies.</p>
-            <div class={`${mdStyles} [&>a]:text-[var(--color-accent)] [&>a]:underline [&_a]:text-[var(--color-accent)] [&_a]:underline`} innerHTML={aboutHtml()} />
+            <p class="text-xs italic text-fg-muted mb-4">This content is AI-generated. Apologies.</p>
+            <div class={`${mdStyles} [&>a]:text-accent [&>a]:underline [&_a]:text-accent [&_a]:underline`} innerHTML={aboutHtml()} />
           </Show>
         </div>
       </div>

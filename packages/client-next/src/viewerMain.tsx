@@ -48,7 +48,7 @@ function ViewerApp() {
       fallback={
         <div class="flex h-screen items-center justify-center">
           <Show when={loading()}>
-            <p class="text-sm text-[var(--text-secondary)]">Loading…</p>
+            <p class="text-sm text-fg-muted">Loading…</p>
           </Show>
           <Show when={error()}>
             <p class="text-sm text-red-500">{error()}</p>

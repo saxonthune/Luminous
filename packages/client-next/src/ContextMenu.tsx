@@ -66,11 +66,11 @@ export function ContextMenu(props: ContextMenuProps) {
           "min-width": `${menuWidth}px`,
           "box-shadow": "var(--shadow-lg)",
         }}
-        class="bg-[var(--bg-overlay)] rounded-lg border border-[var(--border-default)] py-1 text-sm"
+        class="bg-overlay rounded-lg border border-border py-1 text-sm"
       >
         <Show when={props.header}>
           <div
-            class="px-3 py-1.5 text-xs text-[var(--text-tertiary)] font-mono truncate border-b border-[var(--border-subtle)] mb-1 select-text"
+            class="px-3 py-1.5 text-xs text-fg-subtle font-mono truncate border-b border-border-subtle mb-1 select-text"
             onMouseDown={(e) => e.stopPropagation()}
             title={props.header}
           >
@@ -79,13 +79,13 @@ export function ContextMenu(props: ContextMenuProps) {
         </Show>
         <For each={props.items}>
           {(item) => (
-            <Show when={!item.separator} fallback={<div class="my-1 border-t border-[var(--border-subtle)]" />}>
+            <Show when={!item.separator} fallback={<div class="my-1 border-t border-border-subtle" />}>
               <button
                 disabled={item.disabled}
                 class={`w-full text-left px-3 py-1.5 rounded transition-colors ${
                   item.disabled
-                    ? 'text-[var(--text-tertiary)] cursor-not-allowed'
-                    : 'text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] cursor-pointer'
+                    ? 'text-fg-subtle cursor-not-allowed'
+                    : 'text-fg hover:bg-surface-alt cursor-pointer'
                 }`}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
