@@ -88,7 +88,7 @@ title: My Document
 status: draft
 summary: One-line description for MANIFEST
 tags: [keyword1, keyword2]
-deps: [doc01.02.02]
+deps: [doc02.02]
 ---
 ```
 

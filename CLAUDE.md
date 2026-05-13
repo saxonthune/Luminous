@@ -28,7 +28,7 @@ geometry → schema → document → server
                   ↘ vscode
 ```
 
-These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.02.01) for the migration plan.
+These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc02.01) for the migration plan.
 
 ## Current Milestone
 
@@ -80,7 +80,7 @@ All paths are relative to the workspace root, **without** the `.carta/` prefix (
 | `carta punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
 | `carta flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
 | `carta rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
-| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc01.02.01`) | (none) |
+| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
 
 ## Tech Stack
 
