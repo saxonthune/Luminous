@@ -25,6 +25,8 @@ export { resolveAbsolutePosition, resolveAbsolutePositionByParentOf, computeAtta
 export type { ContainerNode, ContainerFitConfig } from './containerOps.js';
 export { gridLayout } from './gridLayout.js';
 export type { GridLayoutInput, GridLayoutOutput } from './gridLayout.js';
+export { elkLayout } from './elkLayout.js';
+export type { ElkLayoutInput, ElkLayoutOutput } from './elkLayout.js';
 export { useNodeLinks } from './useNodeLinks.js';
 export type { Transform } from './useViewport.js';
 export type { CanvasProps, CanvasRef, ConnectionPreviewCoords } from './Canvas.js';

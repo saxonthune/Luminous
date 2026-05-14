@@ -50,6 +50,9 @@ importers:
       d3-zoom:
         specifier: ^3.0.0
         version: 3.0.0
+      elkjs:
+        specifier: ^0.9.3
+        version: 0.9.3
       solid-js:
         specifier: ^1.9.0
         version: 1.9.12
@@ -1425,6 +1428,9 @@ packages:
 
   electron-to-chromium@1.5.278:
     resolution: {integrity: sha512-dQ0tM1svDRQOwxnXxm+twlGTjr9Upvt8UFWAgmLsxEzFQxhbti4VwxmMjsDxVC51Zo84swW7FVCXEV+VAkhuPw==}
+
+  elkjs@0.9.3:
+    resolution: {integrity: sha512-f/ZeWvW/BCXbhGEf1Ujp29EASo/lk1FDnETgNKwJrsVvGZhUWCZyg3xLJjAsxfOmt8KjswHmI5EwCQcPMpOYhQ==}
 
   encodeurl@2.0.0:
     resolution: {integrity: sha512-Q0n9HRi4m6JuGIV1eFlmvJB7ZEVxu93IrMyiMsGC0lrMJMWzRgx6WGquyfQgZVb31vhGgXnfmPNNXmxnOkRBrg==}
@@ -3656,6 +3662,8 @@ snapshots:
   ee-first@1.1.1: {}
 
   electron-to-chromium@1.5.278: {}
+
+  elkjs@0.9.3: {}
 
   encodeurl@2.0.0: {}
 

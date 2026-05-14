@@ -14,6 +14,7 @@
     "d3-selection": "^3.0.0",
     "d3-transition": "^3.0.1",
     "d3-zoom": "^3.0.0",
+    "elkjs": "^0.9.3",
     "solid-js": "^1.9.0"
   },
   "devDependencies": {
