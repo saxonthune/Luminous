@@ -1,0 +1,42 @@
+import type { JSX } from 'solid-js';
+import type { Node, RenderContext } from '@luminous/canvas-core';
+
+type BoxProps = {
+  label: string;
+  description?: string;
+  color?: string;
+  tag?: string;
+};
+
+export default function BoxCard(node: Node, _ctx: RenderContext): JSX.Element {
+  const p = node.props as BoxProps;
+  const borderColor = p.color ?? '#d0d0d0';
+  return (
+    <div style={{
+      'border-radius': '6px',
+      border: `1px solid ${borderColor}`,
+      'border-left': `4px solid ${borderColor}`,
+      background: '#fff',
+      padding: '8px 12px',
+      'box-sizing': 'border-box',
+      width: '100%',
+      height: '100%',
+    }}>
+      <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', gap: '8px' }}>
+        <div style={{ 'font-size': '14px', 'font-weight': '600' }}>{p.label}</div>
+        {p.tag && (
+          <div style={{
+            'font-size': '10px',
+            padding: '2px 6px',
+            'border-radius': '4px',
+            background: '#eee',
+            color: '#666',
+          }}>{p.tag}</div>
+        )}
+      </div>
+      {p.description && (
+        <div style={{ 'font-size': '11px', color: '#666', 'margin-top': '4px' }}>{p.description}</div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,29 @@
+{
+  "version": 3,
+  "packs": { "primitives": "^0.1.0" },
+  "nodes": [
+    {
+      "id": "box.alpha",
+      "kind": "prim.box",
+      "props": { "label": "Alpha", "tag": "module", "color": "#4a90e2", "description": "First sample box." },
+      "tags": []
+    },
+    {
+      "id": "box.beta",
+      "kind": "prim.box",
+      "props": { "label": "Beta", "tag": "module", "color": "#e2884a", "description": "Second sample box." },
+      "tags": []
+    },
+    {
+      "id": "box.gamma",
+      "kind": "prim.box",
+      "props": { "label": "Gamma", "tag": "concept", "color": "#7ab06d" },
+      "tags": []
+    }
+  ],
+  "edges": [
+    { "id": "arrow.a-b", "kind": "prim.arrow", "from": "box.alpha", "to": "box.beta", "props": { "label": "depends on" }, "tags": [] },
+    { "id": "arrow.b-c", "kind": "prim.arrow", "from": "box.beta",  "to": "box.gamma", "props": {}, "tags": [] }
+  ],
+  "defaultView": "architecture"
+}
