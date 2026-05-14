@@ -1,0 +1,20 @@
+{
+  "name": "@luminous/pack-rtp-statechart",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@luminous/canvas-core": "workspace:*",
+    "zod": "^4.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.3"
+  }
+}
