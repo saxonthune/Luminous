@@ -1,5 +1,5 @@
 import { createSignal, createEffect, Match, Switch, onCleanup, onMount } from 'solid-js';
-import { loadCanvasFileFromText, type Graph } from '@luminous/canvas-core';
+import { loadGraphFromText, type Graph } from '@luminous/core';
 import { ensurePacksRegistered } from './registerPacks';
 import { DocumentPicker } from './DocumentPicker';
 import { AppHeader } from './AppHeader';
@@ -55,7 +55,7 @@ export function AppShell() {
       .load()
       .then((text) => {
         try {
-          const g = loadCanvasFileFromText(text);
+          const g = loadGraphFromText(text);
           setGraph(g);
           setShell({ kind: 'canvasMounted' });
         } catch (e) {

@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render } from 'solid-js/web';
 import type { JSX } from 'solid-js';
-import { buildGraph } from '@luminous/canvas-core';
-import type { Node, RenderContext } from '@luminous/canvas-core';
+import { buildGraph } from '@luminous/core';
+import type { Node, RenderContext } from '@luminous/core';
 import StateCard from '../StateCard.tsx';
 import CompositeCard from '../CompositeCard.tsx';
 import TransitionCard from '../TransitionCard.tsx';

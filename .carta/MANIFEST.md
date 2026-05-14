@@ -54,13 +54,15 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.01 | `01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc02.01 | doc01.02, doc01.03.01, doc02.01, doc02.02, doc02.05.01, doc02.06.01, doc02.11, doc02.12, doc03.01, doc03.02, doc03.03, doc03.06 | — |
 | doc02.02 | `02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc02.01, doc01.01 | doc02.03, doc02.04, doc03.02 | — |
 | doc02.03 | `03-api-contract.md` | HTTP + WebSocket API for @luminous/server — document listing, reading, mutation actions, diagnostics, and change notifications | api, http, server, contract | doc02.02 | doc02.04 | — |
-| doc02.04 | `04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc02.02, doc02.03 | — | — |
+| doc02.04 | `04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc02.02, doc02.03 | doc02.15 | — |
 | doc02.07 | `07-solidjs-pipeline-spec.md` | Node types, nesting rules, and edge semantics for the Solid.js static analysis pipeline | pipeline, solid, static-analysis, milestone-1 | doc01.03 | doc02.08, doc02.10.01 | — |
 | doc02.08 | `08-edge-schemas.md` | Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern | edges, schemas, design, cactus-boundary | doc03.03, doc02.05.01, doc02.06.02, doc02.07 | doc02.10.02 | — |
 | doc02.09 | `09-primitive-reference.md` | Enumerated reference for node primitives (drag-bar, title, markdown, container) with bind semantics and examples | primitives, schemas, reference, node | — | doc02.10.02 | — |
-| doc02.11 | `11-pdr-property-graph-architecture.md` | Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. | pdr, architecture, property-graph, packs, views, disclosure, canvas-engine | doc02.01 | doc02.10.03 | — |
+| doc02.11 | `11-pdr-property-graph-architecture.md` | Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. | pdr, architecture, property-graph, packs, views, disclosure, canvas-engine | doc02.01 | doc02.10.03, doc02.14, doc02.15 | — |
 | doc02.12 | `12-app-shell-statechart.md` | Statechart of Luminous's app shell — boot, picker, canvas-mounted, error, theme region. Boundary: app-shell only, canvas internals are a black box. | ui, statechart, app-shell, shell | doc02.01, doc01.01 | doc02.13 | app-shell.statechart.json |
 | doc02.13 | `13-app-shell-component-tree.md` | Component tree of the app shell, derived from the statechart and six inventories. Canvas internals are not modeled here. | components, derivation, app-shell | doc02.12 | — | — |
+| doc02.14 | `14-pack-contract.md` | What a pack must provide, what it may provide, how registration works, and the current enforcement gap between the contract and CanvasHost's hard-wired references. | pack, contract, schema, registry, gap | doc02.11 | doc02.15 | — |
+| doc02.15 | `15-mcp-iterative-graph-building.md` | Tool surface for AI agents to build and query property graphs iteratively — six tiers from CRUD to pack authoring, with layout policy and sync strategy. | mcp, ai, tools, graph, iteration | doc02.04, doc02.11, doc02.14 | — | — |
 
 ### Cactus Canvas Engine
 
@@ -111,7 +113,7 @@ Quick lookup for file-path→doc mapping:
 | Tag | Relevant Docs |
 |-----|---------------|
 | `adr` | doc02.06.00, doc02.06.01, doc02.06.02 |
-| `ai` | doc00.04, doc02.04 |
+| `ai` | doc00.04, doc02.04, doc02.15 |
 | `ai-context` | doc01.01, doc03.06 |
 | `algorithms` | doc02.05.03 |
 | `api` | doc02.03, doc02.04, doc02.05.02 |
@@ -127,7 +129,7 @@ Quick lookup for file-path→doc mapping:
 | `cognitive-load` | doc03.04 |
 | `components` | doc02.05.02, doc02.13 |
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
-| `contract` | doc02.03 |
+| `contract` | doc02.03, doc02.14 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
 | `crystallization` | doc02.01 |
@@ -145,18 +147,21 @@ Quick lookup for file-path→doc mapping:
 | `examples` | doc02.10.00, doc02.10.01, doc02.10.02, doc02.10.03 |
 | `exploration` | doc03.00 |
 | `formalization` | doc02.02, doc03.02 |
+| `gap` | doc02.14 |
 | `gap-analysis` | doc02.10.02 |
 | `gauges` | doc02.10.00 |
 | `gestalt` | doc03.04 |
+| `graph` | doc02.15 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
 | `http` | doc02.03 |
 | `index` | doc00.00 |
+| `iteration` | doc02.15 |
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |
 | `layout` | doc02.05.03 |
 | `maintenance` | doc00.02 |
-| `mcp` | doc02.04, doc03.06 |
+| `mcp` | doc02.04, doc02.15, doc03.06 |
 | `meta` | doc00.00, doc00.01 |
 | `milestone-1` | doc02.07, doc02.10.01 |
 | `milestone-2` | doc03.06 |
@@ -167,6 +172,7 @@ Quick lookup for file-path→doc mapping:
 | `notion` | doc03.03 |
 | `openapi` | doc02.10.02 |
 | `overview` | doc02.05.01 |
+| `pack` | doc02.14 |
 | `packs` | doc02.11 |
 | `pdr` | doc02.01, doc02.11 |
 | `perception` | doc03.04 |
@@ -182,12 +188,13 @@ Quick lookup for file-path→doc mapping:
 | `reactivity` | doc02.06.01, doc03.05 |
 | `reference` | doc02.09 |
 | `reference-graph` | doc03.05 |
+| `registry` | doc02.14 |
 | `rendering` | doc03.05 |
 | `research` | doc03.00, doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06 |
 | `retrieval` | doc00.04 |
 | `roadmap` | doc01.03.01 |
 | `rtp` | doc02.10.03 |
-| `schema` | doc02.06.02, doc03.03 |
+| `schema` | doc02.06.02, doc02.14, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
 | `server` | doc02.03 |
 | `shell` | doc02.12 |
@@ -200,7 +207,7 @@ Quick lookup for file-path→doc mapping:
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc03.03 |
-| `tools` | doc02.04 |
+| `tools` | doc02.04, doc02.15 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `ui` | doc02.12 |
 | `unfolding` | doc02.01, doc02.02 |

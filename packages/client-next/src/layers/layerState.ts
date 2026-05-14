@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import type { LayerState } from '@luminous/canvas-core';
+import type { LayerState } from '@luminous/core';
 
 export interface LayerStateKey {
   canvasId: string;

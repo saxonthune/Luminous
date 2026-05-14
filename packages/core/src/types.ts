@@ -1,5 +1,5 @@
 /**
- * @luminous/canvas-core — property-graph contract types.
+ * @luminous/core — property-graph contract types.
  *
  * The interface shared by every part of the system: pipelines, packs, the
  * canvas runtime, MCP, and persistence all speak this vocabulary. See PDR
@@ -77,7 +77,7 @@ export interface Graph {
  * Minimal schema validator interface. Zod implements this shape; any
  * equivalent (Valibot, ArkType, hand-rolled) works.
  *
- * Kept as a structural type to avoid pulling Zod into canvas-core itself.
+ * Kept as a structural type to avoid pulling Zod into core itself.
  */
 export interface PropsSchema<T = unknown> {
   parse(input: unknown): T;
@@ -232,7 +232,7 @@ export interface DisclosureSchema {
  * Reactive context passed to every renderer. The level signal updates as
  * the user zooms; renderers re-evaluate fine-grainedly through Solid.
  *
- * `JSX.Element` is intentionally `unknown` here so canvas-core does not
+ * `JSX.Element` is intentionally `unknown` here so core does not
  * depend on solid-js. The canvas client narrows it to Solid's JSX type
  * at the boundary.
  */
@@ -300,7 +300,7 @@ export interface Pack {
  * server, or in an HTTP-served static bundle.
  *
  * For v0 there is exactly one implementation: a single-file static loader
- * that reads a `.canvas.json` v3 document. Multi-doc composition (PDR §3.4)
+ * that reads a `.graph.json` v3 document. Multi-doc composition (PDR §3.4)
  * lands later as another implementation behind this same interface.
  */
 export interface GraphSource {
@@ -315,9 +315,9 @@ export interface GraphSource {
  * Schema, renderers, and views do not live here — they come from imported
  * packs. This file is data only.
  */
-export interface CanvasFileV3 {
+export interface GraphFileV3 {
   version: 3;
-  /** Pack ids and semver ranges this canvas expects to be available. */
+  /** Pack ids and semver ranges this graph expects to be available. */
   packs: Record<PackId, string>;
   nodes: Node[];
   edges: Edge[];

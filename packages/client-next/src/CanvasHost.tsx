@@ -1,5 +1,5 @@
 import { createSignal, createMemo } from 'solid-js';
-import type { Graph, View } from '@luminous/canvas-core';
+import type { Graph, View } from '@luminous/core';
 import rtpStatechartPack from '@luminous/pack-rtp-statechart';
 import { PgCanvasView, type ViewerHandle } from './PgCanvasView';
 import { ViewSwitcher } from './views/ViewSwitcher';
@@ -17,7 +17,7 @@ export function CanvasHost(props: CanvasHostProps) {
   const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);
 
   const canvasId = createMemo(
-    () => props.sourceId.split('/').pop()?.replace(/\.canvas\.json$/, '') ?? props.sourceId,
+    () => props.sourceId.split('/').pop()?.replace(/\.graph\.json$/, '') ?? props.sourceId,
   );
 
   const activeView = createMemo<View>(

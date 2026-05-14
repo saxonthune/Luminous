@@ -2,13 +2,13 @@
 /**
  * Solid.js Static Analysis Pipeline
  *
- * Reads Solid.js source files and emits a .canvas.json summarizing
+ * Reads Solid.js source files and emits a .graph.json summarizing
  * component architecture, reactive data flow, and external dependencies.
  *
  * Usage: npx tsx scripts/analyze-solidjs.ts [target-dirs...] [--output path]
  *
  * Default targets: packages/client-next/src packages/cactus/src
- * Default output:  .canvases/solidjs-analysis.canvas.json
+ * Default output:  .canvases/solidjs-analysis.graph.json
  */
 
 import ts from 'typescript';
@@ -1325,7 +1325,7 @@ function main() {
   // Parse CLI
   const outputIdx = args.indexOf('--output');
   let outputPath =
-    outputIdx >= 0 ? args[outputIdx + 1] : resolve(ROOT, '.canvases/solidjs-analysis.canvas.json');
+    outputIdx >= 0 ? args[outputIdx + 1] : resolve(ROOT, '.canvases/solidjs-analysis.graph.json');
 
   const targetDirs = args
     .filter((a, i) => a !== '--output' && (outputIdx < 0 || i !== outputIdx + 1))

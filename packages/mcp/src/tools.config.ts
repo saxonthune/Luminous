@@ -26,13 +26,13 @@ export interface BatchToolConfig {
 const pathParam: ParamType = {
   type: 'described',
   innerType: 'string',
-  description: "Path to the canvas document, e.g. 'project.canvas.json'. Get available paths from canvas list.",
+  description: "Path to the graph document, e.g. 'project.graph.json'. Get available paths from canvas list.",
 }
 
 export const toolConfig: Record<string, ToolGroupConfig> = {
   canvas: {
     description:
-      "Canvases are v3 structured visual documents stored as `.canvas.json` files. Each references one or more packs (versioned libraries that define node and edge kinds). Use `list` to discover available documents; `read` to inspect a canvas; `create` to author a new one.",
+      "Canvases are v3 structured visual documents stored as `.graph.json` files. Each references one or more packs (versioned libraries that define node and edge kinds). Use `list` to discover available documents; `read` to inspect a canvas; `create` to author a new one.",
     actions: {
       list: {
         description: 'Returns all available canvas document paths.',
@@ -49,12 +49,12 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
       create: {
         description: "Create a new empty v3 canvas file. Fails if the file already exists.",
         method: 'POST',
-        path: '/api/canvas/create',
+        path: '/api/graph/create',
         params: {
           path: {
             type: 'described',
             innerType: 'string',
-            description: "Canvas filename to create, e.g. 'overview.canvas.json'.",
+            description: "Graph filename to create, e.g. 'overview.graph.json'.",
           },
           'packs?': {
             type: 'described',

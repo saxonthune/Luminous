@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@luminous/canvas-core": "workspace:*",
+    "@luminous/core": "workspace:*",
     "solid-js": "^1.9.0",
     "zod": "^4.0"
   },

@@ -174,7 +174,7 @@ export function watchDocuments(
   watch(watchRootDir, { recursive: true }, (_event, filename) => {
     if (!filename) return
     const normalized = filename.replace(/\\/g, "/")
-    if (!normalized.endsWith(".canvas.json")) return
+    if (!normalized.endsWith(".graph.json")) return
     const absPath = resolve(watchRootDir, normalized)
     const lastWrite = recentWrites.get(absPath)
     if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {

@@ -1,4 +1,4 @@
-import type { NodeRenderer, EdgeRenderer, KindId, DisclosureLevel } from '@luminous/canvas-core';
+import type { NodeRenderer, EdgeRenderer, KindId, DisclosureLevel } from '@luminous/core';
 import StateCard, { StatePeek, StateOpen } from './renderers/StateCard.tsx';
 import CompositeCard, { CompositePeek, CompositeOpen } from './renderers/CompositeCard.tsx';
 import RegionCard, { RegionPeek, RegionOpen } from './renderers/RegionCard.tsx';

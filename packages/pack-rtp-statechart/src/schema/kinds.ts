@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { NodeKind, EdgeKind } from '@luminous/canvas-core';
+import type { NodeKind, EdgeKind } from '@luminous/core';
 
 // --- Node prop schemas ---
 

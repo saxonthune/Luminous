@@ -6,8 +6,8 @@
  * DOM nesting assertion skipped per plan fallback.
  */
 import { describe, it, expect } from 'vitest';
-import { buildGraph, evaluateView } from '@luminous/canvas-core';
-import type { Node, Edge, View } from '@luminous/canvas-core';
+import { buildGraph, evaluateView } from '@luminous/core';
+import type { Node, Edge, View } from '@luminous/core';
 import { gridLayout, resolveAbsolutePositionByParentOf } from '@luminous/cactus';
 
 // ── Fixture ──────────────────────────────────────────────────────────────────

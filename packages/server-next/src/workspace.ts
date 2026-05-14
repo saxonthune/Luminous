@@ -10,7 +10,7 @@ async function walk(dir: string): Promise<string[]> {
     if (entry.isDirectory()) {
       const nested = await walk(full)
       results.push(...nested)
-    } else if (entry.isFile() && entry.name.endsWith(".canvas.json")) {
+    } else if (entry.isFile() && entry.name.endsWith(".graph.json")) {
       results.push(full)
     }
   }
@@ -23,7 +23,7 @@ export async function scanDocuments(rootDir: string): Promise<DocumentMeta[]> {
   for (const absPath of files) {
     const s = await stat(absPath)
     const relPath = relative(rootDir, absPath)
-    const name = basename(absPath, ".canvas.json")
+    const name = basename(absPath, ".graph.json")
     metas.push({ path: relPath, name, lastModified: s.mtimeMs })
   }
   return metas

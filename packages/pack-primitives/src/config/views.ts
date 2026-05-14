@@ -1,4 +1,4 @@
-import type { View } from '@luminous/canvas-core';
+import type { View } from '@luminous/core';
 
 export const architectureView: View = {
   id: 'architecture',

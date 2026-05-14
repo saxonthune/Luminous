@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from 'solid-js/web';
 import { ViewSwitcher } from '../ViewSwitcher.tsx';
-import type { View } from '@luminous/canvas-core';
+import type { View } from '@luminous/core';
 
 const views: View[] = [
   {

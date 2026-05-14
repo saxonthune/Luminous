@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Extract the public API from @luminous/cactus and generate:
- *   1. A canvas file (.canvases/cactus-api.canvas.json) with spatial grouping
+ *   1. A canvas file (.canvases/cactus-api.graph.json) with spatial grouping
  *   2. Markdown reference (stdout, or file path as first arg)
  *
  * Usage: npx tsx scripts/extract-cactus-api.ts [output.md]
@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
 const CACTUS_SRC = resolve(ROOT, 'packages/cactus/src');
 const INDEX_PATH = resolve(CACTUS_SRC, 'index.ts');
-const CANVAS_OUT = resolve(ROOT, '.canvases/cactus-api.canvas.json');
+const CANVAS_OUT = resolve(ROOT, '.canvases/cactus-api.graph.json');
 
 // ---------------------------------------------------------------------------
 // Phase 1: Parse export manifest from index.ts

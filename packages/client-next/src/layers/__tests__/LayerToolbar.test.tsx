@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { render } from 'solid-js/web';
-import type { Layer } from '@luminous/canvas-core';
+import type { Layer } from '@luminous/core';
 import { LayerToolbar } from '../LayerToolbar';
 import { defaultLayerStateStore } from '../layerState';
 

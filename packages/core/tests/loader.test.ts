@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
-import { loadCanvasFileFromText, loadCanvasFile } from '../src/loader.ts';
+import { loadGraphFromText, loadGraphFile } from '../src/loader.ts';
 import { registerPack, resetRegistry } from '../src/registry.ts';
 import type { Pack } from '../src/types.ts';
 
@@ -61,7 +61,7 @@ function fixtureJson(name: string): string {
   return readFileSync(join(__dirname, 'fixtures', name), 'utf-8');
 }
 
-function makeCanvasJson(overrides: Record<string, unknown> = {}): string {
+function makeGraphJson(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
     version: 3,
     packs: { test: '^0.0.1' },
@@ -85,18 +85,18 @@ beforeEach(() => {
 // Happy path
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFileFromText — happy path', () => {
+describe('loadGraphFromText — happy path', () => {
   it('returns a Graph with correct node and edge counts from inline JSON', () => {
     registerPack(makeTestPack());
-    const graph = loadCanvasFileFromText(makeCanvasJson());
+    const graph = loadGraphFromText(makeGraphJson());
     expect(graph.nodes.size).toBe(2);
     expect(graph.edges.size).toBe(1);
   });
 
-  it('returns a Graph from the minimal.canvas.json fixture', () => {
+  it('returns a Graph from the minimal.graph.json fixture', () => {
     registerPack(makeTestPack());
-    const json = fixtureJson('minimal.canvas.json');
-    const graph = loadCanvasFileFromText(json);
+    const json = fixtureJson('minimal.graph.json');
+    const graph = loadGraphFromText(json);
     expect(graph.nodes.size).toBe(2);
     expect(graph.edges.size).toBe(1);
     expect(graph.nodes.has('node-1')).toBe(true);
@@ -106,7 +106,7 @@ describe('loadCanvasFileFromText — happy path', () => {
 
   it('builds adjacency indices correctly', () => {
     registerPack(makeTestPack());
-    const graph = loadCanvasFileFromText(makeCanvasJson());
+    const graph = loadGraphFromText(makeGraphJson());
     expect(graph.outgoing.get('n1')?.has('e1')).toBe(true);
     expect(graph.incoming.get('n2')?.has('e1')).toBe(true);
   });
@@ -116,10 +116,10 @@ describe('loadCanvasFileFromText — happy path', () => {
 // Version validation
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFileFromText — version validation', () => {
+describe('loadGraphFromText — version validation', () => {
   it('throws on version 2', () => {
     registerPack(makeTestPack());
-    expect(() => loadCanvasFileFromText(makeCanvasJson({ version: 2 }))).toThrow(
+    expect(() => loadGraphFromText(makeGraphJson({ version: 2 }))).toThrow(
       'unsupported version 2'
     );
   });
@@ -127,12 +127,12 @@ describe('loadCanvasFileFromText — version validation', () => {
   it('throws when version field is missing', () => {
     registerPack(makeTestPack());
     const json = JSON.stringify({ packs: {}, nodes: [], edges: [] });
-    expect(() => loadCanvasFileFromText(json)).toThrow(/missing.*version/i);
+    expect(() => loadGraphFromText(json)).toThrow(/missing.*version/i);
   });
 
   it('throws on non-numeric version', () => {
     registerPack(makeTestPack());
-    expect(() => loadCanvasFileFromText(makeCanvasJson({ version: 'v3' }))).toThrow(
+    expect(() => loadGraphFromText(makeGraphJson({ version: 'v3' }))).toThrow(
       'unsupported version'
     );
   });
@@ -142,14 +142,14 @@ describe('loadCanvasFileFromText — version validation', () => {
 // Invalid JSON
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFileFromText — invalid JSON', () => {
+describe('loadGraphFromText — invalid JSON', () => {
   it('throws with "invalid JSON" message', () => {
-    expect(() => loadCanvasFileFromText('{bad json')).toThrow('loadCanvasFile: invalid JSON');
+    expect(() => loadGraphFromText('{bad json')).toThrow('loadGraphFile: invalid JSON');
   });
 
   it('throws on non-object top-level (array)', () => {
     registerPack(makeTestPack());
-    expect(() => loadCanvasFileFromText('[]')).toThrow(/expected.*object/i);
+    expect(() => loadGraphFromText('[]')).toThrow(/expected.*object/i);
   });
 });
 
@@ -157,15 +157,15 @@ describe('loadCanvasFileFromText — invalid JSON', () => {
 // Pack registration check
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFileFromText — pack registration', () => {
+describe('loadGraphFromText — pack registration', () => {
   it('throws when a referenced pack is not registered', () => {
-    const err = () => loadCanvasFileFromText(makeCanvasJson());
+    const err = () => loadGraphFromText(makeGraphJson());
     expect(err).toThrow(/pack "test".*registered/);
   });
 
   it('includes the pack id and the word "registered" in the error', () => {
     try {
-      loadCanvasFileFromText(makeCanvasJson({ packs: { 'unknown-pack': '^1.0.0' } }));
+      loadGraphFromText(makeGraphJson({ packs: { 'unknown-pack': '^1.0.0' } }));
       expect.fail('should have thrown');
     } catch (e) {
       const msg = (e as Error).message;
@@ -179,43 +179,43 @@ describe('loadCanvasFileFromText — pack registration', () => {
 // Kind validation
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFileFromText — kind validation', () => {
+describe('loadGraphFromText — kind validation', () => {
   it('throws when a node references an unknown kind', () => {
     registerPack(makeTestPack());
-    const json = makeCanvasJson({
+    const json = makeGraphJson({
       nodes: [{ id: 'n1', kind: 'test.unknown', props: {}, tags: [] }],
       edges: [],
     });
-    expect(() => loadCanvasFileFromText(json)).toThrow(/unknown kind.*test\.unknown/);
+    expect(() => loadGraphFromText(json)).toThrow(/unknown kind.*test\.unknown/);
   });
 
   it('throws when an edge references an unknown kind', () => {
     registerPack(makeTestPack());
-    const json = makeCanvasJson({
+    const json = makeGraphJson({
       nodes: [
         { id: 'n1', kind: 'test.foo', props: {}, tags: [] },
         { id: 'n2', kind: 'test.foo', props: {}, tags: [] },
       ],
       edges: [{ id: 'e1', kind: 'test.unknown-edge', from: 'n1', to: 'n2', props: {}, tags: [] }],
     });
-    expect(() => loadCanvasFileFromText(json)).toThrow(/edge "e1".*unknown kind/);
+    expect(() => loadGraphFromText(json)).toThrow(/edge "e1".*unknown kind/);
   });
 
   it('throws when a node has malformed props (schema rejects non-object)', () => {
     registerPack(makeTestPack());
-    const json = makeCanvasJson({
+    const json = makeGraphJson({
       nodes: [
         { id: 'bad-node', kind: 'test.foo', props: 'not-an-object', tags: [] },
         { id: 'n2', kind: 'test.foo', props: {}, tags: [] },
       ],
       edges: [],
     });
-    expect(() => loadCanvasFileFromText(json)).toThrow(/bad-node/);
+    expect(() => loadGraphFromText(json)).toThrow(/bad-node/);
   });
 
   it('aggregates multiple bad nodes into a single error', () => {
     registerPack(makeTestPack());
-    const json = makeCanvasJson({
+    const json = makeGraphJson({
       nodes: [
         { id: 'bad-1', kind: 'test.foo', props: 'bad', tags: [] },
         { id: 'bad-2', kind: 'test.foo', props: 42, tags: [] },
@@ -224,7 +224,7 @@ describe('loadCanvasFileFromText — kind validation', () => {
       edges: [],
     });
     try {
-      loadCanvasFileFromText(json);
+      loadGraphFromText(json);
       expect.fail('should have thrown');
     } catch (e) {
       const msg = (e as Error).message;
@@ -235,7 +235,7 @@ describe('loadCanvasFileFromText — kind validation', () => {
 
   it('aggregates bad nodes AND bad edges in a single throw', () => {
     registerPack(makeTestPack());
-    const json = makeCanvasJson({
+    const json = makeGraphJson({
       nodes: [
         { id: 'bad-node', kind: 'test.foo', props: 'bad', tags: [] },
         { id: 'n2', kind: 'test.foo', props: {}, tags: [] },
@@ -245,7 +245,7 @@ describe('loadCanvasFileFromText — kind validation', () => {
       ],
     });
     try {
-      loadCanvasFileFromText(json);
+      loadGraphFromText(json);
       expect.fail('should have thrown');
     } catch (e) {
       const msg = (e as Error).message;
@@ -259,30 +259,30 @@ describe('loadCanvasFileFromText — kind validation', () => {
 // buildGraph propagation
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFileFromText — buildGraph error propagation', () => {
+describe('loadGraphFromText — buildGraph error propagation', () => {
   it('propagates duplicate node id error from buildGraph', () => {
     registerPack(makeTestPack());
-    const json = makeCanvasJson({
+    const json = makeGraphJson({
       nodes: [
         { id: 'dup', kind: 'test.foo', props: {}, tags: [] },
         { id: 'dup', kind: 'test.foo', props: {}, tags: [] },
       ],
       edges: [],
     });
-    expect(() => loadCanvasFileFromText(json)).toThrow(/dup/);
+    expect(() => loadGraphFromText(json)).toThrow(/dup/);
   });
 });
 
 // ---------------------------------------------------------------------------
-// loadCanvasFile (URL-based)
+// loadGraphFile (URL-based)
 // ---------------------------------------------------------------------------
 
-describe('loadCanvasFile — URL fetch', () => {
+describe('loadGraphFile — URL fetch', () => {
   it('rejects with error containing the URL on HTTP 404', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, { status: 404, statusText: 'Not Found' }) as unknown as Response
     );
-    await expect(loadCanvasFile('http://example.invalid/nope.json')).rejects.toThrow(
+    await expect(loadGraphFile('http://example.invalid/nope.json')).rejects.toThrow(
       'http://example.invalid/nope.json'
     );
   });
@@ -291,14 +291,14 @@ describe('loadCanvasFile — URL fetch', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, { status: 500, statusText: 'Internal Server Error' }) as unknown as Response
     );
-    await expect(loadCanvasFile('http://example.invalid/nope.json')).rejects.toThrow('HTTP 500');
+    await expect(loadGraphFile('http://example.invalid/nope.json')).rejects.toThrow('HTTP 500');
   });
 
   it('resolves a Graph when fetch returns valid JSON', async () => {
     registerPack(makeTestPack());
-    const body = makeCanvasJson();
+    const body = makeGraphJson();
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body, { status: 200 }) as unknown as Response);
-    const graph = await loadCanvasFile('http://example.invalid/good.json');
+    const graph = await loadGraphFile('http://example.invalid/good.json');
     expect(graph.nodes.size).toBe(2);
     expect(graph.edges.size).toBe(1);
   });
@@ -307,8 +307,8 @@ describe('loadCanvasFile — URL fetch', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('not json', { status: 200 }) as unknown as Response
     );
-    await expect(loadCanvasFile('http://example.invalid/bad.json')).rejects.toThrow(
-      /loadCanvasFile \[http:\/\/example\.invalid\/bad\.json\]/
+    await expect(loadGraphFile('http://example.invalid/bad.json')).rejects.toThrow(
+      /loadGraphFile \[http:\/\/example\.invalid\/bad\.json\]/
     );
   });
 });

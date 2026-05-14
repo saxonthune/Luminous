@@ -299,8 +299,8 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     return
   }
 
-  // POST /api/canvas/create
-  if (url === "/api/canvas/create" && req.method === "POST") {
+  // POST /api/graph/create
+  if (url === "/api/graph/create" && req.method === "POST") {
     let body: { path?: string; packs?: Record<string, string> }
     try {
       body = (await parseBody(req)) as typeof body

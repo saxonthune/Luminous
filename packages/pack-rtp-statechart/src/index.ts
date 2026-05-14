@@ -1,4 +1,4 @@
-import type { Pack } from '@luminous/canvas-core';
+import type { Pack } from '@luminous/core';
 import { nodeKinds, edgeKinds } from './schema/kinds.ts';
 import { nodeRenderers, edgeRenderers } from './presentation/renderers.ts';
 import { views, statechartView, conceptMapView } from './config/views.ts';

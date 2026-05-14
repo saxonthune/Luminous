@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js';
-import type { Node, RenderContext } from '@luminous/canvas-core';
+import type { Node, RenderContext } from '@luminous/core';
 
 type StateProps = {
   description?: string;

@@ -12,9 +12,9 @@ describe('fetchServerSources', () => {
         return Promise.resolve({
           json: () => Promise.resolve({
             documents: [
-              { path: 'rtp-statechart.canvas.json', name: 'rtp-statechart', lastModified: 1000 },
-              { path: 'old-v2.canvas.json', name: 'old-v2', lastModified: 2000 },
-              { path: 'subdir/another.canvas.json', name: 'another', lastModified: 3000 },
+              { path: 'rtp-statechart.graph.json', name: 'rtp-statechart', lastModified: 1000 },
+              { path: 'old-v2.graph.json', name: 'old-v2', lastModified: 2000 },
+              { path: 'subdir/another.graph.json', name: 'another', lastModified: 3000 },
             ],
           }),
         });
@@ -24,7 +24,7 @@ describe('fetchServerSources', () => {
 
     const sources = await fetchServerSources();
     expect(sources).toHaveLength(1);
-    expect(sources[0].id).toBe('rtp-statechart.canvas.json');
+    expect(sources[0].id).toBe('rtp-statechart.graph.json');
     expect(sources[0].label).toBe('rtp-statechart');
   });
 
@@ -34,12 +34,12 @@ describe('fetchServerSources', () => {
         return Promise.resolve({
           json: () => Promise.resolve({
             documents: [
-              { path: 'rtp-statechart.canvas.json', name: 'rtp-statechart', lastModified: 1000 },
+              { path: 'rtp-statechart.graph.json', name: 'rtp-statechart', lastModified: 1000 },
             ],
           }),
         });
       }
-      if (url === '/api/document/rtp-statechart.canvas.json') {
+      if (url === '/api/document/rtp-statechart.graph.json') {
         return Promise.resolve({ text: () => Promise.resolve('{"version":3}') });
       }
       return Promise.reject(new Error('unexpected fetch: ' + url));
@@ -50,7 +50,7 @@ describe('fetchServerSources', () => {
     const text = await sources[0].load();
 
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/document/' + encodeURIComponent('rtp-statechart.canvas.json')
+      '/api/document/' + encodeURIComponent('rtp-statechart.graph.json')
     );
     expect(text).toBe('{"version":3}');
   });

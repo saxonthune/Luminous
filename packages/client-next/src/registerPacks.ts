@@ -1,4 +1,4 @@
-import { registerPack, getPack } from '@luminous/canvas-core';
+import { registerPack, getPack } from '@luminous/core';
 import rtpStatechartPack from '@luminous/pack-rtp-statechart';
 import primitivesPack from '@luminous/pack-primitives';
 

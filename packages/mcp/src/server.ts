@@ -130,7 +130,7 @@ try {
 }
 
 const instructions = `\
-Luminous is a structured visual canvas tool for software design. It maintains v3 .canvas.json files — each referencing one or more packs and containing nodes and edges.
+Luminous is a structured visual canvas tool for software design. It maintains v3 .graph.json files — each referencing one or more packs and containing nodes and edges.
 
 Core concepts:
 - Pack: a versioned library (e.g. "primitives": "^0.1.0") that defines node and edge kinds along with their props schemas and default views. Canvases declare which packs they use.
@@ -169,7 +169,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       properties: {
         path: {
           type: 'string',
-          description: "Path to the canvas document, e.g. 'project.canvas.json'. Get available paths from canvas list.",
+          description: "Path to the canvas document, e.g. 'project.graph.json'. Get available paths from canvas list.",
         },
         actions: {
           type: 'array',

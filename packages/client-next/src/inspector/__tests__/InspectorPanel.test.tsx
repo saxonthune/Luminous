@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { render } from 'solid-js/web';
 import { createSignal } from 'solid-js';
-import { buildGraph } from '@luminous/canvas-core';
-import type { View } from '@luminous/canvas-core';
+import { buildGraph } from '@luminous/core';
+import type { View } from '@luminous/core';
 import { InspectorContext, type InspectorContextValue } from '../InspectorContext';
 import { InspectorPanel } from '../InspectorPanel';
 

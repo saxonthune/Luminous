@@ -1,5 +1,5 @@
 import { For } from 'solid-js';
-import type { Layer, LayerState } from '@luminous/canvas-core';
+import type { Layer, LayerState } from '@luminous/core';
 import { defaultLayerStateStore } from './layerState';
 
 export interface LayerToolbarProps {

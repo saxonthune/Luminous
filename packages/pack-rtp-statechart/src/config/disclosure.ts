@@ -1,4 +1,4 @@
-import type { DisclosureSchema } from '@luminous/canvas-core';
+import type { DisclosureSchema } from '@luminous/core';
 
 export const disclosureSchemas: DisclosureSchema[] = [
   {

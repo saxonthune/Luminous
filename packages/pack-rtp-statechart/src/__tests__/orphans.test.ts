@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Graph, Node, Edge } from '@luminous/canvas-core';
+import type { Graph, Node, Edge } from '@luminous/core';
 import { findOrphanActions } from '../orphans.ts';
 
 function makeGraph(nodes: Node[], edges: Edge[]): Graph {

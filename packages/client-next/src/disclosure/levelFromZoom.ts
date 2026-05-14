@@ -1,4 +1,4 @@
-import type { DisclosureLevel, View } from '@luminous/canvas-core';
+import type { DisclosureLevel, View } from '@luminous/core';
 
 const DEFAULT_THRESHOLDS: Array<{ minZoom: number; level: DisclosureLevel }> = [
   { minZoom: 0,   level: 'peek' },

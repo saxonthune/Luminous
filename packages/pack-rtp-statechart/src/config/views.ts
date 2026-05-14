@@ -1,4 +1,4 @@
-import type { View } from '@luminous/canvas-core';
+import type { View } from '@luminous/core';
 import { conceptMapView } from './views/concept-map.ts';
 
 export const DEFAULT_ZOOM_TO_LEVEL: View['zoomToLevel'] = [

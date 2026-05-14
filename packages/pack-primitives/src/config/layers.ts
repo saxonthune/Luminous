@@ -1,3 +1,3 @@
-import type { Layer } from '@luminous/canvas-core';
+import type { Layer } from '@luminous/core';
 
 export const layers: Layer[] = [];

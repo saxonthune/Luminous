@@ -1,4 +1,4 @@
-import type { Layer } from '@luminous/canvas-core';
+import type { Layer } from '@luminous/core';
 import { defaultLayerStateStore } from './layerState';
 
 export function useLayerOpacity(

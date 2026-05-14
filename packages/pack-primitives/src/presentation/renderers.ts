@@ -1,4 +1,4 @@
-import type { NodeRenderer, EdgeRenderer, KindId, DisclosureLevel } from '@luminous/canvas-core';
+import type { NodeRenderer, EdgeRenderer, KindId, DisclosureLevel } from '@luminous/core';
 import BoxCard from './renderers/BoxCard.tsx';
 
 const arrowCard: EdgeRenderer = (edge) => {

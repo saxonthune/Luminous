@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import rtpStatechartPack from '@luminous/pack-rtp-statechart';
-import { resetRegistry } from '@luminous/canvas-core';
+import { resetRegistry } from '@luminous/core';
 import { ensurePacksRegistered } from '../registerPacks';
 
 describe('viewer wiring', () => {

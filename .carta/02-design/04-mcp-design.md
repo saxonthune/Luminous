@@ -7,6 +7,8 @@ deps: [doc02.02, doc02.03]
 
 # MCP Design
 
+> **Note (2026-05-14):** Portions of this doc predate the property-graph PDR ([doc02.11](./11-pdr-property-graph-architecture.md)). The concept-grouped / HTTP-only model is superseded by [doc02.15](./15-mcp-iterative-graph-building.md) for iterative diagram building. Read this for the same-contract principle and the AI workflow rationale; read doc02.15 for the current tool surface.
+
 Architecture for `@luminous/mcp` — how AI agents interact with Luminous canvases via the Model Context Protocol.
 
 ## Core Constraint: Same Contract

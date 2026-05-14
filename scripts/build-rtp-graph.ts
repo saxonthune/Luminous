@@ -1,4 +1,4 @@
-// Pipeline: RTP navigation statechart + concept catalog → .canvases/rtp-statechart.canvas.json
+// Pipeline: RTP navigation statechart + concept catalog → .canvases/rtp-statechart.graph.json
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -454,7 +454,7 @@ const canvas = {
 const outDir = path.join(ROOT, '.canvases');
 if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
-const outPath = path.join(outDir, 'rtp-statechart.canvas.json');
+const outPath = path.join(outDir, 'rtp-statechart.graph.json');
 fs.writeFileSync(outPath, JSON.stringify(canvas, null, 2) + '\n', 'utf8');
 process.stderr.write(
   `[info] wrote ${path.relative(ROOT, outPath)} (${nodes.length} nodes, ${edges.length} edges)\n`,

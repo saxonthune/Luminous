@@ -2,45 +2,45 @@ import type { Graph, Node, Edge } from './types.ts';
 import { buildGraph } from './graph.ts';
 import { getNodeKind, getEdgeKind, getPack } from './registry.ts';
 
-export function loadCanvasFileFromText(json: string): Graph {
+export function loadGraphFromText(json: string): Graph {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`loadCanvasFile: invalid JSON: ${msg}`);
+    throw new Error(`loadGraphFile: invalid JSON: ${msg}`);
   }
 
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error('loadCanvasFile: expected a JSON object at top level');
+    throw new Error('loadGraphFile: expected a JSON object at top level');
   }
 
   const file = parsed as Record<string, unknown>;
 
   if (!('version' in file)) {
-    throw new Error('loadCanvasFile: missing required field "version"');
+    throw new Error('loadGraphFile: missing required field "version"');
   }
   if (file.version !== 3) {
-    throw new Error(`loadCanvasFile: unsupported version ${String(file.version)}, expected 3`);
+    throw new Error(`loadGraphFile: unsupported version ${String(file.version)}, expected 3`);
   }
 
   if (typeof file.packs !== 'object' || file.packs === null || Array.isArray(file.packs)) {
-    throw new Error('loadCanvasFile: "packs" must be a Record<PackId, string>');
+    throw new Error('loadGraphFile: "packs" must be a Record<PackId, string>');
   }
 
   if (!Array.isArray(file.nodes)) {
-    throw new Error('loadCanvasFile: "nodes" must be an array');
+    throw new Error('loadGraphFile: "nodes" must be an array');
   }
 
   if (!Array.isArray(file.edges)) {
-    throw new Error('loadCanvasFile: "edges" must be an array');
+    throw new Error('loadGraphFile: "edges" must be an array');
   }
 
   const packs = file.packs as Record<string, unknown>;
   for (const packId of Object.keys(packs)) {
     if (getPack(packId) === undefined) {
       throw new Error(
-        `loadCanvasFile: pack "${packId}" is referenced by the canvas but not registered. Register the pack before loading.`
+        `loadGraphFile: pack "${packId}" is referenced by the graph but not registered. Register the pack before loading.`
       );
     }
   }
@@ -74,30 +74,30 @@ export function loadCanvasFileFromText(json: string): Graph {
   }
 
   if (validationErrors.length > 0) {
-    throw new Error(`loadCanvasFile: validation errors:\n${validationErrors.join('\n')}`);
+    throw new Error(`loadGraphFile: validation errors:\n${validationErrors.join('\n')}`);
   }
 
   return buildGraph(nodes, edges);
 }
 
-export async function loadCanvasFile(url: string): Promise<Graph> {
+export async function loadGraphFile(url: string): Promise<Graph> {
   let response: Response;
   try {
     response = await fetch(url);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`loadCanvasFile [${url}]: fetch failed: ${msg}`);
+    throw new Error(`loadGraphFile [${url}]: fetch failed: ${msg}`);
   }
 
   if (!response.ok) {
-    throw new Error(`loadCanvasFile: HTTP ${response.status} fetching ${url}`);
+    throw new Error(`loadGraphFile: HTTP ${response.status} fetching ${url}`);
   }
 
   const text = await response.text();
   try {
-    return loadCanvasFileFromText(text);
+    return loadGraphFromText(text);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`loadCanvasFile [${url}]: ${msg}`);
+    throw new Error(`loadGraphFile [${url}]: ${msg}`);
   }
 }

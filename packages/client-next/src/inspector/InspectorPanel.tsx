@@ -1,8 +1,8 @@
 import { Show, For, onMount, onCleanup, createMemo } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { useContext } from 'solid-js';
-import type { Graph, View, Node, Edge } from '@luminous/canvas-core';
-import { getNodeRenderer, getEdgeRenderer } from '@luminous/canvas-core';
+import type { Graph, View, Node, Edge } from '@luminous/core';
+import { getNodeRenderer, getEdgeRenderer } from '@luminous/core';
 import { CanvasContext } from '@luminous/cactus';
 import { useInspector } from './InspectorContext';
 

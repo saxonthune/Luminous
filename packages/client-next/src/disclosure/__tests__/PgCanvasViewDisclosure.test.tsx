@@ -8,8 +8,8 @@
 import { describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest';
 import { render } from 'solid-js/web';
 import type { JSX } from 'solid-js';
-import { buildGraph, registerPack, resetRegistry, getNodeRenderer } from '@luminous/canvas-core';
-import type { Node, RenderContext, View } from '@luminous/canvas-core';
+import { buildGraph, registerPack, resetRegistry, getNodeRenderer } from '@luminous/core';
+import type { Node, RenderContext, View } from '@luminous/core';
 import rtpStatechartPack from '@luminous/pack-rtp-statechart';
 
 const testView: View = {

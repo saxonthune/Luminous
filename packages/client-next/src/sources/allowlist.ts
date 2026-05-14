@@ -1,8 +1,8 @@
 // Single point of control for which canvases appear in the document picker.
 // Edit this list to expose more fixtures as they migrate to v3.
 const ALLOWED_PATHS: ReadonlySet<string> = new Set([
-  'rtp-statechart.canvas.json',
-  'sample-primitives.canvas.json',
+  'rtp-statechart.graph.json',
+  'sample-primitives.graph.json',
 ]);
 
 export function isVisibleSource(path: string): boolean {

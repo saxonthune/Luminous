@@ -1,4 +1,4 @@
-import type { Graph } from '@luminous/canvas-core';
+import type { Graph } from '@luminous/core';
 
 /** Returns the set of `rtp.action` node ids that have no incoming `statechart.invokes-action` edge. */
 export function findOrphanActions(graph: Graph): ReadonlySet<string> {

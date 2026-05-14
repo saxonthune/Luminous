@@ -10,7 +10,7 @@ import {
   resetRegistry,
   buildGraph,
   type RenderContext,
-} from '@luminous/canvas-core';
+} from '@luminous/core';
 import rtpStatechartPack, { nodeKinds, edgeKinds, statechartView } from '../src/index.ts';
 
 beforeEach(() => {

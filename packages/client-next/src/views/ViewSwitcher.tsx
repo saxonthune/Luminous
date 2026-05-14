@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js';
-import type { View } from '@luminous/canvas-core';
+import type { View } from '@luminous/core';
 
 export interface ViewSwitcherProps {
   views: readonly View[];

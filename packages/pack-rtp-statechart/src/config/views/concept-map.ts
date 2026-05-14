@@ -1,4 +1,4 @@
-import type { View } from '@luminous/canvas-core';
+import type { View } from '@luminous/core';
 
 // Containment direction: evaluateContainment treats edge.from as child, edge.to as parent.
 // belongs-to-concept: from=rtp.action (child), to=rtp.concept (parent) → concept contains action. Correct.

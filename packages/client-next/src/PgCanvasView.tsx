@@ -1,8 +1,8 @@
 import { For, createResource, Show, createMemo } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
-import type { Graph, View, DisclosureLevel, RenderContext } from '@luminous/canvas-core';
-import { evaluateView, getNodeRenderer } from '@luminous/canvas-core';
+import type { Graph, View, DisclosureLevel, RenderContext } from '@luminous/core';
+import { evaluateView, getNodeRenderer } from '@luminous/core';
 import { Canvas, NodeContainer, resolveAbsolutePositionByParentOf, gridLayout, elkLayout, useCanvasContext } from '@luminous/cactus';
 import type { ElkLayoutOutput, CanvasRef } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
