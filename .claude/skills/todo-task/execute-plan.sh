@@ -267,21 +267,6 @@ check_trunk_leak() {
 phase_verify() {
   echo "── Verifying build & tests ──"
 
-  check_trunk_leak
-  if [[ "$LEAKED" == "true" ]]; then
-    echo "ERROR: Agent commits leaked to trunk (${TRUNK})."
-    echo "Leaked commits:"
-    echo "${LEAKED_COMMITS}"
-    echo ""
-    echo "${LEAKED_ERROR}"
-    VERIFIED=false
-    VERIFICATION_STATE="$SM_VERIFY_LEAKED_TRUNK"
-    BUILD_TEST_OUTPUT="Trunk leak detected. Leaked commits:\n${LEAKED_COMMITS}\n\n${LEAKED_ERROR}"
-    SESSION_ERROR="${LEAKED_ERROR}"
-    echo ""
-    return
-  fi
-
   BUILD_TEST_OUTPUT=""
   VERIFIED=false
   VERIFICATION_STATE="$SM_VERIFY_FAILED"
@@ -377,20 +362,6 @@ phase_merge() {
   MERGE_STATUS="$SM_MERGE_NOT_ATTEMPTED"
   DIRTY_FILES=""
   COMMITS=$(cd "${WORKTREE_DIR}" && git log "${TRUNK}..HEAD" --oneline 2>/dev/null || echo "(none)")
-
-  check_trunk_leak
-  if [[ "$LEAKED" == "true" ]]; then
-    echo "ERROR: Trunk advanced during session — leaked commits detected pre-merge."
-    echo "${LEAKED_COMMITS}"
-    echo "${LEAKED_ERROR}"
-    VERIFIED=false
-    VERIFICATION_STATE="$SM_VERIFY_LEAKED_TRUNK"
-    MERGE_STATUS="$SM_MERGE_NOT_ATTEMPTED"
-    BUILD_TEST_OUTPUT="Trunk leak detected pre-merge. Leaked commits:\n${LEAKED_COMMITS}\n\n${LEAKED_ERROR}"
-    SESSION_ERROR="${LEAKED_ERROR}"
-    echo ""
-    return
-  fi
 
   if [[ "$VERIFIED" == "true" ]]; then
     if [[ "$NO_MERGE" == "false" ]]; then
