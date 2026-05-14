@@ -1,4 +1,5 @@
-import { createSignal, onCleanup, Show, type JSX } from 'solid-js';
+import { createSignal, createMemo, onCleanup, Show, type JSX } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { useViewport, type UseViewportOptions, type Transform } from './useViewport.js';
 import { observeLongTasks } from './perf.js';
 import { useConnectionDrag } from './useConnectionDrag.js';
@@ -8,6 +9,10 @@ import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import { EdgeLayer } from './EdgeLayer.js';
 import type { EdgeDeclaration } from './types.js';
+import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
+import { ChromeSlots } from './chrome/ChromeSlots.js';
+import { MenuRoot } from './chrome/ChromePrimitives.js';
+import { useHotkeys } from './chrome/useHotkeys.js';
 
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
@@ -49,6 +54,14 @@ export interface CanvasProps {
   onBackgroundContextMenu?: (event: MouseEvent) => void;
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element;
   ref?: (handle: CanvasRef) => void;
+  /** Declarative toolbar schema rendered in screen-space slots (top/left/right/bottom). */
+  chrome?: ChromeSchema;
+  /** Dispatches action ids from chrome controls and hotkeys. */
+  onAction?: (id: string, payload?: unknown) => void;
+  /** Returns a MenuSchema for a node right-click, or undefined for no menu. */
+  nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
+  /** Returns a MenuSchema for a background right-click, or undefined for no menu. */
+  backgroundContextMenu?: () => MenuSchema | undefined;
 }
 
 export interface CanvasRef {
@@ -58,6 +71,25 @@ export interface CanvasRef {
   zoomIn: () => void;
   zoomOut: () => void;
   clearSelection: () => void;
+}
+
+/** Flatten all Action records from a ChromeSchema for hotkey registration. */
+function flattenActions(chrome: ChromeSchema | undefined): Action[] {
+  if (!chrome) return [];
+  const actions: Action[] = [];
+  const slots = [chrome.top, chrome.left, chrome.right, chrome.bottom];
+  for (const slot of slots) {
+    if (!slot) continue;
+    for (const toolbar of slot) {
+      for (const ctrl of toolbar.controls) {
+        if (ctrl.type === 'button') actions.push(ctrl.action);
+        else if (ctrl.type === 'toggle-group' || ctrl.type === 'toggle-set') {
+          actions.push(...ctrl.actions);
+        }
+      }
+    }
+  }
+  return actions;
 }
 
 export function Canvas(props: CanvasProps) {
@@ -125,6 +157,17 @@ export function Canvas(props: CanvasProps) {
     window.removeEventListener('keyup', handleKeyUp);
   });
 
+  // Context menu state — rendered in a Portal at cursor position.
+  const [ctxMenuState, setCtxMenuState] = createSignal<{
+    x: number;
+    y: number;
+    schema: MenuSchema;
+  } | null>(null);
+
+  // Hotkeys: flatten actions from the chrome schema and register a global keydown listener.
+  const allActions = createMemo(() => flattenActions(props.chrome));
+  useHotkeys(allActions, (id, payload) => props.onAction?.(id, payload));
+
   props.ref?.({
     fitView,
     screenToCanvas,
@@ -150,6 +193,36 @@ export function Canvas(props: CanvasProps) {
     getNodeRects,
   };
 
+  const handleContextMenu = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const container = target.closest?.('[data-container-id]');
+
+    if (container && props.nodeContextMenu) {
+      const nodeId = container.getAttribute('data-container-id')!;
+      const schema = props.nodeContextMenu(nodeId);
+      if (schema && schema.items.length > 0) {
+        e.preventDefault();
+        setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+        return;
+      }
+    }
+
+    if (!container) {
+      if (props.backgroundContextMenu) {
+        const schema = props.backgroundContextMenu();
+        if (schema && schema.items.length > 0) {
+          e.preventDefault();
+          setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+          return;
+        }
+      }
+      if (props.onBackgroundContextMenu) {
+        e.preventDefault();
+        props.onBackgroundContextMenu(e);
+      }
+    }
+  };
+
   return (
     <CanvasContext.Provider value={contextValue}>
       <div
@@ -164,14 +237,7 @@ export function Canvas(props: CanvasProps) {
             }
           }
         }}
-        onContextMenu={(e) => {
-          if (!props.onBackgroundContextMenu) return;
-          const target = e.target as HTMLElement;
-          // If the right-click landed on (or inside) a node, let the node handle it.
-          if (target.closest?.('[data-container-id]')) return;
-          e.preventDefault();
-          props.onBackgroundContextMenu(e);
-        }}
+        onContextMenu={handleContextMenu}
       >
         {props.renderBackground
           ? props.renderBackground(transform(), props.patternId)
@@ -235,7 +301,26 @@ export function Canvas(props: CanvasProps) {
             />
           )}
         </Show>
+
+        {/* Screen-space chrome toolbars — anchored to viewport, resist pan/zoom */}
+        <ChromeSlots schema={props.chrome} onAction={props.onAction} />
       </div>
+
+      {/* Context menu — rendered outside the canvas container for correct stacking */}
+      <Show when={ctxMenuState()}>
+        {(state) => (
+          <Portal>
+            <MenuRoot
+              schema={state().schema}
+              open
+              onOpenChange={(open) => { if (!open) setCtxMenuState(null); }}
+              anchorX={state().x}
+              anchorY={state().y}
+              onAction={props.onAction}
+            />
+          </Portal>
+        )}
+      </Show>
     </CanvasContext.Provider>
   );
 }

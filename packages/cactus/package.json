@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@kobalte/core": "^0.13.0",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-transition": "^3.0.1",
