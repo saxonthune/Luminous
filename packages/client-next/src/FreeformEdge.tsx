@@ -83,6 +83,8 @@ interface FreeformEdgeProps {
   edge: Edge;
   getAbsoluteRect: (id: string) => { x: number; y: number; w: number; h: number } | undefined;
   onUpdateLabel?: (edgeId: string, label: string | null) => void;
+  opacity?: number;
+  edgeKind?: string;
 }
 
 export function FreeformEdge(props: FreeformEdgeProps) {
@@ -193,8 +195,10 @@ export function FreeformEdge(props: FreeformEdgeProps) {
 
   const labelWidth = () => (props.edge.label?.length ?? 0) * 6.5 + 16;
 
+  const resolvedOpacity = () => props.opacity ?? 1;
+
   return (
-    <Show when={fromRect() && toRect()}>
+    <Show when={fromRect() && toRect() && resolvedOpacity() > 0}>
       <defs>
         <marker
           id={`arrow-${props.edge.id}`}
@@ -206,7 +210,7 @@ export function FreeformEdge(props: FreeformEdgeProps) {
           <path d="M 0 1 L 10 5 L 0 9 z" fill={edgeColor()} />
         </marker>
       </defs>
-      <g style={{ "pointer-events": 'auto' }}>
+      <g style={{ "pointer-events": 'auto', opacity: resolvedOpacity() }}>
         <path
           d={pathD()}
           stroke="transparent" stroke-width={12} fill="none"
