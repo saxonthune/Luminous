@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from 'solid-js';
+import { createSignal } from 'solid-js';
 
 export type Theme = 'light' | 'dusk' | 'ground';
 
@@ -9,7 +9,8 @@ export const THEMES: ReadonlyArray<{ id: Theme; label: string; icon: string }> =
 ];
 
 const ids = THEMES.map((t) => t.id);
-const stored = localStorage.getItem('luminous-theme') as Theme | null;
+const STORAGE_KEY = 'luminous-theme';
+const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
 const initial: Theme = stored && ids.includes(stored) ? stored : 'light';
 
 export const [theme, setTheme] = createSignal<Theme>(initial);
@@ -19,8 +20,13 @@ export function cycleTheme() {
   setTheme(ids[(current + 1) % ids.length]);
 }
 
-createEffect(() => {
-  const t = theme();
+export function themeIcon(t: Theme): string {
+  return THEMES.find((x) => x.id === t)?.icon ?? '☀';
+}
+
+export function persistTheme(t: Theme) {
   document.documentElement.dataset.theme = t;
-  localStorage.setItem('luminous-theme', t);
-});
+  localStorage.setItem(STORAGE_KEY, t);
+}
+
+persistTheme(initial);

@@ -33,7 +33,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
-| doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06 | — |
+| doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc02.12, doc03.01, doc03.02, doc03.06 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Carta — separation of the docs system from the visualization tools | background, history, carta, split | doc02.01 | — | — |
 
 ### Milestones
@@ -51,7 +51,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc02.00 | `00-index.md` | Product and software design — architecture decisions, concept inventory, API contracts, engine internals | design | — | — | — |
-| doc02.01 | `01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc02.01 | doc01.02, doc01.03.01, doc02.01, doc02.02, doc02.05.01, doc02.06.01, doc02.11, doc03.01, doc03.02, doc03.03, doc03.06 | — |
+| doc02.01 | `01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc02.01 | doc01.02, doc01.03.01, doc02.01, doc02.02, doc02.05.01, doc02.06.01, doc02.11, doc02.12, doc03.01, doc03.02, doc03.03, doc03.06 | — |
 | doc02.02 | `02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc02.01, doc01.01 | doc02.03, doc02.04, doc03.02 | — |
 | doc02.03 | `03-api-contract.md` | HTTP + WebSocket API for @luminous/server — document listing, reading, mutation actions, diagnostics, and change notifications | api, http, server, contract | doc02.02 | doc02.04 | — |
 | doc02.04 | `04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc02.02, doc02.03 | — | — |
@@ -59,6 +59,8 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.08 | `08-edge-schemas.md` | Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern | edges, schemas, design, cactus-boundary | doc03.03, doc02.05.01, doc02.06.02, doc02.07 | doc02.10.02 | — |
 | doc02.09 | `09-primitive-reference.md` | Enumerated reference for node primitives (drag-bar, title, markdown, container) with bind semantics and examples | primitives, schemas, reference, node | — | doc02.10.02 | — |
 | doc02.11 | `11-pdr-property-graph-architecture.md` | Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. | pdr, architecture, property-graph, packs, views, disclosure, canvas-engine | doc02.01 | doc02.10.03 | — |
+| doc02.12 | `12-app-shell-statechart.md` | Statechart of Luminous's app shell — boot, picker, canvas-mounted, error, theme region. Boundary: app-shell only, canvas internals are a black box. | ui, statechart, app-shell, shell | doc02.01, doc01.01 | doc02.13 | app-shell.statechart.json |
+| doc02.13 | `13-app-shell-component-tree.md` | Component tree of the app shell, derived from the statechart and six inventories. Canvas internals are not modeled here. | components, derivation, app-shell | doc02.12 | — | — |
 
 ### Cactus Canvas Engine
 
@@ -113,6 +115,7 @@ Quick lookup for file-path→doc mapping:
 | `ai-context` | doc01.01, doc03.06 |
 | `algorithms` | doc02.05.03 |
 | `api` | doc02.03, doc02.04, doc02.05.02 |
+| `app-shell` | doc02.12, doc02.13 |
 | `architecture` | doc02.01, doc02.04, doc02.05.01, doc02.06.00, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
@@ -122,13 +125,14 @@ Quick lookup for file-path→doc mapping:
 | `canvas-engine` | doc02.11 |
 | `carta` | doc01.02 |
 | `cognitive-load` | doc03.04 |
-| `components` | doc02.05.02 |
+| `components` | doc02.05.02, doc02.13 |
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `contract` | doc02.03 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
 | `crystallization` | doc02.01 |
 | `data-model` | doc03.03 |
+| `derivation` | doc02.13 |
 | `design` | doc02.00, doc02.02, doc02.08 |
 | `disclosure` | doc02.11 |
 | `discriminant` | doc02.06.02 |
@@ -186,17 +190,19 @@ Quick lookup for file-path→doc mapping:
 | `schema` | doc02.06.02, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
 | `server` | doc02.03 |
+| `shell` | doc02.12 |
 | `software-design` | doc01.01 |
 | `solid` | doc02.06.01, doc02.07, doc02.10.01, doc03.01, doc03.05 |
 | `split` | doc01.02 |
 | `sql` | doc02.10.02 |
-| `statechart` | doc02.10.03 |
+| `statechart` | doc02.10.03, doc02.12 |
 | `static-analysis` | doc01.03.01, doc02.07, doc02.10.01 |
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc03.03 |
 | `tools` | doc02.04 |
 | `types` | doc02.05.02, doc02.06.02 |
+| `ui` | doc02.12 |
 | `unfolding` | doc02.01, doc02.02 |
 | `use-cases` | doc02.10.00 |
 | `verification` | doc03.02 |
