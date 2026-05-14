@@ -154,3 +154,6 @@ playwright-report/
 !.canvases/rtp-statechart.canvas.json
 !.canvases/sample-primitives.canvas.json
 
+
+# Verification script workaround (todo-task runner has buggy cd chain)
+packages/client-next/packages/

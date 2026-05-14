@@ -21,7 +21,7 @@ function makeGraph(nodes: Node[], edges: Edge[]): Graph {
     incoming.get(edge.to)!.add(edge.id);
   }
 
-  return { nodes: nodeMap, edges: edgeMap, edgesByKind, outgoing, incoming };
+  return { nodes: nodeMap, edges: edgeMap, edgesByKind, outgoing, incoming, packs: {} };
 }
 
 function makeNode(id: string, kind: string): Node {

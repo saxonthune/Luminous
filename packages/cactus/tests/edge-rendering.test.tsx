@@ -1,0 +1,132 @@
+/**
+ * Test: Edge rendering via EdgeDeclaration
+ *
+ * Verifies that Canvas draws SVG line elements in the edge layer when edges
+ * are provided, using the node rect registry populated by NodeContainer.
+ */
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import { render } from 'solid-js/web';
+import { Canvas } from '../src/Canvas';
+import { NodeContainer } from '../src/NodeContainer';
+import type { EdgeDeclaration } from '../src/types';
+
+beforeAll(() => {
+  if (typeof PointerEvent === 'undefined') {
+    class PointerEventPolyfill extends MouseEvent {
+      constructor(type: string, params: PointerEventInit = {}) {
+        super(type, params);
+      }
+    }
+    (globalThis as Record<string, unknown>).PointerEvent = PointerEventPolyfill;
+  }
+});
+
+function renderIntoContainer(ui: () => unknown): { container: HTMLElement; cleanup: () => void } {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const cleanup = render(ui as () => import('solid-js').JSX.Element, container);
+  return { container, cleanup };
+}
+
+/** Query the edge SVG layer specifically (ignores NodeContainer drag handle SVGs). */
+function getEdgeSvg(container: HTMLElement): Element | null {
+  return container.querySelector('[data-cactus-edge-layer]');
+}
+
+describe('Canvas edge rendering', () => {
+  it('renders an SVG line between two nodes', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        styling: { arrowHead: false, dash: 'solid' },
+      },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    expect(edgeSvg).not.toBeNull();
+
+    const line = edgeSvg!.querySelector('line');
+    expect(line).not.toBeNull();
+
+    // Centers: node-a center = (100+30, 100+20) = (130, 120)
+    //          node-b center = (300+30, 200+20) = (330, 220)
+    expect(line!.getAttribute('x1')).toBe('130');
+    expect(line!.getAttribute('y1')).toBe('120');
+    expect(line!.getAttribute('x2')).toBe('330');
+    expect(line!.getAttribute('y2')).toBe('220');
+
+    cleanup();
+  });
+
+  it('renders an arrowhead path when arrowHead: true', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        styling: { arrowHead: true },
+      },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 0} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 0} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    expect(edgeSvg).not.toBeNull();
+    const path = edgeSvg!.querySelector('path');
+    expect(path).not.toBeNull();
+
+    cleanup();
+  });
+
+  it('does NOT render edge SVG layer when no edges prop provided', () => {
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    expect(edgeSvg).toBeNull();
+
+    cleanup();
+  });
+
+  it('skips edge line when source node is not registered', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1',
+        sourceId: 'node-a',
+        targetId: 'node-missing',
+      },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    // SVG layer exists (edges prop is non-empty), but no line should be drawn
+    // because node-missing is not registered.
+    const lines = edgeSvg?.querySelectorAll('line') ?? [];
+    expect(lines.length).toBe(0);
+
+    cleanup();
+  });
+});

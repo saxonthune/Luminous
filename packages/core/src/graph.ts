@@ -5,12 +5,13 @@ import type {
   NodeId,
   EdgeId,
   KindId,
+  PackId,
   View,
   ContainmentTree,
   ContainmentWarning,
 } from './types.ts';
 
-export function buildGraph(nodes: readonly Node[], edges: readonly Edge[]): Graph {
+export function buildGraph(nodes: readonly Node[], edges: readonly Edge[], packs: Record<PackId, string> = {}): Graph {
   const nodeMap = new Map<NodeId, Node>();
   for (const node of nodes) {
     if (nodeMap.has(node.id)) {
@@ -59,6 +60,7 @@ export function buildGraph(nodes: readonly Node[], edges: readonly Edge[]): Grap
     edgesByKind,
     outgoing,
     incoming,
+    packs,
   };
 }
 

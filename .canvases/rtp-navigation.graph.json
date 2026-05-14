@@ -1,0 +1,1834 @@
+{
+  "version": 3,
+  "packs": {
+    "rtp-statechart": "^0.1.0"
+  },
+  "nodes": [
+    {
+      "id": "action.concept.Collection.addEntry",
+      "kind": "rtp.action",
+      "props": {
+        "name": "addEntry",
+        "signature": "addEntry(location, review)",
+        "description": "append an entry. Same Location across Collections = multiple entries.",
+        "conceptId": "concept.Collection"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Collection.create",
+      "kind": "rtp.action",
+      "props": {
+        "name": "create",
+        "signature": "create(name)",
+        "description": "start an empty Collection.",
+        "conceptId": "concept.Collection"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Collection.export",
+      "kind": "rtp.action",
+      "props": {
+        "name": "export",
+        "signature": "export(format)",
+        "description": "emit the Collection as a portable bundle for backup or sharing.",
+        "conceptId": "concept.Collection"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Collection.import",
+      "kind": "rtp.action",
+      "props": {
+        "name": "import",
+        "signature": "import(source)",
+        "description": "ingest an external collection (KML, GeoJSON, RTP bundle, third-party share URL). Becomes a first-class Collection owned by the user.",
+        "conceptId": "concept.Collection"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Collection.removeEntry",
+      "kind": "rtp.action",
+      "props": {
+        "name": "removeEntry",
+        "signature": "removeEntry(entry)",
+        "description": "drop an entry from this Collection. Does not delete the Location or its Reviews in other Collections.",
+        "conceptId": "concept.Collection"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Collection.share",
+      "kind": "rtp.action",
+      "props": {
+        "name": "share",
+        "signature": "share(audience)",
+        "description": "produce a shareable artifact (deferred to a later sharing concept).",
+        "conceptId": "concept.Collection"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.addToCollection",
+      "kind": "rtp.action",
+      "props": {
+        "name": "addToCollection",
+        "signature": "addToCollection(collection, data)",
+        "description": "make this Location an entry in a Collection (this is `Collection.addEntry` viewed from the Location's side; see synchronization below).",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.dropPin",
+      "kind": "rtp.action",
+      "props": {
+        "name": "dropPin",
+        "signature": "dropPin(coordinates)",
+        "description": "create a `manual` Location with a generated UUID.",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.import",
+      "kind": "rtp.action",
+      "props": {
+        "name": "import",
+        "signature": "import(externalRef)",
+        "description": "adopt a Location from a KML placemark, GeoJSON feature, or shared URL.",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.merge",
+      "kind": "rtp.action",
+      "props": {
+        "name": "merge",
+        "signature": "merge(other)",
+        "description": "user-confirmed reconciliation when two Locations from different providers refer to the same real place.",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.openExternally",
+      "kind": "rtp.action",
+      "props": {
+        "name": "openExternally",
+        "signature": "openExternally(target)",
+        "description": "hand off to an external map app (e.g. Google Maps, Apple Maps) for navigation, street view, or richer details. RTP does not reimplement those affordances; it cedes them by handoff.",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.refresh",
+      "kind": "rtp.action",
+      "props": {
+        "name": "refresh",
+        "signature": "refresh()",
+        "description": "if `refreshable`, re-query the provider to update `cachedMetadata`.",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Location.resolve",
+      "kind": "rtp.action",
+      "props": {
+        "name": "resolve",
+        "signature": "resolve(query, provider)",
+        "description": "search a provider for a place; return a candidate Location.",
+        "conceptId": "concept.Location"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.MapOverview.jumpToCollection",
+      "kind": "rtp.action",
+      "props": {
+        "name": "jumpToCollection",
+        "signature": "jumpToCollection(collection)",
+        "description": "fit viewport to that Collection's entries.",
+        "conceptId": "concept.MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.MapOverview.open",
+      "kind": "rtp.action",
+      "props": {
+        "name": "open",
+        "signature": "open()",
+        "description": "launch action. Restore `viewport`, render `visiblePins` for all Collections in `collectionFilter`. Renders before any background data has loaded (see doc01.01 §\"Cold-start playbook\").",
+        "conceptId": "concept.MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.MapOverview.pan",
+      "kind": "rtp.action",
+      "props": {
+        "name": "pan",
+        "signature": "pan(delta)",
+        "description": "standard map navigation. Updates `viewport`.",
+        "conceptId": "concept.MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.MapOverview.selectPin",
+      "kind": "rtp.action",
+      "props": {
+        "name": "selectPin",
+        "signature": "selectPin(pin)",
+        "description": "focus an entry; reveal its Collection and per-entry data.",
+        "conceptId": "concept.MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.MapOverview.toggleCollection",
+      "kind": "rtp.action",
+      "props": {
+        "name": "toggleCollection",
+        "signature": "toggleCollection(collection)",
+        "description": "add/remove a Collection from `collectionFilter`. Persistent.",
+        "conceptId": "concept.MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.MapOverview.zoom",
+      "kind": "rtp.action",
+      "props": {
+        "name": "zoom",
+        "signature": "zoom(delta)",
+        "description": "standard map navigation. Updates `viewport`.",
+        "conceptId": "concept.MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.clear",
+      "kind": "rtp.action",
+      "props": {
+        "name": "clear",
+        "signature": "clear(field)",
+        "description": "unset a field where \"not set\" is meaningful (distinct from \"false\" for booleans, etc.).",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.defineTemplate",
+      "kind": "rtp.action",
+      "props": {
+        "name": "defineTemplate",
+        "signature": "defineTemplate(collection, fields)",
+        "description": "initial template at Collection creation.",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.edit",
+      "kind": "rtp.action",
+      "props": {
+        "name": "edit",
+        "signature": "edit(review, data)",
+        "description": "change values within the template.",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.editTemplate",
+      "kind": "rtp.action",
+      "props": {
+        "name": "editTemplate",
+        "signature": "editTemplate(collection, newFields)",
+        "description": "modify. Existing instances reconcile (missing required fields prompt; removed fields archived but not destroyed).",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.start",
+      "kind": "rtp.action",
+      "props": {
+        "name": "start",
+        "signature": "start(collection, location)",
+        "description": "produce a draft Review for a Location in this Collection. Pre-filled with sensible defaults (today's date, Unvisited, etc.).",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.submit",
+      "kind": "rtp.action",
+      "props": {
+        "name": "submit",
+        "signature": "submit(review, data)",
+        "description": "commit the instance. Becomes the entry's Review.",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "action.concept.Review.useBuiltIn",
+      "kind": "rtp.action",
+      "props": {
+        "name": "useBuiltIn",
+        "signature": "useBuiltIn(collection, templateName)",
+        "description": "adopt a built-in template (Coffee Ranking, Wishlist, Geo Diary, etc.) as the starting point.",
+        "conceptId": "concept.Review"
+      },
+      "tags": []
+    },
+    {
+      "id": "composite.nav.CollectionDetail",
+      "kind": "statechart.composite",
+      "props": {
+        "description": "One Collection: its entries shown as either a map or a list projection (toggleable). Entry point for adding/removing entries, editing the template, and exporting/sharing.",
+        "tags": [
+          "detail"
+        ],
+        "initial": "mapProjection",
+        "parallel": false
+      },
+      "tags": [
+        "detail"
+      ]
+    },
+    {
+      "id": "composite.overlay.ReviewForm",
+      "kind": "statechart.composite",
+      "props": {
+        "description": "Author or edit a Review instance against the Collection's template. Two substates: `editing` (the form is open) and `submitting` (commit in flight).",
+        "tags": [
+          "form"
+        ],
+        "initial": "editing",
+        "parallel": false
+      },
+      "tags": [
+        "form"
+      ]
+    },
+    {
+      "id": "concept.Collection",
+      "kind": "rtp.concept",
+      "props": {
+        "name": "Collection",
+        "purpose": "Let a user organize a set of Location entries under one shared review template, so they can build a personal record of any kind of place-bound activity (cafés ranked, restaurants visited, days journaled).",
+        "state": "- `name` — user-provided label.\n- `entries` — set of `(Location, Review)` pairs. The same Location may appear in many Collections; each appearance is a distinct entry with its own Review.\n- `created`, `last_modified` — for sorting and sync.\n- `appearance` — visual identity used on the map (color, pin style). Set on creation; editable.\n\nThe Collection's review template lives in the Review concept (§3), not here. The Collection knows that *its* entries' Reviews share a template, but does not own the template's structure.",
+        "operationalPrinciple": "A user creates a Collection \"Drip Coffee,\" authors its Review template (via §3) to include stars and coffee-style, and `addEntry(BlueBottleMintPlaza, review)` where the Review carries the per-place data. Later they add Blue Bottle to a different Collection \"Geo Diary\" with a different Review template; the two entries are independent. Browsing Drip Coffee shows only the coffee-shaped entries."
+      },
+      "tags": []
+    },
+    {
+      "id": "concept.Location",
+      "kind": "rtp.concept",
+      "props": {
+        "name": "Location",
+        "purpose": "Let a user designate a real-world place once, and refer to it from anywhere in the app, regardless of which provider supplied its identity.",
+        "state": "- `coordinates` — `(lat, lng)`. Always present.\n- `displayName` — human-readable label.\n- `sourceType` — which provider asserted this Location: `google`, `osm`, `apple`, `manual`, etc.\n- `sourceId` — stable id within that provider (`place_id`, OSM node id, generated UUID for `manual`).\n- `cachedMetadata` — provider-supplied snapshot at import time (address, category, etc.).\n- `refreshable` — whether the source can be re-queried for updated metadata.\n\n`(sourceType, sourceId)` is the identity. Two Locations with the same `(lat, lng)` from different providers are distinct.",
+        "operationalPrinciple": "A user searches \"Blue Bottle Mint Plaza\" via the Google provider and resolves a Location. They add it to two Collections. Later they tap the Location and choose \"Open in Google Maps\"; the OS hands off to the Google Maps app, which opens at the same coordinates. Their entries in both Collections are unaffected."
+      },
+      "tags": []
+    },
+    {
+      "id": "concept.MapOverview",
+      "kind": "rtp.concept",
+      "props": {
+        "name": "Map Overview",
+        "purpose": "Give the user, on every app launch, an immediate spatial view of everything they care about — all Collections, all entries, with enough visual encoding to read the state of their world at a glance.",
+        "state": "- `viewport` — current `(center, zoom, bearing)`. Persisted across launches.\n- `visiblePins` — for each entry across all Collections, a pin styled by:\n  - **fill color** = the owning Collection's `appearance` color\n  - **outline** = same color as fill for visited entries; pin is **gray with a colored outline** for unvisited entries (where the schema has a Visited/Unvisited concept)\n- `collectionFilter` — set of Collections currently shown. Defaults to \"all.\"\n- `selectedPin` — currently focused entry, if any.",
+        "operationalPrinciple": "A user taps the RTP icon. Within ~200ms, they see their last viewport with pins from all their Collections: orange-filled pins for \"Drip Coffee\" (visited), orange-outlined gray pins for cafés on their wishlist, green-filled pins for \"NYT Top 100\" places they've been, green-outlined gray pins for the rest of the NYT list. Without any further action, they understand the state of their world. Tapping a pin reveals which Collection it belongs to and the entry's data."
+      },
+      "tags": []
+    },
+    {
+      "id": "concept.Review",
+      "kind": "rtp.concept",
+      "props": {
+        "name": "Review",
+        "purpose": "Let a user capture a structured evaluation of a Location within the context of a particular Collection — restaurants reviewed by stars and dish notes; coffee shops by roast style and a power-ranking position; diary entries by date and freeform text.\n\nA Review has two faces, kept inside one concept because they share a single purpose (defining and capturing the evaluation):\n\n1. A **template** — the shape of the form, authored once per Collection.\n2. An **instance** — the filled-in data for a specific entry.",
+        "state": "Per Collection (template):\n\n- `template` — an ordered list of fields. Each field has a `name`, a `type` (e.g. `stars`, `text`, `enum`, `boolean`, `date`, `power-ranking`), per-type configuration (e.g. `stars: 1–5`; `enum: [light, medium, dark]`), and a `required` flag.\n- `template_version` — bumped when the template changes; used to reconcile instances.\n\nPer entry (instance):\n\n- `data` — a map of `field-name → value`, conforming to the template at the recorded version.\n- `recorded_template_version` — the template version this instance was written against.\n- `created`, `last_modified`.",
+        "operationalPrinciple": "A user creating \"Drip Coffee\" authors the template: a 1–5 stars field, a `light|medium|dark` style enum, a Visited boolean, a power-ranking field, a freeform notes field. Later, sitting at a café, they `start(DripCoffee, BlueBottleMintPlaza)`. The app shows the template's form; they fill in stars=4, style=light, visited=true, notes=\"excellent\", and `submit`. The entry now carries this Review. Browsing the Collection, they see entries shaped exactly by their template."
+      },
+      "tags": []
+    },
+    {
+      "id": "region.nav",
+      "kind": "statechart.region",
+      "props": {
+        "description": "The primary screen the user is on. Persistent — does not change when overlays open and close.",
+        "initial": "MapOverview"
+      },
+      "tags": []
+    },
+    {
+      "id": "region.overlay",
+      "kind": "statechart.region",
+      "props": {
+        "description": "What sheet/modal is currently overlaid on top of the nav surface. Transitions to non-`none` open an overlay; transitions back to `none` close it. Multi-target transitions can simultaneously close an overlay and change the underlying nav state (see ReviewForm.submitting.SUBMITTED).",
+        "initial": "none"
+      },
+      "tags": []
+    },
+    {
+      "id": "state.nav.CollectionDetail.listProjection",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Entries shown as a scrollable list, sortable by date, distance, or power-ranking.",
+        "tags": [
+          "list"
+        ]
+      },
+      "tags": [
+        "list"
+      ]
+    },
+    {
+      "id": "state.nav.CollectionDetail.mapProjection",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Entries shown as pins on a map fitted to the Collection's bounds.",
+        "tags": [
+          "map"
+        ]
+      },
+      "tags": [
+        "map"
+      ]
+    },
+    {
+      "id": "state.nav.CollectionList",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Manage the user's Collections. Create new ones, open existing ones, import external lists.",
+        "tags": [
+          "list"
+        ],
+        "surface": "CollectionList",
+        "reads": [
+          "collections"
+        ]
+      },
+      "tags": [
+        "list"
+      ]
+    },
+    {
+      "id": "state.nav.EntryDetail",
+      "kind": "statechart.state",
+      "props": {
+        "description": "One entry — the (Location, Review) pair. Read-mostly surface; mutation goes through the ReviewForm overlay. Hosts the 'open externally' handoff to Google Maps / Apple Maps / etc.",
+        "tags": [
+          "detail"
+        ],
+        "surface": "EntryDetail",
+        "reads": [
+          "entry",
+          "location",
+          "review"
+        ]
+      },
+      "tags": [
+        "detail"
+      ]
+    },
+    {
+      "id": "state.nav.MapOverview",
+      "kind": "statechart.state",
+      "props": {
+        "description": "The everything view. Default landing surface. Shows pins for every entry in every visible Collection, colored by Collection appearance and styled by visited/unvisited state. See doc01.03 §4.",
+        "tags": [
+          "landing",
+          "map"
+        ],
+        "surface": "MapOverview",
+        "reads": [
+          "all-collections",
+          "all-entries",
+          "viewport"
+        ]
+      },
+      "tags": [
+        "landing",
+        "map"
+      ]
+    },
+    {
+      "id": "state.nav.Settings",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Configure providers, BYOK keys, sync target. Surface is intentionally under-specified until the relevant concept actions exist.",
+        "tags": [
+          "modal"
+        ],
+        "surface": "Settings",
+        "reads": [
+          "settings"
+        ]
+      },
+      "tags": [
+        "modal"
+      ]
+    },
+    {
+      "id": "state.overlay.AddToCollection",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Location-first flow: a Location is already chosen (dropped pin, shared link, etc.). User picks which Collection to add it to.",
+        "tags": [
+          "picker"
+        ],
+        "surface": "AddToCollection",
+        "reads": [
+          "collections",
+          "candidate-location"
+        ]
+      },
+      "tags": [
+        "picker"
+      ]
+    },
+    {
+      "id": "state.overlay.ImportFlow",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Import an external collection. Stub — concrete steps (source picker, schema mapping, preview, confirm) will be detailed when the import surface is unfolded.",
+        "tags": [
+          "modal"
+        ],
+        "surface": "ImportFlow"
+      },
+      "tags": [
+        "modal"
+      ]
+    },
+    {
+      "id": "state.overlay.LocationPicker",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Resolve, drop, or import a Location. Search via a configured provider, drop a manual pin, or import from a URL / file (KML, share link).",
+        "tags": [
+          "picker"
+        ],
+        "surface": "LocationPicker",
+        "reads": [
+          "provider-results"
+        ]
+      },
+      "tags": [
+        "picker"
+      ]
+    },
+    {
+      "id": "state.overlay.none",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Rest state — no overlay. The user sees only the underlying nav surface.",
+        "tags": [
+          "rest"
+        ]
+      },
+      "tags": [
+        "rest"
+      ]
+    },
+    {
+      "id": "state.overlay.ReviewForm.editing",
+      "kind": "statechart.state",
+      "props": {
+        "description": "User is filling in template fields.",
+        "tags": []
+      },
+      "tags": []
+    },
+    {
+      "id": "state.overlay.ReviewForm.submitting",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Submit in flight. Brief transient state; transitions both close the overlay and route nav to EntryDetail of the just-saved entry.",
+        "tags": []
+      },
+      "tags": []
+    },
+    {
+      "id": "state.overlay.SchemaBuilder",
+      "kind": "statechart.state",
+      "props": {
+        "description": "Author or edit a Collection's Review template — the schema that governs every Review in this Collection. Add/remove/reorder fields; pick field types (stars, enum, boolean, date, power-ranking, text). Adopt a built-in template as a starting point.",
+        "tags": [
+          "form"
+        ],
+        "surface": "SchemaBuilder",
+        "reads": [
+          "template"
+        ]
+      },
+      "tags": [
+        "form"
+      ]
+    },
+    {
+      "id": "transition.composite.nav.CollectionDetail.BACK",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "BACK",
+        "description": "Return to the everything view.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.composite.nav.CollectionDetail.TAP_ADD_ENTRY",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_ADD_ENTRY",
+        "description": "User starts the Collection-first add flow. LocationPicker resolves a Location, then ReviewForm captures the per-entry Review.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.composite.nav.CollectionDetail.TAP_EDIT_TEMPLATE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_EDIT_TEMPLATE",
+        "description": "User opens the Review template editor for this Collection.",
+        "actions": [
+          "Review.editTemplate"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.composite.nav.CollectionDetail.TAP_ENTRY",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_ENTRY",
+        "description": "User opens a single entry to inspect its Location and Review.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.composite.nav.CollectionDetail.TAP_EXPORT",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_EXPORT",
+        "description": "User exports this Collection as a portable bundle (KML / GeoJSON / RTP bundle).",
+        "actions": [
+          "Collection.export"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.composite.nav.CollectionDetail.TAP_SHARE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_SHARE",
+        "description": "User produces a shareable artifact. Sharing concept deferred — see doc01.04.",
+        "actions": [
+          "Collection.share"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.CollectionDetail.listProjection.TAP_TOGGLE_PROJECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_TOGGLE_PROJECTION",
+        "description": "User switches to the map view of this Collection.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.CollectionDetail.mapProjection.TAP_TOGGLE_PROJECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_TOGGLE_PROJECTION",
+        "description": "User switches to the list view of this Collection.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.CollectionList.BACK",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "BACK",
+        "description": "Return to the everything view.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.CollectionList.TAP_COLLECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_COLLECTION",
+        "description": "User opens a Collection to see its entries.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.CollectionList.TAP_IMPORT",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_IMPORT",
+        "description": "User imports an external collection (KML, GeoJSON, RTP bundle, third-party share URL).",
+        "actions": [
+          "Collection.import"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.CollectionList.TAP_NEW_COLLECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_NEW_COLLECTION",
+        "description": "User starts a new Collection. Opens the SchemaBuilder overlay to author the Review template before any entries can be added.",
+        "actions": [
+          "Collection.create"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.EntryDetail.BACK",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "BACK",
+        "description": "Return to the Collection.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.EntryDetail.TAP_EDIT_REVIEW",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_EDIT_REVIEW",
+        "description": "User edits the Review for this entry.",
+        "actions": [
+          "Review.edit"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.EntryDetail.TAP_OPEN_EXTERNAL",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_OPEN_EXTERNAL",
+        "description": "User hands off to an external map app (Google Maps, Apple Maps, OsmAnd, ...) for navigation or street view. RTP does not track what happens after.",
+        "actions": [
+          "Location.openExternally"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.EntryDetail.TAP_REFRESH_LOCATION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_REFRESH_LOCATION",
+        "description": "If the Location is refreshable, re-query the provider for updated metadata.",
+        "actions": [
+          "Location.refresh"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.EntryDetail.TAP_REMOVE_ENTRY",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_REMOVE_ENTRY",
+        "description": "User removes this entry from the Collection. Does not delete the Location — it may exist in other Collections.",
+        "actions": [
+          "Collection.removeEntry"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.MapOverview.TAP_ADD_HERE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_ADD_HERE",
+        "description": "User drops a pin at their current location (or a tapped map point) and chooses which Collection to add it to. Starts the Location-first flow from doc01.02 §3.",
+        "actions": [
+          "Location.dropPin"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.MapOverview.TAP_COLLECTION_TOGGLE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_COLLECTION_TOGGLE",
+        "description": "User toggles a Collection's visibility from the legend. Stays on this surface; the pin set updates.",
+        "actions": [
+          "MapOverview.toggleCollection"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.MapOverview.TAP_COLLECTIONS_BUTTON",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_COLLECTIONS_BUTTON",
+        "description": "User opens the list of Collections to manage them.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.MapOverview.TAP_JUMP_TO_COLLECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_JUMP_TO_COLLECTION",
+        "description": "User picks a Collection from the legend to fit the viewport to its entries.",
+        "actions": [
+          "MapOverview.jumpToCollection"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.MapOverview.TAP_PIN",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_PIN",
+        "description": "User taps a pin on the map to inspect that entry.",
+        "actions": [
+          "MapOverview.selectPin"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.MapOverview.TAP_SETTINGS",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_SETTINGS",
+        "description": "User opens settings (providers, BYOK keys, sync target).",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.nav.Settings.BACK",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "BACK",
+        "description": "Return to the everything view.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.AddToCollection.CLOSE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "CLOSE",
+        "description": "Cancel; close the overlay. Underlying nav remains where it was.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.AddToCollection.PICK_COLLECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "PICK_COLLECTION",
+        "description": "User picks a Collection; advance to fill out the Review.",
+        "actions": [
+          "Location.addToCollection"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.AddToCollection.TAP_NEW_COLLECTION",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_NEW_COLLECTION",
+        "description": "None of the existing Collections fit; create a new one.",
+        "actions": [
+          "Collection.create"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ImportFlow.CLOSE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "CLOSE",
+        "description": "Cancel the import.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ImportFlow.DONE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "DONE",
+        "description": "Import committed; close the overlay. Underlying nav (CollectionList) refreshes.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.LocationPicker.CLOSE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "CLOSE",
+        "description": "Cancel the add flow; close the overlay.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.LocationPicker.DROP_PIN",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "DROP_PIN",
+        "description": "User long-presses the map to drop a manual pin.",
+        "actions": [
+          "Location.dropPin"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.LocationPicker.PASTE_URL_OR_FILE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "PASTE_URL_OR_FILE",
+        "description": "User pastes a share URL or selects a KML/GeoJSON file.",
+        "actions": [
+          "Location.import"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.LocationPicker.PICK_RESULT",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "PICK_RESULT",
+        "description": "User picks one candidate; advance to fill out the Review.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.LocationPicker.TYPE_QUERY",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TYPE_QUERY",
+        "description": "User types a search query; provider returns candidates.",
+        "actions": [
+          "Location.resolve"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ReviewForm.editing.CLEAR_FIELD",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "CLEAR_FIELD",
+        "description": "User explicitly unsets a field. Distinct from 'false' for booleans (three-state widget).",
+        "actions": [
+          "Review.clear"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ReviewForm.editing.EDIT_FIELD",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "EDIT_FIELD",
+        "description": "User changes the value of any field.",
+        "actions": [
+          "Review.edit"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ReviewForm.editing.TAP_CANCEL",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_CANCEL",
+        "description": "User cancels without saving. Draft is discarded, overlay closes.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ReviewForm.editing.TAP_SUBMIT",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "TAP_SUBMIT",
+        "description": "User submits the Review.",
+        "actions": [
+          "Review.submit"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.ReviewForm.submitting.SUBMITTED",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "SUBMITTED",
+        "description": "Submit succeeded; close the overlay. (Underlying nav routing to EntryDetail will be handled by an action once the visualizer tolerates multi-target transitions; see doc02.02.01.)",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.SchemaBuilder.CLOSE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "CLOSE",
+        "description": "Cancel without committing template changes.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.SchemaBuilder.DEFINE_TEMPLATE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "DEFINE_TEMPLATE",
+        "description": "Initial template authoring at Collection creation.",
+        "actions": [
+          "Review.defineTemplate"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.SchemaBuilder.DONE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "DONE",
+        "description": "Template authored or edited; close the overlay. Caller's underlying nav resumes — typically CollectionDetail.",
+        "actions": []
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.SchemaBuilder.EDIT_TEMPLATE",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "EDIT_TEMPLATE",
+        "description": "Modify an existing template. Existing Reviews reconcile against the new shape.",
+        "actions": [
+          "Review.editTemplate"
+        ]
+      },
+      "tags": []
+    },
+    {
+      "id": "transition.state.overlay.SchemaBuilder.USE_BUILT_IN",
+      "kind": "statechart.transition",
+      "props": {
+        "event": "USE_BUILT_IN",
+        "description": "Adopt a built-in template (Coffee Ranking, Wishlist, Geo Diary) as the starting point.",
+        "actions": [
+          "Review.useBuiltIn"
+        ]
+      },
+      "tags": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.belongs-to-concept.action.concept.Collection.addEntry",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Collection.addEntry",
+      "to": "concept.Collection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Collection.create",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Collection.create",
+      "to": "concept.Collection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Collection.export",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Collection.export",
+      "to": "concept.Collection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Collection.import",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Collection.import",
+      "to": "concept.Collection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Collection.removeEntry",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Collection.removeEntry",
+      "to": "concept.Collection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Collection.share",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Collection.share",
+      "to": "concept.Collection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.addToCollection",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.addToCollection",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.dropPin",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.dropPin",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.import",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.import",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.merge",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.merge",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.openExternally",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.openExternally",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.refresh",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.refresh",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Location.resolve",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Location.resolve",
+      "to": "concept.Location",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.MapOverview.jumpToCollection",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.MapOverview.jumpToCollection",
+      "to": "concept.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.MapOverview.open",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.MapOverview.open",
+      "to": "concept.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.MapOverview.pan",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.MapOverview.pan",
+      "to": "concept.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.MapOverview.selectPin",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.MapOverview.selectPin",
+      "to": "concept.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.MapOverview.toggleCollection",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.MapOverview.toggleCollection",
+      "to": "concept.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.MapOverview.zoom",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.MapOverview.zoom",
+      "to": "concept.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.clear",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.clear",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.defineTemplate",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.defineTemplate",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.edit",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.edit",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.editTemplate",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.editTemplate",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.start",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.start",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.submit",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.submit",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.belongs-to-concept.action.concept.Review.useBuiltIn",
+      "kind": "rtp.belongs-to-concept",
+      "from": "action.concept.Review.useBuiltIn",
+      "to": "concept.Review",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.composite.nav.CollectionDetail.TAP_EDIT_TEMPLATE.action.concept.Review.editTemplate",
+      "kind": "statechart.invokes-action",
+      "from": "transition.composite.nav.CollectionDetail.TAP_EDIT_TEMPLATE",
+      "to": "action.concept.Review.editTemplate",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.composite.nav.CollectionDetail.TAP_EXPORT.action.concept.Collection.export",
+      "kind": "statechart.invokes-action",
+      "from": "transition.composite.nav.CollectionDetail.TAP_EXPORT",
+      "to": "action.concept.Collection.export",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.composite.nav.CollectionDetail.TAP_SHARE.action.concept.Collection.share",
+      "kind": "statechart.invokes-action",
+      "from": "transition.composite.nav.CollectionDetail.TAP_SHARE",
+      "to": "action.concept.Collection.share",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.CollectionList.TAP_IMPORT.action.concept.Collection.import",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.CollectionList.TAP_IMPORT",
+      "to": "action.concept.Collection.import",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.CollectionList.TAP_NEW_COLLECTION.action.concept.Collection.create",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.CollectionList.TAP_NEW_COLLECTION",
+      "to": "action.concept.Collection.create",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.EntryDetail.TAP_EDIT_REVIEW.action.concept.Review.edit",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.EntryDetail.TAP_EDIT_REVIEW",
+      "to": "action.concept.Review.edit",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.EntryDetail.TAP_OPEN_EXTERNAL.action.concept.Location.openExternally",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.EntryDetail.TAP_OPEN_EXTERNAL",
+      "to": "action.concept.Location.openExternally",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.EntryDetail.TAP_REFRESH_LOCATION.action.concept.Location.refresh",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.EntryDetail.TAP_REFRESH_LOCATION",
+      "to": "action.concept.Location.refresh",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.EntryDetail.TAP_REMOVE_ENTRY.action.concept.Collection.removeEntry",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.EntryDetail.TAP_REMOVE_ENTRY",
+      "to": "action.concept.Collection.removeEntry",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.MapOverview.TAP_ADD_HERE.action.concept.Location.dropPin",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.MapOverview.TAP_ADD_HERE",
+      "to": "action.concept.Location.dropPin",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.MapOverview.TAP_COLLECTION_TOGGLE.action.concept.MapOverview.toggleCollection",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.MapOverview.TAP_COLLECTION_TOGGLE",
+      "to": "action.concept.MapOverview.toggleCollection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.MapOverview.TAP_JUMP_TO_COLLECTION.action.concept.MapOverview.jumpToCollection",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.MapOverview.TAP_JUMP_TO_COLLECTION",
+      "to": "action.concept.MapOverview.jumpToCollection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.nav.MapOverview.TAP_PIN.action.concept.MapOverview.selectPin",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.nav.MapOverview.TAP_PIN",
+      "to": "action.concept.MapOverview.selectPin",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.AddToCollection.PICK_COLLECTION.action.concept.Location.addToCollection",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.AddToCollection.PICK_COLLECTION",
+      "to": "action.concept.Location.addToCollection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.AddToCollection.TAP_NEW_COLLECTION.action.concept.Collection.create",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.AddToCollection.TAP_NEW_COLLECTION",
+      "to": "action.concept.Collection.create",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.LocationPicker.DROP_PIN.action.concept.Location.dropPin",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.LocationPicker.DROP_PIN",
+      "to": "action.concept.Location.dropPin",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.LocationPicker.PASTE_URL_OR_FILE.action.concept.Location.import",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.LocationPicker.PASTE_URL_OR_FILE",
+      "to": "action.concept.Location.import",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.LocationPicker.TYPE_QUERY.action.concept.Location.resolve",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.LocationPicker.TYPE_QUERY",
+      "to": "action.concept.Location.resolve",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.ReviewForm.editing.CLEAR_FIELD.action.concept.Review.clear",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.ReviewForm.editing.CLEAR_FIELD",
+      "to": "action.concept.Review.clear",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.ReviewForm.editing.EDIT_FIELD.action.concept.Review.edit",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.ReviewForm.editing.EDIT_FIELD",
+      "to": "action.concept.Review.edit",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.ReviewForm.editing.TAP_SUBMIT.action.concept.Review.submit",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.ReviewForm.editing.TAP_SUBMIT",
+      "to": "action.concept.Review.submit",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.SchemaBuilder.DEFINE_TEMPLATE.action.concept.Review.defineTemplate",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.SchemaBuilder.DEFINE_TEMPLATE",
+      "to": "action.concept.Review.defineTemplate",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.SchemaBuilder.EDIT_TEMPLATE.action.concept.Review.editTemplate",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.SchemaBuilder.EDIT_TEMPLATE",
+      "to": "action.concept.Review.editTemplate",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.invokes-action.transition.state.overlay.SchemaBuilder.USE_BUILT_IN.action.concept.Review.useBuiltIn",
+      "kind": "statechart.invokes-action",
+      "from": "transition.state.overlay.SchemaBuilder.USE_BUILT_IN",
+      "to": "action.concept.Review.useBuiltIn",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.composite.nav.CollectionDetail",
+      "kind": "statechart.substate-of",
+      "from": "composite.nav.CollectionDetail",
+      "to": "region.nav",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.composite.overlay.ReviewForm",
+      "kind": "statechart.substate-of",
+      "from": "composite.overlay.ReviewForm",
+      "to": "region.overlay",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.nav.CollectionDetail.listProjection",
+      "kind": "statechart.substate-of",
+      "from": "state.nav.CollectionDetail.listProjection",
+      "to": "composite.nav.CollectionDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.nav.CollectionDetail.mapProjection",
+      "kind": "statechart.substate-of",
+      "from": "state.nav.CollectionDetail.mapProjection",
+      "to": "composite.nav.CollectionDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.nav.CollectionList",
+      "kind": "statechart.substate-of",
+      "from": "state.nav.CollectionList",
+      "to": "region.nav",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.nav.EntryDetail",
+      "kind": "statechart.substate-of",
+      "from": "state.nav.EntryDetail",
+      "to": "region.nav",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.nav.MapOverview",
+      "kind": "statechart.substate-of",
+      "from": "state.nav.MapOverview",
+      "to": "region.nav",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.nav.Settings",
+      "kind": "statechart.substate-of",
+      "from": "state.nav.Settings",
+      "to": "region.nav",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.AddToCollection",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.AddToCollection",
+      "to": "region.overlay",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.ImportFlow",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.ImportFlow",
+      "to": "region.overlay",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.LocationPicker",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.LocationPicker",
+      "to": "region.overlay",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.none",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.none",
+      "to": "region.overlay",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.ReviewForm.editing",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.ReviewForm.editing",
+      "to": "composite.overlay.ReviewForm",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.ReviewForm.submitting",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.ReviewForm.submitting",
+      "to": "composite.overlay.ReviewForm",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.substate-of.state.overlay.SchemaBuilder",
+      "kind": "statechart.substate-of",
+      "from": "state.overlay.SchemaBuilder",
+      "to": "region.overlay",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.composite.nav.CollectionDetail.state.nav.EntryDetail.TAP_ENTRY",
+      "kind": "statechart.transition",
+      "from": "composite.nav.CollectionDetail",
+      "to": "state.nav.EntryDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.composite.nav.CollectionDetail.state.nav.MapOverview.BACK",
+      "kind": "statechart.transition",
+      "from": "composite.nav.CollectionDetail",
+      "to": "state.nav.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.composite.nav.CollectionDetail.state.overlay.LocationPicker.TAP_ADD_ENTRY",
+      "kind": "statechart.transition",
+      "from": "composite.nav.CollectionDetail",
+      "to": "state.overlay.LocationPicker",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.composite.nav.CollectionDetail.state.overlay.SchemaBuilder.TAP_EDIT_TEMPLATE",
+      "kind": "statechart.transition",
+      "from": "composite.nav.CollectionDetail",
+      "to": "state.overlay.SchemaBuilder",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.CollectionDetail.listProjection.state.nav.CollectionDetail.mapProjection.TAP_TOGGLE_PROJECTION",
+      "kind": "statechart.transition",
+      "from": "state.nav.CollectionDetail.listProjection",
+      "to": "state.nav.CollectionDetail.mapProjection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.CollectionDetail.mapProjection.state.nav.CollectionDetail.listProjection.TAP_TOGGLE_PROJECTION",
+      "kind": "statechart.transition",
+      "from": "state.nav.CollectionDetail.mapProjection",
+      "to": "state.nav.CollectionDetail.listProjection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.CollectionList.composite.nav.CollectionDetail.TAP_COLLECTION",
+      "kind": "statechart.transition",
+      "from": "state.nav.CollectionList",
+      "to": "composite.nav.CollectionDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.CollectionList.state.nav.MapOverview.BACK",
+      "kind": "statechart.transition",
+      "from": "state.nav.CollectionList",
+      "to": "state.nav.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.CollectionList.state.overlay.ImportFlow.TAP_IMPORT",
+      "kind": "statechart.transition",
+      "from": "state.nav.CollectionList",
+      "to": "state.overlay.ImportFlow",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.CollectionList.state.overlay.SchemaBuilder.TAP_NEW_COLLECTION",
+      "kind": "statechart.transition",
+      "from": "state.nav.CollectionList",
+      "to": "state.overlay.SchemaBuilder",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.EntryDetail.composite.nav.CollectionDetail.BACK",
+      "kind": "statechart.transition",
+      "from": "state.nav.EntryDetail",
+      "to": "composite.nav.CollectionDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.EntryDetail.composite.nav.CollectionDetail.TAP_REMOVE_ENTRY",
+      "kind": "statechart.transition",
+      "from": "state.nav.EntryDetail",
+      "to": "composite.nav.CollectionDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.EntryDetail.composite.overlay.ReviewForm.TAP_EDIT_REVIEW",
+      "kind": "statechart.transition",
+      "from": "state.nav.EntryDetail",
+      "to": "composite.overlay.ReviewForm",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.MapOverview.state.nav.CollectionList.TAP_COLLECTIONS_BUTTON",
+      "kind": "statechart.transition",
+      "from": "state.nav.MapOverview",
+      "to": "state.nav.CollectionList",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.MapOverview.state.nav.EntryDetail.TAP_PIN",
+      "kind": "statechart.transition",
+      "from": "state.nav.MapOverview",
+      "to": "state.nav.EntryDetail",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.MapOverview.state.nav.Settings.TAP_SETTINGS",
+      "kind": "statechart.transition",
+      "from": "state.nav.MapOverview",
+      "to": "state.nav.Settings",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.MapOverview.state.overlay.AddToCollection.TAP_ADD_HERE",
+      "kind": "statechart.transition",
+      "from": "state.nav.MapOverview",
+      "to": "state.overlay.AddToCollection",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.nav.Settings.state.nav.MapOverview.BACK",
+      "kind": "statechart.transition",
+      "from": "state.nav.Settings",
+      "to": "state.nav.MapOverview",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.AddToCollection.composite.overlay.ReviewForm.PICK_COLLECTION",
+      "kind": "statechart.transition",
+      "from": "state.overlay.AddToCollection",
+      "to": "composite.overlay.ReviewForm",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.AddToCollection.state.overlay.none.CLOSE",
+      "kind": "statechart.transition",
+      "from": "state.overlay.AddToCollection",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.AddToCollection.state.overlay.SchemaBuilder.TAP_NEW_COLLECTION",
+      "kind": "statechart.transition",
+      "from": "state.overlay.AddToCollection",
+      "to": "state.overlay.SchemaBuilder",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.ImportFlow.state.overlay.none.CLOSE",
+      "kind": "statechart.transition",
+      "from": "state.overlay.ImportFlow",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.ImportFlow.state.overlay.none.DONE",
+      "kind": "statechart.transition",
+      "from": "state.overlay.ImportFlow",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.LocationPicker.composite.overlay.ReviewForm.PICK_RESULT",
+      "kind": "statechart.transition",
+      "from": "state.overlay.LocationPicker",
+      "to": "composite.overlay.ReviewForm",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.LocationPicker.state.overlay.none.CLOSE",
+      "kind": "statechart.transition",
+      "from": "state.overlay.LocationPicker",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.ReviewForm.editing.state.overlay.none.TAP_CANCEL",
+      "kind": "statechart.transition",
+      "from": "state.overlay.ReviewForm.editing",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.ReviewForm.editing.state.overlay.ReviewForm.submitting.TAP_SUBMIT",
+      "kind": "statechart.transition",
+      "from": "state.overlay.ReviewForm.editing",
+      "to": "state.overlay.ReviewForm.submitting",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.ReviewForm.submitting.state.overlay.none.SUBMITTED",
+      "kind": "statechart.transition",
+      "from": "state.overlay.ReviewForm.submitting",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.SchemaBuilder.state.overlay.none.CLOSE",
+      "kind": "statechart.transition",
+      "from": "state.overlay.SchemaBuilder",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    },
+    {
+      "id": "edge.transition.state.overlay.SchemaBuilder.state.overlay.none.DONE",
+      "kind": "statechart.transition",
+      "from": "state.overlay.SchemaBuilder",
+      "to": "state.overlay.none",
+      "props": {},
+      "tags": []
+    }
+  ],
+  "defaultView": "statechart"
+}

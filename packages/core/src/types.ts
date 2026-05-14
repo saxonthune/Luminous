@@ -67,6 +67,8 @@ export interface Graph {
   /** Adjacency indices for traversal. */
   outgoing: ReadonlyMap<NodeId, ReadonlySet<EdgeId>>;
   incoming: ReadonlyMap<NodeId, ReadonlySet<EdgeId>>;
+  /** Pack ids and semver ranges declared by this graph's source file. */
+  packs: Record<PackId, string>;
 }
 
 // ============================================================================

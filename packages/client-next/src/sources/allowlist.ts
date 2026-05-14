@@ -2,6 +2,7 @@
 // Edit this list to expose more fixtures as they migrate to v3.
 const ALLOWED_PATHS: ReadonlySet<string> = new Set([
   'rtp-statechart.graph.json',
+  'rtp-navigation.graph.json',
   'sample-primitives.graph.json',
 ]);
 

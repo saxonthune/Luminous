@@ -1,7 +1,7 @@
 ---
 title: Pack Contract
-summary: What a pack must provide, what it may provide, how registration works, and the current enforcement gap between the contract and CanvasHost's hard-wired references.
-tags: [pack, contract, schema, registry, gap]
+summary: What a pack must provide, what it may provide, how registration works, and how the boundary is enforced at runtime.
+tags: [pack, contract, schema, registry]
 deps: [doc02.11]
 ---
 
@@ -54,30 +54,31 @@ The renderer getter (`packages/core/src/registry.ts:138`) implements level fallb
 
 Packs are registered at module load time (call `registerPack` at the top level of the pack's `index.ts`, or call `ensurePacksRegistered()` in the app shell before the first load). There is no deferred or lazy registration mechanism.
 
-## The enforcement gap
+## Enforcement at runtime (gap closed)
 
-Luminous **defines** the pack contract but does not yet **enforce** it as a runtime seam.
-
-`CanvasHost` (`packages/client-next/src/CanvasHost.tsx`) hard-wires the RTP statechart pack directly:
+The pack contract is now enforced as a runtime seam. `CanvasHost` no longer imports
+any pack directly. Views and layers are resolved from the registry using the pack ids
+declared in `graph.packs`:
 
 ```ts
-// CanvasHost.tsx:15
-const [activeViewId, setActiveViewId] = createSignal<string>(rtpStatechartPack.views[0].id);
-
-// CanvasHost.tsx:24
-const activeView = createMemo<View>(
-  () => rtpStatechartPack.views.find((v) => v.id === activeViewId()) ?? rtpStatechartPack.views[0],
+// CanvasHost.tsx
+const declaredPacks = createMemo<Pack[]>(() =>
+  Object.keys(props.graph.packs)
+    .map((id) => getPack(id))
+    .filter((p): p is Pack => Boolean(p))
 );
-
-// CanvasHost.tsx:28
-const activeLayers = createMemo(() =>
-  rtpStatechartPack.layers.filter((l) => l.id in activeView().layers),
-);
+const availableViews = createMemo<View[]>(() => declaredPacks().flatMap((p) => p.views));
+const availableLayers = createMemo<Layer[]>(() => declaredPacks().flatMap((p) => p.layers));
 ```
 
-The correct architecture would have `CanvasHost` read the loaded graph's `packs` declaration, look up each pack in the registry, and resolve views and layers from there. Until that indirection is added, loading a `.graph.json` that references a different pack will render with the RTP pack's views regardless.
+`graph.packs` is now a field on the in-memory `Graph` type (threaded from `GraphFileV3`
+through `buildGraph` and `loadGraphFromText`). When the graph declares no packs or declares
+a pack that is not registered, `CanvasHost` renders an empty-state message rather than
+crashing.
 
-This is a known deferred follow-up (see `doc02.15` for where MCP tool design intersects with this gap). The gap does not affect correctness for the current single-pack workflow; it becomes a defect when a second pack ships.
+Any `.graph.json` that declares a registered pack will populate `ViewSwitcher` and
+`LayerToolbar` from that pack's views and layers. The rtp-statechart pack is not
+privileged; it is just the first registered pack.
 
 ## Third-party pack checklist
 

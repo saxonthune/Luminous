@@ -2,6 +2,13 @@ import { createContext, useContext } from 'solid-js';
 import type { Transform } from './useViewport.js';
 import type { ConnectionDragState } from './useConnectionDrag.js';
 
+export interface NodeRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface CanvasContextValue {
   /** Current viewport transform { x, y, k } — signal accessor */
   transform: () => Transform;
@@ -23,6 +30,12 @@ export interface CanvasContextValue {
   setSelectedIds: (ids: string[]) => void;
   /** Whether Ctrl/Meta key is currently held — signal accessor */
   ctrlHeld: () => boolean;
+  /** Register a node's canvas-space bounding rect (called by NodeContainer). */
+  registerNodeRect: (id: string, rect: NodeRect) => void;
+  /** Unregister a node's rect on cleanup (called by NodeContainer). */
+  unregisterNodeRect: (id: string) => void;
+  /** Reactive accessor — returns the current node rect map. Tracks rect version. */
+  getNodeRects: () => ReadonlyMap<string, NodeRect>;
 }
 
 export const CanvasContext = createContext<CanvasContextValue>();

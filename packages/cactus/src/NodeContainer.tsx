@@ -1,4 +1,5 @@
-import type { JSX } from 'solid-js';
+import { createRenderEffect, onCleanup, type JSX } from 'solid-js';
+import { useCanvasContext } from './CanvasContext.js';
 
 export interface NodeContainerProps {
   nodeId: string;
@@ -12,6 +13,21 @@ export interface NodeContainerProps {
 }
 
 export function NodeContainer(props: NodeContainerProps): JSX.Element {
+  const ctx = useCanvasContext();
+
+  // createRenderEffect runs synchronously during the render pass so that
+  // node rects are registered before the EdgeLayer (which comes after in
+  // the Canvas JSX) reads them for geometry computation.
+  createRenderEffect(() => {
+    ctx.registerNodeRect(props.nodeId, {
+      x: props.x(),
+      y: props.y(),
+      w: props.w(),
+      h: props.h(),
+    });
+    onCleanup(() => ctx.unregisterNodeRect(props.nodeId));
+  });
+
   return (
     <div
       data-node-id={props.nodeId}

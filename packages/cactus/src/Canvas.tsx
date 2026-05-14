@@ -5,7 +5,9 @@ import { useConnectionDrag } from './useConnectionDrag.js';
 import { useBoxSelect } from './useBoxSelect.js';
 import { useSelection } from './useSelection.js';
 import { DotGrid } from './DotGrid.js';
-import { CanvasContext, type CanvasContextValue } from './CanvasContext.js';
+import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
+import { EdgeLayer } from './EdgeLayer.js';
+import type { EdgeDeclaration } from './types.js';
 
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
@@ -16,6 +18,14 @@ export interface ConnectionPreviewCoords {
   currentY: number;
 }
 
+/**
+ * Cactus is domain-agnostic. It accepts opaque node and edge declarations with
+ * geometry hints. It does not know about kinds, views, roles, layers, disclosure,
+ * or packs. All domain concepts are the host's responsibility.
+ *
+ * Node positions are tracked internally via CanvasContext (NodeContainer registers
+ * on mount). Edge geometry is computed from these positions.
+ */
 export interface CanvasProps {
   viewportOptions?: UseViewportOptions;
   connectionDrag?: {
@@ -25,7 +35,8 @@ export interface CanvasProps {
   boxSelect?: {
     getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
   };
-  renderEdges?: (transform: Transform) => JSX.Element;
+  /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
+  edges?: EdgeDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
   class?: string;
   children: JSX.Element;
@@ -51,6 +62,22 @@ export interface CanvasRef {
 
 export function Canvas(props: CanvasProps) {
   const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(props.viewportOptions);
+
+  // Node rect registry — populated by NodeContainer via context; consumed by EdgeLayer.
+  const nodeRectsData = new Map<string, NodeRect>();
+  const [nodeRectsVersion, setNodeRectsVersion] = createSignal(0);
+  const registerNodeRect = (id: string, rect: NodeRect) => {
+    nodeRectsData.set(id, rect);
+    setNodeRectsVersion((v) => v + 1);
+  };
+  const unregisterNodeRect = (id: string) => {
+    nodeRectsData.delete(id);
+    setNodeRectsVersion((v) => v + 1);
+  };
+  const getNodeRects = (): ReadonlyMap<string, NodeRect> => {
+    nodeRectsVersion(); // reactive dependency — re-evaluates when any rect changes
+    return nodeRectsData;
+  };
 
   const connectionDragResult = useConnectionDrag(
     props.connectionDrag
@@ -118,6 +145,9 @@ export function Canvas(props: CanvasProps) {
     onNodePointerDown,
     setSelectedIds,
     ctrlHeld,
+    registerNodeRect,
+    unregisterNodeRect,
+    getNodeRects,
   };
 
   return (
@@ -159,10 +189,10 @@ export function Canvas(props: CanvasProps) {
           {props.children}
         </div>
 
-        <Show when={props.renderEdges}>
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+        <Show when={(props.edges?.length ?? 0) > 0}>
+          <svg data-cactus-edge-layer width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              {props.renderEdges!(transform())}
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} />
             </g>
           </svg>
         </Show>

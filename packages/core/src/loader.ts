@@ -77,7 +77,7 @@ export function loadGraphFromText(json: string): Graph {
     throw new Error(`loadGraphFile: validation errors:\n${validationErrors.join('\n')}`);
   }
 
-  return buildGraph(nodes, edges);
+  return buildGraph(nodes, edges, packs as Record<string, string>);
 }
 
 export async function loadGraphFile(url: string): Promise<Graph> {

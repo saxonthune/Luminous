@@ -1,6 +1,6 @@
-import { createSignal, createMemo } from 'solid-js';
-import type { Graph, View } from '@luminous/core';
-import rtpStatechartPack from '@luminous/pack-rtp-statechart';
+import { createSignal, createMemo, Show } from 'solid-js';
+import type { Graph, View, Layer, Pack } from '@luminous/core';
+import { getPack } from '@luminous/core';
 import { PgCanvasView, type ViewerHandle } from './PgCanvasView';
 import { ViewSwitcher } from './views/ViewSwitcher';
 import { LayerToolbar } from './layers/LayerToolbar';
@@ -12,7 +12,6 @@ interface CanvasHostProps {
 }
 
 export function CanvasHost(props: CanvasHostProps) {
-  const [activeViewId, setActiveViewId] = createSignal<string>(rtpStatechartPack.views[0].id);
   const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('grid');
   const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);
 
@@ -20,29 +19,51 @@ export function CanvasHost(props: CanvasHostProps) {
     () => props.sourceId.split('/').pop()?.replace(/\.graph\.json$/, '') ?? props.sourceId,
   );
 
-  const activeView = createMemo<View>(
-    () => rtpStatechartPack.views.find((v) => v.id === activeViewId()) ?? rtpStatechartPack.views[0],
+  const declaredPacks = createMemo<Pack[]>(() =>
+    Object.keys(props.graph.packs)
+      .map((id) => getPack(id))
+      .filter((p): p is Pack => Boolean(p))
   );
 
-  const activeLayers = createMemo(() =>
-    rtpStatechartPack.layers.filter((l) => l.id in activeView().layers),
+  const availableViews = createMemo<View[]>(() => declaredPacks().flatMap((p) => p.views));
+  const availableLayers = createMemo<Layer[]>(() => declaredPacks().flatMap((p) => p.layers));
+
+  const [activeViewId, setActiveViewId] = createSignal<string>('');
+  const activeView = createMemo<View | undefined>(
+    () => availableViews().find((v) => v.id === activeViewId()) ?? availableViews()[0],
+  );
+  const activeLayers = createMemo<Layer[]>(() =>
+    activeView() ? availableLayers().filter((l) => activeView()!.layers[l.id] !== undefined) : [],
   );
 
   return (
     <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
-      <ViewSwitcher
-        views={rtpStatechartPack.views}
-        activeViewId={activeViewId()}
-        onChange={setActiveViewId}
-      />
-      <LayerToolbar canvasId={canvasId()} viewId={activeViewId()} layers={activeLayers()} />
-      <LayoutToolbar handle={viewerHandle} algorithm={algorithm} onAlgorithmChange={setAlgorithm} />
-      <PgCanvasView
-        graph={props.graph}
-        view={activeView()}
-        algorithm={algorithm()}
-        ref={setViewerHandle}
-      />
+      <Show
+        when={availableViews().length > 0}
+        fallback={
+          <div style={{ padding: '24px', color: '#888' }}>
+            No views available. Check that the graph declares a registered pack.
+          </div>
+        }
+      >
+        <ViewSwitcher
+          views={availableViews()}
+          activeViewId={activeView()?.id ?? ''}
+          onChange={setActiveViewId}
+        />
+        <LayerToolbar canvasId={canvasId()} viewId={activeView()?.id ?? ''} layers={activeLayers()} />
+        <LayoutToolbar handle={viewerHandle} algorithm={algorithm} onAlgorithmChange={setAlgorithm} />
+        <Show when={activeView()}>
+          {(view) => (
+            <PgCanvasView
+              graph={props.graph}
+              view={view()}
+              algorithm={algorithm()}
+              ref={setViewerHandle}
+            />
+          )}
+        </Show>
+      </Show>
     </div>
   );
 }

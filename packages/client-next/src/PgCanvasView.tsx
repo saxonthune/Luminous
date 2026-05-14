@@ -1,10 +1,10 @@
-import { For, createResource, Show, createMemo } from 'solid-js';
+import { For, createResource, Show, createMemo, createSignal, createEffect } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
 import type { Graph, View, DisclosureLevel, RenderContext } from '@luminous/core';
-import { evaluateView, getNodeRenderer } from '@luminous/core';
+import { evaluateView, getNodeRenderer, getEdgeRenderer } from '@luminous/core';
 import { Canvas, NodeContainer, resolveAbsolutePositionByParentOf, gridLayout, elkLayout, useCanvasContext } from '@luminous/cactus';
-import type { ElkLayoutOutput, CanvasRef } from '@luminous/cactus';
+import type { ElkLayoutOutput, CanvasRef, EdgeDeclaration } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
@@ -84,15 +84,15 @@ function renderNodes(
 }
 
 /**
- * Inner component rendered inside <Canvas> so it can access CanvasContext
- * via createInspector(). Uses a Portal to render the inspector panel outside
- * the Canvas's CSS transform so position:fixed works correctly.
+ * Inner component rendered inside <Canvas> so it can access CanvasContext.
+ * Exposes its computed edges via the onEdges callback (called reactively when edges change).
  */
 function CanvasInner(props: {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk';
   exposeRects?: (getter: () => NodeRect[]) => void;
+  onEdges?: (edges: EdgeDeclaration[]) => void;
 }): JSX.Element {
   ensurePacksRegistered();
   const inspector = createInspector();
@@ -113,6 +113,49 @@ function CanvasInner(props: {
     graph: props.graph,
     inspect: (id) => inspector.open(id),
   };
+
+  // Build and expose edge declarations reactively.
+  const edgeDeclarations = createMemo<EdgeDeclaration[]>(() => {
+    const decls: EdgeDeclaration[] = [];
+    const currentLevel = level();
+
+    for (const edge of scene().arrows) {
+      const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
+      const capturedEdge = edge;
+      const label = edgeRenderer
+        ? () => edgeRenderer(capturedEdge, renderCtx) as JSX.Element
+        : undefined;
+      decls.push({
+        id: edge.id,
+        sourceId: edge.from,
+        targetId: edge.to,
+        styling: { arrowHead: true, dash: 'solid' },
+        label,
+      });
+    }
+
+    // v1: summary edges render as dotted lines (chip-on-source is a follow-up)
+    for (const edge of scene().summaryEdges) {
+      const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
+      const capturedEdge = edge;
+      const label = edgeRenderer
+        ? () => edgeRenderer(capturedEdge, renderCtx) as JSX.Element
+        : undefined;
+      decls.push({
+        id: edge.id,
+        sourceId: edge.from,
+        targetId: edge.to,
+        styling: { dash: 'dotted', arrowHead: false },
+        label,
+      });
+    }
+
+    return decls;
+  });
+
+  createEffect(() => {
+    props.onEdges?.(edgeDeclarations());
+  });
 
   if (props.algorithm === 'elk') {
     const [elkResult] = createResource(
@@ -174,6 +217,10 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
   let canvasHandle: CanvasRef | undefined;
   let getRects: (() => NodeRect[]) | undefined;
 
+  // Edges are computed inside CanvasInner (needs CanvasContext for level),
+  // then surfaced here and passed to Canvas via the edges prop.
+  const [edges, setEdges] = createSignal<EdgeDeclaration[]>([]);
+
   const emit = () => {
     if (!canvasHandle || !getRects || !props.ref) return;
     props.ref({
@@ -184,12 +231,13 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
   };
 
   return (
-    <Canvas ref={(r) => { canvasHandle = r; emit(); }}>
+    <Canvas ref={(r) => { canvasHandle = r; emit(); }} edges={edges()}>
       <CanvasInner
         graph={props.graph}
         view={props.view}
         algorithm={props.algorithm}
         exposeRects={(g) => { getRects = g; emit(); }}
+        onEdges={setEdges}
       />
     </Canvas>
   );
