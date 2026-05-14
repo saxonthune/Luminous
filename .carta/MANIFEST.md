@@ -87,7 +87,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.10.00 | `10-examples/00-index.md` | Use cases that act as gauges for Luminous capabilities — each example defines features the product must enable | examples, gauges, use-cases | — | — | — |
 | doc02.10.01 | `10-examples/01-solidjs-reference-graph.md` | Static analysis of a Solid.js codebase rendered as a canvas — components, signals, and their consumer edges (milestone 1) | examples, milestone-1, static-analysis, solid, pipeline | doc01.03.01, doc02.07 | — | — |
 | doc02.10.02 | `10-examples/02-api-coverage-workbench.md` | Tri-layer canvas — OpenAPI controllers, JSON Schema aggregate, SQL tables — coverage edges reveal data-flow gaps | examples, openapi, json-schema, sql, coverage, gap-analysis | doc02.08, doc02.09 | — | — |
-| doc02.10.03 | `10-examples/03-rtp-statechart-canvas.md` | Worked example: render RankThePlanet's XState navigation chart and concept inventory as a property-graph canvas. Two views (statechart, concept map) prove the role-based projection design end-to-end. | examples, statechart, xstate, concepts, rtp, property-graph | doc02.11 | — | concepts.markdown, navigation.statechart.json |
+| doc02.10.03 | `10-examples/03-rtp-statechart-canvas.md` | Worked example. RankThePlanet (RTP) hands Luminous a navigation statechart and a concept inventory; Luminous renders both as one property graph with two views (statechart shape, concept-coverage shape). | examples, statechart, xstate, concepts, rtp, property-graph | doc02.11 | — | concepts.json, concepts.markdown, navigation.statechart.json |
 
 ## 03-research-sessions — Research Sessions
 

@@ -1,20 +1,29 @@
 import { For, createResource, Show, createMemo } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
-import type { Graph, View, Node, DisclosureLevel, RenderContext } from '@luminous/canvas-core';
+import type { Graph, View, DisclosureLevel, RenderContext } from '@luminous/canvas-core';
 import { evaluateView, getNodeRenderer } from '@luminous/canvas-core';
 import { Canvas, NodeContainer, resolveAbsolutePositionByParentOf, gridLayout, elkLayout, useCanvasContext } from '@luminous/cactus';
-import type { ElkLayoutOutput } from '@luminous/cactus';
+import type { ElkLayoutOutput, CanvasRef } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
 import { ensurePacksRegistered } from './registerPacks';
 import { levelFromZoom } from './disclosure/levelFromZoom';
 
+export interface ViewerHandle {
+  fitView: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+}
+
+type NodeRect = { id: string; x: number; y: number; width: number; height: number };
+
 export interface PgCanvasViewProps {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk';
+  ref?: (handle: ViewerHandle) => void;
 }
 
 /** BFS topological order from roots through childrenOf — parents before children. */
@@ -83,6 +92,7 @@ function CanvasInner(props: {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk';
+  exposeRects?: (getter: () => NodeRect[]) => void;
 }): JSX.Element {
   ensurePacksRegistered();
   const inspector = createInspector();
@@ -114,6 +124,16 @@ function CanvasInner(props: {
       (input): Promise<ElkLayoutOutput> => elkLayout({ ...input, direction: 'RIGHT' }),
     );
 
+    props.exposeRects?.(() => {
+      const lay = elkResult();
+      if (!lay) return [];
+      return containment().rootIds.flatMap((id) => {
+        const pos = lay.positions.get(id);
+        const sz = lay.sizes.get(id);
+        return pos && sz ? [{ id, x: pos.x, y: pos.y, width: sz.w, height: sz.h }] : [];
+      });
+    });
+
     return (
       <InspectorContext.Provider value={inspector}>
         <Show when={elkResult()} fallback={<div style={{ padding: '8px', color: '#888' }}>Computing layout…</div>}>
@@ -131,6 +151,15 @@ function CanvasInner(props: {
     childrenOf: containment().childrenOf,
   }));
 
+  props.exposeRects?.(() => {
+    const lay = layout();
+    return containment().rootIds.flatMap((id) => {
+      const pos = lay.positions.get(id);
+      const sz = lay.sizes.get(id);
+      return pos && sz ? [{ id, x: pos.x, y: pos.y, width: sz.w, height: sz.h }] : [];
+    });
+  });
+
   return (
     <InspectorContext.Provider value={inspector}>
       {renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx)}
@@ -142,9 +171,26 @@ function CanvasInner(props: {
 }
 
 export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
+  let canvasHandle: CanvasRef | undefined;
+  let getRects: (() => NodeRect[]) | undefined;
+
+  const emit = () => {
+    if (!canvasHandle || !getRects || !props.ref) return;
+    props.ref({
+      fitView: () => canvasHandle!.fitView(getRects!(), 64),
+      zoomIn: () => canvasHandle!.zoomIn(),
+      zoomOut: () => canvasHandle!.zoomOut(),
+    });
+  };
+
   return (
-    <Canvas>
-      <CanvasInner graph={props.graph} view={props.view} algorithm={props.algorithm} />
+    <Canvas ref={(r) => { canvasHandle = r; emit(); }}>
+      <CanvasInner
+        graph={props.graph}
+        view={props.view}
+        algorithm={props.algorithm}
+        exposeRects={(g) => { getRects = g; emit(); }}
+      />
     </Canvas>
   );
 }

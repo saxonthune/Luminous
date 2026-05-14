@@ -1,5 +1,5 @@
 import type { LayoutEdge, LayoutResult } from './layout.js'
-import type { TidyNode, TidyLayoutOptions, TidyResult } from './tidyLayout.js'
+import type { TidyNode, TidyLayoutOptions } from './tidyLayout.js'
 import { tidyLayout } from './tidyLayout.js'
 
 export interface DagLayoutOptions {

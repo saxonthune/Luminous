@@ -4,9 +4,10 @@ import './index.css';
 import { loadCanvasFileFromText, type Graph, type View } from '@luminous/canvas-core';
 import rtpStatechartPack from '@luminous/pack-rtp-statechart';
 import { ensurePacksRegistered } from './registerPacks';
-import { PgCanvasView } from './PgCanvasView';
+import { PgCanvasView, type ViewerHandle } from './PgCanvasView';
 import { ViewSwitcher } from './views/ViewSwitcher';
 import { LayerToolbar } from './layers/LayerToolbar';
+import { LayoutToolbar, type LayoutAlgorithm } from './toolbar/LayoutToolbar';
 import { defaultCanvasText, defaultCanvasId } from './defaultCanvas';
 
 function ViewerApp() {
@@ -19,6 +20,8 @@ function ViewerApp() {
   const [graph, setGraph] = createSignal<Graph | null>(null);
   const [error, setError] = createSignal<string | null>(null);
   const [activeViewId, setActiveViewId] = createSignal<string>(rtpStatechartPack.views[0].id);
+  const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('grid');
+  const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);
 
   const loadPromise = src
     ? fetch(src).then((r) => r.text())
@@ -65,7 +68,17 @@ function ViewerApp() {
           viewId={activeViewId()}
           layers={activeLayers()}
         />
-        <PgCanvasView graph={graph()!} view={activeView()} />
+        <LayoutToolbar
+          handle={viewerHandle}
+          algorithm={algorithm}
+          onAlgorithmChange={setAlgorithm}
+        />
+        <PgCanvasView
+          graph={graph()!}
+          view={activeView()}
+          algorithm={algorithm()}
+          ref={setViewerHandle}
+        />
       </div>
     </Show>
   );

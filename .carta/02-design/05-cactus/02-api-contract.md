@@ -9,6 +9,38 @@ deps: [doc02.05.01]
 
 Public API of the cactus canvas engine (`packages/cactus/src/`). Everything exported from the barrel `index.ts` is documented here. Internal modules are not part of the contract.
 
+## Minimum viable canvas
+
+```tsx
+import { Canvas, NodeContainer, useCanvasContext } from '@luminous/cactus';
+
+function MyApp() {
+  return (
+    <Canvas>
+      <NodeContainer nodeId="a" x={() => 100} y={() => 100} w={() => 200} h={() => 80}>
+        <div style={{ padding: '8px' }}>Hello</div>
+      </NodeContainer>
+    </Canvas>
+  );
+}
+```
+
+The `Canvas` provides pan/zoom (`useViewport`), selection (`useSelection`), and box-select infrastructure automatically. Position/size props on `NodeContainer` are accessors so they participate in Solid's reactivity. Place all `NodeContainer`s and any hook calls that need `useCanvasContext` **inside `<Canvas>`** — the context throws if consumed outside.
+
+## Data-attribute contract
+
+Cactus uses DOM data attributes as the public hit-testing contract. Renderers and consumers should preserve these (already set by primitives — listed here for awareness when writing custom hit logic or pack renderers):
+
+| Attribute | Set by | Purpose |
+|-----------|--------|---------|
+| `data-node-id` | `NodeContainer`, `ConnectionHandle` | Identifies the node a DOM subtree belongs to |
+| `data-container-id` | `NodeContainer` | This element is a nestable container; matches `data-node-id` |
+| `data-drop-target="true"` | `NodeContainer` | Eligible drop target for `findContainerAt` |
+| `data-connection-target="true"` | `NodeContainer`, `ConnectionHandle` | Eligible target for `useConnectionDrag` hit-test |
+| `data-handle-id` | `ConnectionHandle` (when `id` is set) | Named handle id within a node |
+| `data-drag-handle="true"` | `DragHandle`, `NodeContainer`'s built-in gripper | Elements that initiate node drag when `handleSelector='[data-drag-handle]'` |
+| `data-no-pan="true"` | `NodeContainer`, `ConnectionHandle`, `DragHandle` | Pointer events on this subtree do **not** start a viewport pan |
+
 ## Components
 
 ### Canvas
@@ -29,12 +61,15 @@ interface CanvasProps {
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element
   onBackgroundPointerDown?: (event: PointerEvent) => void
-  className?: string
+  onBackgroundContextMenu?: (event: MouseEvent) => void
+  class?: string
   patternId?: string
   children: JSX.Element
   ref?: (el: CanvasRef) => void
 }
 ```
+
+`onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
 
 **Ref methods** (`CanvasRef`) — accessed via ref callback (not `forwardRef`):
 
@@ -46,6 +81,65 @@ interface CanvasProps {
 | `zoomIn` | `() => void` | Zoom in 1.15x with 300ms animation |
 | `zoomOut` | `() => void` | Zoom out 1/1.15x with 300ms animation |
 | `clearSelection` | `() => void` | Deselect all nodes |
+
+### NodeContainer
+
+The primary primitive for rendering a node. Positions its children absolutely at `(x, y)` in canvas coordinates and stamps the data-attributes that drive hit-testing. Renders a built-in drag gripper in the bottom-left corner.
+
+```typescript
+interface NodeContainerProps {
+  nodeId: string
+  x: () => number              // accessor (canvas coords)
+  y: () => number
+  w: () => number              // applied as min-width
+  h: () => number              // applied as min-height
+  onPointerDown?: (e: PointerEvent) => void
+  onContextMenu?: (e: MouseEvent) => void
+  children?: JSX.Element
+}
+```
+
+Sizing model: `w` and `h` are **floors** (rendered as `min-width` / `min-height`), so cards grow to fit content. Layout algorithms should pass measured leaf sizes via their `sizeOf` parameter (see Layout primitives) to keep parent packing accurate.
+
+The bottom-left gripper is always rendered. To wire dragging, pair with `useNodeDrag({ handleSelector: '[data-drag-handle]' })` and forward `onPointerDown`.
+
+### NodeShell
+
+Lower-level wrapper around `NodeContainer` that adds a default visual style (border, background, shadow). Pure presentation — `NodeContainer` is preferred when you bring your own renderer.
+
+```typescript
+interface NodeShellProps extends NodeContainerProps {
+  selected?: boolean
+  class?: string
+  style?: JSX.CSSProperties
+}
+```
+
+### DragHandle
+
+A standalone draggable element that stamps `data-drag-handle="true"` and `data-no-pan="true"`. Used when you want a drag-initiation surface outside of `NodeContainer`'s built-in gripper.
+
+```typescript
+interface DragHandleProps {
+  class?: string
+  style?: JSX.CSSProperties
+  children?: JSX.Element
+}
+```
+
+### ResizeHandle
+
+A corner/edge handle that stamps `data-resize-handle` and forwards `onPointerDown` to `useNodeResize.onResizePointerDown`. Pair the two for full resize behavior.
+
+```typescript
+interface ResizeHandleProps {
+  nodeId: string
+  direction: ResizeDirection
+  onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void
+  class?: string
+  style?: JSX.CSSProperties
+}
+```
 
 ### DotGrid
 
@@ -129,6 +223,19 @@ interface ConnectionPreviewProps {
 
 ## Hooks
 
+### Lifecycle summary
+
+| Hook | Must be inside `<Canvas>`? | Reads `CanvasContext`? | Notes |
+|------|----------------------------|------------------------|-------|
+| `useViewport` | No (called by Canvas itself) | No | Direct use only when composing your own root |
+| `useNodeDrag` | Recommended (reads zoom) | No (you pass `zoomScale`) | Pass result's `onPointerDown` to `NodeContainer` |
+| `useNodeResize` | Recommended | No | Pair with `ResizeHandle` |
+| `useConnectionDrag` | Recommended | No | Called by Canvas when `connectionDrag` prop is set |
+| `useSelection` | Recommended | No (called internally by Canvas) | Selection already exposed via `useCanvasContext` |
+| `useBoxSelect` | Yes | Yes (transform) | Activated by Shift+drag on background |
+| `useKeyboardShortcuts` | No | No | Window-level listener |
+| `useNodeLinks` | No | No | Pure lookup; no DOM/event side-effects |
+
 ### useViewport
 
 Manages pan/zoom via d3-zoom. Returns a container ref and programmatic controls.
@@ -141,7 +248,8 @@ interface UseViewportOptions {
 
 function useViewport(options?: UseViewportOptions): {
   transform: Accessor<Transform>
-  containerRef: (el: HTMLDivElement) => void
+  setContainerRef: (el: HTMLDivElement) => void   // pass to <div ref={...}>
+  containerEl: Accessor<HTMLDivElement | undefined>
   fitView: (rects: NodeRect[], padding?: number) => void
   zoomIn: () => void
   zoomOut: () => void
@@ -149,14 +257,16 @@ function useViewport(options?: UseViewportOptions): {
 }
 ```
 
+Called automatically by `<Canvas>`. Call directly only if you're composing your own canvas root.
+
 ### useNodeDrag
 
 Manages node dragging. Converts screen deltas to canvas deltas (zoom-aware). Left button only.
 
 ```typescript
 interface UseNodeDragOptions {
-  zoomScale: number
-  handleSelector?: string        // CSS selector to restrict drag initiation
+  zoomScale: () => number              // accessor — reads current zoom each frame
+  handleSelector?: string               // CSS selector to restrict drag initiation
   callbacks: {
     onDragStart?: (nodeId: string, event: PointerEvent) => void
     onDrag?: (nodeId: string, deltaX: number, deltaY: number) => void
@@ -170,7 +280,7 @@ function useNodeDrag(options: UseNodeDragOptions): {
 }
 ```
 
-Deltas are cumulative from drag start (not frame-to-frame). Apply as `basePosition + delta`.
+`deltaX`/`deltaY` are **cumulative** from drag start in **canvas coordinates** (zoom-corrected) — not per-frame deltas. Apply as `basePosition + delta`, where `basePosition` was snapshotted at `onDragStart`. Forward the returned `onPointerDown` to each node's `NodeContainer.onPointerDown`.
 
 ### useNodeResize
 
@@ -183,7 +293,7 @@ type ResizeDirection = {
 }
 
 interface UseNodeResizeOptions {
-  zoomScale: number
+  zoomScale: () => number              // accessor
   callbacks: {
     onResizeStart?: (nodeId: string, direction: ResizeDirection) => void
     onResize?: (nodeId: string, deltaWidth: number, deltaHeight: number, direction: ResizeDirection) => void
@@ -352,10 +462,17 @@ function findContainerAt(screenX: number, screenY: number): string | null
 
 ```typescript
 function resolveAbsolutePosition(nodeId: string, nodes: ContainerNode[]): { x: number; y: number }
+function resolveAbsolutePositionByParentOf(
+  nodeId: string,
+  positions: ReadonlyMap<string, { x: number; y: number }>,
+  parentOf: ReadonlyMap<string, string>,
+): { x: number; y: number }
 function computeAttach(nodeId: string, containerId: string, nodes: ContainerNode[]): { x: number; y: number }
 function computeDetach(nodeId: string, nodes: ContainerNode[]): { x: number; y: number }
 function computeContainerFit(childGeometries: NodeGeometry[], config?: ContainerFitConfig): OrganizerFitResult
 ```
+
+`resolveAbsolutePositionByParentOf` is the variant used when a layout has already produced a `positions` map and a `parentOf` lookup (e.g., output of `gridLayout` / `elkLayout` plus `ContainmentTree`). Walks the parent chain summing relative positions.
 
 Position conversions for nesting operations. `computeAttach` returns the relative position a node should have inside a container to preserve its absolute canvas position. `computeDetach` is the inverse.
 
@@ -424,6 +541,33 @@ interface ContainerFitConfig {
   layout?: OrganizerLayoutConfig
 }
 ```
+
+## Layout primitives
+
+Seven pure functions take a containment tree and produce `{ positions, sizes }`. They share the bottom-up invariant: parents are sized from packed children, so leaf sizes drive everything. Pass measured leaf sizes via each algorithm's `sizeOf` parameter when available (see `viewer-auto-size-nodes` for the wiring pattern).
+
+| Function | When to use |
+|----------|-------------|
+| `gridLayout` | Default for nested containment without edge-driven ordering. Cheap, deterministic. Children of a composite pack into a square-ish grid. |
+| `elkLayout` | When arrow edges should influence placement (layered DAG-like layouts). Async. Accepts `sizeOf`, `direction`, `headerHeight`. |
+| `tidyLayout` | Classical Reingold–Tilford for tree-shaped content. |
+| `treeLayout` | Lighter tree layout for the common single-root case. |
+| `compositeLayout` | Mixes a tidy/tree pass for the spine with a packing pass for leaves. |
+| `dagLayout` | Layered layout for true DAGs (no containment recursion). |
+| `forceDirectedLayout` | Last resort for graphs without natural hierarchy. |
+
+Full input/output signatures and choice tradeoffs are documented separately in [Layout primitives](03-layout-primitives.md).
+
+## Performance utilities
+
+```typescript
+function traceCallback<F extends (...args: any[]) => any>(label: string, fn: F): F
+function observeLongTasks(): () => void               // returns cleanup
+function markInteraction(label: string): { end: () => void }
+function createPerformanceMonitor(options?: PerformanceMonitorOptions): PerformanceMonitorResult
+```
+
+`traceCallback` wraps a callback with a `performance.mark`/`measure` pair around each invocation (no-op in production). `observeLongTasks` registers a `PerformanceObserver` for long tasks during development. `markInteraction` is for user-initiated gestures (drag, connection) that span multiple frames. `createPerformanceMonitor` aggregates frame timings and exposes signals for an HUD.
 
 ## CSS Variables
 

@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "type": "module",
   "main": "src/index.ts",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:types": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "d3-force": "^3.0.0",
