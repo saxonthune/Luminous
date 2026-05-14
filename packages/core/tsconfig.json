@@ -14,7 +14,10 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "@luminous/cactus/chrome-types": ["../cactus/src/chrome/types.ts"]
+    }
   },
   "include": ["src/**/*", "tests/**/*"]
 }
