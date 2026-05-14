@@ -120,13 +120,42 @@ export interface Legend {
   blurb: string
 }
 
-/** v2 canvas document. Four flat hashtables keyed by id. */
-export interface Document {
+/** v2 canvas document — kept for diag.ts compatibility. */
+export interface V2Document {
   version: 2
   schemas:   Record<string, Schema>
   structure: Record<string, NodeStructure>
   content:   Record<string, NodeContent>
   edges:     Record<string, Edge>
-  /** Optional legend — when present, the viewer shows an info button. */
   legend?:   Legend
 }
+
+// ---------------------------------------------------------------------------
+// v3 types — canonical on-disk format for new canvases
+// ---------------------------------------------------------------------------
+
+export interface V3Node {
+  id: string
+  kind: string
+  props: Record<string, unknown>
+  tags: string[]
+}
+
+export interface V3Edge {
+  id: string
+  kind: string
+  from: string
+  to: string
+  props: Record<string, unknown>
+  tags: string[]
+}
+
+export interface V3Document {
+  version: 3
+  packs: Record<string, string>
+  nodes: V3Node[]
+  edges: V3Edge[]
+  defaultView?: string
+}
+
+export type Document = V3Document

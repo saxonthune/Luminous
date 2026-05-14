@@ -4,7 +4,8 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments } from "./workspace.js"
-import { getDocument, applyAction, applyBatch, flushAll, setRootDir, watchDocuments } from "./store.js"
+import { getDocument, applyAction, applyBatch, flushAll, setRootDir, watchDocuments, createDocument } from "./store.js"
+import type { V2Document } from "./types.js"
 import { roots as diagRoots, bbox as diagBbox, outliers as diagOutliers, subtree as diagSubtree, outline as diagOutline, summary as diagSummary, query as diagQuery } from "./diag.js"
 import type { QueryFilter } from "./diag.js"
 
@@ -158,7 +159,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const doc = await getDocument(docPath)
-    sendJson(res, 200, diagRoots(doc))
+    sendJson(res, 200, diagRoots(doc as unknown as V2Document))
     return
   }
 
@@ -170,7 +171,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const doc = await getDocument(docPath)
-    sendJson(res, 200, diagOutliers(doc))
+    sendJson(res, 200, diagOutliers(doc as unknown as V2Document))
     return
   }
 
@@ -189,7 +190,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const doc = await getDocument(docPath)
-    const result = diagBbox(doc, nodeId)
+    const result = diagBbox(doc as unknown as V2Document, nodeId)
     if (result === null) {
       sendJson(res, 404, { error: "node not found" })
       return
@@ -213,7 +214,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const doc = await getDocument(docPath)
-    const result = diagSubtree(doc, nodeId)
+    const result = diagSubtree(doc as unknown as V2Document, nodeId)
     if (result === null) {
       sendJson(res, 404, { error: "node not found" })
       return
@@ -236,7 +237,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         return
       }
       const doc = await getDocument(docPath)
-      sendJson(res, 200, diagOutline(doc, null))
+      sendJson(res, 200, diagOutline(doc as unknown as V2Document, null))
       return
     }
     // Otherwise last segment is a node id — split on lastSlash
@@ -251,7 +252,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const doc = await getDocument(docPath)
-    sendJson(res, 200, diagOutline(doc, nodeId))
+    sendJson(res, 200, diagOutline(doc as unknown as V2Document, nodeId))
     return
   }
 
@@ -263,7 +264,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       return
     }
     const doc = await getDocument(docPath)
-    sendJson(res, 200, diagSummary(doc))
+    sendJson(res, 200, diagSummary(doc as unknown as V2Document))
     return
   }
 
@@ -294,7 +295,29 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       ? (body.fields as Array<'title' | 'schemaName' | 'parent' | 'geometry'>)
       : undefined
     const doc = await getDocument(docPath)
-    sendJson(res, 200, diagQuery(doc, filter, fields))
+    sendJson(res, 200, diagQuery(doc as unknown as V2Document, filter, fields))
+    return
+  }
+
+  // POST /api/canvas/create
+  if (url === "/api/canvas/create" && req.method === "POST") {
+    let body: { path?: string; packs?: Record<string, string> }
+    try {
+      body = (await parseBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: "invalid JSON" })
+      return
+    }
+    if (!body.path) {
+      sendJson(res, 400, { ok: false, error: "missing path" })
+      return
+    }
+    if (hasTraversal(body.path)) {
+      sendJson(res, 400, { ok: false, error: "invalid path" })
+      return
+    }
+    const result = await createDocument(body.path, body.packs ?? {})
+    sendJson(res, result.ok ? 200 : 400, result)
     return
   }
 

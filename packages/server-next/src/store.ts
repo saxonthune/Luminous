@@ -1,5 +1,5 @@
 import { watch } from "node:fs"
-import { readFile, writeFile } from "node:fs/promises"
+import { readFile, writeFile, access } from "node:fs/promises"
 import { resolve } from "node:path"
 import type { Document } from "./types.js"
 import { applyActionToDoc } from "./actions.js"
@@ -17,27 +17,19 @@ export function setRootDir(dir: string): void {
   rootDir = dir
 }
 
-function emptyDoc(): Document {
-  return { version: 2, schemas: {}, structure: {}, content: {}, edges: {} }
+function emptyDoc(packs: Record<string, string> = {}): Document {
+  return { version: 3, packs, nodes: [], edges: [] }
 }
 
 async function loadDocument(filePath: string): Promise<Document> {
   try {
     const raw = await readFile(filePath, "utf-8")
     const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === 'object' && parsed.version === 2) {
-      const doc = parsed as Document
-      // Backwards-compat: schemas written before the discriminated union have no `kind` field.
-      // Inject `kind: 'node'` so all existing canvases load correctly.
-      for (const schema of Object.values(doc.schemas)) {
-        if (schema.kind === undefined) {
-          (schema as any).kind = 'node'
-        }
-      }
-      return doc
+    if (parsed && typeof parsed === 'object' && parsed.version === 3) {
+      return parsed as Document
     }
-    // v1 document — not supported; return raw so client can detect and show error
-    return parsed as unknown as Document
+    console.error(`[store] document is not version 3: ${filePath}`)
+    return emptyDoc()
   } catch (err) {
     console.error(`[store] failed to load document: ${filePath}`, err)
     return emptyDoc()
@@ -46,7 +38,6 @@ async function loadDocument(filePath: string): Promise<Document> {
 
 async function saveDocument(filePath: string, doc: Document): Promise<void> {
   await writeFile(filePath, JSON.stringify(doc, null, 2), "utf-8")
-  // Record after write completes so the timestamp reflects when fs.watch will fire
   recentWrites.set(filePath, Date.now())
 }
 
@@ -92,6 +83,24 @@ export async function getDocument(relativePath: string): Promise<Document> {
   const doc = await loadDocument(absPath)
   cache.set(relativePath, doc)
   return doc
+}
+
+export async function createDocument(
+  relativePath: string,
+  packs: Record<string, string> = {}
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  if (!relativePath) return { ok: false, error: "missing path" }
+  const absPath = resolve(rootDir, relativePath)
+  try {
+    await access(absPath)
+    return { ok: false, error: "already exists" }
+  } catch {
+    // file does not exist — proceed
+  }
+  const doc = emptyDoc(packs)
+  await saveDocument(absPath, doc)
+  cache.set(relativePath, doc)
+  return { ok: true, path: relativePath }
 }
 
 export async function applyAction(

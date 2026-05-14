@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { roots, bbox, outliers, subtree, outline, summary, query } from '../src/diag.js'
-import type { Document } from '../src/types.js'
+import type { V2Document } from '../src/types.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDoc(overrides: Partial<Document> = {}): Document {
+function makeDoc(overrides: Partial<V2Document> = {}): V2Document {
   return {
     version: 2,
     schemas: {},

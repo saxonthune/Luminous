@@ -130,25 +130,25 @@ try {
 }
 
 const instructions = `\
-Luminous is a structured visual canvas tool for software design. It maintains .canvas.json files — each containing schemas (node type definitions), nodes (positioned content boxes), and edges (directed connections between nodes).
+Luminous is a structured visual canvas tool for software design. It maintains v3 .canvas.json files — each referencing one or more packs and containing nodes and edges.
 
 Core concepts:
-- Schema: defines a node type — its name, visual primitives (drag-bar, title, markdown, container), and content field bindings. Must exist before creating nodes of that type.
-- Node: a positioned box on the canvas. Has a schemaName (which type it is), geometry (x/y/w/h in canvas coordinates), optional parent (for nesting), order (fractional-index string for sibling ordering), and content (field values matching the schema).
-- Edge: a directed connection from one node to another. Optional label and schemaName for typed edges.
+- Pack: a versioned library (e.g. "primitives": "^0.1.0") that defines node and edge kinds along with their props schemas and default views. Canvases declare which packs they use.
+- Node: a content element with a pack-defined kind (e.g. "prim.box"), props (kind-specific key-value data), and tags (free-form strings). Layout is computed by the viewer — nodes have no x/y/w/h in the file.
+- Edge: a directed connection from one node to another. Has a kind (e.g. "prim.arrow"), from/to node IDs, props, and tags. The server validates that both endpoints exist when adding an edge.
 
 Recommended workflow:
 1. canvas list — discover available canvas documents
-2. canvas read — load a specific canvas to see its schemas, nodes, and edges
-3. Understand the schemas before creating nodes (each node must reference a defined schema)
-4. Use node, edge, and schema tools to create and modify content
-5. Use diag tools for structural queries without loading full content
+2. canvas read — inspect a canvas to see its packs, nodes, and edges
+3. canvas create — author a new canvas, specifying which packs it will use
+4. node add / edge add — add nodes and edges using kinds the pack defines
+5. batch — use for multi-step operations to reduce round-trips
 
 All mutations go through the same API that the browser canvas uses — there is no separate write path.
 
-Prefer the batch tool for multi-step operations. Batch executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: create a node with ref "n1", then immediately connect it to an existing node using "$ref:n1" as the fromId.
+Prefer the batch tool for multi-step operations. Batch executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: canvas (browse/load documents), node (create/move/resize/nest/delete nodes), edge (connect/disconnect/relabel), schema (define/remove node types), diag (read-only structural queries), batch (atomic multi-action sequences).`
+Tool groups: canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },

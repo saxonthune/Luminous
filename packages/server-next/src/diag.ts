@@ -1,4 +1,4 @@
-import type { Document, Geometry } from "./types.js"
+import type { V2Document, Geometry } from "./types.js"
 import { isNodeSchema } from "./types.js"
 
 // ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ function expandBbox(bbox: BBoxRect | null, g: Geometry): BBoxRect {
 }
 
 /** Build a parent → children[] index from doc.structure. */
-function buildChildrenIndex(doc: Document): Map<string, string[]> {
+function buildChildrenIndex(doc: V2Document): Map<string, string[]> {
   const index = new Map<string, string[]>()
   for (const node of Object.values(doc.structure)) {
     const parentKey = node.parent ?? "__root__"
@@ -136,7 +136,7 @@ function buildChildrenIndex(doc: Document): Map<string, string[]> {
 }
 
 /** Best-effort title resolver. Returns null at any failure — never throws. */
-function resolveTitle(doc: Document, nodeId: string): string | null {
+function resolveTitle(doc: V2Document, nodeId: string): string | null {
   const node = doc.structure[nodeId]
   if (!node) return null
   const schema = doc.schemas[node.schemaName]
@@ -153,7 +153,7 @@ function resolveTitle(doc: Document, nodeId: string): string | null {
 // roots
 // ---------------------------------------------------------------------------
 
-export function roots(doc: Document): RootsSummary {
+export function roots(doc: V2Document): RootsSummary {
   const allNodes = Object.values(doc.structure)
   const rootNodes = allNodes.filter(n => n.parent === null)
 
@@ -204,7 +204,7 @@ export function roots(doc: Document): RootsSummary {
 // bbox
 // ---------------------------------------------------------------------------
 
-export function bbox(doc: Document, id: string): NodeBbox | null {
+export function bbox(doc: V2Document, id: string): NodeBbox | null {
   const node = doc.structure[id]
   if (!node) return null
 
@@ -270,7 +270,7 @@ export function bbox(doc: Document, id: string): NodeBbox | null {
 // outliers
 // ---------------------------------------------------------------------------
 
-export function outliers(doc: Document): OutliersList {
+export function outliers(doc: V2Document): OutliersList {
   const allNodes = Object.values(doc.structure)
   const result: OutlierEntry[] = []
 
@@ -309,7 +309,7 @@ export function outliers(doc: Document): OutliersList {
 // subtree
 // ---------------------------------------------------------------------------
 
-export function subtree(doc: Document, id: string): SubtreeDump | null {
+export function subtree(doc: V2Document, id: string): SubtreeDump | null {
   const root = doc.structure[id]
   if (!root) return null
 
@@ -358,7 +358,7 @@ export function subtree(doc: Document, id: string): SubtreeDump | null {
 // outline
 // ---------------------------------------------------------------------------
 
-export function outline(doc: Document, rootId: string | null): OutlineResult {
+export function outline(doc: V2Document, rootId: string | null): OutlineResult {
   const childrenIndex = buildChildrenIndex(doc)
   const CAP = 500
   let count = 0
@@ -421,7 +421,7 @@ export function outline(doc: Document, rootId: string | null): OutlineResult {
 // summary
 // ---------------------------------------------------------------------------
 
-export function summary(doc: Document): SummaryResult {
+export function summary(doc: V2Document): SummaryResult {
   const allNodes = Object.values(doc.structure)
   const totalNodes = allNodes.length
   const rootNodes = allNodes.filter(n => n.parent === null)
@@ -468,7 +468,7 @@ export function summary(doc: Document): SummaryResult {
 // ---------------------------------------------------------------------------
 
 export function query(
-  doc: Document,
+  doc: V2Document,
   filter: QueryFilter,
   fields?: Array<'title' | 'schemaName' | 'parent' | 'geometry'>
 ): QueryResult {
