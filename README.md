@@ -6,7 +6,7 @@ Luminous connects human visual thinking with AI structured context. You design o
 
 ## Demo
 
-[Live canvas](https://saxonthune.github.io/Luminous/viewer.html) — auto-generated from static analysis of this codebase on every deploy.
+[Live canvas](https://saxonthune.github.io/Luminous/) — auto-generated from static analysis of this codebase on every deploy.
 
 ## What it does
 
