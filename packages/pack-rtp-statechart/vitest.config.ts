@@ -4,7 +4,7 @@ import solid from 'vite-plugin-solid';
 export default defineConfig({
   plugins: [solid()],
   test: {
-    include: ['tests/**/*.test.ts', 'src/**/*.test.tsx'],
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
     exclude: ['node_modules', 'dist'],
     // card renderer tests need a real DOM to mount Solid components
     environment: 'jsdom',

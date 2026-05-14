@@ -19,4 +19,10 @@ export const layers: Layer[] = [
     edgeKinds: [],
     defaultState: 'peek',
   },
+  {
+    id: 'orphan-action-highlight',
+    name: 'Highlight orphan actions',
+    edgeKinds: [],
+    defaultState: 'on',
+  },
 ];

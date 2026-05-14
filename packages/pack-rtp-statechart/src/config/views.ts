@@ -1,4 +1,5 @@
 import type { View } from '@luminous/canvas-core';
+import { conceptMapView } from './views/concept-map.ts';
 
 export const statechartView: View = {
   id: 'statechart',
@@ -26,4 +27,5 @@ export const statechartView: View = {
   layout: { algorithm: 'elk' },
 };
 
-export const views: View[] = [statechartView];
+export { conceptMapView };
+export const views: View[] = [statechartView, conceptMapView];

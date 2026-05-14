@@ -1,7 +1,7 @@
 import type { Pack } from '@luminous/canvas-core';
 import { nodeKinds, edgeKinds } from './schema/kinds.ts';
 import { nodeRenderers, edgeRenderers } from './presentation/renderers.ts';
-import { views, statechartView } from './config/views.ts';
+import { views, statechartView, conceptMapView } from './config/views.ts';
 import { layers } from './config/layers.ts';
 import { disclosureSchemas } from './config/disclosure.ts';
 
@@ -19,4 +19,6 @@ export const rtpStatechartPack: Pack = {
 };
 
 export default rtpStatechartPack;
-export { nodeKinds, edgeKinds, statechartView };
+export { nodeKinds, edgeKinds, statechartView, conceptMapView };
+export { findOrphanActions } from './orphans.ts';
+export { OrphanActionWrapper } from './presentation/OrphanActionWrapper.tsx';
