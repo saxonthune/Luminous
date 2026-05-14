@@ -3,7 +3,16 @@ import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
 import type { Graph, View, DisclosureLevel, RenderContext } from '@luminous/core';
 import { evaluateView, getNodeRenderer, getEdgeRenderer } from '@luminous/core';
-import { Canvas, NodeContainer, resolveAbsolutePositionByParentOf, gridLayout, elkLayout, useCanvasContext } from '@luminous/cactus';
+import type { ChromeSchema, MenuSchema } from '@luminous/core';
+import {
+  Canvas,
+  NodeContainer,
+  resolveAbsolutePositionByParentOf,
+  gridLayout,
+  elkLayout,
+  useCanvasContext,
+  useNodeDrag,
+} from '@luminous/cactus';
 import type { ElkLayoutOutput, CanvasRef, EdgeDeclaration } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
@@ -24,6 +33,10 @@ export interface PgCanvasViewProps {
   view: View;
   algorithm?: 'grid' | 'elk';
   ref?: (handle: ViewerHandle) => void;
+  chrome?: ChromeSchema;
+  onAction?: (id: string, payload?: unknown) => void;
+  nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
+  backgroundContextMenu?: () => MenuSchema | undefined;
 }
 
 /** BFS topological order from roots through childrenOf — parents before children. */
@@ -48,6 +61,7 @@ function renderNodes(
   layout: () => { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
   parentOf: () => ReadonlyMap<string, string>,
   renderCtx: RenderContext,
+  onPointerDown?: (nodeId: string, e: PointerEvent) => void,
 ): JSX.Element {
   return (
     <For each={renderOrder()}>
@@ -63,10 +77,7 @@ function renderNodes(
             y={() => abs().y}
             w={() => sz().w}
             h={() => sz().h}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              renderCtx.inspect(nodeId);
-            }}
+            onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
           >
             {(() => {
               const renderer = getNodeRenderer(node.kind, renderCtx.level());
@@ -93,10 +104,13 @@ function CanvasInner(props: {
   algorithm?: 'grid' | 'elk';
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
+  exposeInspect?: (fn: (id: string) => void) => void;
 }): JSX.Element {
   ensurePacksRegistered();
   const inspector = createInspector();
   const canvasCtx = useCanvasContext();
+
+  props.exposeInspect?.((id) => inspector.open(id));
 
   const scene = createMemo(() => evaluateView(props.graph, props.view));
   const containment = createMemo(() => scene().containment);
@@ -134,7 +148,6 @@ function CanvasInner(props: {
       });
     }
 
-    // v1: summary edges render as dotted lines (chip-on-source is a follow-up)
     for (const edge of scene().summaryEdges) {
       const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
       const capturedEdge = edge;
@@ -157,6 +170,46 @@ function CanvasInner(props: {
     props.onEdges?.(edgeDeclarations());
   });
 
+  // --- Node drag ---
+  const [nodeOverrides, setNodeOverrides] = createSignal<Map<string, { x: number; y: number }>>(new Map());
+  const dragStartPositions = new Map<string, { x: number; y: number }>();
+  let latestBasePositions: ReadonlyMap<string, { x: number; y: number }> = new Map();
+
+  const { onPointerDown: dragPointerDown } = useNodeDrag({
+    zoomScale: () => canvasCtx.transform().k,
+    handleSelector: '[data-drag-handle="true"]',
+    callbacks: {
+      onDragStart: (nodeId) => {
+        const overridePos = nodeOverrides().get(nodeId);
+        const basePos = latestBasePositions.get(nodeId);
+        const pos = overridePos ?? basePos;
+        if (pos) dragStartPositions.set(nodeId, { ...pos });
+      },
+      onDrag: (nodeId, dx, dy) => {
+        const start = dragStartPositions.get(nodeId);
+        if (!start) return;
+        setNodeOverrides((prev) => {
+          const next = new Map(prev);
+          next.set(nodeId, { x: start.x + dx, y: start.y + dy });
+          return next;
+        });
+      },
+      onDragEnd: (nodeId) => {
+        dragStartPositions.delete(nodeId);
+      },
+    },
+  });
+
+  function applyOverrides(
+    base: { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
+  ) {
+    const overrides = nodeOverrides();
+    if (overrides.size === 0) return base;
+    const positions = new Map(base.positions);
+    for (const [id, pos] of overrides) positions.set(id, pos);
+    return { ...base, positions };
+  }
+
   if (props.algorithm === 'elk') {
     const [elkResult] = createResource(
       () => ({
@@ -167,8 +220,19 @@ function CanvasInner(props: {
       (input): Promise<ElkLayoutOutput> => elkLayout({ ...input, direction: 'RIGHT' }),
     );
 
+    createEffect(() => {
+      const result = elkResult();
+      if (result) latestBasePositions = result.positions;
+    });
+
+    const effectiveLayout = createMemo(() => {
+      const base = elkResult();
+      if (!base) return null;
+      return applyOverrides(base);
+    });
+
     props.exposeRects?.(() => {
-      const lay = elkResult();
+      const lay = effectiveLayout();
       if (!lay) return [];
       return containment().rootIds.flatMap((id) => {
         const pos = lay.positions.get(id);
@@ -179,8 +243,8 @@ function CanvasInner(props: {
 
     return (
       <InspectorContext.Provider value={inspector}>
-        <Show when={elkResult()} fallback={<div style={{ padding: '8px', color: '#888' }}>Computing layout…</div>}>
-          {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx)}
+        <Show when={effectiveLayout()} fallback={<div style={{ padding: '8px', color: '#888' }}>Computing layout…</div>}>
+          {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, dragPointerDown)}
         </Show>
         <Portal mount={document.body}>
           <InspectorPanel graph={props.graph} view={props.view} />
@@ -189,13 +253,17 @@ function CanvasInner(props: {
     );
   }
 
-  const layout = createMemo(() => gridLayout({
+  const baseLayout = createMemo(() => gridLayout({
     rootIds: containment().rootIds,
     childrenOf: containment().childrenOf,
   }));
 
+  createEffect(() => { latestBasePositions = baseLayout().positions; });
+
+  const effectiveLayout = createMemo(() => applyOverrides(baseLayout()));
+
   props.exposeRects?.(() => {
-    const lay = layout();
+    const lay = effectiveLayout();
     return containment().rootIds.flatMap((id) => {
       const pos = lay.positions.get(id);
       const sz = lay.sizes.get(id);
@@ -205,7 +273,7 @@ function CanvasInner(props: {
 
   return (
     <InspectorContext.Provider value={inspector}>
-      {renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx)}
+      {renderNodes(props.graph, renderOrder, effectiveLayout, () => containment().parentOf, renderCtx, dragPointerDown)}
       <Portal mount={document.body}>
         <InspectorPanel graph={props.graph} view={props.view} />
       </Portal>
@@ -216,9 +284,8 @@ function CanvasInner(props: {
 export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
   let canvasHandle: CanvasRef | undefined;
   let getRects: (() => NodeRect[]) | undefined;
+  let inspectFn: ((id: string) => void) | undefined;
 
-  // Edges are computed inside CanvasInner (needs CanvasContext for level),
-  // then surfaced here and passed to Canvas via the edges prop.
   const [edges, setEdges] = createSignal<EdgeDeclaration[]>([]);
 
   const emit = () => {
@@ -230,14 +297,30 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
     });
   };
 
+  const handleAction = (id: string, payload?: unknown) => {
+    if (id === 'NODE.INSPECT') {
+      inspectFn?.((payload as { nodeId: string }).nodeId);
+    } else {
+      props.onAction?.(id, payload);
+    }
+  };
+
   return (
-    <Canvas ref={(r) => { canvasHandle = r; emit(); }} edges={edges()}>
+    <Canvas
+      ref={(r) => { canvasHandle = r; emit(); }}
+      edges={edges()}
+      chrome={props.chrome}
+      onAction={handleAction}
+      nodeContextMenu={props.nodeContextMenu}
+      backgroundContextMenu={props.backgroundContextMenu}
+    >
       <CanvasInner
         graph={props.graph}
         view={props.view}
         algorithm={props.algorithm}
         exposeRects={(g) => { getRects = g; emit(); }}
         onEdges={setEdges}
+        exposeInspect={(fn) => { inspectFn = fn; }}
       />
     </Canvas>
   );

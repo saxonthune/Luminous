@@ -1,10 +1,17 @@
 import { createSignal, createMemo, Show } from 'solid-js';
 import type { Graph, View, Layer, Pack } from '@luminous/core';
-import { getPack } from '@luminous/core';
+import {
+  getPack,
+  viewSwitcherSchema,
+  layerToolbarSchema,
+  layoutToolbarSchema,
+  nodeContextMenuSchema,
+  backgroundContextMenuSchema,
+} from '@luminous/core';
+import type { ChromeSchema } from '@luminous/core';
 import { PgCanvasView, type ViewerHandle } from './PgCanvasView';
-import { ViewSwitcher } from './views/ViewSwitcher';
-import { LayerToolbar } from './layers/LayerToolbar';
-import { LayoutToolbar, type LayoutAlgorithm } from './toolbar/LayoutToolbar';
+
+type LayoutAlgorithm = 'grid' | 'elk';
 
 interface CanvasHostProps {
   graph: Graph;
@@ -14,10 +21,7 @@ interface CanvasHostProps {
 export function CanvasHost(props: CanvasHostProps) {
   const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('grid');
   const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);
-
-  const canvasId = createMemo(
-    () => props.sourceId.split('/').pop()?.replace(/\.graph\.json$/, '') ?? props.sourceId,
-  );
+  const [enabledLayers, setEnabledLayers] = createSignal<Record<string, boolean>>({});
 
   const declaredPacks = createMemo<Pack[]>(() =>
     Object.keys(props.graph.packs)
@@ -32,9 +36,44 @@ export function CanvasHost(props: CanvasHostProps) {
   const activeView = createMemo<View | undefined>(
     () => availableViews().find((v) => v.id === activeViewId()) ?? availableViews()[0],
   );
-  const activeLayers = createMemo<Layer[]>(() =>
-    activeView() ? availableLayers().filter((l) => activeView()!.layers[l.id] !== undefined) : [],
-  );
+
+  const chrome = createMemo<ChromeSchema>(() => {
+    const view = activeView();
+    if (!view) return {};
+    const currentViewId = activeViewId() || (availableViews()[0]?.id ?? '');
+    const layerTb = layerToolbarSchema(view, availableLayers(), enabledLayers());
+    return {
+      left: [viewSwitcherSchema(availableViews(), currentViewId)],
+      top: layerTb.controls.length > 0 ? [layerTb] : [],
+      right: [layoutToolbarSchema(algorithm(), ['grid', 'elk'])],
+    };
+  });
+
+  const dispatch = (id: string, payload?: unknown) => {
+    const p = payload as Record<string, unknown>;
+    switch (id) {
+      case 'VIEW.SET':
+        setActiveViewId(p['viewId'] as string);
+        break;
+      case 'LAYER.TOGGLE': {
+        const layerId = p['layerId'] as string;
+        setEnabledLayers((prev) => ({ ...prev, [layerId]: prev[layerId] === false }));
+        break;
+      }
+      case 'LAYOUT.ZOOM_IN':
+        viewerHandle()?.zoomIn();
+        break;
+      case 'LAYOUT.ZOOM_OUT':
+        viewerHandle()?.zoomOut();
+        break;
+      case 'LAYOUT.FIT':
+        viewerHandle()?.fitView();
+        break;
+      case 'LAYOUT.SET_ALGORITHM':
+        setAlgorithm(p['algorithm'] as LayoutAlgorithm);
+        break;
+    }
+  };
 
   return (
     <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
@@ -46,13 +85,6 @@ export function CanvasHost(props: CanvasHostProps) {
           </div>
         }
       >
-        <ViewSwitcher
-          views={availableViews()}
-          activeViewId={activeView()?.id ?? ''}
-          onChange={setActiveViewId}
-        />
-        <LayerToolbar canvasId={canvasId()} viewId={activeView()?.id ?? ''} layers={activeLayers()} />
-        <LayoutToolbar handle={viewerHandle} algorithm={algorithm} onAlgorithmChange={setAlgorithm} />
         <Show when={activeView()}>
           {(view) => (
             <PgCanvasView
@@ -60,6 +92,14 @@ export function CanvasHost(props: CanvasHostProps) {
               view={view()}
               algorithm={algorithm()}
               ref={setViewerHandle}
+              chrome={chrome()}
+              onAction={dispatch}
+              nodeContextMenu={(nodeId) => {
+                const node = props.graph.nodes.get(nodeId);
+                if (!node) return undefined;
+                return nodeContextMenuSchema(node, []);
+              }}
+              backgroundContextMenu={backgroundContextMenuSchema}
             />
           )}
         </Show>
