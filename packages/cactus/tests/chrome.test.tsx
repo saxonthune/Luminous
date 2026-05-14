@@ -1,8 +1,22 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { render } from 'solid-js/web';
-import type { ChromeSchema, ToolbarSchema } from '../src/chrome/types';
+import type { ChromeSchema, MenuSchema, ToolbarSchema } from '../src/chrome/types';
 import { ChromeSlots } from '../src/chrome/ChromeSlots';
-import { Toolbar } from '../src/chrome/ChromePrimitives';
+import { MenuRoot, Toolbar } from '../src/chrome/ChromePrimitives';
+
+// jsdom does not include PointerEvent — polyfill it.
+beforeAll(() => {
+  if (typeof PointerEvent === 'undefined') {
+    class PointerEventPolyfill extends MouseEvent {
+      pointerType: string;
+      constructor(type: string, params: PointerEventInit & { pointerType?: string } = {}) {
+        super(type, params);
+        this.pointerType = params.pointerType ?? '';
+      }
+    }
+    (globalThis as Record<string, unknown>).PointerEvent = PointerEventPolyfill;
+  }
+});
 
 function renderInto(ui: () => unknown): { container: HTMLElement; cleanup: () => void } {
   const container = document.createElement('div');
@@ -126,6 +140,68 @@ describe('Toolbar — toggle-set control', () => {
     expect(set).not.toBeNull();
     const items = container.querySelectorAll('.cactus-chrome-toggle-item');
     expect(items.length).toBe(2);
+    cleanup();
+  });
+});
+
+describe('MenuRoot', () => {
+  it('renders three action items when open', () => {
+    const schema: MenuSchema = {
+      id: 'test-menu',
+      items: [
+        { type: 'action', action: { id: 'ACT.1', label: 'First' } },
+        { type: 'action', action: { id: 'ACT.2', label: 'Second' } },
+        { type: 'action', action: { id: 'ACT.3', label: 'Third' } },
+      ],
+    };
+    const { cleanup } = renderInto(() => (
+      <MenuRoot schema={schema} open onOpenChange={() => {}} anchorX={0} anchorY={0} />
+    ));
+    // Portal renders into document.body — query globally.
+    const items = document.querySelectorAll('.cactus-chrome-menu-item');
+    expect(items.length).toBeGreaterThanOrEqual(3);
+    cleanup();
+  });
+
+  it('calls onAction when a menu item is activated via pointer', () => {
+    const onAction = vi.fn();
+    const schema: MenuSchema = {
+      id: 'test-menu',
+      items: [
+        { type: 'action', action: { id: 'NODE.INSPECT', label: 'Inspect', payload: { nodeId: 'n1' } } },
+      ],
+    };
+    const { cleanup } = renderInto(() => (
+      <MenuRoot schema={schema} open onOpenChange={() => {}} anchorX={0} anchorY={0} onAction={onAction} />
+    ));
+    // Kobalte MenuItem fires onSelect on pointerdown+pointerup sequence.
+    const item = document.querySelector('.cactus-chrome-menu-item') as HTMLElement | null;
+    expect(item).not.toBeNull();
+    item!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse' }));
+    item!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'mouse' }));
+    expect(onAction).toHaveBeenCalledWith('NODE.INSPECT', { nodeId: 'n1' });
+    cleanup();
+  });
+
+  it('renders a submenu trigger for submenu items', () => {
+    const schema: MenuSchema = {
+      id: 'test-menu',
+      items: [
+        {
+          type: 'submenu',
+          label: 'More',
+          items: [
+            { type: 'action', action: { id: 'SUB.1', label: 'Sub Action' } },
+          ],
+        },
+      ],
+    };
+    const { cleanup } = renderInto(() => (
+      <MenuRoot schema={schema} open onOpenChange={() => {}} anchorX={0} anchorY={0} />
+    ));
+    const trigger = document.querySelector('.cactus-chrome-menu-item') as HTMLElement | null;
+    expect(trigger).not.toBeNull();
+    expect(trigger!.textContent).toContain('More');
     cleanup();
   });
 });
