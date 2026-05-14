@@ -8,6 +8,7 @@ import {
   getDisclosureSchema,
   getNodeRenderer,
   resetRegistry,
+  buildGraph,
   type RenderContext,
 } from '@luminous/canvas-core';
 import rtpStatechartPack, { nodeKinds, edgeKinds, statechartView } from '../src/index.ts';
@@ -117,6 +118,7 @@ describe('renderer fallback', () => {
       level: () => 'open',
       zoom: () => 1,
       view: statechartView,
+      graph: buildGraph([], []),
       inspect: () => undefined,
     };
     const result = renderer?.({ id: 'state.nav.Home', kind: 'statechart.state', props: { name: 'Home' }, tags: [] }, mockCtx);

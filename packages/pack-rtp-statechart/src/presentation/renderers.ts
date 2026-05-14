@@ -1,21 +1,21 @@
 import type { NodeRenderer, EdgeRenderer, KindId, DisclosureLevel } from '@luminous/canvas-core';
-import StateCard from './renderers/StateCard.tsx';
-import CompositeCard from './renderers/CompositeCard.tsx';
-import RegionCard from './renderers/RegionCard.tsx';
-import TransitionCard from './renderers/TransitionCard.tsx';
-import ConceptCard from './renderers/ConceptCard.tsx';
-import ActionCard from './renderers/ActionCard.tsx';
+import StateCard, { StatePeek, StateOpen } from './renderers/StateCard.tsx';
+import CompositeCard, { CompositePeek, CompositeOpen } from './renderers/CompositeCard.tsx';
+import RegionCard, { RegionPeek, RegionOpen } from './renderers/RegionCard.tsx';
+import TransitionCard, { TransitionPeek, TransitionOpen } from './renderers/TransitionCard.tsx';
+import ConceptCard, { ConceptPeek, ConceptOpen } from './renderers/ConceptCard.tsx';
+import ActionCard, { ActionPeek, ActionOpen } from './renderers/ActionCard.tsx';
 
 const placeholderEdge: EdgeRenderer = (edge) =>
   `[${edge.kind}] ${edge.from} → ${edge.to}`;
 
 export const nodeRenderers: Record<KindId, Partial<Record<DisclosureLevel, NodeRenderer>>> = {
-  'statechart.region':     { card: RegionCard },
-  'statechart.composite':  { card: CompositeCard },
-  'statechart.state':      { card: StateCard },
-  'statechart.transition': { card: TransitionCard },
-  'rtp.concept':           { card: ConceptCard },
-  'rtp.action':            { card: ActionCard },
+  'statechart.region':     { peek: RegionPeek,     card: RegionCard,     open: RegionOpen },
+  'statechart.composite':  { peek: CompositePeek,  card: CompositeCard,  open: CompositeOpen },
+  'statechart.state':      { peek: StatePeek,      card: StateCard,      open: StateOpen },
+  'statechart.transition': { peek: TransitionPeek, card: TransitionCard, open: TransitionOpen },
+  'rtp.concept':           { peek: ConceptPeek,    card: ConceptCard,    open: ConceptOpen },
+  'rtp.action':            { peek: ActionPeek,     card: ActionCard,     open: ActionOpen },
 };
 
 export const edgeRenderers: Record<KindId, Partial<Record<DisclosureLevel, EdgeRenderer>>> = {

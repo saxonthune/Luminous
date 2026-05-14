@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render } from 'solid-js/web';
 import type { JSX } from 'solid-js';
+import { buildGraph } from '@luminous/canvas-core';
 import type { Node, RenderContext } from '@luminous/canvas-core';
 import StateCard from '../StateCard.tsx';
 import CompositeCard from '../CompositeCard.tsx';
@@ -19,6 +20,7 @@ const mockCtx: RenderContext = {
     layers: {},
     layout: { algorithm: 'elk' },
   },
+  graph: buildGraph([], []),
   inspect: () => undefined,
 };
 

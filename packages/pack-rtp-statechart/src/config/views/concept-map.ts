@@ -6,6 +6,12 @@ export const conceptMapView: View = {
   id: 'concept-map',
   name: 'Concept map',
   description: 'Concepts containing their actions; states and transitions hidden.',
+  zoomToLevel: [
+    { minZoom: 0,   level: 'peek' },
+    { minZoom: 0.4, level: 'card' },
+    { minZoom: 1.2, level: 'open' },
+    { minZoom: 3.0, level: 'deep' },
+  ],
   nodeRoles: {
     'statechart.region':     'hidden',
     'statechart.composite':  'hidden',

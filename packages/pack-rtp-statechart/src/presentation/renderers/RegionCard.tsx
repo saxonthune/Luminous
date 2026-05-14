@@ -48,3 +48,62 @@ export default function RegionCard(node: Node, _ctx: RenderContext): JSX.Element
     </div>
   );
 }
+
+export function RegionPeek(node: Node, _ctx: RenderContext): JSX.Element {
+  const p = node.props as RegionProps;
+  const title = p.name ?? idSegment(node.id);
+  return (
+    <div style={{
+      background: '#e6f3f1',
+      border: '1px solid #b2d8d2',
+      'border-radius': '4px',
+      padding: '2px 6px',
+      'font-size': '10px',
+      'white-space': 'nowrap',
+      overflow: 'hidden',
+      'text-overflow': 'ellipsis',
+      'max-width': '120px',
+      color: '#3a7a72',
+    }}>
+      <span style={{ 'font-variant': 'small-caps', 'margin-right': '4px' }}>r</span>
+      {title}
+    </div>
+  );
+}
+
+export function RegionOpen(node: Node, _ctx: RenderContext): JSX.Element {
+  const p = node.props as RegionProps;
+  const title = p.name ?? idSegment(node.id);
+  return (
+    <div style={{
+      'border-radius': '6px',
+      border: '1px solid #d0d0d0',
+      background: '#fff',
+      'box-sizing': 'border-box',
+    }}>
+      <div style={{
+        background: '#e6f3f1',
+        padding: '8px 12px',
+        'border-radius': '6px 6px 0 0',
+        display: 'flex',
+        'align-items': 'center',
+        gap: '6px',
+      }}>
+        <span style={{
+          'font-size': '10px',
+          'font-variant': 'small-caps',
+          color: '#3a7a72',
+          'letter-spacing': '0.05em',
+        }}>region</span>
+        <span style={{ 'font-size': '15px', 'font-weight': '700' }}>{title}</span>
+      </div>
+      {p.description && (
+        <div style={{
+          padding: '10px 12px',
+          'font-size': '12px',
+          color: '#555',
+        }}>{p.description}</div>
+      )}
+    </div>
+  );
+}

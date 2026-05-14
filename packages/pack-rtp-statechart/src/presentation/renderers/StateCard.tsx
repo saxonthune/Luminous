@@ -57,3 +57,76 @@ export default function StateCard(node: Node, _ctx: RenderContext): JSX.Element 
     </div>
   );
 }
+
+export function StatePeek(node: Node, _ctx: RenderContext): JSX.Element {
+  const p = node.props as StateProps;
+  const title = p.surface ?? p.name ?? idSegment(node.id);
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1px solid #d0d0d0',
+      'border-radius': '4px',
+      padding: '2px 6px',
+      'font-size': '10px',
+      'white-space': 'nowrap',
+      overflow: 'hidden',
+      'text-overflow': 'ellipsis',
+      'max-width': '120px',
+    }}>{title}</div>
+  );
+}
+
+export function StateOpen(node: Node, _ctx: RenderContext): JSX.Element {
+  const p = node.props as StateProps;
+  const title = p.name ?? idSegment(node.id);
+  const tags = p.tags ?? [];
+  const reads = p.reads ?? [];
+  return (
+    <div style={{
+      'border-radius': '6px',
+      border: '1px solid #d0d0d0',
+      background: '#fff',
+      padding: '10px 14px',
+      'box-sizing': 'border-box',
+    }}>
+      <div style={{ 'font-size': '14px', 'font-weight': '700', 'margin-bottom': '4px' }}>{title}</div>
+      {p.surface && (
+        <div style={{
+          'font-family': 'ui-monospace, monospace',
+          'font-size': '12px',
+          color: '#333',
+          'margin-bottom': '6px',
+        }}>{p.surface}</div>
+      )}
+      {p.description && (
+        <div style={{ 'font-size': '12px', color: '#666', 'margin-bottom': '6px' }}>{p.description}</div>
+      )}
+      {tags.length > 0 && (
+        <div style={{ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-bottom': '6px' }}>
+          {tags.map(tag => (
+            <span style={{
+              background: '#f0f0f0',
+              padding: '2px 8px',
+              'border-radius': '999px',
+              'font-size': '11px',
+            }}>{tag}</span>
+          ))}
+        </div>
+      )}
+      {reads.length > 0 && (
+        <div style={{ 'font-size': '11px', color: '#888' }}>
+          <span style={{ 'font-weight': '600' }}>reads: </span>
+          {reads.map(r => (
+            <span style={{
+              background: '#e8f4fd',
+              padding: '1px 6px',
+              'border-radius': '3px',
+              'margin-right': '4px',
+              'font-size': '11px',
+            }}>{r}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

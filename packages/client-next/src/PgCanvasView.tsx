@@ -1,13 +1,15 @@
-import { For, createResource, Show } from 'solid-js';
+import { For, createResource, Show, createMemo } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
-import type { Graph, View, Node } from '@luminous/canvas-core';
-import { evaluateView } from '@luminous/canvas-core';
-import { Canvas, NodeContainer, resolveAbsolutePositionByParentOf, gridLayout, elkLayout } from '@luminous/cactus';
+import type { Graph, View, Node, DisclosureLevel, RenderContext } from '@luminous/canvas-core';
+import { evaluateView, getNodeRenderer } from '@luminous/canvas-core';
+import { Canvas, NodeContainer, resolveAbsolutePositionByParentOf, gridLayout, elkLayout, useCanvasContext } from '@luminous/cactus';
 import type { ElkLayoutOutput } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
+import { ensurePacksRegistered } from './registerPacks';
+import { levelFromZoom } from './disclosure/levelFromZoom';
 
 export interface PgCanvasViewProps {
   graph: Graph;
@@ -31,17 +33,12 @@ function bfsOrder(
   return order;
 }
 
-function propsPreview(node: Node): string {
-  const entries = Object.entries(node.props).slice(0, 3);
-  if (entries.length === 0) return '';
-  return entries.map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(' ');
-}
-
 function renderNodes(
   graph: Graph,
   renderOrder: string[],
   layout: { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
-  parentOf: ReadonlyMap<string, string>
+  parentOf: ReadonlyMap<string, string>,
+  renderCtx: RenderContext,
 ): JSX.Element {
   return (
     <For each={renderOrder}>
@@ -58,10 +55,14 @@ function renderNodes(
             w={() => sz.w}
             h={() => sz.h}
           >
-            <div style={{ padding: '4px', 'font-size': '11px', color: '#555' }}>
-              <strong>{node.kind}</strong>
-              {propsPreview(node) && <span> — {propsPreview(node)}</span>}
-            </div>
+            {(() => {
+              const renderer = getNodeRenderer(node.kind, renderCtx.level());
+              return renderer ? renderer(node, renderCtx) as JSX.Element : (
+                <div style={{ padding: '4px', 'font-size': '11px', color: '#555' }}>
+                  <strong>{node.kind}</strong>
+                </div>
+              );
+            })()}
           </NodeContainer>
         );
       }}
@@ -79,10 +80,24 @@ function CanvasInner(props: {
   view: View;
   algorithm?: 'grid' | 'elk';
 }): JSX.Element {
+  ensurePacksRegistered();
   const inspector = createInspector();
+  const canvasCtx = useCanvasContext();
   const scene = evaluateView(props.graph, props.view);
   const { containment } = scene;
   const renderOrder = bfsOrder(containment.rootIds, containment.childrenOf);
+
+  const level = createMemo<DisclosureLevel>(() =>
+    levelFromZoom(canvasCtx.transform().k, props.view.zoomToLevel)
+  );
+
+  const renderCtx: RenderContext = {
+    level,
+    zoom: () => canvasCtx.transform().k,
+    view: props.view,
+    graph: props.graph,
+    inspect: (id) => inspector.open(id),
+  };
 
   if (props.algorithm === 'elk') {
     const [elkResult] = createResource<ElkLayoutOutput>(() =>
@@ -97,7 +112,7 @@ function CanvasInner(props: {
     return (
       <InspectorContext.Provider value={inspector}>
         <Show when={elkResult()} fallback={<div style={{ padding: '8px', color: '#888' }}>Computing layout…</div>}>
-          {(layout) => renderNodes(props.graph, renderOrder, layout(), containment.parentOf)}
+          {(layout) => renderNodes(props.graph, renderOrder, layout(), containment.parentOf, renderCtx)}
         </Show>
         <Portal mount={document.body}>
           <InspectorPanel graph={props.graph} view={props.view} />
@@ -113,7 +128,7 @@ function CanvasInner(props: {
 
   return (
     <InspectorContext.Provider value={inspector}>
-      {renderNodes(props.graph, renderOrder, layout, containment.parentOf)}
+      {renderNodes(props.graph, renderOrder, layout, containment.parentOf, renderCtx)}
       <Portal mount={document.body}>
         <InspectorPanel graph={props.graph} view={props.view} />
       </Portal>

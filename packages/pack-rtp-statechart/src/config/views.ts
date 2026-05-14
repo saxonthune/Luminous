@@ -1,10 +1,18 @@
 import type { View } from '@luminous/canvas-core';
 import { conceptMapView } from './views/concept-map.ts';
 
+export const DEFAULT_ZOOM_TO_LEVEL: View['zoomToLevel'] = [
+  { minZoom: 0,   level: 'peek' },
+  { minZoom: 0.4, level: 'card' },
+  { minZoom: 1.2, level: 'open' },
+  { minZoom: 3.0, level: 'deep' },
+];
+
 export const statechartView: View = {
   id: 'statechart',
   name: 'Statechart',
   description: 'States and transitions with action chips on transitions.',
+  zoomToLevel: DEFAULT_ZOOM_TO_LEVEL,
   nodeRoles: {
     'statechart.region': 'spatial',
     'statechart.composite': 'spatial',

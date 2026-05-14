@@ -240,6 +240,8 @@ export interface RenderContext {
   level: () => DisclosureLevel;
   zoom: () => number;
   view: View;
+  /** The full graph — renderers query this for summary chips, related items, etc. */
+  graph: Graph;
   /** Imperative: open the inspector on this node/edge. */
   inspect: (id: NodeId | EdgeId) => void;
 }

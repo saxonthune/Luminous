@@ -126,6 +126,7 @@ export function InspectorPanel(props: InspectorPanelProps): JSX.Element {
       level: () => 'open' as const,
       zoom: () => 1,
       view: props.view,
+      graph: props.graph,
       inspect: open,
     };
 
