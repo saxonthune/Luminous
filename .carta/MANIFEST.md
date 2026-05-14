@@ -58,7 +58,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.07 | `07-solidjs-pipeline-spec.md` | Node types, nesting rules, and edge semantics for the Solid.js static analysis pipeline | pipeline, solid, static-analysis, milestone-1 | doc01.03 | doc02.08, doc02.10.01 | — |
 | doc02.08 | `08-edge-schemas.md` | Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern | edges, schemas, design, cactus-boundary | doc03.03, doc02.05.01, doc02.06.02, doc02.07 | doc02.10.02 | — |
 | doc02.09 | `09-primitive-reference.md` | Enumerated reference for node primitives (drag-bar, title, markdown, container) with bind semantics and examples | primitives, schemas, reference, node | — | doc02.10.02 | — |
-| doc02.11 | `11-pdr-property-graph-architecture.md` | Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, kind packages, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. | pdr, architecture, property-graph, kind-packages, views, disclosure, canvas-engine | doc02.01 | — | — |
+| doc02.11 | `11-pdr-property-graph-architecture.md` | Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. | pdr, architecture, property-graph, packs, views, disclosure, canvas-engine | doc02.01 | doc02.10.03 | — |
 
 ### Cactus Canvas Engine
 
@@ -87,6 +87,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.10.00 | `10-examples/00-index.md` | Use cases that act as gauges for Luminous capabilities — each example defines features the product must enable | examples, gauges, use-cases | — | — | — |
 | doc02.10.01 | `10-examples/01-solidjs-reference-graph.md` | Static analysis of a Solid.js codebase rendered as a canvas — components, signals, and their consumer edges (milestone 1) | examples, milestone-1, static-analysis, solid, pipeline | doc01.03.01, doc02.07 | — | — |
 | doc02.10.02 | `10-examples/02-api-coverage-workbench.md` | Tri-layer canvas — OpenAPI controllers, JSON Schema aggregate, SQL tables — coverage edges reveal data-flow gaps | examples, openapi, json-schema, sql, coverage, gap-analysis | doc02.08, doc02.09 | — | — |
+| doc02.10.03 | `10-examples/03-rtp-statechart-canvas.md` | Worked example: render RankThePlanet's XState navigation chart and concept inventory as a property-graph canvas. Two views (statechart, concept map) prove the role-based projection design end-to-end. | examples, statechart, xstate, concepts, rtp, property-graph | doc02.11 | — | concepts.markdown, navigation.statechart.json |
 
 ## 03-research-sessions — Research Sessions
 
@@ -122,7 +123,7 @@ Quick lookup for file-path→doc mapping:
 | `carta` | doc01.02 |
 | `cognitive-load` | doc03.04 |
 | `components` | doc02.05.02 |
-| `concepts` | doc02.02, doc03.02 |
+| `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `contract` | doc02.03 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
@@ -137,7 +138,7 @@ Quick lookup for file-path→doc mapping:
 | `ecs` | doc03.01, doc03.03 |
 | `edges` | doc02.08 |
 | `engine` | doc02.05.01 |
-| `examples` | doc02.10.00, doc02.10.01, doc02.10.02 |
+| `examples` | doc02.10.00, doc02.10.01, doc02.10.02, doc02.10.03 |
 | `exploration` | doc03.00 |
 | `formalization` | doc02.02, doc03.02 |
 | `gap-analysis` | doc02.10.02 |
@@ -149,7 +150,6 @@ Quick lookup for file-path→doc mapping:
 | `index` | doc00.00 |
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |
-| `kind-packages` | doc02.11 |
 | `layout` | doc02.05.03 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc02.04, doc03.06 |
@@ -163,6 +163,7 @@ Quick lookup for file-path→doc mapping:
 | `notion` | doc03.03 |
 | `openapi` | doc02.10.02 |
 | `overview` | doc02.05.01 |
+| `packs` | doc02.11 |
 | `pdr` | doc02.01, doc02.11 |
 | `perception` | doc03.04 |
 | `performance` | doc02.06.01 |
@@ -170,7 +171,7 @@ Quick lookup for file-path→doc mapping:
 | `pipeline` | doc01.03.01, doc02.07, doc02.10.01, doc03.05 |
 | `pipelines` | doc03.04 |
 | `primitives` | doc02.09 |
-| `property-graph` | doc02.11 |
+| `property-graph` | doc02.10.03, doc02.11 |
 | `qwik` | doc03.05 |
 | `react` | doc02.06.01 |
 | `reactive` | doc03.01 |
@@ -181,6 +182,7 @@ Quick lookup for file-path→doc mapping:
 | `research` | doc03.00, doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06 |
 | `retrieval` | doc00.04 |
 | `roadmap` | doc01.03.01 |
+| `rtp` | doc02.10.03 |
 | `schema` | doc02.06.02, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
 | `server` | doc02.03 |
@@ -188,6 +190,7 @@ Quick lookup for file-path→doc mapping:
 | `solid` | doc02.06.01, doc02.07, doc02.10.01, doc03.01, doc03.05 |
 | `split` | doc01.02 |
 | `sql` | doc02.10.02 |
+| `statechart` | doc02.10.03 |
 | `static-analysis` | doc01.03.01, doc02.07, doc02.10.01 |
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
@@ -201,3 +204,4 @@ Quick lookup for file-path→doc mapping:
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc03.04 |
 | `vocabulary` | doc03.02 |
+| `xstate` | doc02.10.03 |

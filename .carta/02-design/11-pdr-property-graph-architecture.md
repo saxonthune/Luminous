@@ -1,7 +1,7 @@
 ---
 title: "PDR: Property Graph Architecture"
-summary: Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, kind packages, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list.
-tags: [pdr, architecture, property-graph, kind-packages, views, disclosure, canvas-engine]
+summary: Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list.
+tags: [pdr, architecture, property-graph, packs, views, disclosure, canvas-engine]
 deps: [doc02.01]
 ---
 
@@ -14,8 +14,8 @@ Luminous will commit to a **property graph as the interface contract** between e
 On top of this contract, Luminous will introduce:
 
 - **Multi-document composition.** Substrate, layers, user annotations, positions, saved views, and per-agent contributions each live in their own document and compose into one virtual canvas at load time. Provenance is a directory path, not a field.
-- **Kind packages.** Each pipeline ships a package declaring node/edge kinds, Solid renderers, disclosure schemas, layers, saved views, and named MCP queries. Packages are trusted code (v1), installed explicitly by the user.
-- **View semantics with role assignments.** Each saved view assigns every in-scope edge kind a role (`contain`, `arrow`, `aggregate`, `hidden`) and every in-scope node kind a role (`spatial`, `abstract`, `hidden`). This is the formal mechanism that lets the same graph project into a treemap, a call graph, a statechart, or an invariant map — without duplicating data.
+- **Packs.** Each pipeline ships a pack declaring node/edge kinds, Solid renderers, disclosure schemas, layers, saved views, and named MCP queries. Packs are trusted code (v1), installed explicitly by the user. (Compare Coda Packs, tldraw `ShapeUtil`, VS Code extensions.)
+- **View semantics with role assignments.** Each saved view assigns every in-scope edge kind a role (`contain`, `arrow`, `summary`, `hidden`) and every in-scope node kind a role (`spatial`, `latent`, `hidden`). This is the formal mechanism that lets the same graph project into a treemap, a call graph, a statechart, or an invariant map — without duplicating data.
 - **Disclosure levels.** `peek` / `card` / `open` / `deep`, each a declarative field selection plus a renderer. Same node, progressively more content, driven by zoom and by user intent. No editor mode in v1.
 - **Stable IDs** from source content, hybrid (path-primary with a rename detector emitting `prev_ids`), so that pipeline regeneration never clobbers user work.
 - **Cactus-class canvas engine.** DOM-based, Solid-native, with specific growth in virtualization, hybrid edge rendering, layout dispatch, and zoom-as-reactive-signal. No framework switch; no WebGL base.
@@ -60,7 +60,7 @@ The following decisions are binding. Later sections elaborate each.
 |---|---|---|
 | D1 | Property graph as interface contract | Every subsystem speaks the same model. Product-level DB choice is deferred. |
 | D2 | Multi-document composition | Pipeline-owned vs. user-owned vs. agent-owned data must never clobber. Directory path = provenance. |
-| D3 | Kind packages as the pipeline contract | Pipelines bring their own vocabulary, renderers, and default views. Engine knows nothing about Rust or Quint. |
+| D3 | Packs as the pipeline contract | Pipelines bring their own vocabulary, renderers, and default views. Engine knows nothing about Rust or Quint. |
 | D4 | Role-based view semantics | Same graph, many projections, declared per view. No hidden privileged fields. |
 | D5 | Disclosure levels (peek / card / open / deep) | Four levels cover the range from "dot on map" to "full inspector." No editor level in v1. |
 | D6 | Hybrid stable IDs | Path-primary + rename detector. User positions and annotations survive regeneration. |
@@ -77,7 +77,7 @@ Node = {
   id:        string,             // globally unique, derivation-stable
   kind:      string,             // namespaced; e.g. "rust.type", "quint.state"
   props:     Record<string, any>,// typed per kind
-  facets:    string[],           // free-form tags used for ad-hoc filtering
+  tags:      string[],           // free-form labels used for ad-hoc filtering
 }
 
 Edge = {
@@ -86,11 +86,13 @@ Edge = {
   from:      NodeId,
   to:        NodeId,
   props:     Record<string, any>,
-  facets:    string[],
+  tags:      string[],
 }
 ```
 
-Node kinds and edge kinds are declared by kind packages (§5). Props are typed by the owning package's schema. `facets` is an escape hatch for ad-hoc tagging that doesn't justify a new kind or property; use sparingly.
+Node kinds and edge kinds are declared by packs (§5). Props are typed by the owning pack's schema. `tags` is an escape hatch for ad-hoc labeling that doesn't justify a new kind or property; use sparingly.
+
+> **Mapping to openCypher / GQL terminology**: our node `kind` corresponds to a Neo4j/openCypher node *label*; our edge `kind` corresponds to a relationship *type*. We unify under one word because nodes and edges have isomorphic structure in our model.
 
 There is exactly one level of primitive: nodes and edges. No hyperedges, no nested subgraph primitives at the data layer. Containment, nesting, and hierarchical structure are expressed as **edges** whose visual interpretation is decided per view (§4).
 
@@ -106,8 +108,8 @@ There is exactly one level of primitive: nodes and edges. No hyperedges, no nest
 
 Two rules:
 
-1. **Kinds are namespaced.** A package declares kinds under its prefix (`rust.*`, `quint.*`, `solid.*`). No collisions across packages.
-2. **Kinds are open but versioned.** Packages can declare new kinds at any time; the graph admits them. Each package declares a semver; a canvas manifest pins the package versions it uses.
+1. **Kinds are namespaced.** A pack declares kinds under its prefix (`rust.*`, `quint.*`, `solid.*`). No collisions across packs.
+2. **Kinds are open but versioned.** Packs can declare new kinds at any time; the graph admits them. Each pack declares a semver; a canvas manifest pins the pack versions it uses.
 
 ### 3.3 Stable IDs
 
@@ -125,7 +127,7 @@ A canvas is **not** a single file. It is a composition of several, each with a s
 
 ```
 <canvas-root>/
-  canvas.json                    ← thin manifest: name, package versions, doc list
+  canvas.json                    ← thin manifest: name, pack versions, doc list
   substrate/
     nodes.json                   ← pipeline-owned; kinds, props, ids
     edges.json                   ← pipeline-owned
@@ -155,8 +157,8 @@ Ownership is enforced by the write API, not by file permissions. Violations are 
 
 When a canvas opens, the engine:
 
-1. Reads `canvas.json` to discover docs and pinned package versions.
-2. Loads packages (§5); validates kind universe.
+1. Reads `canvas.json` to discover docs and pinned pack versions.
+2. Loads packs (§5); validates kind universe.
 3. Reads substrate; validates nodes and edges against kind schemas.
 4. Reads layers; merges edges into the graph, tagging each with its source doc.
 5. Reads annotations; injects them as edges/nodes of kind `annotation.*`.
@@ -183,15 +185,15 @@ For persistent large-graph caches (Rust crates at member zoom), an on-disk SQLit
 
 **Deferred**: KùzuDB, DuckDB, custom query engines. These become plausible if query latency or memory pressure force the issue. The property-graph contract is designed so that backend swaps do not leak upward.
 
-### 3.8 Facets vs. kinds vs. props
+### 3.8 Tags vs. kinds vs. props
 
 Three mechanisms with overlapping power; the choice matters for refactorability:
 
 - **Kind** — the primary discriminator. Changes rendering, disclosure, layer membership. Use when the answer to "what is this?" differs.
 - **Prop** — typed data on a kind. Use when "what is this?" is the same but the value varies.
-- **Facet** — untyped, ad-hoc tag. Use for transient filters or cross-cutting concerns that don't justify a new kind or prop. Graduate to props when a facet becomes load-bearing.
+- **Tag** — untyped, ad-hoc label. Use for transient filters or cross-cutting concerns that don't justify a new kind or prop. Graduate to props when a tag becomes load-bearing.
 
-When in doubt, lean toward kinds. A proliferation of facets is a signal that the kind universe is under-specified.
+When in doubt, lean toward kinds. A proliferation of tags is a signal that the kind universe is under-specified.
 
 ## 4. View semantics
 
@@ -205,7 +207,7 @@ In any given view, each edge kind plays exactly one role:
 |---|---|
 | `contain` | Child rendered **inside** parent's coordinate system. Parent's bounds enclose child. |
 | `arrow` | Drawn as a visible edge between two spatial nodes. |
-| `aggregate` | Collapsed into a badge/count/summary on the source node. |
+| `summary` | Collapsed into a badge/count/summary chip on the source node. (Formerly called `aggregate`; renamed to avoid conflict with UML aggregation, DDD aggregate roots, and Vega aggregate transforms.) |
 | `hidden` | Present in the graph, not rendered in this view. |
 
 And each node kind plays exactly one role:
@@ -213,7 +215,7 @@ And each node kind plays exactly one role:
 | Role | Meaning |
 |---|---|
 | `spatial` | Has a position; rendered. |
-| `abstract` | Present in the graph, not directly rendered (may appear via aggregation on a spatial node). |
+| `latent` | Present in the graph, not directly rendered (may appear via a `summary` chip on a spatial node). (Formerly called `abstract`; renamed to avoid conflict with OOP abstract classes.) |
 | `hidden` | Excluded from the view. |
 
 A view declares a role assignment for every kind it scopes. Unscoped kinds are implicitly `hidden`.
@@ -241,7 +243,7 @@ Containment implies a coordinate system. The rules:
 3. **A node's position is relative to its containment parent** in that view. If no containment parent, position is relative to the canvas root.
 4. **A node has exactly one containment parent per view**, even if multiple edges of the `contain` kind point to it — take the first, warn on the rest.
 
-These are engine-enforced; packages cannot opt out.
+These are engine-enforced; packs cannot opt out.
 
 ### 4.4 Layouts
 
@@ -253,7 +255,7 @@ Each view declares a layout algorithm:
 - `manual` — positions come entirely from the user positions doc.
 - `hierarchy` — tree layout with a `contain` kind, but drawn as a classic tree (not nested rects).
 
-Layouts are pure functions: `(nodesInScope, edgesInScope, options) → positions`. They live behind a plugin registry so packages can contribute new ones without touching the engine.
+Layouts are pure functions: `(nodesInScope, edgesInScope, options) → positions`. They live behind a plugin registry so packs can contribute new ones without touching the engine.
 
 User positions override layout output. When a user drags a node, the override persists in `positions/<view-id>.json`. Re-running the layout does not overwrite overrides unless the user explicitly resets.
 
@@ -281,7 +283,7 @@ Every view carries an optional filter — a query expression evaluated against t
 nodes where kind = "rust.type" and exists edge of kind "owns" to kind = "rust.type" where props.wrapper = "Arc"
 ```
 
-Query execution is an index walk over edge-kind indices. Named queries (§10) are packaged versions of these, exposed to MCP.
+Query execution is an index walk over edge-kind indices. Named queries (§10) are pack-shipped versions of these, exposed to MCP.
 
 ### 4.8 Saved views
 
@@ -296,15 +298,15 @@ A saved view bundles:
 - Optional per-kind renderer overrides (e.g., use the `statechart-state` renderer for `rust.type` in this view)
 - Optional zoom-to-disclosure-level map
 
-Packages ship saved views as defaults. Users author additional saved views, which live under `views/` in the canvas root. Saved views are first-class artifacts — shareable, diffable, and the natural unit for "show the new hire the module structure" or "concurrency audit."
+Packs ship saved views as defaults. Users author additional saved views, which live under `views/` in the canvas root. Saved views are first-class artifacts — shareable, diffable, and the natural unit for "show the new hire the module structure" or "concurrency audit."
 
-## 5. Kind packages
+## 5. Packs
 
-A kind package is the unit a pipeline ships. It is the contract between the engine and pipeline authors.
+A **pack** is the unit a pipeline ships. It is the contract between the engine and pipeline authors. The closest external analogs are **Coda Packs** (schema + UI + queries bundled), tldraw's `ShapeUtil` registries, and VS Code extensions. (Internally we sometimes call this a "kind pack" when disambiguating from generic NPM packages, but the user-facing term is just *pack*.)
 
 ### 5.1 Three-part internal shape
 
-A package cleanly separates three concerns:
+A pack cleanly separates three concerns:
 
 **Schema** — pure data. Zero UI. Loadable in headless contexts (MCP server, CI lint).
 - Node kinds and edge kinds with props schemas (Zod or equivalent).
@@ -324,15 +326,15 @@ A package cleanly separates three concerns:
 
 MCP and headless consumers load only Schema; the canvas loads all three.
 
-### 5.2 Required minimum (package loads and renders something)
+### 5.2 Required minimum (pack loads and renders something)
 
-1. **Package metadata**: `id`, `name`, `version`, `description`, optional `dependsOn`, optional `sourceUrl`.
+1. **Pack metadata**: `id`, `name`, `version`, `description`, optional `dependsOn`, optional `sourceUrl`.
 2. **Node-kind schemas**: for each kind, `id`, `propsSchema`, `idDerivation`.
 3. **Edge-kind schemas**: for each kind, `id`, `propsSchema`, source/target kind constraints.
 4. **At least one node renderer per kind**, minimum = `card` level: `(props, ctx) => JSX`.
 5. **At least one view** declaring role assignments and a default layout.
 
-### 5.3 Required for good defaults (package feels complete)
+### 5.3 Required for good defaults (pack feels complete)
 
 6. **Disclosure schema per node kind**: declarative per-level field selection (§6).
 7. **Geometry hints**: default size, aspect ratio, min/max bounds, resize policy.
@@ -343,15 +345,15 @@ MCP and headless consumers load only Schema; the canvas loads all three.
 
 10. **Named MCP queries**: domain verbs over the graph (§10).
 11. **Validation rules**: constraints pipelines want enforced (fails loud on violation).
-12. **Theme tokens**: per-package palette/size vocabulary.
+12. **Theme tokens**: per-pack palette/size vocabulary.
 13. **Additional renderers**: `peek`, `open`, `deep` beyond the minimum `card`.
 14. **Interaction hooks**: per-kind click/hover/dblclick overrides.
 
 ### 5.5 On-disk layout
 
 ```
-packages/rust/
-  package.json              ← metadata, dependsOn, version
+packs/rust/
+  package.json              ← npm manifest; metadata, dependsOn, version
   schema/
     kinds.ts                ← node + edge kinds, zod schemas
     id-derivation.ts
@@ -371,36 +373,36 @@ packages/rust/
     layers.ts
     disclosure.ts
     queries.ts
-  package.entry.ts          ← exports the three bundles
+  pack.entry.ts             ← exports the three bundles
 ```
 
-Not dogma. A small package may collapse files. What matters is the three-part separation at the module level.
+Not dogma. A small pack may collapse files. What matters is the three-part separation at the module level.
 
 ### 5.6 Trust model
 
-Packages ship code. Code runs. We take the **trusted components** path:
+Packs ship code. Code runs. We take the **trusted components** path:
 
-- Users explicitly install packages (like VS Code extensions, like tldraw shape plugins).
-- Installed packages run with full canvas API access.
+- Users explicitly install packs (like VS Code extensions, like tldraw shape plugins).
+- Installed packs run with full canvas API access.
 - No sandboxing in v1.
-- The engine itself ships a small set of **declarative-only built-in kinds** (generic card, markdown block, table, badge, freeform region) that any package can reference instead of shipping its own component. This gives us a safe baseline and an expressive escape hatch.
+- The engine itself ships a small set of **declarative-only built-in kinds** (generic card, markdown block, table, badge, freeform region) that any pack can reference instead of shipping its own component. This gives us a safe baseline and an expressive escape hatch.
 
 This mirrors how every successful extensible developer tool in recent memory has shipped. Sandboxing is possible later; commits no design ground now.
 
 ### 5.7 Versioning and composition
 
-- Packages are semver'd.
-- Canvas manifest pins package versions.
-- Packages may `dependsOn` other packages — e.g. a `quint` package might depend on a base `statechart` package that provides the statechart kind vocabulary and views.
-- The engine validates at load time that all declared kinds resolve through the package graph.
+- Packs are semver'd.
+- Canvas manifest pins pack versions.
+- Packs may `dependsOn` other packs — e.g. a `quint` pack might depend on a base `statechart` pack that provides the statechart kind vocabulary and views.
+- The engine validates at load time that all declared kinds resolve through the pack graph.
 
-### 5.8 What MCP sees of a package
+### 5.8 What MCP sees of a pack
 
 MCP loads only Schema. It discovers:
 
 - What node and edge kinds exist.
 - Their prop schemas.
-- The named queries the package exposes.
+- The named queries the pack exposes.
 
 MCP never loads renderers. An agent asking "show me this" gets structured data back; visualization happens in the canvas, not in MCP.
 
@@ -444,14 +446,14 @@ Default interactions, engine-level:
 - Click → select; opens the inspector panel at `open` level.
 - Double-click → focus (animate camera to fit); elevate to `open` level in-canvas.
 - Shift-click or "explore" action → `deep` in the inspector.
-- Click an aggregate badge → expand into a list of related nodes in the inspector.
+- Click a summary badge → expand into a list of related nodes in the inspector.
 - Cmd/Ctrl-click → open-in-editor (for kinds that declare a source link).
 
-Packages override per kind when defaults don't fit.
+Packs override per kind when defaults don't fit.
 
 ### 6.4 Inspector panel
 
-A right-side docked panel that renders the selected node's `open` content (or `deep` if requested). The inspector uses the same renderer component as the `open` level in-canvas, by default. Packages can ship a distinct inspector renderer for kinds where the in-canvas card and the inspector layout differ meaningfully.
+A right-side docked panel that renders the selected node's `open` content (or `deep` if requested). The inspector uses the same renderer component as the `open` level in-canvas, by default. Packs can ship a distinct inspector renderer for kinds where the in-canvas card and the inspector layout differ meaningfully.
 
 Inspector supports navigation: clicking a related-item reference swaps the inspector to that node without changing the canvas selection. A breadcrumb / back-stack tracks the traversal.
 
@@ -484,7 +486,7 @@ The three-state model is what makes "hold context while focusing on one thing" w
 
 ### 7.3 Cross-cutting decorators
 
-Some visual concerns apply across all kinds regardless of layer: selection outline, diff badges (deferred), validation error underlines (for specs). These are cross-cutting decorators, applied by the engine in a final pass, after kind renderers. Packages do not implement them; packages expose flags that decorators consume.
+Some visual concerns apply across all kinds regardless of layer: selection outline, diff badges (deferred), validation error underlines (for specs). These are cross-cutting decorators, applied by the engine in a final pass, after kind renderers. Packs do not implement them; packs expose flags that decorators consume.
 
 ### 7.4 Agent-contributed layers
 
@@ -525,7 +527,7 @@ Cactus-today does not yet support what this PDR commits to. The engine must grow
 5. **Zoom-as-reactive-signal.** Renderers read a zoom signal; no imperative re-render orchestration.
 6. **Containment coordinate systems.** Parent-relative positions, transform composition, hit-testing aware of nesting.
 7. **Per-view position storage.** Position overrides keyed on `(view_id, node_id)`, loaded with the active view.
-8. **Kind-aware input layer.** Click/hover/dblclick dispatch consults the hit kind and lets the package's interaction hooks run before defaults.
+8. **Kind-aware input layer.** Click/hover/dblclick dispatch consults the hit kind and lets the pack's interaction hooks run before defaults.
 
 ### 9.3 Libraries, not engines
 
@@ -557,7 +559,7 @@ The MCP surface is intentionally narrow:
 - **`graph.query(pattern)`** — pattern-match over node/edge kinds and props. Returns IDs plus requested fields.
 - **`graph.inspect(node_id, level)`** — return the disclosure payload at `card`, `open`, or `deep`. Used by agents to get the same rich content the inspector panel shows.
 - **`layer.write(layer_id, {nodes?, edges?})`** — agent contributes its own layer. Agents cannot write to substrate or to layers owned by other agents. Writes include agent ID as provenance.
-- **`query.named(package, query_name, args)`** — invoke a package-exposed named query (e.g. `rust.callers-of(node)`, `quint.reachable-states(init, depth)`). These are the domain verbs.
+- **`query.named(pack, query_name, args)`** — invoke a pack-exposed named query (e.g. `rust.callers-of(node)`, `quint.reachable-states(init, depth)`). These are the domain verbs.
 
 ### 10.2 No dump
 
@@ -583,7 +585,7 @@ The interesting AI verbs are almost always domain-specific. A generic `graph.que
 - `quint.invariants-violated-by(trace)` → invariants a trace breaks.
 - `solid.high-rate-writers()` → stores updating at >30Hz.
 
-Each named query is documented in the package's schema and discoverable via an MCP introspection call. This is the primary way the domain language grows.
+Each named query is documented in the pack's schema and discoverable via an MCP introspection call. This is the primary way the domain language grows.
 
 ## 11. Pipeline contract
 
@@ -592,8 +594,8 @@ Each named query is documented in the package's schema and discoverable via an M
 A pipeline, to integrate with Luminous:
 
 1. **Ingests source artifacts.** File globs, git repos, whatever the domain dictates.
-2. **Emits substrate + layer docs** conforming to the kind packages it ships or depends on.
-3. **Ships a kind package** (or depends on one) covering every kind it emits.
+2. **Emits substrate + layer docs** conforming to the packs it ships or depends on.
+3. **Ships a pack** (or depends on one) covering every kind it emits.
 4. **Provides ID derivation** for every node kind it emits. Determinism is mandatory.
 5. **Supports regeneration.** Re-running the pipeline on unchanged source must produce byte-identical output (modulo ordering). Re-running on changed source must preserve IDs for unchanged entities.
 6. **Reports failures structurally.** Pipeline errors land as a `pipeline-error` node kind with `source_doc`, `message`, `span` — visible in the canvas as an error node, not a console message the user has to hunt for.
@@ -615,7 +617,7 @@ Both are conventions, not engine features. The engine does nothing special for s
 
 In priority order for v1:
 
-1. **Solid component + reactivity pipeline** — the existing Milestone 1 work, upgraded to emit kind-packaged output.
+1. **Solid component + reactivity pipeline** — the existing Milestone 1 work, upgraded to emit pack-conforming output.
 2. **XState / statechart pipeline** — reads an XState sidecar JSON, emits statechart nodes and transitions with `rationale` support.
 3. **Rust pipeline** — module treemap substrate plus owns/borrows/calls/implements layers. Member zoom deferred.
 4. **Quint pipeline** — leveraging Quint's IR. Emits states, actions, invariants.
@@ -646,7 +648,7 @@ source artifacts ↔ pipeline ↔ canvas docs ↔ engine ↔ views
 - Source authored by MCP agents writing to Quint / XState sidecar / spec JSON files.
 - Human reviews the canvas; rarely tweaks small things in source (treated like Tailwind-level edits).
 - Pipeline watches source, re-ingests.
-- MCP queries and writes; named queries like "propose a new state" or "suggest an invariant" are package-scoped conversational authoring moves mediated through source-file writes.
+- MCP queries and writes; named queries like "propose a new state" or "suggest an invariant" are pack-scoped conversational authoring moves mediated through source-file writes.
 
 ### 12.4 What's genuinely shared
 
@@ -658,7 +660,7 @@ source artifacts ↔ pipeline ↔ canvas docs ↔ engine ↔ views
 - Layer system.
 - Saved views.
 
-### 12.5 What's domain-specific (and belongs in packages, not the engine)
+### 12.5 What's domain-specific (and belongs in packs, not the engine)
 
 - Kind vocabulary.
 - Renderers.
@@ -667,13 +669,13 @@ source artifacts ↔ pipeline ↔ canvas docs ↔ engine ↔ views
 - Named queries.
 - Conventions like `rationale` or verification layers.
 
-This is the reason kind packages are the central extensibility primitive: they carry every domain-specific commitment.
+This is the reason packs are the central extensibility primitive: they carry every domain-specific commitment.
 
 ## 13. Reference projections
 
 The vocabulary of views that pipelines ship. These are the "materialized summaries" the formal-methods conversation referenced. Each is a standard kind of projection with a standard set of role assignments and layout.
 
-| Projection | Answers | Containment | Arrow | Aggregate | Layout |
+| Projection | Answers | Containment | Arrow | Summary | Layout |
 |---|---|---|---|---|---|
 | **Treemap** | What is inside what, by size? | `contains-*` | none | fields[] | treemap |
 | **Call / dataflow graph** | What flows where? | none | `calls` / `flows-to` | none | dagre / elk |
@@ -686,7 +688,7 @@ The vocabulary of views that pipelines ship. These are the "materialized summari
 | **Rule / provenance tree** | Why does this derived fact exist? | `derives-via` | none | none | hierarchy |
 | **Component tree** | What renders what? | `contains-component` | `consumes-store` | affordances | hierarchy + overlay |
 
-These aren't engine features. They're saved views shipped by the relevant packages, expressed in the role system. A new projection is a new saved view; the engine already supports it.
+These aren't engine features. They're saved views shipped by the relevant packs, expressed in the role system. A new projection is a new saved view; the engine already supports it.
 
 ## 14. What is deferred
 
@@ -699,7 +701,7 @@ These capabilities are intentionally out of scope for v1. Documenting them here 
 - **LSP bridge.** Bidirectional selection between editor and canvas. Valuable for code class; deferred.
 - **Canvas thumbnail mode.** WebGL rendering for nodes below a visual size threshold, promoting to DOM when interactive. Only needed if a view is asked to render 10k+ simultaneous nodes — explicitly not a v1 requirement.
 - **Multi-user collaborative editing.** Yjs is in place from the unfolding PDR, but collaborative authoring is not a v1 surface. Read-only Yjs sync for watch-together sessions is plausible but not committed.
-- **Sandboxed package execution.** Trust model is explicit install in v1. Sandboxing becomes relevant when package ecosystems grow; architecture makes no commitments that preclude it.
+- **Sandboxed pack execution.** Trust model is explicit install in v1. Sandboxing becomes relevant when pack ecosystems grow; architecture makes no commitments that preclude it.
 - **Sub-canvas navigation.** A node whose body is a whole other canvas. Architecture supports it via `canvas_ref` on a node; UX for traversal and back-navigation is deferred.
 
 ## 15. Open questions
@@ -709,19 +711,19 @@ Questions answered in this PDR:
 - *Property graph or flat list?* → Property graph at the contract level; flat list reserved as an export format.
 - *Storage shape?* → Multi-document JSON on disk; in-memory indexed structure; SQLite as optional derived cache.
 - *How does containment work?* → Edges with `contain` role, per-view assignment, acyclic, one per view.
-- *What does a pipeline ship?* → A kind package with schema, presentation, configuration.
+- *What does a pipeline ship?* → A pack with schema, presentation, configuration.
 - *Trust model?* → Trusted components, explicit install, declarative fallback for built-ins.
 - *Read or read-write?* → Read-only in v1.
 - *Canvas engine?* → Cactus-class; DOM-based, Solid-native, custom, with named growth targets.
 
 Questions still open — to be resolved in follow-on ADRs:
 
-1. **Kind closure.** Is the kind universe for a canvas strictly the union of loaded packages, or are ad-hoc kinds (for freeform user scribbles) allowed outside any package? Lean strict; confirm.
+1. **Kind closure.** Is the kind universe for a canvas strictly the union of loaded packs, or are ad-hoc kinds (for freeform user scribbles) allowed outside any pack? Lean strict; confirm.
 2. **View inheritance.** Can a saved view extend another (base view + overrides)? Probably yes, but the composition semantics need pinning.
 3. **Query language surface.** A textual DSL, a JSON pattern, or both? Named queries sidestep this for common cases, but an ad-hoc query path is needed for the filter surface.
 4. **Rename detector policy.** How aggressive? What signals? When does it ask the user vs. act silently? Needs tuning on the first real pipeline.
 5. **Package distribution.** Git-based install? npm-like registry? Single-repo bundling for v1 with distribution deferred is likely.
-6. **Per-view renderer override composition.** If a view says "use renderer X for kind Y," and the package ships renderer Z, what's the precedence? And what are the user-overridable hooks?
+6. **Per-view renderer override composition.** If a view says "use renderer X for kind Y," and the pack ships renderer Z, what's the precedence? And what are the user-overridable hooks?
 
 ## 16. First milestone and implementation sequence
 
@@ -731,7 +733,7 @@ The work is sequenced so each step earns its place against the next.
 
 **Step 2 — Multi-document composition.** Introduce substrate / annotations split on one concrete use case (the Solid pipeline). Prove that regeneration does not clobber user annotations. Highest-value split; lowest-risk to prototype.
 
-**Step 3 — Kind package scaffolding.** A minimal kind package with schema, a single renderer, one view. Used to wrap the Solid pipeline's current output. Proves the contract end-to-end.
+**Step 3 — Pack scaffolding.** A minimal pack with schema, a single renderer, one view. Used to wrap the Solid pipeline's current output. Proves the contract end-to-end.
 
 **Step 4 — View semantics with roles.** Ship the role system and a second view for the Solid canvas — e.g., a reactivity-DAG view alongside the component tree. Two views over one graph: if this works, the core commitment is proven.
 
@@ -754,8 +756,9 @@ Past step 10, the architecture is load-bearing and the work becomes incremental:
 Acknowledged influences, each contributing a specific pattern Luminous inherits:
 
 - **Alloy Analyzer's theme system** (MIT, Daniel Jackson et al.). The most direct precursor for the view layer: raw instance graphs projected into readable domain diagrams via declarative per-signature theming. Read their docs before finalizing view APIs.
-- **XState Viz / Stately.ai.** Gold standard for Harel statechart rendering. A reference implementation for the statechart kind renderer in the Quint / XState package.
-- **tldraw's `ShapeUtil` system.** The model for kind packages: serializable records + pure components + declared geometry + per-type interaction. Close study recommended; divergences noted (we don't need the whiteboard tool palette).
+- **XState Viz / Stately.ai.** Gold standard for Harel statechart rendering. A reference implementation for the statechart kind renderer in the Quint / XState pack.
+- **tldraw's `ShapeUtil` system.** The model for packs: serializable records + pure components + declared geometry + per-type interaction. Close study recommended; divergences noted (we don't need the whiteboard tool palette).
+- **Coda Packs.** Directly analogous to our packs: a downloadable bundle of schema + UI + queries that extends a generic canvas with a domain. Worth reviewing for distribution and authoring UX.
 - **Kumu's project / map / view separation.** The three-layer architecture that maps 1:1 onto substrate / canvas / saved view.
 - **Neo4j Bloom, Cytoscape.js, Sigma.js.** Informative as counter-examples — they show why "style rules over uniform primitives" falls short of per-kind components.
 - **Soufflé provenance trees.** The pattern for rule/derivation visualizations; reusable for Datalog or any rule-based spec.
@@ -767,7 +770,7 @@ Acknowledged influences, each contributing a specific pattern Luminous inherits:
 
 ## 18. Closing stance
 
-This PDR is a structural commitment, not a feature list. Every decision is chosen to be the one that compounds: once the property graph is the contract, every pipeline gets the same view layer for free; once role-based views are the mechanism, every new projection is a saved view, not an engine feature; once kind packages are the extensibility primitive, adding a new domain never requires modifying the engine.
+This PDR is a structural commitment, not a feature list. Every decision is chosen to be the one that compounds: once the property graph is the contract, every pipeline gets the same view layer for free; once role-based views are the mechanism, every new projection is a saved view, not an engine feature; once packs are the extensibility primitive, adding a new domain never requires modifying the engine.
 
 The architecture is built to be re-entered. When the forces shift — when editor mode becomes necessary, when scale demands WebGL, when a new formal-methods tool becomes important — the changes land in known places. Nothing in this design is precious except the shape of the contract.
 
