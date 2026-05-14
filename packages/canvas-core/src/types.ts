@@ -334,3 +334,33 @@ export interface NamedQuery {
   /** Pure function over the graph. Returns ids or projected records. */
   execute: (graph: Graph, args: unknown) => unknown;
 }
+
+// ============================================================================
+// Scene graph — the view evaluator's output
+// ============================================================================
+
+/**
+ * Produced by `evaluateView(graph, view)`. Partitions the in-scope graph
+ * according to the view's role assignments. Consumed by the renderer.
+ */
+export interface SceneGraph {
+  /** Spatial nodes — have a position; rendered. Deterministic order. */
+  spatialNodes: Node[];
+  /** Latent nodes — present, not rendered; may appear via summary chips. */
+  latentNodes: Node[];
+  /** Edges with role `arrow` — drawn as visible lines. */
+  arrows: Edge[];
+  /** Edges with role `summary` — collapsed into chips on the source node. */
+  summaryEdges: Edge[];
+  /** Per-view nesting tree from the contain-role edge subset. */
+  containment: ContainmentTree;
+  /** Non-fatal evaluation warnings. */
+  warnings: SceneWarning[];
+}
+
+export interface SceneWarning {
+  code: 'latent-without-summary' | 'orphan-summary-edge' | 'unknown-kind-role';
+  /** Node or edge id this warning pertains to, when applicable. */
+  id?: NodeId | EdgeId;
+  message: string;
+}
