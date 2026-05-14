@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   resolveAbsolutePosition,
+  resolveAbsolutePositionByParentOf,
   computeAttach,
   computeDetach,
   computeContainerFit,
@@ -151,5 +152,54 @@ describe('computeContainerFit', () => {
     const fitAfter = computeContainerFit(remaining);
 
     expect(fitAfter.size.height).toBeLessThan(fitBefore.size.height);
+  });
+});
+
+// ===== resolveAbsolutePositionByParentOf =====
+
+describe('resolveAbsolutePositionByParentOf', () => {
+  it('returns own position for leaf with no parent', () => {
+    const positions = new Map([['a', { x: 10, y: 20 }]]);
+    const parentOf = new Map<string, string>();
+    expect(resolveAbsolutePositionByParentOf('a', positions, parentOf)).toEqual({ x: 10, y: 20 });
+  });
+
+  it('adds parent offset for one-level nesting', () => {
+    const positions = new Map([
+      ['parent', { x: 100, y: 100 }],
+      ['child', { x: 50, y: 50 }],
+    ]);
+    const parentOf = new Map([['child', 'parent']]);
+    expect(resolveAbsolutePositionByParentOf('child', positions, parentOf)).toEqual({ x: 150, y: 150 });
+  });
+
+  it('accumulates offsets for three-level nesting (region → composite → state)', () => {
+    const positions = new Map([
+      ['region', { x: 10, y: 20 }],
+      ['composite', { x: 30, y: 40 }],
+      ['state', { x: 50, y: 60 }],
+    ]);
+    const parentOf = new Map([
+      ['composite', 'region'],
+      ['state', 'composite'],
+    ]);
+    // 10+30+50=90, 20+40+60=120
+    expect(resolveAbsolutePositionByParentOf('state', positions, parentOf)).toEqual({ x: 90, y: 120 });
+  });
+
+  it('returns own position and warns when parent is missing', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const positions = new Map([['child', { x: 5, y: 7 }]]);
+    const parentOf = new Map([['child', 'ghost']]);
+    const result = resolveAbsolutePositionByParentOf('child', positions, parentOf);
+    expect(result).toEqual({ x: 5, y: 7 });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('ghost'));
+    warnSpy.mockRestore();
+  });
+
+  it('returns { x:0, y:0 } for unknown nodeId', () => {
+    const positions = new Map<string, { x: number; y: number }>();
+    const parentOf = new Map<string, string>();
+    expect(resolveAbsolutePositionByParentOf('missing', positions, parentOf)).toEqual({ x: 0, y: 0 });
   });
 });
