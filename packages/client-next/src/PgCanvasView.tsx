@@ -35,25 +35,29 @@ function bfsOrder(
 
 function renderNodes(
   graph: Graph,
-  renderOrder: string[],
-  layout: { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
-  parentOf: ReadonlyMap<string, string>,
+  renderOrder: () => string[],
+  layout: () => { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
+  parentOf: () => ReadonlyMap<string, string>,
   renderCtx: RenderContext,
 ): JSX.Element {
   return (
-    <For each={renderOrder}>
+    <For each={renderOrder()}>
       {(nodeId) => {
         const node = graph.nodes.get(nodeId);
         if (!node) return null;
-        const abs = resolveAbsolutePositionByParentOf(nodeId, layout.positions, parentOf);
-        const sz = layout.sizes.get(nodeId) ?? { w: 120, h: 60 };
+        const abs = createMemo(() => resolveAbsolutePositionByParentOf(nodeId, layout().positions, parentOf()));
+        const sz = createMemo(() => layout().sizes.get(nodeId) ?? { w: 120, h: 60 });
         return (
           <NodeContainer
             nodeId={nodeId}
-            x={() => abs.x}
-            y={() => abs.y}
-            w={() => sz.w}
-            h={() => sz.h}
+            x={() => abs().x}
+            y={() => abs().y}
+            w={() => sz().w}
+            h={() => sz().h}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              renderCtx.inspect(nodeId);
+            }}
           >
             {(() => {
               const renderer = getNodeRenderer(node.kind, renderCtx.level());
@@ -83,9 +87,10 @@ function CanvasInner(props: {
   ensurePacksRegistered();
   const inspector = createInspector();
   const canvasCtx = useCanvasContext();
-  const scene = evaluateView(props.graph, props.view);
-  const { containment } = scene;
-  const renderOrder = bfsOrder(containment.rootIds, containment.childrenOf);
+
+  const scene = createMemo(() => evaluateView(props.graph, props.view));
+  const containment = createMemo(() => scene().containment);
+  const renderOrder = createMemo(() => bfsOrder(containment().rootIds, containment().childrenOf));
 
   const level = createMemo<DisclosureLevel>(() =>
     levelFromZoom(canvasCtx.transform().k, props.view.zoomToLevel)
@@ -94,25 +99,25 @@ function CanvasInner(props: {
   const renderCtx: RenderContext = {
     level,
     zoom: () => canvasCtx.transform().k,
-    view: props.view,
+    get view() { return props.view; },
     graph: props.graph,
     inspect: (id) => inspector.open(id),
   };
 
   if (props.algorithm === 'elk') {
-    const [elkResult] = createResource<ElkLayoutOutput>(() =>
-      elkLayout({
-        rootIds: containment.rootIds,
-        childrenOf: containment.childrenOf,
-        edges: scene.arrows.map((a) => ({ id: `${a.from}->${a.to}`, from: a.from, to: a.to })),
-        direction: 'RIGHT',
-      })
+    const [elkResult] = createResource(
+      () => ({
+        rootIds: containment().rootIds,
+        childrenOf: containment().childrenOf,
+        edges: scene().arrows.map((a) => ({ id: `${a.from}->${a.to}`, from: a.from, to: a.to })),
+      }),
+      (input): Promise<ElkLayoutOutput> => elkLayout({ ...input, direction: 'RIGHT' }),
     );
 
     return (
       <InspectorContext.Provider value={inspector}>
         <Show when={elkResult()} fallback={<div style={{ padding: '8px', color: '#888' }}>Computing layout…</div>}>
-          {(layout) => renderNodes(props.graph, renderOrder, layout(), containment.parentOf, renderCtx)}
+          {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx)}
         </Show>
         <Portal mount={document.body}>
           <InspectorPanel graph={props.graph} view={props.view} />
@@ -121,14 +126,14 @@ function CanvasInner(props: {
     );
   }
 
-  const layout = gridLayout({
-    rootIds: containment.rootIds,
-    childrenOf: containment.childrenOf,
-  });
+  const layout = createMemo(() => gridLayout({
+    rootIds: containment().rootIds,
+    childrenOf: containment().childrenOf,
+  }));
 
   return (
     <InspectorContext.Provider value={inspector}>
-      {renderNodes(props.graph, renderOrder, layout, containment.parentOf, renderCtx)}
+      {renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx)}
       <Portal mount={document.body}>
         <InspectorPanel graph={props.graph} view={props.view} />
       </Portal>
