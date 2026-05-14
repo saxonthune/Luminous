@@ -86,7 +86,11 @@ interface FreeformEdgeProps {
 }
 
 export function FreeformEdge(props: FreeformEdgeProps) {
-  const { setSelectedIds } = useCanvasContext();
+  const { setSelectedIds, selectedIds } = useCanvasContext();
+  const [hovered, setHovered] = createSignal(false);
+  const isSelected = () => selectedIds().includes(props.edge.id);
+  const edgeColor = () => isSelected() || hovered() ? 'var(--accent-subtle)' : 'var(--edge)';
+  const strokeWidth = () => isSelected() || hovered() ? 3 : 2;
   const [editing, setEditing] = createSignal(false);
   const [editValue, setEditValue] = createSignal('');
   const [contextMenu, setContextMenu] = createSignal<{ x: number; y: number } | null>(null);
@@ -199,19 +203,34 @@ export function FreeformEdge(props: FreeformEdgeProps) {
           markerWidth="8" markerHeight="8"
           orient="auto-start-reverse"
         >
-          <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--edge)" />
+          <path d="M 0 1 L 10 5 L 0 9 z" fill={edgeColor()} />
         </marker>
       </defs>
       <g style={{ "pointer-events": 'auto' }}>
         <path
           d={pathD()}
           stroke="transparent" stroke-width={12} fill="none"
+          pointer-events="stroke"
+          data-edge-id={props.edge.id}
           style={{ cursor: 'pointer' }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (e.shiftKey) {
+              const current = selectedIds();
+              if (!current.includes(props.edge.id)) {
+                setSelectedIds([...current, props.edge.id]);
+              }
+            } else {
+              setSelectedIds([props.edge.id]);
+            }
+          }}
+          onPointerEnter={() => setHovered(true)}
+          onPointerLeave={() => setHovered(false)}
           onDblClick={startEditing}
         />
         <path
           d={pathD()}
-          stroke="var(--edge)" stroke-width={2} stroke-linecap="round" stroke-linejoin="round" fill="none"
+          stroke={edgeColor()} stroke-width={strokeWidth()} stroke-linecap="round" stroke-linejoin="round" fill="none"
           marker-end={`url(#arrow-${props.edge.id})`}
           style={{ "pointer-events": 'none' }}
         />

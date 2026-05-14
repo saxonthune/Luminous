@@ -154,6 +154,24 @@ function CanvasContent(props: CanvasContentProps): JSX.Element {
     onCleanup(() => window.removeEventListener('keydown', handler));
   });
 
+  // Escape — clear selection
+  onMount(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const active = document.activeElement;
+      if (
+        active &&
+        (active.tagName === 'INPUT' ||
+          active.tagName === 'TEXTAREA' ||
+          (active as HTMLElement).closest?.('.cm-editor'))
+      )
+        return;
+      clearSelection();
+    };
+    window.addEventListener('keydown', handler);
+    onCleanup(() => window.removeEventListener('keydown', handler));
+  });
+
   // F2 — cycle theme
   onMount(() => {
     const handler = (e: KeyboardEvent) => {
