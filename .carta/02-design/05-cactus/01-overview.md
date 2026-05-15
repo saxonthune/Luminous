@@ -14,15 +14,15 @@ Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses
 
 ## Data Contract
 
-Cactus is "domain-agnostic" in a precise sense: the boundary is defined by which fields it reads and which it ignores.
+Cactus is "domain-agnostic" in a precise sense: it has no opinion about a "node data model." It accepts geometry through component props and renders whatever JSX the host hands it as children. The contract surface is exactly:
 
-**Nodes.** Cactus reads `id`, `schemaName` (as an opaque string tag — never interpreted), `parent` (for containment rendering), and `geometry` (`{x, y, w, h}`). It does not read `content`, does not know what `title`, `body`, or any schema-specific field means, does not interpret `schemaName` values, and does not validate schemas.
+**Nodes.** `<NodeContainer nodeId x y w h>{ children }</NodeContainer>` — `nodeId` is an opaque string, `x/y/w/h` are signal accessors in canvas coordinates, `children` is opaque JSX that cactus never inspects. Containment, schemas, content, titles, and any domain-specific fields live entirely above this boundary — the host computes geometry from whatever data model it owns and passes the result through props.
 
-**Edges.** Cactus reads `id`, `fromId`, `toId`, and optionally `schemaName` (again as an opaque tag). It does not interpret edge schemas and does not filter edges by schema — filtering is the caller's job. Edge direction is a visual hint for the renderer, not a semantic constraint cactus enforces.
+**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it's given. Direction is a visual hint (arrowhead on target) not a semantic constraint.
 
-**Schemas.** Cactus reads nothing from `doc.schemas`. The schemas table is entirely the domain layer's concern. Cactus receives opaque `schemaName` strings on nodes and edges and uses them only as data attributes for CSS styling and hit-testing.
+**Hit-testing and styling.** Cactus uses DOM data attributes (see [DOM Attribute Conventions](#dom-attribute-conventions)). Hosts and pack renderers may stamp additional attributes for CSS targeting; cactus only reads the ones it owns.
 
-If new code in cactus starts reading content, interpreting schema names, or knowing what specific strings like `'component'` or `'renders'` mean, it belongs in the domain layer above cactus, not in cactus itself.
+If new code in cactus starts reading domain fields, interpreting schema names, or knowing what specific strings like `'component'` or `'renders'` mean, it belongs in the domain layer above cactus, not in cactus itself.
 
 ## Design Principles
 
@@ -102,15 +102,27 @@ Each interaction is a hook that follows the same pattern:
 
 All hooks are zoom-aware: screen-space pointer deltas are divided by `transform.k` to produce canvas-space deltas.
 
+## Mount Lifecycle
+
+A `<Canvas>` mounts in a fixed sequence; understanding it matters when modifying `NodeContainer`, `EdgeLayer`, or any code that touches the rect registry.
+
+1. **Canvas mounts.** Internally calls `useViewport()` (creates the `transform` signal and attaches d3-zoom to the container ref), creates an empty reactive node-rect `Map` with a version counter, then calls `useConnectionDrag()`, `useSelection()`, and `useBoxSelect()`. Assembles `CanvasContextValue` and wraps `children` in `<CanvasContext.Provider>`. No nodes are registered yet; the edge layer is rendered but has nothing to draw.
+2. **Children render.** Each `<NodeContainer>` runs a `createRenderEffect` that synchronously calls `ctx.registerNodeRect(nodeId, {x,y,w,h})` during the render pass — **before paint, before EdgeLayer reads rects**. This is the ordering guarantee that prevents edge flicker on first frame. The effect re-fires reactively whenever any of the `x/y/w/h` accessors change.
+3. **EdgeLayer reads rects.** EdgeLayer is rendered by Canvas itself, positioned in the JSX after `children`. Its per-edge `createMemo` calls `getNodeRects()` and computes center-to-center endpoints. The memo subscribes to the rect-map version counter, so any subsequent `registerNodeRect` automatically invalidates and re-renders affected edges.
+4. **Steady state.** Pan/zoom updates the `transform` signal — CSS `transform: translate/scale` on the node layer div and SVG layer move together. Node drag through `useNodeDrag` callbacks updates host position state, which flows back into `NodeContainer`'s accessors and re-registers rects. Connection drag, selection, and box-select operate independently through context.
+5. **Unmount.** Each `NodeContainer` cleanup calls `unregisterNodeRect(nodeId)`. d3-zoom is detached.
+
+The key invariant: **edges read what `NodeContainer`s register**. Anything that bypasses `NodeContainer` (custom node primitives, tests) must call `registerNodeRect`/`unregisterNodeRect` directly or edges will not appear.
+
 ## Integration Pattern
 
-A typical domain integration (like `client-next`'s CanvasView) looks like:
+A typical domain integration (like `client-next`'s `PgCanvasView`) looks like:
 
-1. **Wrap content in `<Canvas>`** — provides viewport, context, and structural layers.
-2. **Render nodes as children** — positioned with CSS `position: absolute; left; top`. Nodes use `useCanvasContext()` for selection state and connection initiation.
-3. **Pass `renderEdges` prop** — returns SVG elements in canvas coordinate space.
-4. **Pass `connectionDrag.onConnect`** — called when a connection drag completes. Domain layer creates the edge.
-5. **Use `useNodeDrag` / `useNodeResize`** inside the content — attach handlers to node elements.
-6. **Use `ConnectionHandle`** on nodes — source handles initiate connections, target handles receive them.
+1. **Wrap content in `<Canvas>`** — provides viewport, context, and structural layers. Pass `edges`, optional `chrome`/`onAction`, and `connectionDrag.onConnect`.
+2. **Compute layout above cactus** — the host runs a layout algorithm (`gridLayout`, `elkLayout`, etc.) that produces `positions` and `sizes` maps, then resolves absolute canvas coordinates by walking the containment tree.
+3. **Render each node inside a `<NodeContainer>`** — pass `x/y/w/h` as signal accessors derived from the layout (plus any drag overrides). Place the consumer's renderer as `children` — it is opaque to cactus.
+4. **Declare edges** — build `EdgeDeclaration[]` from the host's edge model and pass via the `edges` prop. Cactus draws straight lines (see [Edge geometry](02-api-contract.md#edge-geometry)).
+5. **Wire interactions outside Canvas** — call `useNodeDrag` / `useNodeResize` in the host component, pass `zoomScale: () => ctx.transform().k` so deltas are zoom-corrected, and in callbacks update the host's reactive position store. That store feeds the accessors passed to `NodeContainer`, closing the loop.
+6. **Use `ConnectionHandle`** on nodes that participate in edge creation — source handles call `ctx.startConnection`; target handles set `data-connection-target` so the connection-drop hit-test can find them.
 
-The Canvas component provides a Solid context (`CanvasContext`) with `transform`, `screenToCanvas`, `selectedIds`, `clearSelection`, `isSelected`, `onNodePointerDown`, `startConnection`, and `ctrlHeld`. Child components consume this via `useCanvasContext()` to participate in canvas interactions.
+The Canvas component provides a Solid context (`CanvasContext`) with `transform`, `screenToCanvas`, `selectedIds`, `clearSelection`, `isSelected`, `onNodePointerDown`, `startConnection`, `ctrlHeld`, and the rect-registry trio `registerNodeRect` / `unregisterNodeRect` / `getNodeRects`. Child components consume this via `useCanvasContext()`.

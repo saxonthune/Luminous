@@ -57,17 +57,23 @@ interface CanvasProps {
   boxSelect?: {
     getNodeRects: () => NodeRect[]
   }
-  renderEdges?: (transform: Transform) => JSX.Element
+  edges?: EdgeDeclaration[]
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element
   onBackgroundPointerDown?: (event: PointerEvent) => void
   onBackgroundContextMenu?: (event: MouseEvent) => void
+  chrome?: ChromeSchema
+  onAction?: (id: string, payload?: unknown) => void
+  nodeContextMenu?: (nodeId: string) => MenuSchema | undefined
+  backgroundContextMenu?: () => MenuSchema | undefined
   class?: string
   patternId?: string
   children: JSX.Element
   ref?: (el: CanvasRef) => void
 }
 ```
+
+`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress.
 
 `onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
 
@@ -99,7 +105,7 @@ interface NodeContainerProps {
 }
 ```
 
-Sizing model: `w` and `h` are **floors** (rendered as `min-width` / `min-height`), so cards grow to fit content. Layout algorithms should pass measured leaf sizes via their `sizeOf` parameter (see Layout primitives) to keep parent packing accurate.
+Sizing model (current): `w` is rendered as a fixed `width` (`${w}px`); `h` is rendered as `min-height` (`${h}px`). So nodes grow vertically to fit content but **do not grow horizontally** — content wider than `w` overflows and the node's border (drawn at width `w`) will not enclose it. Layout algorithms should pass measured leaf sizes via their `sizeOf` parameter (see Layout primitives) so width is accurate for the rendered content.
 
 The bottom-left gripper is always rendered. To wire dragging, pair with `useNodeDrag({ handleSelector: '[data-drag-handle]' })` and forward `onPointerDown`.
 
@@ -220,6 +226,40 @@ interface ConnectionPreviewProps {
   strokeDasharray?: string      // default '4 4'
 }
 ```
+
+## Edges
+
+### EdgeDeclaration
+
+Declarative edge passed via `<Canvas edges={...}>`. Cactus owns geometry; the host declares connectivity and optional styling hints.
+
+```typescript
+interface EdgeDeclaration {
+  id: string
+  sourceId: string         // must match a registered NodeContainer nodeId
+  targetId: string
+  styling?: EdgeStyling
+  label?: () => JSX.Element  // rendered as <text> at the line midpoint
+}
+
+interface EdgeStyling {
+  colorToken?: string      // CSS variable name without leading -- (e.g. 'accent', 'fg-muted')
+  dash?: 'solid' | 'dashed' | 'dotted'
+  width?: number           // default 1.5
+  arrowHead?: boolean      // default false — triangle on target end
+}
+```
+
+### Edge geometry
+
+Edges currently render as **straight lines from source-node-center to target-node-center**. Endpoints are computed inside `EdgeLayer` as:
+
+```
+x1 = src.x + src.w / 2     x2 = tgt.x + tgt.w / 2
+y1 = src.y + src.h / 2     y2 = tgt.y + tgt.h / 2
+```
+
+where `src`/`tgt` come from `ctx.getNodeRects()`. The visual consequence is that lines cross into the node's interior rather than terminating at its border — arrowheads land on the centerpoint, not on the edge of the box. Edge-intersection routing, curves, and container-avoidance are not implemented (see `TODO(routing)` in `EdgeLayer.tsx`). Endpoints recompute reactively whenever any `NodeContainer` re-registers its rect.
 
 ## Hooks
 
@@ -441,10 +481,22 @@ interface CanvasContextValue {
   onNodePointerDown: (nodeId: string, event: PointerEvent) => void
   setSelectedIds: (ids: string[]) => void
   ctrlHeld: Accessor<boolean>
+  /** Register a node's canvas-space bounding rect. Called by NodeContainer in a
+   *  createRenderEffect during render so rects are available before EdgeLayer reads them. */
+  registerNodeRect: (id: string, rect: NodeRect) => void
+  /** Unregister on cleanup. Called by NodeContainer. */
+  unregisterNodeRect: (id: string) => void
+  /** Reactive accessor over all currently registered rects. EdgeLayer subscribes to this
+   *  to recompute endpoints when any node moves or resizes. */
+  getNodeRects: () => ReadonlyMap<string, NodeRect>
 }
 
 function useCanvasContext(): CanvasContextValue  // throws if outside Canvas
 ```
+
+`registerNodeRect` / `unregisterNodeRect` / `getNodeRects` are the public mechanism by which edges know where nodes are. Custom node renderers do not need to call these — wrapping content in `<NodeContainer>` registers automatically. They are exposed in the contract because alternative node primitives (or tests) may bypass `NodeContainer`.
+
+`NodeRect` shape: `{ x: number; y: number; w: number; h: number }` — note `w`/`h` (not `width`/`height`); this is the registry's internal shape and differs from the public `NodeRect` type used by `boxSelect.getNodeRects`, which uses `width`/`height` plus `id`.
 
 ## Geometry Utilities
 
