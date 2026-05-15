@@ -15,6 +15,30 @@ function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8)
   return `M ${x2} ${y2} L ${baseX1} ${baseY1} L ${baseX2} ${baseY2} Z`;
 }
 
+/**
+ * Intersect a line from a box's center toward an external point with the
+ * box's perimeter. Returns the perimeter point, used to terminate edges
+ * at the node border rather than the node center.
+ */
+function lineExitsBox(
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  toX: number,
+  toY: number,
+): { x: number; y: number } {
+  const dx = toX - cx;
+  const dy = toY - cy;
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+  const halfW = w / 2;
+  const halfH = h / 2;
+  const tx = dx === 0 ? Infinity : halfW / Math.abs(dx);
+  const ty = dy === 0 ? Infinity : halfH / Math.abs(dy);
+  const t = Math.min(tx, ty);
+  return { x: cx + t * dx, y: cy + t * dy };
+}
+
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   return (
     <For each={props.edges}>
@@ -24,12 +48,13 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           const src = rects.get(edge.sourceId);
           const tgt = rects.get(edge.targetId);
           if (!src || !tgt) return null;
-          return {
-            x1: src.x + src.w / 2,
-            y1: src.y + src.h / 2,
-            x2: tgt.x + tgt.w / 2,
-            y2: tgt.y + tgt.h / 2,
-          };
+          const sx = src.x + src.w / 2;
+          const sy = src.y + src.h / 2;
+          const tx = tgt.x + tgt.w / 2;
+          const ty = tgt.y + tgt.h / 2;
+          const start = lineExitsBox(sx, sy, src.w, src.h, tx, ty);
+          const end = lineExitsBox(tx, ty, tgt.w, tgt.h, sx, sy);
+          return { x1: start.x, y1: start.y, x2: end.x, y2: end.y };
         });
 
         const dash = edge.styling?.dash;
@@ -67,6 +92,10 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                     dominant-baseline="middle"
                     font-size="10"
                     fill={color}
+                    stroke="var(--bg-surface, white)"
+                    stroke-width="4"
+                    stroke-linejoin="round"
+                    paint-order="stroke fill"
                     style={{ 'pointer-events': 'none' }}
                   >
                     {edge.label?.()}

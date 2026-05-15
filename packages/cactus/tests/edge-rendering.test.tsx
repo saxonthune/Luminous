@@ -58,12 +58,15 @@ describe('Canvas edge rendering', () => {
     const line = edgeSvg!.querySelector('line');
     expect(line).not.toBeNull();
 
-    // Centers: node-a center = (100+30, 100+20) = (130, 120)
-    //          node-b center = (300+30, 200+20) = (330, 220)
-    expect(line!.getAttribute('x1')).toBe('130');
-    expect(line!.getAttribute('y1')).toBe('120');
-    expect(line!.getAttribute('x2')).toBe('330');
-    expect(line!.getAttribute('y2')).toBe('220');
+    // Edge-to-edge routing: line from src center (130,120) toward tgt center
+    // (330,220) exits src box (60x40) at the perimeter, not the center.
+    // dx=200, dy=100; t = min(30/200, 20/100) = 0.15
+    // src exit = (130+0.15*200, 120+0.15*100) = (160, 135)
+    // tgt exit = (330-30, 220-15) = (300, 205)
+    expect(line!.getAttribute('x1')).toBe('160');
+    expect(line!.getAttribute('y1')).toBe('135');
+    expect(line!.getAttribute('x2')).toBe('300');
+    expect(line!.getAttribute('y2')).toBe('205');
 
     cleanup();
   });
