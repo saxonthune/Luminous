@@ -13,6 +13,8 @@ const arrowProps = z.object({
   color: z.string().optional(),
 });
 
+const containsProps = z.object({});
+
 export const boxKind: NodeKind = {
   id: 'prim.box',
   label: 'Box',
@@ -30,5 +32,12 @@ export const arrowKind: EdgeKind = {
   directed: true,
 };
 
+export const containsKind: EdgeKind = {
+  id: 'prim.contains',
+  label: 'Contains',
+  propsSchema: containsProps,
+  directed: true,
+};
+
 export const nodeKinds: NodeKind[] = [boxKind];
-export const edgeKinds: EdgeKind[] = [arrowKind];
+export const edgeKinds: EdgeKind[] = [arrowKind, containsKind];

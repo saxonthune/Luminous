@@ -105,7 +105,7 @@ interface NodeContainerProps {
 }
 ```
 
-Sizing model (current): `w` is rendered as a fixed `width` (`${w}px`); `h` is rendered as `min-height` (`${h}px`). So nodes grow vertically to fit content but **do not grow horizontally** — content wider than `w` overflows and the node's border (drawn at width `w`) will not enclose it. Layout algorithms should pass measured leaf sizes via their `sizeOf` parameter (see Layout primitives) so width is accurate for the rendered content.
+Sizing model: `w` and `h` are **floors**, rendered as `min-width: ${w}px` and `min-height: ${h}px`. The node's div grows in both axes to fit content, so the border always encloses what is rendered inside. A `ResizeObserver` on the container updates the registered rect with the measured size after first layout, so edges and other consumers of `getNodeRects()` see the actual rendered dimensions rather than the layout hint. Layout algorithms should still pass measured leaf sizes via their `sizeOf` parameter so parent packing is accurate, but the visible border is no longer at risk of clipping content.
 
 ### NodeShell
 

@@ -15,6 +15,7 @@ export const architectureView: View = {
   },
   edgeRoles: {
     'prim.arrow': 'arrow',
+    'prim.contains': 'contain',
   },
   layers: {},
   layout: { algorithm: 'elk' },
