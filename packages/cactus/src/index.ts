@@ -14,6 +14,8 @@ export { DragHandle } from './DragHandle.js';
 export type { DragHandleProps } from './DragHandle.js';
 export { NodeBody } from './NodeBody.js';
 export type { NodeBodyProps } from './NodeBody.js';
+export { NodeHeader } from './NodeHeader.js';
+export type { NodeHeaderProps } from './NodeHeader.js';
 export { ResizeHandle } from './ResizeHandle.js';
 export type { ResizeHandleProps } from './ResizeHandle.js';
 export { DotGrid } from './DotGrid.js';

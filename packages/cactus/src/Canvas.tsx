@@ -114,6 +114,22 @@ export function Canvas(props: CanvasProps) {
     return nodeRectsData;
   };
 
+  // Header-height registry — populated by <NodeHeader> via context; consumed by layout.
+  const headerHeightsData = new Map<string, number>();
+  const [headerHeightsVersion, setHeaderHeightsVersion] = createSignal(0);
+  const registerHeaderHeight = (nodeId: string, height: number) => {
+    headerHeightsData.set(nodeId, height);
+    setHeaderHeightsVersion((v) => v + 1);
+  };
+  const unregisterHeaderHeight = (nodeId: string) => {
+    headerHeightsData.delete(nodeId);
+    setHeaderHeightsVersion((v) => v + 1);
+  };
+  const getHeaderHeights = (): ReadonlyMap<string, number> => {
+    headerHeightsVersion(); // reactive dependency
+    return headerHeightsData;
+  };
+
   const connectionDragResult = useConnectionDrag(
     props.connectionDrag
       ? { ...props.connectionDrag, screenToCanvas }
@@ -194,6 +210,9 @@ export function Canvas(props: CanvasProps) {
     registerNodeRect,
     unregisterNodeRect,
     getNodeRects,
+    registerHeaderHeight,
+    unregisterHeaderHeight,
+    getHeaderHeights,
   };
   /* eslint-enable solid/reactivity */
 

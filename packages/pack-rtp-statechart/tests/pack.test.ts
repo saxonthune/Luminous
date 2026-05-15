@@ -119,6 +119,7 @@ describe('renderer fallback', () => {
       zoom: () => 1,
       view: statechartView,
       graph: buildGraph([], []),
+      hasChildren: () => false,
       inspect: () => undefined,
     };
     const result = renderer?.({ id: 'state.nav.Home', kind: 'statechart.state', props: { name: 'Home' }, tags: [] }, mockCtx);

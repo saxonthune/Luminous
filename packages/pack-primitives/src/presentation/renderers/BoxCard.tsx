@@ -1,6 +1,6 @@
 import type { JSX } from 'solid-js';
 import type { Node, RenderContext } from '@luminous/core';
-import { NodeBody } from '@luminous/cactus';
+import { NodeBody, NodeHeader } from '@luminous/cactus';
 
 type BoxProps = {
   label: string;
@@ -12,6 +12,38 @@ type BoxProps = {
 export default function BoxCard(node: Node, _ctx: RenderContext): JSX.Element {
   const p = node.props as BoxProps;
   const borderColor = p.color ?? '#d0d0d0';
+
+  if (_ctx.hasChildren(node.id)) {
+    return (
+      <NodeBody
+        direction="vertical"
+        style={{
+          'border-radius': '6px',
+          border: `1px solid ${borderColor}`,
+          'border-left': `4px solid ${borderColor}`,
+          background: '#fff',
+          width: '100%',
+          'min-height': '100%',
+        }}
+      >
+        <NodeHeader nodeId={node.id} padding="6px 12px">
+          <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', gap: '8px' }}>
+            <div style={{ 'font-size': '14px', 'font-weight': '600' }}>{p.label}</div>
+            {p.tag && (
+              <div style={{
+                'font-size': '10px',
+                padding: '2px 6px',
+                'border-radius': '4px',
+                background: '#eee',
+                color: '#666',
+              }}>{p.tag}</div>
+            )}
+          </div>
+        </NodeHeader>
+      </NodeBody>
+    );
+  }
+
   return (
     <NodeBody
       direction="vertical"

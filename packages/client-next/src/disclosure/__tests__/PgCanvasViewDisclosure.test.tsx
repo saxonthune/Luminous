@@ -29,6 +29,7 @@ function makeCtx(level: RenderContext['level']): RenderContext {
     zoom: () => 1,
     view: testView,
     graph: emptyGraph,
+    hasChildren: () => false,
     inspect: () => undefined,
   };
 }

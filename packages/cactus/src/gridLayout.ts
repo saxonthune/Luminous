@@ -2,9 +2,13 @@ export interface GridLayoutInput {
   rootIds: ReadonlyArray<string>;
   childrenOf: ReadonlyMap<string, ReadonlyArray<string>>;
   nodeSize?: { w: number; h: number };
+  /** Per-leaf intrinsic size; falls back to nodeSize default. Parents are sized from packed children. */
+  sizeOf?: ReadonlyMap<string, { w: number; h: number }>;
   padding?: number;
   gap?: number;
   headerHeight?: number;
+  /** Per-parent header height overrides. Falls back to headerHeight for parents not in this map. */
+  headerHeights?: ReadonlyMap<string, number>;
 }
 
 export interface GridLayoutOutput {
@@ -17,10 +21,14 @@ export function gridLayout(input: GridLayoutInput): GridLayoutOutput {
     rootIds,
     childrenOf,
     nodeSize = { w: 120, h: 60 },
+    sizeOf,
     padding = 16,
     gap = 8,
     headerHeight = 24,
+    headerHeights,
   } = input;
+
+  const headerFor = (id: string) => headerHeights?.get(id) ?? headerHeight;
 
   const positions = new Map<string, { x: number; y: number }>();
   const sizes = new Map<string, { w: number; h: number }>();
@@ -29,7 +37,8 @@ export function gridLayout(input: GridLayoutInput): GridLayoutOutput {
     const children = childrenOf.get(id) ?? [];
 
     if (children.length === 0) {
-      sizes.set(id, { w: nodeSize.w, h: nodeSize.h });
+      const size = sizeOf?.get(id) ?? nodeSize;
+      sizes.set(id, { w: size.w, h: size.h });
       return;
     }
 
@@ -41,7 +50,7 @@ export function gridLayout(input: GridLayoutInput): GridLayoutOutput {
     const cols = Math.ceil(Math.sqrt(children.length));
 
     let curX = padding;
-    let curY = headerHeight + padding;
+    let curY = headerFor(id) + padding;
     let col = 0;
     let rowH = 0;
 

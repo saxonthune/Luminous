@@ -12,6 +12,8 @@ export interface ElkLayoutInput {
   direction?: 'RIGHT' | 'DOWN';
   /** Header reservation at the top of each container so children don't overlap title. */
   headerHeight?: number;
+  /** Per-parent header height overrides. Falls back to headerHeight for parents not in this map. */
+  headerHeights?: ReadonlyMap<string, number>;
 }
 
 export interface ElkLayoutOutput {
@@ -25,6 +27,7 @@ function buildElkNode(
   sizeOf: ReadonlyMap<string, { w: number; h: number }> | undefined,
   defaultSize: { w: number; h: number },
   headerHeight: number,
+  headerHeights?: ReadonlyMap<string, number>,
 ): ElkNode {
   const children = childrenOf.get(id) ?? [];
   const size = sizeOf?.get(id);
@@ -39,16 +42,17 @@ function buildElkNode(
 
   const minW = size?.w ?? 200;
   const minH = size?.h ?? 120;
+  const topPad = headerHeights?.get(id) ?? headerHeight;
 
   return {
     id,
     width: minW,
     height: minH,
     layoutOptions: {
-      'elk.padding': `[top=${headerHeight},left=8,right=8,bottom=8]`,
+      'elk.padding': `[top=${topPad},left=8,right=8,bottom=8]`,
     },
     children: children.map((cid) =>
-      buildElkNode(cid, childrenOf, sizeOf, defaultSize, headerHeight)
+      buildElkNode(cid, childrenOf, sizeOf, defaultSize, headerHeight, headerHeights)
     ),
   };
 }
@@ -78,6 +82,7 @@ export async function elkLayout(input: ElkLayoutInput): Promise<ElkLayoutOutput>
     defaultNodeSize = { w: 120, h: 60 },
     direction = 'RIGHT',
     headerHeight = 24,
+    headerHeights,
   } = input;
 
   const elk = new ELK();
@@ -105,7 +110,7 @@ export async function elkLayout(input: ElkLayoutInput): Promise<ElkLayoutOutput>
       'elk.layered.spacing.nodeNodeBetweenLayers': '50',
     },
     children: rootIds.map((rid) =>
-      buildElkNode(rid, childrenOf, sizeOf, defaultNodeSize, headerHeight)
+      buildElkNode(rid, childrenOf, sizeOf, defaultNodeSize, headerHeight, headerHeights)
     ),
     edges: filteredEdges.map((e) => ({ id: e.id, sources: [e.from], targets: [e.to] })),
   };

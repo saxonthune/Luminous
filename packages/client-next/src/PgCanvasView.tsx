@@ -128,6 +128,7 @@ function CanvasInner(props: {
     zoom: () => canvasCtx.transform().k,
     get view() { return props.view; },
     get graph() { return props.graph; },
+    hasChildren: (id) => (containment().childrenOf.get(id)?.length ?? 0) > 0,
     inspect: (id) => inspector.open(id),
   };
 
@@ -212,6 +213,44 @@ function CanvasInner(props: {
     return { ...base, positions };
   }
 
+  // Stability guard: only propagate new leaf sizes when ≥1px change occurs, preventing
+  // layout thrash during the initial ResizeObserver burst.
+  let prevLeafSizes: ReadonlyMap<string, { w: number; h: number }> = new Map();
+  const measuredLeafSizes = createMemo<ReadonlyMap<string, { w: number; h: number }>>(() => {
+    const rects = canvasCtx.getNodeRects();
+    const childrenMap = containment().childrenOf;
+    const next = new Map<string, { w: number; h: number }>();
+    let changed = false;
+    for (const [id, rect] of rects) {
+      const kids = childrenMap.get(id);
+      if (kids && kids.length > 0) continue;
+      next.set(id, { w: rect.w, h: rect.h });
+      const p = prevLeafSizes.get(id);
+      if (!p || Math.abs(p.w - rect.w) >= 1 || Math.abs(p.h - rect.h) >= 1) changed = true;
+    }
+    if (!changed && next.size === prevLeafSizes.size) return prevLeafSizes;
+    prevLeafSizes = next;
+    return next;
+  });
+
+  // headerHeight: 60 ≈ label 22px + tag chip + description 24px + padding 8+8.
+  // Per-parent overrides come from measuredHeaderHeights; 60 is the fallback for unmigrated renderers.
+  const HEADER_HEIGHT = 60;
+
+  // Stability guard: only propagate new header heights when ≥1px change occurs.
+  let prevHeaders: ReadonlyMap<string, number> = new Map();
+  const measuredHeaderHeights = createMemo<ReadonlyMap<string, number>>(() => {
+    const heights = canvasCtx.getHeaderHeights();
+    let changed = heights.size !== prevHeaders.size;
+    for (const [id, h] of heights) {
+      const p = prevHeaders.get(id);
+      if (p === undefined || Math.abs(p - h) >= 1) changed = true;
+    }
+    if (!changed) return prevHeaders;
+    prevHeaders = new Map(heights);
+    return prevHeaders;
+  });
+
   // Both layouts are created unconditionally so the chosen one can swap reactively
   // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
   const [elkResult] = createResource(
@@ -220,6 +259,9 @@ function CanvasInner(props: {
           rootIds: containment().rootIds,
           childrenOf: containment().childrenOf,
           edges: scene().arrows.map((a) => ({ id: `${a.from}->${a.to}`, from: a.from, to: a.to })),
+          sizeOf: measuredLeafSizes(),
+          headerHeight: HEADER_HEIGHT,
+          headerHeights: measuredHeaderHeights(),
         }
       : null,
     (input): Promise<ElkLayoutOutput> => elkLayout({ ...input, direction: 'RIGHT' }),
@@ -228,6 +270,9 @@ function CanvasInner(props: {
   const gridResult = createMemo(() => gridLayout({
     rootIds: containment().rootIds,
     childrenOf: containment().childrenOf,
+    sizeOf: measuredLeafSizes(),
+    headerHeight: HEADER_HEIGHT,
+    headerHeights: measuredHeaderHeights(),
   }));
 
   const baseLayout = createMemo<{ positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> } | null>(

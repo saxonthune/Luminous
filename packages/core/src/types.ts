@@ -244,6 +244,8 @@ export interface RenderContext {
   view: View;
   /** The full graph — renderers query this for summary chips, related items, etc. */
   graph: Graph;
+  /** True when this node has at least one child via the current view's containment relation. */
+  hasChildren: (nodeId: NodeId) => boolean;
   /** Imperative: open the inspector on this node/edge. */
   inspect: (id: NodeId | EdgeId) => void;
 }

@@ -21,6 +21,7 @@ const mockCtx: RenderContext = {
     layout: { algorithm: 'elk' },
   },
   graph: buildGraph([], []),
+  hasChildren: () => false,
   inspect: () => undefined,
 };
 

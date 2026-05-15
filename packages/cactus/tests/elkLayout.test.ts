@@ -59,4 +59,33 @@ describe('elkLayout', () => {
     expect(result.sizes.has('a')).toBe(true);
     expect(result.sizes.has('b')).toBe(true);
   });
+
+  it('headerHeights per-parent overrides global headerHeight in elk padding', async () => {
+    // With a large per-parent headerHeight the root container must be taller than
+    // the same layout with the global default headerHeight.
+    const nodeSize = { w: 80, h: 40 };
+    const [smallHeader, largeHeader] = await Promise.all([
+      elkLayout({
+        rootIds: ['root'],
+        childrenOf: new Map([['root', ['a', 'b']]]),
+        edges: [{ id: 'e1', from: 'a', to: 'b' }],
+        sizeOf: new Map([['a', nodeSize], ['b', nodeSize]]),
+        headerHeight: 10,
+        direction: 'DOWN',
+      }),
+      elkLayout({
+        rootIds: ['root'],
+        childrenOf: new Map([['root', ['a', 'b']]]),
+        edges: [{ id: 'e1', from: 'a', to: 'b' }],
+        sizeOf: new Map([['a', nodeSize], ['b', nodeSize]]),
+        headerHeight: 10,
+        headerHeights: new Map([['root', 100]]),
+        direction: 'DOWN',
+      }),
+    ]);
+
+    const smallRootH = smallHeader.sizes.get('root')!.h;
+    const largeRootH = largeHeader.sizes.get('root')!.h;
+    expect(largeRootH).toBeGreaterThan(smallRootH);
+  });
 });

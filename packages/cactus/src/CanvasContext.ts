@@ -36,6 +36,12 @@ export interface CanvasContextValue {
   unregisterNodeRect: (id: string) => void;
   /** Reactive accessor — returns the current node rect map. Tracks rect version. */
   getNodeRects: () => ReadonlyMap<string, NodeRect>;
+  /** Register a node's measured header height. Called by <NodeHeader>. */
+  registerHeaderHeight: (nodeId: string, height: number) => void;
+  /** Unregister on cleanup. */
+  unregisterHeaderHeight: (nodeId: string) => void;
+  /** Reactive accessor — returns the current header-height map. Tracks version. */
+  getHeaderHeights: () => ReadonlyMap<string, number>;
 }
 
 export const CanvasContext = createContext<CanvasContextValue>();
