@@ -38,7 +38,7 @@ Cactus uses DOM data attributes as the public hit-testing contract. Renderers an
 | `data-drop-target="true"` | `NodeContainer` | Eligible drop target for `findContainerAt` |
 | `data-connection-target="true"` | `NodeContainer`, `ConnectionHandle` | Eligible target for `useConnectionDrag` hit-test |
 | `data-handle-id` | `ConnectionHandle` (when `id` is set) | Named handle id within a node |
-| `data-drag-handle="true"` | `DragHandle`, `NodeContainer`'s built-in gripper | Elements that initiate node drag when `handleSelector='[data-drag-handle]'` |
+| `data-drag-handle="true"` | `DragHandle` | Elements that initiate node drag when `handleSelector='[data-drag-handle]'` |
 | `data-no-pan="true"` | `NodeContainer`, `ConnectionHandle`, `DragHandle` | Pointer events on this subtree do **not** start a viewport pan |
 
 ## Components
@@ -90,7 +90,7 @@ interface CanvasProps {
 
 ### NodeContainer
 
-The primary primitive for rendering a node. Positions its children absolutely at `(x, y)` in canvas coordinates and stamps the data-attributes that drive hit-testing. Renders a built-in drag gripper in the bottom-left corner.
+The primary primitive for rendering a node. Positions its children absolutely at `(x, y)` in canvas coordinates and stamps the data-attributes that drive hit-testing. Renders no drag affordance of its own. By default (consumer omits `handleSelector` on `useNodeDrag`), any pointer-down on the container body initiates drag. For scoped drag handles, place `<DragHandle>` inside `children` and set `handleSelector='[data-drag-handle]'`.
 
 ```typescript
 interface NodeContainerProps {
@@ -107,8 +107,6 @@ interface NodeContainerProps {
 
 Sizing model (current): `w` is rendered as a fixed `width` (`${w}px`); `h` is rendered as `min-height` (`${h}px`). So nodes grow vertically to fit content but **do not grow horizontally** — content wider than `w` overflows and the node's border (drawn at width `w`) will not enclose it. Layout algorithms should pass measured leaf sizes via their `sizeOf` parameter (see Layout primitives) so width is accurate for the rendered content.
 
-The bottom-left gripper is always rendered. To wire dragging, pair with `useNodeDrag({ handleSelector: '[data-drag-handle]' })` and forward `onPointerDown`.
-
 ### NodeShell
 
 Lower-level wrapper around `NodeContainer` that adds a default visual style (border, background, shadow). Pure presentation — `NodeContainer` is preferred when you bring your own renderer.
@@ -123,7 +121,7 @@ interface NodeShellProps extends NodeContainerProps {
 
 ### DragHandle
 
-A standalone draggable element that stamps `data-drag-handle="true"` and `data-no-pan="true"`. Used when you want a drag-initiation surface outside of `NodeContainer`'s built-in gripper.
+A standalone draggable element that stamps `data-drag-handle="true"` and `data-no-pan="true"`. Place inside a node's children and set `handleSelector='[data-drag-handle]'` on `useNodeDrag` to restrict drag initiation to this element.
 
 ```typescript
 interface DragHandleProps {
@@ -132,6 +130,25 @@ interface DragHandleProps {
   children?: JSX.Element
 }
 ```
+
+### NodeBody
+
+A thin auto-layout primitive for structuring node content. A styled flex div — no engine state. "Hug contents" behavior comes from `NodeContainer`'s `ResizeObserver`-based measured-rect registration.
+
+```typescript
+interface NodeBodyProps {
+  direction?: 'vertical' | 'horizontal'  // default: 'vertical'
+  gap?: number | string                   // number → px, string → as-is
+  padding?: number | string              // number → px, string → as-is
+  align?: 'start' | 'center' | 'end' | 'stretch'           // default: 'stretch'
+  justify?: 'start' | 'center' | 'end' | 'space-between'   // default: 'start'
+  class?: string
+  style?: JSX.CSSProperties
+  children?: JSX.Element
+}
+```
+
+Consumer controls all styling. Any additional `style` props merge over the computed flex styles. Use `width: '100%'` and `height: '100%'` in `style` when the node should fill the `NodeContainer`.
 
 ### ResizeHandle
 

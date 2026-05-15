@@ -10,6 +10,7 @@ export function DragHandle(props: DragHandleProps): JSX.Element {
   return (
     <div
       data-drag-handle="true"
+      data-no-pan="true"
       class={props.class}
       style={props.style}
     >

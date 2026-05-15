@@ -180,7 +180,6 @@ function CanvasInner(props: {
 
   const { onPointerDown: dragPointerDown } = useNodeDrag({
     zoomScale: () => canvasCtx.transform().k,
-    handleSelector: '[data-drag-handle="true"]',
     callbacks: {
       onDragStart: (nodeId) => {
         const overridePos = nodeOverrides().get(nodeId);

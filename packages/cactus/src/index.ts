@@ -12,6 +12,8 @@ export { NodeContainer } from './NodeContainer.js';
 export type { NodeContainerProps } from './NodeContainer.js';
 export { DragHandle } from './DragHandle.js';
 export type { DragHandleProps } from './DragHandle.js';
+export { NodeBody } from './NodeBody.js';
+export type { NodeBodyProps } from './NodeBody.js';
 export { ResizeHandle } from './ResizeHandle.js';
 export type { ResizeHandleProps } from './ResizeHandle.js';
 export { DotGrid } from './DotGrid.js';

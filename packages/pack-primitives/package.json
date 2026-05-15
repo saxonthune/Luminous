@@ -9,6 +9,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@luminous/cactus": "workspace:*",
     "@luminous/core": "workspace:*",
     "solid-js": "^1.9.0",
     "zod": "^4.0"

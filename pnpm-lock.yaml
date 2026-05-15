@@ -195,6 +195,9 @@ importers:
 
   packages/pack-primitives:
     dependencies:
+      '@luminous/cactus':
+        specifier: workspace:*
+        version: link:../cactus
       '@luminous/core':
         specifier: workspace:*
         version: link:../core
