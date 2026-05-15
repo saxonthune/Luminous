@@ -1,4 +1,4 @@
-import { For, type JSX } from 'solid-js';
+import { For, Match, Show, Switch, type JSX } from 'solid-js';
 import { ToggleGroup } from '@kobalte/core/toggle-group';
 import { ToggleButton } from '@kobalte/core/toggle-button';
 import { DropdownMenu } from '@kobalte/core/dropdown-menu';
@@ -80,19 +80,25 @@ function ToggleSetControl(props: { actions: Action[] } & OnActionProp): JSX.Elem
 export function ToolbarControlRenderer(
   props: { control: ToolbarControl } & OnActionProp,
 ): JSX.Element {
-  const ctrl = props.control;
-  switch (ctrl.type) {
-    case 'separator':
-      return <div class="cactus-chrome-sep" role="separator" aria-hidden />;
-    case 'spacer':
-      return <div class="cactus-chrome-spacer" />;
-    case 'button':
-      return <ButtonControl action={ctrl.action} onAction={props.onAction} />;
-    case 'toggle-group':
-      return <ToggleGroupControl actions={ctrl.actions} onAction={props.onAction} />;
-    case 'toggle-set':
-      return <ToggleSetControl actions={ctrl.actions} onAction={props.onAction} />;
-  }
+  return (
+    <Switch>
+      <Match when={props.control.type === 'separator'}>
+        <div class="cactus-chrome-sep" role="separator" aria-hidden />
+      </Match>
+      <Match when={props.control.type === 'spacer'}>
+        <div class="cactus-chrome-spacer" />
+      </Match>
+      <Match when={props.control.type === 'button' && props.control}>
+        {(ctrl) => <ButtonControl action={(ctrl() as Extract<ToolbarControl, { type: 'button' }>).action} onAction={props.onAction} />}
+      </Match>
+      <Match when={props.control.type === 'toggle-group' && props.control}>
+        {(ctrl) => <ToggleGroupControl actions={(ctrl() as Extract<ToolbarControl, { type: 'toggle-group' }>).actions} onAction={props.onAction} />}
+      </Match>
+      <Match when={props.control.type === 'toggle-set' && props.control}>
+        {(ctrl) => <ToggleSetControl actions={(ctrl() as Extract<ToolbarControl, { type: 'toggle-set' }>).actions} onAction={props.onAction} />}
+      </Match>
+    </Switch>
+  );
 }
 
 export function Toolbar(props: { schema: ToolbarSchema } & OnActionProp): JSX.Element {
@@ -108,35 +114,48 @@ export function Toolbar(props: { schema: ToolbarSchema } & OnActionProp): JSX.El
 // --- Menu items ---
 
 function MenuItemRenderer(props: { item: MenuItem } & OnActionProp): JSX.Element {
-  if (props.item.type === 'divider') {
-    return <DropdownMenu.Separator class="cactus-chrome-menu-sep" />;
-  }
-  if (props.item.type === 'submenu') {
-    return (
-      <DropdownMenu.Sub>
-        <DropdownMenu.SubTrigger class="cactus-chrome-menu-item">
-          {props.item.label}
-          <span aria-hidden>›</span>
-        </DropdownMenu.SubTrigger>
-        <DropdownMenu.SubContent class="cactus-chrome-menu-content">
-          <For each={props.item.items}>
-            {(item) => <MenuItemRenderer item={item} onAction={props.onAction} />}
-          </For>
-        </DropdownMenu.SubContent>
-      </DropdownMenu.Sub>
-    );
-  }
-  const action = props.item.action;
   return (
-    <DropdownMenu.Item
-      class="cactus-chrome-menu-item"
-      disabled={action.enabled === false}
-      data-tone={action.tone}
-      onSelect={() => props.onAction?.(action.id, action.payload)}
-    >
-      <span>{action.label}</span>
-      {action.hotkey && <span class="cactus-chrome-menu-hotkey">{action.hotkey}</span>}
-    </DropdownMenu.Item>
+    <Switch>
+      <Match when={props.item.type === 'divider'}>
+        <DropdownMenu.Separator class="cactus-chrome-menu-sep" />
+      </Match>
+      <Match when={props.item.type === 'submenu' && props.item}>
+        {(item) => {
+          const sub = () => item() as Extract<MenuItem, { type: 'submenu' }>;
+          return (
+            <DropdownMenu.Sub>
+              <DropdownMenu.SubTrigger class="cactus-chrome-menu-item">
+                {sub().label}
+                <span aria-hidden>›</span>
+              </DropdownMenu.SubTrigger>
+              <DropdownMenu.SubContent class="cactus-chrome-menu-content">
+                <For each={sub().items}>
+                  {(child) => <MenuItemRenderer item={child} onAction={props.onAction} />}
+                </For>
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Sub>
+          );
+        }}
+      </Match>
+      <Match when={props.item.type === 'action' && props.item}>
+        {(item) => {
+          const action = () => (item() as Extract<MenuItem, { type: 'action' }>).action;
+          return (
+            <DropdownMenu.Item
+              class="cactus-chrome-menu-item"
+              disabled={action().enabled === false}
+              data-tone={action().tone}
+              onSelect={() => props.onAction?.(action().id, action().payload)}
+            >
+              <span>{action().label}</span>
+              <Show when={action().hotkey}>
+                <span class="cactus-chrome-menu-hotkey">{action().hotkey}</span>
+              </Show>
+            </DropdownMenu.Item>
+          );
+        }}
+      </Match>
+    </Switch>
   );
 }
 

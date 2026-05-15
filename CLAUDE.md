@@ -85,3 +85,11 @@ All paths are relative to the workspace root, **without** the `.carta/` prefix (
 ## Tech Stack
 
 Solid.js, TypeScript 5.9, Vite, Tailwind, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest
+
+## Type Checking
+
+Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).
+
+- `pnpm -r typecheck` or `make typecheck` — runs `tsgo --noEmit` across all packages
+- `npx tsgo --noEmit -p <tsconfig>` — check a single package
+- Build scripts (`tsc -b`, `tsc -p`) stay as-is — tsgo does not emit in the beta

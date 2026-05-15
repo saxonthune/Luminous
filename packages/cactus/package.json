@@ -16,7 +16,7 @@
   "scripts": {
     "test": "vitest run",
     "build:types": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.0",

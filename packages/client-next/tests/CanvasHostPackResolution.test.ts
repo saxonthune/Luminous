@@ -8,7 +8,6 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { registerPack, resetRegistry, getPack } from '@luminous/core';
 import { buildGraph } from '@luminous/core';
 import type { Pack, Node, Edge, View } from '@luminous/core';
-import { z } from 'zod';
 
 // ── Minimal test pack ─────────────────────────────────────────────────────────
 

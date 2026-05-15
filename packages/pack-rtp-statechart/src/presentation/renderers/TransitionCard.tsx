@@ -1,4 +1,5 @@
 import type { JSX } from 'solid-js';
+import { For } from 'solid-js';
 import type { Node, RenderContext } from '@luminous/core';
 
 type TransitionProps = {
@@ -108,7 +109,7 @@ export function TransitionOpen(node: Node, ctx: RenderContext): JSX.Element {
         <div>
           <div style={{ 'font-size': '11px', 'font-weight': '600', color: '#888', 'margin-bottom': '4px' }}>Actions</div>
           <div style={{ display: 'flex', gap: '4px', 'flex-wrap': 'wrap' }}>
-            {invokedActions.map(a => (
+            <For each={invokedActions}>{a => (
               <span
                 style={{
                   background: '#f0f0f0',
@@ -121,7 +122,7 @@ export function TransitionOpen(node: Node, ctx: RenderContext): JSX.Element {
                 }}
                 onClick={() => ctx.inspect(a.id)}
               >{a.name}</span>
-            ))}
+            )}</For>
           </div>
         </div>
       )}

@@ -38,6 +38,7 @@ export function createLayerStateStore() {
       }
     }
 
+    // eslint-disable-next-line solid/reactivity -- returns a getter for consumers to use in tracked scopes
     return () => store().get(k) ?? defaultState;
   }
 

@@ -96,6 +96,7 @@ export function AppShell() {
 
   function boot() {
     fetchServerSources()
+      // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);
         setShell({ kind: 'picker' });

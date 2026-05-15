@@ -47,7 +47,7 @@ export function EdgeLabel(props: EdgeLabelProps): JSX.Element {
             "white-space": 'nowrap',
             ...props.style,
           }}
-          onContextMenu={props.onContextMenu}
+          onContextMenu={(e) => props.onContextMenu?.(e)}
         >
           {props.children}
         </div>

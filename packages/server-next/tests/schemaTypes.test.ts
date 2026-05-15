@@ -68,7 +68,7 @@ describe('type narrowing via isNodeSchema', () => {
 describe('schema loader backwards-compat', () => {
   it('schemas with no kind field get kind: node after normalization', () => {
     // Simulate what the loader does after parsing a pre-union canvas file.
-    const schemas: Record<string, any> = {
+    const schemas: Record<string, Record<string, unknown>> = {
       component: { name: 'component', label: 'Component', primitives: [] },
       signal: { name: 'signal', label: 'Signal', primitives: [] },
     }
@@ -82,7 +82,7 @@ describe('schema loader backwards-compat', () => {
   })
 
   it('schemas with explicit kind: edge preserve kind: edge after normalization', () => {
-    const schemas: Record<string, any> = {
+    const schemas: Record<string, Record<string, unknown>> = {
       renders: { kind: 'edge', name: 'renders', label: 'Renders' },
       component: { name: 'component', label: 'Component', primitives: [] },
     }

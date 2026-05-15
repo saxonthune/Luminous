@@ -93,6 +93,9 @@ function flattenActions(chrome: ChromeSchema | undefined): Action[] {
 }
 
 export function Canvas(props: CanvasProps) {
+  // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
+  // parents are expected to remount Canvas if the configuration changes.
+  /* eslint-disable solid/reactivity */
   const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(props.viewportOptions);
 
   // Node rect registry — populated by NodeContainer via context; consumed by EdgeLayer.
@@ -192,6 +195,7 @@ export function Canvas(props: CanvasProps) {
     unregisterNodeRect,
     getNodeRects,
   };
+  /* eslint-enable solid/reactivity */
 
   const handleContextMenu = (e: MouseEvent) => {
     const target = e.target as HTMLElement;

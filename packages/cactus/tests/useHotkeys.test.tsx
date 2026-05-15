@@ -12,7 +12,7 @@ function HotkeyMount(props: {
   actions: Action[];
   onAction: (id: string, payload?: unknown) => void;
 }): JSX.Element {
-  useHotkeys(() => props.actions, props.onAction);
+  useHotkeys(() => props.actions, (id, payload) => props.onAction(id, payload));
   return <div />;
 }
 

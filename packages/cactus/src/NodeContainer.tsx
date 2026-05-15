@@ -42,8 +42,8 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         width: `${props.w()}px`,
         'min-height': `${props.h()}px`,
       }}
-      onPointerDown={props.onPointerDown}
-      onContextMenu={props.onContextMenu}
+      onPointerDown={(e) => props.onPointerDown?.(e)}
+      onContextMenu={(e) => props.onContextMenu?.(e)}
     >
       {props.children}
       {/* Universal drag gripper — bottom-left corner, always present */}

@@ -177,7 +177,7 @@ describe('createPerformanceMonitor', () => {
       // Window 2: windowStart is now ts=101, close at ts=202
       ts = driveWindow(ts, 100, 0);
       // Window 3: close at ts=303
-      ts = driveWindow(ts, 100, 0);
+      driveWindow(ts, 100, 0);
 
       // All 3 windows had fps < 40 → decline should have fired
       expect(mon.factor()).toBeCloseTo(0.9, 5);
@@ -207,7 +207,7 @@ describe('createPerformanceMonitor', () => {
       // fps = round(7 / 101 * 1000) = round(69.3) = 69 (above 55) ✓
       let ts = driveWindow(0, 100, 6);
       ts = driveWindow(ts, 100, 6);
-      ts = driveWindow(ts, 100, 6);
+      driveWindow(ts, 100, 6);
 
       expect(mon.factor()).toBeCloseTo(0.6, 5);
 
@@ -282,7 +282,7 @@ describe('createPerformanceMonitor', () => {
       // Round 4: low fps → should NOT change (stabilized)
       ts = driveWindow(ts, 100, 0);
       ts = driveWindow(ts, 100, 0);
-      ts = driveWindow(ts, 100, 0);
+      driveWindow(ts, 100, 0);
       expect(mon.factor()).toBeCloseTo(0.6, 5); // unchanged
 
       mon.stop();

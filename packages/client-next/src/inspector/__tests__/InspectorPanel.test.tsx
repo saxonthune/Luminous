@@ -8,7 +8,7 @@ import { InspectorPanel } from '../InspectorPanel';
 
 beforeAll(() => {
   if (typeof PointerEvent === 'undefined') {
-    // @ts-expect-error
+    // @ts-expect-error jsdom lacks PointerEvent; stub with MouseEvent
     globalThis.PointerEvent = class PointerEvent extends MouseEvent {};
   }
 });

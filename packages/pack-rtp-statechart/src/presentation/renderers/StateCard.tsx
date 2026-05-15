@@ -1,4 +1,5 @@
 import type { JSX } from 'solid-js';
+import { For } from 'solid-js';
 import type { Node, RenderContext } from '@luminous/core';
 
 type StateProps = {
@@ -44,14 +45,14 @@ export default function StateCard(node: Node, _ctx: RenderContext): JSX.Element 
       )}
       {tags.length > 0 && (
         <div style={{ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-top': '6px' }}>
-          {tags.map(tag => (
+          <For each={tags}>{tag => (
             <span style={{
               background: '#f0f0f0',
               padding: '2px 8px',
               'border-radius': '999px',
               'font-size': '11px',
             }}>{tag}</span>
-          ))}
+          )}</For>
         </div>
       )}
     </div>
@@ -103,20 +104,20 @@ export function StateOpen(node: Node, _ctx: RenderContext): JSX.Element {
       )}
       {tags.length > 0 && (
         <div style={{ display: 'flex', gap: '4px', 'flex-wrap': 'wrap', 'margin-bottom': '6px' }}>
-          {tags.map(tag => (
+          <For each={tags}>{tag => (
             <span style={{
               background: '#f0f0f0',
               padding: '2px 8px',
               'border-radius': '999px',
               'font-size': '11px',
             }}>{tag}</span>
-          ))}
+          )}</For>
         </div>
       )}
       {reads.length > 0 && (
         <div style={{ 'font-size': '11px', color: '#888' }}>
           <span style={{ 'font-weight': '600' }}>reads: </span>
-          {reads.map(r => (
+          <For each={reads}>{r => (
             <span style={{
               background: '#e8f4fd',
               padding: '1px 6px',
@@ -124,7 +125,7 @@ export function StateOpen(node: Node, _ctx: RenderContext): JSX.Element {
               'margin-right': '4px',
               'font-size': '11px',
             }}>{r}</span>
-          ))}
+          )}</For>
         </div>
       )}
     </div>

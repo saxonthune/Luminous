@@ -17,7 +17,7 @@ export function AppHeader(props: AppHeaderProps) {
       <div class="flex items-center gap-3">
         <Show when={props.showBack}>
           <button
-            onClick={props.onBack}
+            onClick={() => props.onBack()}
             class="rounded px-2 py-1 text-sm text-fg-muted hover:bg-surface-alt hover:text-fg"
             title="Back to canvases"
           >
@@ -31,7 +31,7 @@ export function AppHeader(props: AppHeaderProps) {
         </Show>
       </div>
       <button
-        onClick={props.onCycleTheme}
+        onClick={() => props.onCycleTheme()}
         class="rounded px-2 py-1 text-base text-fg-muted hover:bg-surface-alt hover:text-fg"
         title={`Theme: ${theme()} (F2 to cycle)`}
       >

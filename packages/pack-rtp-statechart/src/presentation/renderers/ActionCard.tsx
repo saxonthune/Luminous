@@ -1,4 +1,5 @@
 import type { JSX } from 'solid-js';
+import { For } from 'solid-js';
 import type { Node, RenderContext } from '@luminous/core';
 
 type ActionProps = {
@@ -116,7 +117,7 @@ export function ActionOpen(node: Node, ctx: RenderContext): JSX.Element {
         <div>
           <div style={{ 'font-size': '11px', 'font-weight': '600', color: '#888', 'margin-bottom': '4px' }}>Invoked by</div>
           <div style={{ display: 'flex', gap: '4px', 'flex-wrap': 'wrap' }}>
-            {invokedBy.map(t => (
+            <For each={invokedBy}>{t => (
               <span
                 style={{
                   background: '#fff7d6',
@@ -130,7 +131,7 @@ export function ActionOpen(node: Node, ctx: RenderContext): JSX.Element {
                 }}
                 onClick={() => ctx.inspect(t.id)}
               >{t.name}</span>
-            ))}
+            )}</For>
           </div>
         </div>
       )}

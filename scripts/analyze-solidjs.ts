@@ -20,7 +20,7 @@ import {
   mkdirSync,
   existsSync,
 } from 'node:fs';
-import { resolve, relative, dirname, extname, join, basename } from 'node:path';
+import { resolve, relative, dirname, extname, join } from 'node:path';
 import { dagLayout } from '../packages/cactus/src/dagLayout.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type {
@@ -339,7 +339,7 @@ function extractJsxComponentNames(node: ts.Node, source: string): string[] {
 /** Get the name from a FunctionDeclaration or the variable name for ArrowFunction/FunctionExpression */
 function getFunctionName(
   node: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression,
-  source: string
+  _source: string
 ): string | null {
   if (ts.isFunctionDeclaration(node)) {
     return node.name ? node.name.text : null;
@@ -403,11 +403,6 @@ function analyzeFile(
       if (ctx.kind === 'component' || ctx.kind === 'hook') return ctx.name;
     }
     return '__module__';
-  }
-
-  function currentContext(): 'component' | 'hook' | 'effect' | 'other' | null {
-    if (contextStack.length === 0) return null;
-    return contextStack[contextStack.length - 1].kind;
   }
 
   // Counters for anonymous effects
@@ -745,34 +740,6 @@ function resolveImportPath(from: string, importedFrom: string): string | null {
     }
   }
   return null;
-}
-
-function crossFileResolution(
-  analysis: SolidAnalysis,
-  fileImportMaps: Map<string, Map<string, ImportRecord[]>>,
-  relPathMap: Map<string, string> // absPath -> relPath
-): void {
-  // Build lookup: signal getter name -> SignalInfo
-  const signalsByName = new Map<string, SignalInfo>();
-  for (const sig of analysis.signals) {
-    signalsByName.set(sig.name, sig);
-  }
-  const memosByName = new Map<string, MemoInfo>();
-  for (const m of analysis.memos) {
-    memosByName.set(m.name, m);
-  }
-
-  // Determine hook calledBy: look at component bodies and see if they call known hooks
-  const hookNames = new Set(analysis.hooks.map((h) => h.name));
-  for (const comp of analysis.components) {
-    // For each hook called in this component, set hook.calledBy = comp.name
-    // We'll do this by looking at recorded JSX children and known hooks
-    // Hook calls are detected when we see a hook name as a CalledExpression inside a component
-    // We do this statically from the hookCallSites collected during analysis
-  }
-
-  // For now, use the hookCallSites data collected in a separate pass
-  // (handled via the analysis.hooks entries that have calledBy already set or null)
 }
 
 // ---------------------------------------------------------------------------
@@ -1324,7 +1291,7 @@ function main() {
 
   // Parse CLI
   const outputIdx = args.indexOf('--output');
-  let outputPath =
+  const outputPath =
     outputIdx >= 0 ? args[outputIdx + 1] : resolve(ROOT, '.canvases/solidjs-analysis.graph.json');
 
   const targetDirs = args

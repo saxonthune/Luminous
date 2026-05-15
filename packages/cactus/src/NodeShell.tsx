@@ -42,7 +42,7 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
         onNodePointerDown(props.nodeId, e);
         props.onDragPointerDown(props.nodeId, e);
       }}
-      onContextMenu={props.onContextMenu}
+      onContextMenu={(e) => props.onContextMenu?.(e)}
     >
       <div
         data-drag-handle="true"
