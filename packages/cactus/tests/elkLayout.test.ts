@@ -15,12 +15,14 @@ describe('elkLayout', () => {
   });
 
   it('places child b to the right of child a when direction is RIGHT', async () => {
-    const result = await elkLayout({
-      rootIds: ['root'],
-      childrenOf: new Map([['root', ['a', 'b']]]),
-      edges: [{ id: 'e1', from: 'a', to: 'b' }],
-      direction: 'RIGHT',
-    });
+    const result = await elkLayout(
+      {
+        rootIds: ['root'],
+        childrenOf: new Map([['root', ['a', 'b']]]),
+        edges: [{ id: 'e1', from: 'a', to: 'b' }],
+      },
+      { direction: 'RIGHT' },
+    );
 
     const posA = result.positions.get('a')!;
     const posB = result.positions.get('b')!;
@@ -29,16 +31,18 @@ describe('elkLayout', () => {
 
   it('composite size is at least as large as children bounding box plus padding', async () => {
     const nodeSize = { w: 80, h: 40 };
-    const result = await elkLayout({
-      rootIds: ['root'],
-      childrenOf: new Map([['root', ['a', 'b']]]),
-      edges: [{ id: 'e1', from: 'a', to: 'b' }],
-      sizeOf: new Map([
-        ['a', nodeSize],
-        ['b', nodeSize],
-      ]),
-      direction: 'RIGHT',
-    });
+    const result = await elkLayout(
+      {
+        rootIds: ['root'],
+        childrenOf: new Map([['root', ['a', 'b']]]),
+        edges: [{ id: 'e1', from: 'a', to: 'b' }],
+        nodeSizes: new Map([
+          ['a', nodeSize],
+          ['b', nodeSize],
+        ]),
+      },
+      { direction: 'RIGHT' },
+    );
 
     const rootSize = result.sizes.get('root')!;
     const posA = result.positions.get('a')!;
@@ -65,27 +69,43 @@ describe('elkLayout', () => {
     // the same layout with the global default headerHeight.
     const nodeSize = { w: 80, h: 40 };
     const [smallHeader, largeHeader] = await Promise.all([
-      elkLayout({
-        rootIds: ['root'],
-        childrenOf: new Map([['root', ['a', 'b']]]),
-        edges: [{ id: 'e1', from: 'a', to: 'b' }],
-        sizeOf: new Map([['a', nodeSize], ['b', nodeSize]]),
-        headerHeight: 10,
-        direction: 'DOWN',
-      }),
-      elkLayout({
-        rootIds: ['root'],
-        childrenOf: new Map([['root', ['a', 'b']]]),
-        edges: [{ id: 'e1', from: 'a', to: 'b' }],
-        sizeOf: new Map([['a', nodeSize], ['b', nodeSize]]),
-        headerHeight: 10,
-        headerHeights: new Map([['root', 100]]),
-        direction: 'DOWN',
-      }),
+      elkLayout(
+        {
+          rootIds: ['root'],
+          childrenOf: new Map([['root', ['a', 'b']]]),
+          edges: [{ id: 'e1', from: 'a', to: 'b' }],
+          nodeSizes: new Map([['a', nodeSize], ['b', nodeSize]]),
+          headerHeight: 10,
+        },
+        { direction: 'DOWN' },
+      ),
+      elkLayout(
+        {
+          rootIds: ['root'],
+          childrenOf: new Map([['root', ['a', 'b']]]),
+          edges: [{ id: 'e1', from: 'a', to: 'b' }],
+          nodeSizes: new Map([['a', nodeSize], ['b', nodeSize]]),
+          headerHeight: 10,
+          headerHeights: new Map([['root', 100]]),
+        },
+        { direction: 'DOWN' },
+      ),
     ]);
 
     const smallRootH = smallHeader.sizes.get('root')!.h;
     const largeRootH = largeHeader.sizes.get('root')!.h;
     expect(largeRootH).toBeGreaterThan(smallRootH);
+  });
+
+  it('passes edge labels to ELK when provided', async () => {
+    // Smoke test: layout completes without error when edges carry label sizes.
+    const result = await elkLayout({
+      rootIds: ['root'],
+      childrenOf: new Map([['root', ['a', 'b']]]),
+      edges: [{ id: 'e1', from: 'a', to: 'b', label: { w: 60, h: 20 } }],
+    });
+
+    expect(result.positions.has('a')).toBe(true);
+    expect(result.positions.has('b')).toBe(true);
   });
 });

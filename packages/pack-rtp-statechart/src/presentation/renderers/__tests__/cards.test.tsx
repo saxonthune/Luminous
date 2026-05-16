@@ -23,6 +23,7 @@ const mockCtx: RenderContext = {
   graph: buildGraph([], []),
   hasChildren: () => false,
   inspect: () => undefined,
+  sectionColorOf: () => undefined,
 };
 
 function mkNode(overrides: Partial<Node>): Node {

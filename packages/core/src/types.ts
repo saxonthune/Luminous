@@ -248,6 +248,9 @@ export interface RenderContext {
   hasChildren: (nodeId: NodeId) => boolean;
   /** Imperative: open the inspector on this node/edge. */
   inspect: (id: NodeId | EdgeId) => void;
+  /** Section color for this node — the palette color of its top-level
+   *  container ancestor. Undefined for top-level nodes. */
+  sectionColorOf: (nodeId: NodeId) => string | undefined;
 }
 
 export type NodeRenderer = (node: Node, ctx: RenderContext) => unknown;

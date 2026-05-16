@@ -13,7 +13,7 @@ import {
   useCanvasContext,
   useNodeDrag,
 } from '@luminous/cactus';
-import type { ElkLayoutOutput, CanvasRef, EdgeDeclaration } from '@luminous/cactus';
+import type { LayoutResult, CanvasRef, EdgeDeclaration } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
@@ -39,6 +39,15 @@ export interface PgCanvasViewProps {
   backgroundContextMenu?: () => MenuSchema | undefined;
 }
 
+const PALETTE = [
+  '#6ea8d4', // soft blue
+  '#5bab9b', // teal
+  '#d4a04e', // amber
+  '#9b78c8', // violet
+  '#d47878', // rose
+  '#6ab878', // green
+];
+
 /** BFS topological order from roots through childrenOf — parents before children. */
 function bfsOrder(
   rootIds: readonly string[],
@@ -58,7 +67,7 @@ function bfsOrder(
 function renderNodes(
   graph: Graph,
   renderOrder: () => string[],
-  layout: () => { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
+  layout: () => LayoutResult,
   parentOf: () => ReadonlyMap<string, string>,
   renderCtx: RenderContext,
   onPointerDown?: (nodeId: string, e: PointerEvent) => void,
@@ -138,6 +147,16 @@ function CanvasInner(props: {
     get graph() { return props.graph; },
     hasChildren: (id) => (containment().childrenOf.get(id)?.length ?? 0) > 0,
     inspect: (id) => inspector.open(id),
+    sectionColorOf: (nodeId) => {
+      const ct = containment();
+      if (!ct.parentOf.has(nodeId)) return undefined;
+      let ancestor = nodeId;
+      while (ct.parentOf.has(ancestor)) {
+        ancestor = ct.parentOf.get(ancestor)!;
+      }
+      const idx = ct.rootIds.indexOf(ancestor);
+      return idx === -1 ? undefined : PALETTE[idx % PALETTE.length];
+    },
   };
 
   // Build and expose edge declarations reactively.
@@ -148,30 +167,32 @@ function CanvasInner(props: {
     for (const edge of scene().arrows) {
       const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
       const capturedEdge = edge;
-      const label = edgeRenderer
-        ? () => edgeRenderer(capturedEdge, renderCtx) as JSX.Element
-        : undefined;
+      const rendered = edgeRenderer ? edgeRenderer(capturedEdge, renderCtx) : undefined;
+      const labelText = typeof rendered === 'string' ? rendered : undefined;
+      const label = rendered !== undefined ? () => rendered as JSX.Element : undefined;
       decls.push({
         id: edge.id,
         sourceId: edge.from,
         targetId: edge.to,
         styling: { arrowHead: true, dash: 'solid' },
         label,
+        labelText,
       });
     }
 
     for (const edge of scene().summaryEdges) {
       const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
       const capturedEdge = edge;
-      const label = edgeRenderer
-        ? () => edgeRenderer(capturedEdge, renderCtx) as JSX.Element
-        : undefined;
+      const rendered = edgeRenderer ? edgeRenderer(capturedEdge, renderCtx) : undefined;
+      const labelText = typeof rendered === 'string' ? rendered : undefined;
+      const label = rendered !== undefined ? () => rendered as JSX.Element : undefined;
       decls.push({
         id: edge.id,
         sourceId: edge.from,
         targetId: edge.to,
         styling: { dash: 'dotted', arrowHead: false },
         label,
+        labelText,
       });
     }
 
@@ -211,9 +232,7 @@ function CanvasInner(props: {
     },
   });
 
-  function applyOverrides(
-    base: { positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> },
-  ) {
+  function applyOverrides(base: LayoutResult): LayoutResult {
     const overrides = nodeOverrides();
     if (overrides.size === 0) return base;
     const positions = new Map(base.positions);
@@ -267,23 +286,24 @@ function CanvasInner(props: {
           rootIds: containment().rootIds,
           childrenOf: containment().childrenOf,
           edges: scene().arrows.map((a) => ({ id: `${a.from}->${a.to}`, from: a.from, to: a.to })),
-          sizeOf: measuredLeafSizes(),
+          nodeSizes: measuredLeafSizes(),
           headerHeight: HEADER_HEIGHT,
           headerHeights: measuredHeaderHeights(),
         }
       : null,
-    (input): Promise<ElkLayoutOutput> => elkLayout({ ...input, direction: 'RIGHT' }),
+    (input): Promise<LayoutResult> => elkLayout(input, { direction: 'RIGHT' }),
   );
 
   const gridResult = createMemo(() => gridLayout({
     rootIds: containment().rootIds,
     childrenOf: containment().childrenOf,
-    sizeOf: measuredLeafSizes(),
+    nodeSizes: measuredLeafSizes(),
     headerHeight: HEADER_HEIGHT,
     headerHeights: measuredHeaderHeights(),
+    edges: [],
   }));
 
-  const baseLayout = createMemo<{ positions: ReadonlyMap<string, { x: number; y: number }>; sizes: ReadonlyMap<string, { w: number; h: number }> } | null>(
+  const baseLayout = createMemo<LayoutResult | null>(
     () => props.algorithm === 'elk' ? (elkResult() ?? null) : gridResult(),
   );
 

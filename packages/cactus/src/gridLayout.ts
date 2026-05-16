@@ -1,32 +1,26 @@
-export interface GridLayoutInput {
-  rootIds: ReadonlyArray<string>;
-  childrenOf: ReadonlyMap<string, ReadonlyArray<string>>;
+import type { LayoutRequest, LayoutResult } from './layout-types.js';
+
+export type { LayoutRequest, LayoutResult };
+
+export interface GridLayoutOptions {
+  /** Default size for leaf nodes not in nodeSizes. */
   nodeSize?: { w: number; h: number };
-  /** Per-leaf intrinsic size; falls back to nodeSize default. Parents are sized from packed children. */
-  sizeOf?: ReadonlyMap<string, { w: number; h: number }>;
   padding?: number;
   gap?: number;
-  headerHeight?: number;
-  /** Per-parent header height overrides. Falls back to headerHeight for parents not in this map. */
-  headerHeights?: ReadonlyMap<string, number>;
 }
 
-export interface GridLayoutOutput {
-  positions: ReadonlyMap<string, { x: number; y: number }>;
-  sizes: ReadonlyMap<string, { w: number; h: number }>;
-}
-
-export function gridLayout(input: GridLayoutInput): GridLayoutOutput {
+export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): LayoutResult {
   const {
     rootIds,
     childrenOf,
-    nodeSize = { w: 120, h: 60 },
-    sizeOf,
-    padding = 16,
-    gap = 8,
+    nodeSizes,
     headerHeight = 24,
     headerHeights,
-  } = input;
+  } = req;
+
+  const nodeSize = opts?.nodeSize ?? { w: 120, h: 60 };
+  const padding = opts?.padding ?? 16;
+  const gap = opts?.gap ?? 8;
 
   const headerFor = (id: string) => headerHeights?.get(id) ?? headerHeight;
 
@@ -37,7 +31,7 @@ export function gridLayout(input: GridLayoutInput): GridLayoutOutput {
     const children = childrenOf.get(id) ?? [];
 
     if (children.length === 0) {
-      const size = sizeOf?.get(id) ?? nodeSize;
+      const size = nodeSizes?.get(id) ?? nodeSize;
       sizes.set(id, { w: size.w, h: size.h });
       return;
     }

@@ -121,6 +121,7 @@ describe('renderer fallback', () => {
       graph: buildGraph([], []),
       hasChildren: () => false,
       inspect: () => undefined,
+      sectionColorOf: () => undefined,
     };
     const result = renderer?.({ id: 'state.nav.Home', kind: 'statechart.state', props: { name: 'Home' }, tags: [] }, mockCtx);
     // renderer now returns JSX (not a string); verify fallback mechanism returns something

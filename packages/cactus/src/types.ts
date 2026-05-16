@@ -10,6 +10,8 @@ export interface EdgeDeclaration {
   sourceId: string;
   targetId: string;
   styling?: EdgeStyling;
+  /** Raw label text. When present, cactus renders it truncated and click-revealable. */
+  labelText?: string;
   /** Optional Solid component rendered at the path midpoint. */
   label?: () => JSX.Element;
 }

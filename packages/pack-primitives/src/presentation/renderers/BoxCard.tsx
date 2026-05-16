@@ -9,11 +9,13 @@ type BoxProps = {
   tag?: string;
 };
 
-export default function BoxCard(node: Node, _ctx: RenderContext): JSX.Element {
+export default function BoxCard(node: Node, ctx: RenderContext): JSX.Element {
   const p = node.props as BoxProps;
   const borderColor = p.color ?? '#d0d0d0';
+  const sectionColor = ctx.sectionColorOf(node.id);
+  const leftBorderColor = sectionColor ?? borderColor;
 
-  if (_ctx.hasChildren(node.id)) {
+  if (ctx.hasChildren(node.id)) {
     return (
       <NodeBody
         direction="vertical"
@@ -22,7 +24,7 @@ export default function BoxCard(node: Node, _ctx: RenderContext): JSX.Element {
           inset: '0',
           'border-radius': '6px',
           border: `1px solid ${borderColor}`,
-          'border-left': `4px solid ${borderColor}`,
+          'border-left': `4px solid ${leftBorderColor}`,
           background: '#fff',
         }}
       >
@@ -56,7 +58,7 @@ export default function BoxCard(node: Node, _ctx: RenderContext): JSX.Element {
       style={{
         'border-radius': '6px',
         border: `1px solid ${borderColor}`,
-        'border-left': `4px solid ${borderColor}`,
+        'border-left': `4px solid ${leftBorderColor}`,
         background: '#fff',
         width: '100%',
         height: '100%',

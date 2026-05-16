@@ -109,6 +109,101 @@ describe('Canvas edge rendering', () => {
     cleanup();
   });
 
+  it('truncates labelText longer than 28 characters', () => {
+    const longLabel = 'this label is definitely longer than twenty-eight characters';
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        labelText: longLabel,
+      },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    expect(edgeSvg).not.toBeNull();
+
+    const text = edgeSvg!.querySelector('text');
+    expect(text).not.toBeNull();
+    expect(text!.textContent).toMatch(/…$/);
+    expect(text!.textContent!.length).toBeLessThanOrEqual(29);
+
+    cleanup();
+  });
+
+  it('shows short labelText without truncation', () => {
+    const shortLabel = 'short label';
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        labelText: shortLabel,
+      },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    const text = edgeSvg!.querySelector('text');
+    expect(text).not.toBeNull();
+    expect(text!.textContent).toBe(shortLabel);
+
+    cleanup();
+  });
+
+  it('reveals full labelText in a foreignObject on click, collapses on second click', async () => {
+    const longLabel = 'this label is definitely longer than twenty-eight characters';
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        labelText: longLabel,
+      },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const edgeSvg = getEdgeSvg(container);
+    expect(edgeSvg).not.toBeNull();
+
+    // No popover before click
+    expect(edgeSvg!.querySelector('foreignObject')).toBeNull();
+
+    // Click truncated label
+    const text = edgeSvg!.querySelector('text')!;
+    text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    // Popover should appear with full text
+    const fo = edgeSvg!.querySelector('foreignObject');
+    expect(fo).not.toBeNull();
+    expect(fo!.textContent).toContain(longLabel);
+
+    // Click the same label text again to toggle (collapse)
+    text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(edgeSvg!.querySelector('foreignObject')).toBeNull();
+
+    cleanup();
+  });
+
   it('skips edge line when source node is not registered', () => {
     const edges: EdgeDeclaration[] = [
       {

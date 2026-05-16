@@ -12,9 +12,10 @@ function conceptLabel(conceptId: string): string {
   return conceptId.replace(/^concept\./, '');
 }
 
-export default function ActionCard(node: Node, _ctx: RenderContext): JSX.Element {
+export default function ActionCard(node: Node, ctx: RenderContext): JSX.Element {
   const p = node.props as ActionProps;
   const label = p.conceptId ? conceptLabel(p.conceptId) : '';
+  const sectionColor = ctx.sectionColorOf(node.id);
 
   return (
     <div
@@ -22,6 +23,7 @@ export default function ActionCard(node: Node, _ctx: RenderContext): JSX.Element
       style={{
         'border-radius': '6px',
         border: '1px solid #d0d0d0',
+        'border-left': sectionColor ? `4px solid ${sectionColor}` : '1px solid #d0d0d0',
         background: '#fff',
         padding: '8px 12px',
         'box-sizing': 'border-box',

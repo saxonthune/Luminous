@@ -13,14 +13,16 @@ function idSegment(id: string): string {
   return parts[parts.length - 1] ?? id;
 }
 
-export default function CompositeCard(node: Node, _ctx: RenderContext): JSX.Element {
+export default function CompositeCard(node: Node, ctx: RenderContext): JSX.Element {
   const p = node.props as CompositeProps;
   const title = p.name ?? idSegment(node.id);
+  const sectionColor = ctx.sectionColorOf(node.id);
 
   return (
     <div style={{
       'border-radius': '6px',
       border: '1px solid #d0d0d0',
+      'border-left': sectionColor ? `4px solid ${sectionColor}` : '1px solid #d0d0d0',
       background: '#fff',
       'box-sizing': 'border-box',
     }}>

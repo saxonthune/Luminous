@@ -6,6 +6,7 @@ describe('gridLayout', () => {
     const { positions, sizes } = gridLayout({
       rootIds: [],
       childrenOf: new Map(),
+      edges: [],
     });
     expect(positions.size).toBe(0);
     expect(sizes.size).toBe(0);
@@ -15,6 +16,7 @@ describe('gridLayout', () => {
     const { positions, sizes } = gridLayout({
       rootIds: ['a'],
       childrenOf: new Map(),
+      edges: [],
     });
     expect(positions.get('a')).toEqual({ x: 0, y: 0 });
     expect(sizes.get('a')).toEqual({ w: 120, h: 60 });
@@ -23,14 +25,15 @@ describe('gridLayout', () => {
   it('root with 4 children gets a 2-column grid layout', () => {
     const children = ['c1', 'c2', 'c3', 'c4'];
     const childrenOf = new Map([['root', children]]);
-    const { positions, sizes } = gridLayout({
-      rootIds: ['root'],
-      childrenOf,
-      nodeSize: { w: 100, h: 50 },
-      padding: 10,
-      gap: 5,
-      headerHeight: 20,
-    });
+    const { positions, sizes } = gridLayout(
+      {
+        rootIds: ['root'],
+        childrenOf,
+        headerHeight: 20,
+        edges: [],
+      },
+      { nodeSize: { w: 100, h: 50 }, padding: 10, gap: 5 },
+    );
 
     // With 4 children: ceil(sqrt(4)) = 2 columns
     // Row 0: c1 at (10, 30), c2 at (115, 30)
@@ -57,6 +60,7 @@ describe('gridLayout', () => {
     const { sizes } = gridLayout({
       rootIds: ['region'],
       childrenOf,
+      edges: [],
     });
 
     const stateSize = sizes.get('state')!;
@@ -69,23 +73,24 @@ describe('gridLayout', () => {
     expect(regionSize.h).toBeGreaterThan(compositeSize.h);
   });
 
-  it('sizeOf overrides nodeSize for leaf nodes', () => {
+  it('nodeSizes overrides default nodeSize for leaf nodes', () => {
     const childrenOf = new Map([['parent', ['leaf1', 'leaf2']]]);
-    const sizeOf = new Map([
+    const nodeSizes = new Map([
       ['leaf1', { w: 200, h: 80 }],
       ['leaf2', { w: 150, h: 100 }],
     ]);
-    const { sizes } = gridLayout({
-      rootIds: ['parent'],
-      childrenOf,
-      nodeSize: { w: 120, h: 60 },
-      sizeOf,
-      padding: 10,
-      gap: 5,
-      headerHeight: 20,
-    });
+    const { sizes } = gridLayout(
+      {
+        rootIds: ['parent'],
+        childrenOf,
+        nodeSizes,
+        headerHeight: 20,
+        edges: [],
+      },
+      { nodeSize: { w: 120, h: 60 }, padding: 10, gap: 5 },
+    );
 
-    // Leaves use sizeOf, not nodeSize
+    // Leaves use nodeSizes, not nodeSize
     expect(sizes.get('leaf1')).toEqual({ w: 200, h: 80 });
     expect(sizes.get('leaf2')).toEqual({ w: 150, h: 100 });
 
@@ -97,24 +102,27 @@ describe('gridLayout', () => {
     expect(parentSize.h).toBe(140);
   });
 
-  it('sizeOf does not affect parent nodes (parents sized from children)', () => {
+  it('nodeSizes does not affect parent nodes (parents sized from children)', () => {
     const childrenOf = new Map([['parent', ['leaf']]]);
-    // Provide a sizeOf for parent too — should be ignored since parent has children
-    const sizeOf = new Map([
+    // Provide a nodeSizes for parent too — should be ignored since parent has children
+    const nodeSizes = new Map([
       ['leaf', { w: 200, h: 80 }],
       ['parent', { w: 999, h: 999 }],
     ]);
-    const { sizes } = gridLayout({
-      rootIds: ['parent'],
-      childrenOf,
-      sizeOf,
-      padding: 10,
-      headerHeight: 20,
-    });
+    const { sizes } = gridLayout(
+      {
+        rootIds: ['parent'],
+        childrenOf,
+        nodeSizes,
+        headerHeight: 20,
+        edges: [],
+      },
+      { padding: 10 },
+    );
 
-    // leaf uses sizeOf
+    // leaf uses nodeSizes
     expect(sizes.get('leaf')).toEqual({ w: 200, h: 80 });
-    // parent is sized from children, not sizeOf
+    // parent is sized from children, not nodeSizes
     const parentSize = sizes.get('parent')!;
     expect(parentSize.w).not.toBe(999);
     expect(parentSize.h).not.toBe(999);
@@ -122,15 +130,16 @@ describe('gridLayout', () => {
 
   it('headerHeights per-parent overrides global headerHeight for child pack-start', () => {
     const childrenOf = new Map([['parent', ['c1', 'c2']]]);
-    const { positions } = gridLayout({
-      rootIds: ['parent'],
-      childrenOf,
-      nodeSize: { w: 100, h: 50 },
-      padding: 10,
-      gap: 5,
-      headerHeight: 20,
-      headerHeights: new Map([['parent', 80]]),
-    });
+    const { positions } = gridLayout(
+      {
+        rootIds: ['parent'],
+        childrenOf,
+        headerHeight: 20,
+        headerHeights: new Map([['parent', 80]]),
+        edges: [],
+      },
+      { nodeSize: { w: 100, h: 50 }, padding: 10, gap: 5 },
+    );
 
     // With per-parent headerHeight=80: children start at y = 80 + padding(10) = 90
     expect(positions.get('c1')!.y).toBe(90);
@@ -139,32 +148,47 @@ describe('gridLayout', () => {
 
   it('headerHeights falls back to global headerHeight for parents not in the map', () => {
     const childrenOf = new Map([['parent', ['c1']]]);
-    const { positions } = gridLayout({
-      rootIds: ['parent'],
-      childrenOf,
-      nodeSize: { w: 100, h: 50 },
-      padding: 10,
-      gap: 5,
-      headerHeight: 30,
-      headerHeights: new Map([['other', 80]]),
-    });
+    const { positions } = gridLayout(
+      {
+        rootIds: ['parent'],
+        childrenOf,
+        headerHeight: 30,
+        headerHeights: new Map([['other', 80]]),
+        edges: [],
+      },
+      { nodeSize: { w: 100, h: 50 }, padding: 10, gap: 5 },
+    );
 
     // parent not in headerHeights map, falls back to headerHeight=30: y = 30 + 10 = 40
     expect(positions.get('c1')!.y).toBe(40);
   });
 
   it('multiple roots are placed left-to-right with gap', () => {
-    const { positions, sizes } = gridLayout({
-      rootIds: ['r1', 'r2'],
-      childrenOf: new Map(),
-      nodeSize: { w: 100, h: 50 },
-      gap: 10,
-    });
+    const { positions, sizes } = gridLayout(
+      {
+        rootIds: ['r1', 'r2'],
+        childrenOf: new Map(),
+        edges: [],
+      },
+      { nodeSize: { w: 100, h: 50 }, gap: 10 },
+    );
 
     expect(positions.get('r1')).toEqual({ x: 0, y: 0 });
     // r2 starts after r1.w + gap = 100 + 10 = 110
     expect(positions.get('r2')).toEqual({ x: 110, y: 0 });
     expect(sizes.get('r1')).toEqual({ w: 100, h: 50 });
     expect(sizes.get('r2')).toEqual({ w: 100, h: 50 });
+  });
+
+  it('edges field is accepted and ignored by grid layout', () => {
+    const { positions, sizes } = gridLayout({
+      rootIds: ['a', 'b'],
+      childrenOf: new Map(),
+      edges: [{ id: 'e1', from: 'a', to: 'b', label: { w: 60, h: 20 } }],
+    });
+    expect(positions.has('a')).toBe(true);
+    expect(positions.has('b')).toBe(true);
+    expect(sizes.has('a')).toBe(true);
+    expect(sizes.has('b')).toBe(true);
   });
 });

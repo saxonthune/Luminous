@@ -28,9 +28,10 @@ export { computeBounds, findContainerAt, isPointInRect } from './containment.js'
 export { resolveAbsolutePosition, resolveAbsolutePositionByParentOf, computeAttach, computeDetach, computeContainerFit } from './containerOps.js';
 export type { ContainerNode, ContainerFitConfig } from './containerOps.js';
 export { gridLayout } from './gridLayout.js';
-export type { GridLayoutInput, GridLayoutOutput } from './gridLayout.js';
+export type { GridLayoutOptions } from './gridLayout.js';
 export { elkLayout } from './elkLayout.js';
-export type { ElkLayoutInput, ElkLayoutOutput } from './elkLayout.js';
+export type { ElkLayoutOptions } from './elkLayout.js';
+export type { LayoutRequest, LayoutResult } from './layout-types.js';
 export { useNodeLinks } from './useNodeLinks.js';
 export type { Transform } from './useViewport.js';
 export type { CanvasProps, CanvasRef, ConnectionPreviewCoords } from './Canvas.js';
@@ -43,7 +44,7 @@ export type { NodeLink, FollowerDragDecision, UseNodeLinksOptions, UseNodeLinksR
 export type { ResizeDirection, NodeResizeCallbacks, UseNodeResizeOptions, UseNodeResizeResult } from './useNodeResize.js';
 export type { UseSelectionOptions, UseSelectionResult } from './useSelection.js';
 export { forceDirectedLayout } from './layout.js';
-export type { LayoutNode, LayoutEdge, LayoutResult } from './layout.js';
+export type { LayoutNode, LayoutEdge, LayoutResult as FdLayoutResult } from './layout.js';
 export { treeLayout } from './treeLayout.js';
 export type { TreeLayoutOptions } from './treeLayout.js';
 export { tidyLayout } from './tidyLayout.js';

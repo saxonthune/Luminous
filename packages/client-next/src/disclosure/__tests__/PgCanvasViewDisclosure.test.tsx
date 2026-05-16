@@ -31,6 +31,7 @@ function makeCtx(level: RenderContext['level']): RenderContext {
     graph: emptyGraph,
     hasChildren: () => false,
     inspect: () => undefined,
+    sectionColorOf: () => undefined,
   };
 }
 
