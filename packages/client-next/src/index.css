@@ -7,6 +7,7 @@
 
 body {
   color: var(--fg);
+  background: var(--canvas);
 }
 
 /* TIER 1+2: palette (where applicable) + semantic vars per theme */
@@ -157,6 +158,32 @@ body {
   --color-kind-hook-border: color-mix(in oklch, var(--color-kind-hook-bg) 55%, var(--tone-5));
   --color-kind-datasource-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-oxide));
   --color-kind-datasource-border: color-mix(in oklch, var(--color-kind-datasource-bg) 55%, var(--tone-5));
+}
+
+/* cactus theme contract (doc02.05.05) — Luminous brings its own theme by
+   mapping domain tokens onto the --cactus-* contract. The right-hand vars are
+   redefined per [data-theme]; custom properties resolve lazily, so this single
+   :root mapping flows all three Luminous themes through cactus automatically. */
+:root {
+  --cactus-canvas-bg:     var(--canvas);
+  --cactus-fg:            var(--fg);
+  --cactus-fg-muted:      var(--fg-muted);
+  --cactus-fg-subtle:     var(--fg-subtle);
+  --cactus-overlay:       var(--overlay);
+  --cactus-surface:       var(--surface);
+  --cactus-surface-alt:   var(--surface-alt);
+  --cactus-border:        var(--border);
+  --cactus-border-subtle: var(--border-subtle);
+  --cactus-accent:        var(--accent);
+  --cactus-accent-subtle: var(--accent-subtle);
+  --cactus-selection:     var(--accent-10);
+  --cactus-on-accent:     var(--on-accent);
+  --cactus-danger:        var(--danger, #dc2626);
+  --cactus-danger-subtle: var(--danger-10, #fef2f2);
+  --cactus-grid-dot:      var(--dot-grid);
+  --cactus-resize-handle: var(--resize-handle);
+  --cactus-shadow-sm:     var(--shadow-sm);
+  --cactus-shadow-lg:     var(--shadow-lg);
 }
 
 /* TIER 3: Tailwind token layer — never overridden, generates utilities */

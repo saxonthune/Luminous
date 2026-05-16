@@ -80,7 +80,7 @@ export function CanvasHost(props: CanvasHostProps) {
       <Show
         when={availableViews().length > 0}
         fallback={
-          <div style={{ padding: '24px', color: '#888' }}>
+          <div style={{ padding: '24px', color: 'var(--fg-muted)' }}>
             No views available. Check that the graph declares a registered pack.
           </div>
         }

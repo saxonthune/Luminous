@@ -86,7 +86,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
             dash === 'dashed' ? '6 3' : dash === 'dotted' ? '2 3' : undefined;
           const color = edge.styling?.colorToken
             ? `var(--${edge.styling.colorToken})`
-            : 'var(--fg-muted, #888)';
+            : 'var(--cactus-fg-muted, #6b7280)';
           const width = edge.styling?.width ?? 1.5;
           const arrowHead = edge.styling?.arrowHead ?? false;
 
@@ -116,7 +116,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                       dominant-baseline="middle"
                       font-size="10"
                       fill={color}
-                      stroke="var(--bg-surface, white)"
+                      stroke="var(--cactus-canvas-bg, #ffffff)"
                       stroke-width="4"
                       stroke-linejoin="round"
                       paint-order="stroke fill"
@@ -142,7 +142,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
       <Show when={revealedPopover()}>
         {(mp) => (
           <EdgeLabel x={mp().x} y={mp().y} onClick={() => setRevealedId(null)}>
-            <span style={{ 'font-size': '10px', color: 'var(--fg, #333)' }}>{mp().text}</span>
+            <span style={{ 'font-size': '10px', color: 'var(--cactus-fg, #111827)' }}>{mp().text}</span>
           </EdgeLabel>
         )}
       </Show>

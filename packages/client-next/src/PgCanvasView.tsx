@@ -110,7 +110,7 @@ function renderNodes(
             <Show
               when={getNodeRenderer(node.kind, renderCtx.level())}
               fallback={
-                <div style={{ padding: '4px', 'font-size': '11px', color: '#555' }}>
+                <div style={{ padding: '4px', 'font-size': '11px', color: 'var(--fg-muted)' }}>
                   <strong>{node.kind}</strong>
                 </div>
               }
@@ -361,7 +361,7 @@ function CanvasInner(props: {
     <InspectorContext.Provider value={inspector}>
       <Show
         when={effectiveLayout()}
-        fallback={<div style={{ padding: '8px', color: '#888' }}>Computing layout…</div>}
+        fallback={<div style={{ padding: '8px', color: 'var(--fg-muted)' }}>Computing layout…</div>}
       >
         {/* eslint-disable-next-line solid/reactivity -- renderNodes returns JSX evaluated inside the Show's tracked scope */}
         {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, dragPointerDown)}

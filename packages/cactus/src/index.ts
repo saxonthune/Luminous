@@ -62,3 +62,5 @@ export type { ParsedHotkey } from './chrome/parseHotkey.js';
 export { useHotkeys } from './chrome/useHotkeys.js';
 export { Toolbar, ToolbarControlRenderer, MenuRoot } from './chrome/ChromePrimitives.js';
 export { ChromeSlots } from './chrome/ChromeSlots.js';
+export { CACTUS_TOKENS, cactusVar } from './cactus-tokens.js';
+export type { CactusToken } from './cactus-tokens.js';

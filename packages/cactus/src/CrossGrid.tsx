@@ -15,7 +15,7 @@ export interface CrossGridProps {
 export function CrossGrid(props: CrossGridProps): JSX.Element {
   const patternId = () => props.patternId ?? 'cross-grid';
   const spacing = () => props.spacing ?? 40;
-  const strokeColor = () => props.strokeColor ?? 'var(--dot-grid)';
+  const strokeColor = () => props.strokeColor ?? 'var(--cactus-grid-dot, #d1d5db)';
   const sw = () => props.strokeWidth ?? 1.2;
   const crossSize = () => props.crossSize ?? 18;
   const backgroundColor = () => props.backgroundColor ?? 'transparent';

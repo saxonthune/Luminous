@@ -14,7 +14,7 @@ export function DotGrid(props: DotGridProps): JSX.Element {
   const patternId = () => props.patternId ?? 'dot-grid';
   const spacing = () => props.spacing ?? 16;
   const dotRadius = () => props.dotRadius ?? 1;
-  const dotColor = () => props.dotColor ?? 'var(--dot-grid)';
+  const dotColor = () => props.dotColor ?? 'var(--cactus-grid-dot, #d1d5db)';
   const backgroundColor = () => props.backgroundColor ?? 'transparent';
 
   return (

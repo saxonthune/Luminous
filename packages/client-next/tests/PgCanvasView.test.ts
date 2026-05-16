@@ -62,6 +62,7 @@ describe('PgCanvasView data pipeline', () => {
     const { sizes } = gridLayout({
       rootIds: containment.rootIds,
       childrenOf: containment.childrenOf,
+      edges: [],
     });
     const stateSize     = sizes.get('state')!;
     const compositeSize = sizes.get('composite')!;
@@ -75,6 +76,7 @@ describe('PgCanvasView data pipeline', () => {
     const { positions } = gridLayout({
       rootIds: containment.rootIds,
       childrenOf: containment.childrenOf,
+      edges: [],
     });
 
     const regionAbs    = resolveAbsolutePositionByParentOf('region',    positions, containment.parentOf);

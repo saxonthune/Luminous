@@ -251,7 +251,7 @@ export function Canvas(props: CanvasProps) {
       <div
         ref={setContainerRef}
         class={props.class}
-        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none' }}
+        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
         onPointerDown={(e) => {
           if (props.onBackgroundPointerDown) {
             const target = e.target as HTMLElement;
@@ -317,8 +317,8 @@ export function Canvas(props: CanvasProps) {
                 top: `${rect().y}px`,
                 width: `${rect().width}px`,
                 height: `${rect().height}px`,
-                border: '1px solid var(--accent)',
-                "background-color": 'var(--accent-10)',
+                border: '1px solid var(--cactus-accent, #2563eb)',
+                "background-color": 'var(--cactus-selection, rgba(37, 99, 235, 0.1))',
                 "pointer-events": 'none',
               }}
             />
