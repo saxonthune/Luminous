@@ -11,7 +11,8 @@
     },
     "./chrome-types": {
       "default": "./src/chrome/types.ts"
-    }
+    },
+    "./cactus.css": "./src/cactus.css"
   },
   "scripts": {
     "test": "vitest run",
