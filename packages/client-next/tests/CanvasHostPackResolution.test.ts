@@ -5,7 +5,7 @@
  * Pure data-layer test — no DOM rendering required.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { registerPack, resetRegistry, getPack } from '@luminous/core';
+import { registerPack, resetRegistry, resolvePack } from '@luminous/core';
 import { buildGraph } from '@luminous/core';
 import type { Pack, Node, Edge, View } from '@luminous/core';
 
@@ -57,8 +57,8 @@ afterEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('Pack resolution from graph.pack', () => {
-  it('getPack returns the registered pack for the declared id', () => {
-    const pack = getPack('test-synthetic-pack');
+  it('resolvePack returns the registered pack for the declared id', () => {
+    const pack = resolvePack('test-synthetic-pack');
     expect(pack).toBeDefined();
     expect(pack!.views.length).toBe(2);
     expect(pack!.views[0].id).toBe('test.my-view');
@@ -75,7 +75,7 @@ describe('Pack resolution from graph.pack', () => {
     const graph = buildGraph([], [], 'test-synthetic-pack');
 
     // Simulate what CanvasHost does: resolve the single pack
-    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const p = graph.pack ? resolvePack(graph.pack) : undefined;
     const declaredPacks = p ? [p] : [];
 
     const availableViews = declaredPacks.flatMap((p) => p.views);
@@ -87,7 +87,7 @@ describe('Pack resolution from graph.pack', () => {
   it('resolves layers by looking up graph.pack through registry', () => {
     const graph = buildGraph([], [], 'test-synthetic-pack');
 
-    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const p = graph.pack ? resolvePack(graph.pack) : undefined;
     const declaredPacks = p ? [p] : [];
 
     const availableLayers = declaredPacks.flatMap((p) => p.layers);
@@ -97,14 +97,14 @@ describe('Pack resolution from graph.pack', () => {
 
   it('returns empty views when graph declares no pack', () => {
     const graph = buildGraph([], [], '');
-    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const p = graph.pack ? resolvePack(graph.pack) : undefined;
     const declaredPacks = p ? [p] : [];
     expect(declaredPacks).toHaveLength(0);
   });
 
   it('returns empty views when pack is not registered', () => {
     const graph = buildGraph([], [], 'unknown-pack');
-    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const p = graph.pack ? resolvePack(graph.pack) : undefined;
     const declaredPacks = p ? [p] : [];
     expect(declaredPacks).toHaveLength(0);
   });

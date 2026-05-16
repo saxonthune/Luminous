@@ -7,7 +7,7 @@ import {
   listViews,
   getLayer,
   getDisclosureSchema,
-  getPack,
+  resolvePack,
   getNodeRenderer,
   getEdgeRenderer,
   resetRegistry,
@@ -133,10 +133,10 @@ describe('registerPack', () => {
     expect(schema?.kind).toBe('test.foo');
   });
 
-  it('resolves getPack after registration', () => {
+  it('resolves resolvePack after registration', () => {
     const pack = makeTestPack();
     registerPack(pack);
-    expect(getPack('test')).toBe(pack);
+    expect(resolvePack('test')).toBe(pack);
   });
 });
 
@@ -247,7 +247,7 @@ describe('resetRegistry', () => {
     expect(listViews()).toHaveLength(0);
     expect(getLayer('test.layer')).toBeUndefined();
     expect(getDisclosureSchema('test.foo')).toBeUndefined();
-    expect(getPack('test')).toBeUndefined();
+    expect(resolvePack('test')).toBeUndefined();
     expect(getNodeRenderer('test.foo', 'card')).toBeUndefined();
   });
 

@@ -131,8 +131,8 @@ export function getDisclosureSchema(kind: KindId): DisclosureSchema | undefined 
   return disclosureSchemas.get(kind);
 }
 
-export function getPack(id: PackId): Pack | undefined {
-  return packs.get(id);
+export function resolvePack(name: PackId): Pack | undefined {
+  return packs.get(name);
 }
 
 export function getNodeRenderer(kind: KindId, level: DisclosureLevel): NodeRenderer | undefined {

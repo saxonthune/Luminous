@@ -1,6 +1,6 @@
 import type { Graph, Node, Edge } from './types.ts';
 import { buildGraph } from './graph.ts';
-import { getNodeKind, getEdgeKind, getPack } from './registry.ts';
+import { getNodeKind, getEdgeKind, resolvePack } from './registry.ts';
 
 export function loadGraphFromText(json: string): Graph {
   let parsed: unknown;
@@ -37,7 +37,7 @@ export function loadGraphFromText(json: string): Graph {
   }
 
   const pack = typeof file.pack === 'string' ? file.pack : '';
-  if (pack !== '' && getPack(pack) === undefined) {
+  if (pack !== '' && resolvePack(pack) === undefined) {
     throw new Error(
       `loadGraphFile: pack "${pack}" is referenced by the graph but not registered. Register the pack before loading.`
     );

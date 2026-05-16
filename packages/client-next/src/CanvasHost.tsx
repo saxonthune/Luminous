@@ -1,7 +1,7 @@
 import { createSignal, createMemo, Show } from 'solid-js';
 import type { Graph, View, Layer, Pack } from '@luminous/core';
 import {
-  getPack,
+  resolvePack,
   viewSwitcherSchema,
   layerToolbarSchema,
   layoutToolbarSchema,
@@ -24,7 +24,7 @@ export function CanvasHost(props: CanvasHostProps) {
   const [enabledLayers, setEnabledLayers] = createSignal<Record<string, boolean>>({});
 
   const declaredPacks = createMemo<Pack[]>(() => {
-    const p = props.graph.pack ? getPack(props.graph.pack) : undefined;
+    const p = props.graph.pack ? resolvePack(props.graph.pack) : undefined;
     return p ? [p] : [];
   });
 
