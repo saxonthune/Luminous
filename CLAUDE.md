@@ -54,7 +54,16 @@ See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full det
 
 ## Canvas Engine
 
-The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable Solid primitives. The engine supports everything we need; restrictions are in the domain layer above it.
+The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable Solid primitives.
+
+**Engine/domain boundary.** Luminous translates the intention of graph + pack declarations into a visual canvas; cactus *is* that visual API. So the split is not "engine supports everything, domain restricts" — it's by *kind of concern*:
+
+- **Visual and interaction concerns belong in cactus** — how the canvas looks and behaves: layout, drag, snapping, collision-free placement, hit-testing. These are not domain logic and should not leak into the domain layer.
+- **Meaning belongs in the domain layer** (`client-next`) — what nodes and edges *are*, the graph + pack declaration, what is semantically allowed.
+
+cactus operates on the rendered projection (the DOM — `data-container-id` nesting, measured rects), not the abstract graph. The domain layer declares intent and persists results; it does not compute visual geometry.
+
+This boundary is a first-class design principle under active test — see PDR D8 (doc02.01) for the rationale and the experimental hypothesis (does enforcing it yield more maintainable, faster-to-iterate software).
 
 ## Docs / Specs
 

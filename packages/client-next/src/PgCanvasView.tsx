@@ -48,6 +48,17 @@ const PALETTE = [
   '#6ab878', // green
 ];
 
+/**
+ * Estimate the rendered size of an edge label so layouts reserve space for it.
+ * Mirrors EdgeLayer: SVG <text font-size=10>, capped at 28 chars, with a 4px
+ * stroke halo. ~5.6px average glyph advance at 10px is a deliberate slight
+ * over-estimate so labels never overlap.
+ */
+function estimateEdgeLabelSize(text: string): { w: number; h: number } {
+  const chars = Math.min(text.length, 28);
+  return { w: chars * 5.6 + 8, h: 16 };
+}
+
 /** BFS topological order from roots through childrenOf — parents before children. */
 function bfsOrder(
   rootIds: readonly string[],
@@ -278,6 +289,23 @@ function CanvasInner(props: {
     return prevHeaders;
   });
 
+  // Edge inputs for layout, carrying estimated label dimensions so both layouts
+  // reserve space for labels. Matches EdgeLayer's SVG <text font-size=10> + 28-char cap.
+  const layoutEdges = createMemo(() => {
+    const currentLevel = level();
+    return scene().arrows.map((a) => {
+      const renderer = getEdgeRenderer(a.kind, currentLevel);
+      const rendered = renderer ? renderer(a, renderCtx) : undefined;
+      const labelText = typeof rendered === 'string' ? rendered : undefined;
+      return {
+        id: a.id ?? `${a.from}->${a.to}`,
+        from: a.from,
+        to: a.to,
+        label: labelText ? estimateEdgeLabelSize(labelText) : undefined,
+      };
+    });
+  });
+
   // Both layouts are created unconditionally so the chosen one can swap reactively
   // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
   const [elkResult] = createResource(
@@ -285,7 +313,7 @@ function CanvasInner(props: {
       ? {
           rootIds: containment().rootIds,
           childrenOf: containment().childrenOf,
-          edges: scene().arrows.map((a) => ({ id: `${a.from}->${a.to}`, from: a.from, to: a.to })),
+          edges: layoutEdges(),
           nodeSizes: measuredLeafSizes(),
           headerHeight: HEADER_HEIGHT,
           headerHeights: measuredHeaderHeights(),
@@ -300,7 +328,7 @@ function CanvasInner(props: {
     nodeSizes: measuredLeafSizes(),
     headerHeight: HEADER_HEIGHT,
     headerHeights: measuredHeaderHeights(),
-    edges: [],
+    edges: layoutEdges(),
   }));
 
   const baseLayout = createMemo<LayoutResult | null>(

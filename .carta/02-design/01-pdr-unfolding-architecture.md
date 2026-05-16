@@ -97,6 +97,19 @@ When a note containing children is promoted to a typed construct, the children s
 
 Batch crystallization (promote parent + children together) and deep promotion (children become structured fields) are compound operations that can be built later from this primitive. The default is the simplest structure-preserving transformation.
 
+### D8: The engine/domain boundary runs by kind of concern
+
+Earlier framing in this PDR — "the engine supports everything; the restrictions are in the domain layer" — is a useful heuristic but imprecise. It implies the engine is a permissive substrate and the domain layer's job is to *withhold* capability. That mental model breaks down the moment a concern is purely visual: where does collision-free node placement go? It is not a restriction on meaning, so "restrictions live in the domain layer" gives no answer.
+
+The sharper rule: the boundary runs by **kind of concern**, not by permission.
+
+- **Visual and interaction concerns belong in cactus** — how the canvas looks and behaves: layout, drag, snapping, collision avoidance, hit-testing. cactus *is* Luminous's visual API. These concerns should not leak into the domain layer even when they are "restrictive."
+- **Meaning belongs in the domain layer** (`client-next`) — what nodes and edges *are*, the graph + pack declaration, what is semantically permitted.
+
+cactus operates on the **rendered projection** — the DOM, with `data-container-id` nesting and measured rects — not on the abstract graph. The domain layer declares intent and persists results; it does not compute visual geometry. A consumer opts into engine behaviors (e.g. collision-free placement) through engine options.
+
+**Experimental question.** Treating this boundary as a first-class, enforced principle is a bet, not a settled fact. The hypothesis: strictly respecting it produces software that is more maintainable and faster to iterate on — visual behavior evolves in cactus without touching domain code, and domain meaning evolves without touching the engine. The cost is friction at the boundary (a concern that looks mixed must be split deliberately). Whether that friction pays for itself in iteration speed is something this project is actively testing; it is not assumed.
+
 ## Cactus Engine Assessment
 
 The cactus canvas engine (`packages/cactus/src/`) is a custom, domain-agnostic primitive system. It uses d3-zoom for viewport, DOM data-attribute hit-testing, and composable Solid primitives. The engine itself supports everything we need. The three gaps for the unfolding model are all in the **domain layer** above cactus, not in the engine primitives:

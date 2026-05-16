@@ -115,6 +115,11 @@ export function AppShell() {
 
   createEffect(() => persistTheme(theme()));
 
+  createEffect(() => {
+    const label = sourceLabel();
+    document.title = label ? `${label} — Luminous` : 'Luminous';
+  });
+
   onMount(() => {
     boot();
     const onKey = (e: KeyboardEvent) => {
