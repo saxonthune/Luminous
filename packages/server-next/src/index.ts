@@ -3,8 +3,8 @@ import { execSync } from "node:child_process"
 import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
-import { scanDocuments } from "./workspace.js"
-import { getDocument, applyAction, applyBatch, flushAll, setRootDir, watchDocuments, createDocument } from "./store.js"
+import { scanDocuments, resolveRoots } from "./workspace.js"
+import { getDocument, applyAction, applyBatch, flushAll, setRoots, watchDocuments, createDocument } from "./store.js"
 import type { V2Document } from "./types.js"
 import { roots as diagRoots, bbox as diagBbox, outliers as diagOutliers, subtree as diagSubtree, outline as diagOutline, summary as diagSummary, query as diagQuery } from "./diag.js"
 import type { QueryFilter } from "./diag.js"
@@ -19,14 +19,18 @@ try {
   // not a git repo or git not available
 }
 
-// Parse --dir CLI arg
-const dirArgIndex = process.argv.indexOf("--dir")
-const rootDir = resolve(
-  dirArgIndex !== -1 && process.argv[dirArgIndex + 1]
-    ? process.argv[dirArgIndex + 1]
-    : process.cwd()
-)
-setRootDir(rootDir)
+// Parse CLI args. --config points at a gitignored multi-root config file;
+// --dir is the single-root fallback when no config is present.
+function argValue(flag: string): string | undefined {
+  const i = process.argv.indexOf(flag)
+  return i !== -1 ? process.argv[i + 1] : undefined
+}
+
+const configPath = argValue("--config") ? resolve(argValue("--config")!) : null
+const fallbackDir = resolve(argValue("--dir") ?? process.cwd())
+
+const roots = await resolveRoots(configPath, fallbackDir)
+setRoots(roots)
 
 // ---------------------------------------------------------------------------
 // WebSocket helpers (text frames only, no library)
@@ -133,7 +137,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // GET /api/documents
   if (url === "/api/documents" && req.method === "GET") {
-    const documents = await scanDocuments(rootDir)
+    const documents = await scanDocuments(roots)
     sendJson(res, 200, { documents })
     return
   }
@@ -397,8 +401,9 @@ server.on("upgrade", (req: IncomingMessage, socket: Socket, _head: Buffer) => {
 
 server.listen(port, () => {
   console.log(`server listening on http://localhost:${port}`)
-  console.log(`serving documents from: ${rootDir}`)
-  watchDocuments(rootDir, (path) => {
+  console.log(`serving ${roots.length} workspace root(s):`)
+  for (const r of roots) console.log(`  ${r.name} → ${r.dir}`)
+  watchDocuments(roots, (path) => {
     console.log(`[watch] external change detected: ${path}`)
     broadcast(path)
   })

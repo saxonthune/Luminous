@@ -61,9 +61,9 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.11 | `11-pdr-property-graph-architecture.md` | Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. | pdr, architecture, property-graph, packs, views, disclosure, canvas-engine | doc02.01 | doc02.10.03, doc02.14, doc02.15, doc02.16, doc02.17 | — |
 | doc02.12 | `12-app-shell-statechart.md` | Statechart of Luminous's app shell — boot, picker, canvas-mounted, error, theme region. Boundary: app-shell only, canvas internals are a black box. | ui, statechart, app-shell, shell | doc02.01, doc01.01 | doc02.13 | app-shell.statechart.json |
 | doc02.13 | `13-app-shell-component-tree.md` | Component tree of the app shell, derived from the statechart and six inventories. Canvas internals are not modeled here. | components, derivation, app-shell | doc02.12 | doc02.19 | — |
-| doc02.14 | `14-pack-contract.md` | What a pack must provide, what it may provide, how registration works, and how the boundary is enforced at runtime. | pack, contract, schema, registry | doc02.11 | doc02.15, doc02.16, doc02.17, doc02.18, doc02.19, doc02.20 | — |
+| doc02.14 | `14-pack-contract.md` | A pack is JSON data owned by the domain it describes, co-located with its graph as a sibling file. What a pack declares, how a graph names it, and how Luminous resolves it. | pack, contract, schema, data, co-location | doc02.11, doc02.16 | doc02.15, doc02.16, doc02.17, doc02.18, doc02.19, doc02.20 | — |
 | doc02.15 | `15-mcp-iterative-graph-building.md` | Tool surface for AI agents to build and query property graphs iteratively — six tiers from CRUD to pack authoring, with layout policy and sync strategy. | mcp, ai, tools, graph, iteration | doc02.04, doc02.11, doc02.14 | — | — |
-| doc02.16 | `16-renderer-engine.md` | Renderers are JSON over a primitive vocabulary; the engine interprets them; custom primitives are the code escape hatch. | renderer, primitives, pack, rendering | doc02.14, doc02.11 | doc02.18 | — |
+| doc02.16 | `16-renderer-engine.md` | Renderers are JSON over a primitive vocabulary; the engine interprets them; custom primitives are the code escape hatch. | renderer, primitives, pack, rendering | doc02.14, doc02.11 | doc02.14, doc02.18 | — |
 | doc02.17 | `17-projection-and-identity.md` | Node identity persists across projections; decoration layers above projection; contain-per-view; animation between views falls out of identity stability. | projection, identity, view, animation, decoration | doc02.11, doc02.14 | doc02.18, doc02.19 | — |
 | doc02.18 | `18-pack-examples.md` | RTP, flowchart, Solid app, React app, Rust app — what each pack declares, what views each wants, and what falls out as Luminous's universal contract. | pack, examples, reference, contract | doc02.14, doc02.16, doc02.17 | — | — |
 | doc02.19 | `19-canvas-component-tree.md` | What lives inside the canvas — toolbars, view switcher, layer toolbar, context menus — derived from inventories of state, mutation rate, and ownership boundary. | canvas, chrome, component-tree, boundaries | doc02.13, doc02.14, doc02.17 | doc02.20 | — |
@@ -138,6 +138,7 @@ Quick lookup for file-path→doc mapping:
 | `canvas-engine` | doc02.11 |
 | `carta` | doc01.02 |
 | `chrome` | doc02.19, doc02.20 |
+| `co-location` | doc02.14 |
 | `cognitive-load` | doc03.04 |
 | `component-tree` | doc02.19 |
 | `components` | doc02.05.02, doc02.13 |
@@ -147,6 +148,7 @@ Quick lookup for file-path→doc mapping:
 | `coverage` | doc02.10.02 |
 | `crystallization` | doc02.01 |
 | `css` | doc02.05.05 |
+| `data` | doc02.14 |
 | `data-model` | doc03.03 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
@@ -205,7 +207,6 @@ Quick lookup for file-path→doc mapping:
 | `reactivity` | doc02.06.01, doc03.05 |
 | `reference` | doc02.09, doc02.18 |
 | `reference-graph` | doc03.05 |
-| `registry` | doc02.14 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc03.05 |
 | `research` | doc03.00, doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06 |

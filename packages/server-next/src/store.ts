@@ -11,10 +11,31 @@ const dirty = new Set<string>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const recentWrites = new Map<string, number>()
 
-let rootDir = process.cwd()
+/** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
+let roots = new Map<string, string>()
 
+export function setRoots(list: { name: string; dir: string }[]): void {
+  roots = new Map(list.map((r) => [r.name, r.dir]))
+}
+
+/** Back-compat shim — register a single anonymous root. */
 export function setRootDir(dir: string): void {
-  rootDir = dir
+  roots = new Map([["", dir]])
+}
+
+/**
+ * Resolve a namespaced document path ("<root>/<rel>") to an absolute file path.
+ * If the first segment names a known root, the rest is resolved within it;
+ * otherwise the whole path is resolved against the first registered root.
+ */
+function resolveDocPath(relativePath: string): string {
+  const slash = relativePath.indexOf("/")
+  if (slash !== -1) {
+    const dir = roots.get(relativePath.slice(0, slash))
+    if (dir) return resolve(dir, relativePath.slice(slash + 1))
+  }
+  const first = roots.values().next().value ?? process.cwd()
+  return resolve(first, relativePath)
 }
 
 function emptyDoc(packs: Record<string, string> = {}): Document {
@@ -49,8 +70,7 @@ function scheduleSave(relativePath: string): void {
     if (dirty.has(relativePath)) {
       const doc = cache.get(relativePath)
       if (doc) {
-        const absPath = resolve(rootDir, relativePath)
-        await saveDocument(absPath, doc)
+        await saveDocument(resolveDocPath(relativePath), doc)
         dirty.delete(relativePath)
       }
     }
@@ -67,8 +87,7 @@ export async function flushAll(): Promise<void> {
   for (const relativePath of dirty) {
     const doc = cache.get(relativePath)
     if (doc) {
-      const absPath = resolve(rootDir, relativePath)
-      writes.push(saveDocument(absPath, doc))
+      writes.push(saveDocument(resolveDocPath(relativePath), doc))
     }
   }
   await Promise.all(writes)
@@ -79,8 +98,7 @@ export async function getDocument(relativePath: string): Promise<Document> {
   if (cache.has(relativePath)) {
     return cache.get(relativePath)!
   }
-  const absPath = resolve(rootDir, relativePath)
-  const doc = await loadDocument(absPath)
+  const doc = await loadDocument(resolveDocPath(relativePath))
   cache.set(relativePath, doc)
   return doc
 }
@@ -90,7 +108,7 @@ export async function createDocument(
   packs: Record<string, string> = {}
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   if (!relativePath) return { ok: false, error: "missing path" }
-  const absPath = resolve(rootDir, relativePath)
+  const absPath = resolveDocPath(relativePath)
   try {
     await access(absPath)
     return { ok: false, error: "already exists" }
@@ -168,20 +186,33 @@ export async function applyBatch(
 }
 
 export function watchDocuments(
-  watchRootDir: string,
+  watchRoots: { name: string; dir: string }[],
   onChange: (relativePath: string) => void
 ): void {
-  watch(watchRootDir, { recursive: true }, (_event, filename) => {
-    if (!filename) return
-    const normalized = filename.replace(/\\/g, "/")
-    if (!normalized.endsWith(".graph.json")) return
-    const absPath = resolve(watchRootDir, normalized)
-    const lastWrite = recentWrites.get(absPath)
-    if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {
-      return
+  for (const root of watchRoots) {
+    try {
+      const watcher = watch(root.dir, { recursive: true }, (_event, filename) => {
+        if (!filename) return
+        const normalized = filename.toString().replace(/\\/g, "/")
+        if (!normalized.endsWith(".graph.json")) return
+        const docPath = root.name ? `${root.name}/${normalized}` : normalized
+        const absPath = resolve(root.dir, normalized)
+        const lastWrite = recentWrites.get(absPath)
+        if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {
+          return
+        }
+        recentWrites.delete(absPath)
+        cache.delete(docPath)
+        onChange(docPath)
+      })
+      // Recursive watch on a large repo can exhaust inotify watches; degrade
+      // gracefully (live-reload off for this root) rather than crash.
+      watcher.on("error", (err) => {
+        console.error(`[watch] disabled for ${root.name}:`, err)
+        watcher.close()
+      })
+    } catch (err) {
+      console.error(`[watch] could not watch ${root.name}:`, err)
     }
-    recentWrites.delete(absPath)
-    cache.delete(normalized)
-    onChange(normalized)
-  })
+  }
 }

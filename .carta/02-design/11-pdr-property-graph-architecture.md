@@ -14,7 +14,7 @@ Luminous will commit to a **property graph as the interface contract** between e
 On top of this contract, Luminous will introduce:
 
 - **Multi-document composition.** Substrate, layers, user annotations, positions, saved views, and per-agent contributions each live in their own document and compose into one virtual canvas at load time. Provenance is a directory path, not a field.
-- **Packs.** Each pipeline ships a pack declaring node/edge kinds, Solid renderers, disclosure schemas, layers, saved views, and named MCP queries. Packs are trusted code (v1), installed explicitly by the user. (Compare Coda Packs, tldraw `ShapeUtil`, VS Code extensions.)
+- **Packs.** Each domain has a pack declaring node/edge kinds, renderer compositions, disclosure schemas, layers, saved views, and named MCP queries. **A pack is JSON data, owned by the domain it describes and co-located with its graph** — not trusted code installed into Luminous. See [doc02.14](14-pack-contract.md), which supersedes §5 below.
 - **View semantics with role assignments.** Each saved view assigns every in-scope edge kind a role (`contain`, `arrow`, `summary`, `hidden`) and every in-scope node kind a role (`spatial`, `latent`, `hidden`). This is the formal mechanism that lets the same graph project into a treemap, a call graph, a statechart, or an invariant map — without duplicating data.
 - **Disclosure levels.** `peek` / `card` / `open` / `deep`, each a declarative field selection plus a renderer. Same node, progressively more content, driven by zoom and by user intent. No editor mode in v1.
 - **Stable IDs** from source content, hybrid (path-primary with a rename detector emitting `prev_ids`), so that pipeline regeneration never clobbers user work.
@@ -65,7 +65,7 @@ The following decisions are binding. Later sections elaborate each.
 | D5 | Disclosure levels (peek / card / open / deep) | Four levels cover the range from "dot on map" to "full inspector." No editor level in v1. |
 | D6 | Hybrid stable IDs | Path-primary + rename detector. User positions and annotations survive regeneration. |
 | D7 | Cactus-class canvas engine | DOM + Solid fine-grained reactivity. No framework switch. |
-| D8 | Trusted components | Packages ship code; user installs explicitly. Declarative-only fallback available for built-ins. |
+| D8 | Packs are data | A pack is one JSON file, owned by the domain repo, co-located with its graph. It executes nothing. Custom rendering primitives are the sole code escape hatch (doc02.16). *(Revised — originally "trusted components ship code"; see doc02.14.)* |
 | D9 | Read-view only in v1 | All authoring is MCP → source → pipeline. Editor mode deferred. |
 
 ## 3. Data model
@@ -109,7 +109,7 @@ There is exactly one level of primitive: nodes and edges. No hyperedges, no nest
 Two rules:
 
 1. **Kinds are namespaced.** A pack declares kinds under its prefix (`rust.*`, `quint.*`, `solid.*`). No collisions across packs.
-2. **Kinds are open but versioned.** Packs can declare new kinds at any time; the graph admits them. Each pack declares a semver; a canvas manifest pins the pack versions it uses.
+2. **Kinds are open.** Packs can declare new kinds at any time; the graph admits them. A graph names its single pack by the `pack` field; pack and graph are co-located siblings and co-versioned by their shared git history, so there is no version pinning (see [doc02.14](14-pack-contract.md)).
 
 ### 3.3 Stable IDs
 
@@ -302,7 +302,9 @@ Packs ship saved views as defaults. Users author additional saved views, which l
 
 ## 5. Packs
 
-A **pack** is the unit a pipeline ships. It is the contract between the engine and pipeline authors. The closest external analogs are **Coda Packs** (schema + UI + queries bundled), tldraw's `ShapeUtil` registries, and VS Code extensions. (Internally we sometimes call this a "kind pack" when disambiguating from generic NPM packages, but the user-facing term is just *pack*.)
+> **Superseded.** This section described packs as trusted *code* — npm-style packages with Solid renderers, `package.json` manifests, `dependsOn` semver graphs, and explicit installation. That model is replaced. **A pack is a single JSON file, owned by the domain repo and co-located with its graph; it executes nothing.** The current contract is [doc02.14](14-pack-contract.md); the renderer-as-data model is [doc02.16](16-renderer-engine.md). The conceptual material below (the schema / presentation / configuration *separation of concerns*, the required-minimum progression, what MCP sees) remains useful — but read it as a separation of concerns within one JSON file, not as code modules, and ignore the on-disk `.ts` layout (§5.5) and trust model (§5.6).
+
+A **pack** is the unit a domain ships. It is the contract between the engine and pack authors. The closest external analogs are **Coda Packs** (schema + UI + queries bundled), tldraw's `ShapeUtil` registries, and VS Code extensions. (Internally we sometimes call this a "kind pack" when disambiguating from generic NPM packages, but the user-facing term is just *pack*.)
 
 ### 5.1 Three-part internal shape
 

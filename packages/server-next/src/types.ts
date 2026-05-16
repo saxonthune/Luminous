@@ -1,6 +1,11 @@
 export interface DocumentMeta {
+  /** Opaque, URL-safe stable id for the document.
+   *  (Filesystem impl: "<root>/<relative path>".) */
   path: string
   name: string
+  /** Grouping key — which workspace/collection the document belongs to. */
+  root: string
+  /** Sort key for recency. (Filesystem impl: mtime in ms.) */
   lastModified: number
 }
 

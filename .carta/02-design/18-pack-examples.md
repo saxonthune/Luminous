@@ -150,7 +150,7 @@ Tabulating across all five packs, the shared shape of the universal contract eme
 | Capability | Required because |
 |---|---|
 | Property graph with `kind`/`content` on nodes and edges | All five |
-| `packs[]` declaration per graph file | Each example loads a different pack |
+| Single `pack` declaration per graph file, resolved to a co-located sibling `*.pack.json` (doc02.14) | Each example loads a different pack |
 | Per-view `(node-kind, edge-kind) → role` tables | Every view in every example |
 | Layout algorithms: hierarchical (ELK), grid, force-directed, bipartite, swimlane | Different views need different layouts |
 | Per-view containment derived from one edge kind | Every primary view has a `contain` role |
@@ -187,7 +187,7 @@ The Luminous toolbar story is therefore: **ViewSwitcher** chooses the projection
 
 A pack declares: kinds, edge kinds, views, layers, disclosure schemas, renderer JSON per kind. Optionally: custom primitives, named queries, a pipeline.
 
-Luminous loads the graph, resolves the declared packs from the registry, interprets the active view's role table over the graph, runs the layout algorithm, renders nodes and edges by interpreting renderer JSON through the primitive vocabulary, and surfaces decorations from the active selection, pins, layer toggles, and query results.
+Luminous loads the graph, resolves its `pack` to the co-located sibling pack file, interprets the active view's role table over the graph, runs the layout algorithm, renders nodes and edges by interpreting renderer JSON through the primitive vocabulary, and surfaces decorations from the active selection, pins, layer toggles, and query results.
 
 Cactus paints geometry: positioned components, lines, labels. It receives a flat list of nodes and edges with positions and pre-interpreted render functions; it never inspects what is being rendered.
 

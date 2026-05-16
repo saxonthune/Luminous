@@ -157,3 +157,6 @@ playwright-report/
 
 # Verification script workaround (todo-task runner has buggy cd chain)
 packages/client-next/packages/
+
+# Per-dev workspace roots for multi-repo serving (see luminous.config.example.json)
+luminous.config.json
