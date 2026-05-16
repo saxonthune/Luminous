@@ -18,15 +18,19 @@ export default function BoxCard(node: Node, _ctx: RenderContext): JSX.Element {
       <NodeBody
         direction="vertical"
         style={{
+          position: 'absolute',
+          inset: '0',
           'border-radius': '6px',
           border: `1px solid ${borderColor}`,
           'border-left': `4px solid ${borderColor}`,
           background: '#fff',
-          width: '100%',
-          'min-height': '100%',
         }}
       >
-        <NodeHeader nodeId={node.id} padding="6px 12px">
+        <NodeHeader
+          nodeId={node.id}
+          padding="6px 12px"
+          style={{ 'border-bottom': '1px dotted #d0d0d0' }}
+        >
           <div style={{ display: 'flex', 'align-items': 'center', 'justify-content': 'space-between', gap: '8px' }}>
             <div style={{ 'font-size': '14px', 'font-weight': '600' }}>{p.label}</div>
             {p.tag && (

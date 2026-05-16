@@ -68,8 +68,16 @@ function renderNodes(
       {(nodeId) => {
         const node = graph.nodes.get(nodeId);
         if (!node) return null;
-        const abs = createMemo(() => resolveAbsolutePositionByParentOf(nodeId, layout().positions, parentOf()));
-        const sz = createMemo(() => layout().sizes.get(nodeId) ?? { w: 120, h: 60 });
+        const abs = createMemo(
+          () => resolveAbsolutePositionByParentOf(nodeId, layout().positions, parentOf()),
+          undefined,
+          { equals: (a, b) => a.x === b.x && a.y === b.y },
+        );
+        const sz = createMemo(
+          () => layout().sizes.get(nodeId) ?? { w: 120, h: 60 },
+          undefined,
+          { equals: (a, b) => a.w === b.w && a.h === b.h },
+        );
         return (
           <NodeContainer
             nodeId={nodeId}

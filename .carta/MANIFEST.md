@@ -75,9 +75,10 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc02.05.00 | `05-cactus/00-index.md` |  |  | — | — | — |
-| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc02.05.02, doc02.05.03, doc02.06.02, doc02.08, doc03.03 | — |
+| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc02.05.02, doc02.05.03, doc02.05.04, doc02.06.02, doc02.08, doc03.03 | — |
 | doc02.05.02 | `05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc02.05.01 | — | — |
-| doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | — | — |
+| doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | doc02.05.04 | — |
+| doc02.05.04 | `05-cactus/04-layout-engine-contract.md` | The LayoutEngine interface and mental model — how the domain layer produces constraints and cactus suggests positions | cactus, layout, architecture | doc02.05.01, doc02.05.03 | — | — |
 
 ### Architecture Decision Records
 
@@ -125,12 +126,12 @@ Quick lookup for file-path→doc mapping:
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `app-shell` | doc02.12, doc02.13 |
-| `architecture` | doc02.01, doc02.04, doc02.05.01, doc02.06.00, doc02.06.01, doc02.11, doc03.01, doc03.03 |
+| `architecture` | doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.00, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
 | `boundaries` | doc02.19 |
 | `boundary` | doc02.20 |
-| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.20 |
+| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.20 |
 | `cactus-boundary` | doc02.08 |
 | `canvas` | doc01.01, doc02.05.01, doc02.05.02, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
@@ -171,7 +172,7 @@ Quick lookup for file-path→doc mapping:
 | `iteration` | doc02.15 |
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |
-| `layout` | doc02.05.03 |
+| `layout` | doc02.05.03, doc02.05.04 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc02.04, doc02.15, doc03.06 |
 | `menus` | doc02.20 |

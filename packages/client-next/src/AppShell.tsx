@@ -66,6 +66,7 @@ export function AppShell() {
   }
 
   function handleGraphFailed(label: string, e: unknown) {
+    console.error(`[loadGraph] "${label}" failed:`, e);
     const msg = e instanceof Error ? e.message : String(e);
     enqueueToast(`Failed to load "${label}": ${msg}`);
     setSourceId(null);
