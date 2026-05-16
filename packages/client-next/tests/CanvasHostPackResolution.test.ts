@@ -1,6 +1,6 @@
 /**
  * Test: CanvasHost resolves views and layers from the pack registry
- * based on graph.packs[], not from a hard-coded pack import.
+ * based on graph.pack, not from a hard-coded pack import.
  *
  * Pure data-layer test — no DOM rendering required.
  */
@@ -56,7 +56,7 @@ afterEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('Pack resolution from graph.packs', () => {
+describe('Pack resolution from graph.pack', () => {
   it('getPack returns the registered pack for the declared id', () => {
     const pack = getPack('test-synthetic-pack');
     expect(pack).toBeDefined();
@@ -64,20 +64,19 @@ describe('Pack resolution from graph.packs', () => {
     expect(pack!.views[0].id).toBe('test.my-view');
   });
 
-  it('graph built with the pack id in packs record carries packs field', () => {
+  it('graph built with the pack id carries pack field', () => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
-    const graph = buildGraph(nodes, edges, { 'test-synthetic-pack': '^1.0.0' });
-    expect(graph.packs['test-synthetic-pack']).toBe('^1.0.0');
+    const graph = buildGraph(nodes, edges, 'test-synthetic-pack');
+    expect(graph.pack).toBe('test-synthetic-pack');
   });
 
-  it('resolves views by iterating graph.packs keys through registry', () => {
-    const graph = buildGraph([], [], { 'test-synthetic-pack': '^1.0.0' });
+  it('resolves views by looking up graph.pack through registry', () => {
+    const graph = buildGraph([], [], 'test-synthetic-pack');
 
-    // Simulate what CanvasHost does: Object.keys(graph.packs).map(id => getPack(id))
-    const declaredPacks = Object.keys(graph.packs)
-      .map((id) => getPack(id))
-      .filter((p): p is Pack => Boolean(p));
+    // Simulate what CanvasHost does: resolve the single pack
+    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const declaredPacks = p ? [p] : [];
 
     const availableViews = declaredPacks.flatMap((p) => p.views);
     expect(availableViews.length).toBe(2);
@@ -85,31 +84,28 @@ describe('Pack resolution from graph.packs', () => {
     expect(availableViews.map((v) => v.id)).toContain('test.second-view');
   });
 
-  it('resolves layers by iterating graph.packs keys through registry', () => {
-    const graph = buildGraph([], [], { 'test-synthetic-pack': '^1.0.0' });
+  it('resolves layers by looking up graph.pack through registry', () => {
+    const graph = buildGraph([], [], 'test-synthetic-pack');
 
-    const declaredPacks = Object.keys(graph.packs)
-      .map((id) => getPack(id))
-      .filter((p): p is Pack => Boolean(p));
+    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const declaredPacks = p ? [p] : [];
 
     const availableLayers = declaredPacks.flatMap((p) => p.layers);
     expect(availableLayers.length).toBe(1);
     expect(availableLayers[0].id).toBe('test-layer');
   });
 
-  it('returns empty views when graph declares no packs', () => {
-    const graph = buildGraph([], [], {});
-    const declaredPacks = Object.keys(graph.packs)
-      .map((id) => getPack(id))
-      .filter((p): p is Pack => Boolean(p));
+  it('returns empty views when graph declares no pack', () => {
+    const graph = buildGraph([], [], '');
+    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const declaredPacks = p ? [p] : [];
     expect(declaredPacks).toHaveLength(0);
   });
 
-  it('skips packs not registered (unknown pack id)', () => {
-    const graph = buildGraph([], [], { 'unknown-pack': '^9.0.0' });
-    const declaredPacks = Object.keys(graph.packs)
-      .map((id) => getPack(id))
-      .filter((p): p is Pack => Boolean(p));
+  it('returns empty views when pack is not registered', () => {
+    const graph = buildGraph([], [], 'unknown-pack');
+    const p = graph.pack ? getPack(graph.pack) : undefined;
+    const declaredPacks = p ? [p] : [];
     expect(declaredPacks).toHaveLength(0);
   });
 });

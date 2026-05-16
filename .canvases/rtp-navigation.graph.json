@@ -1,8 +1,6 @@
 {
   "version": 3,
-  "packs": {
-    "rtp-statechart": "^0.1.0"
-  },
+  "pack": "rtp-statechart",
   "nodes": [
     {
       "id": "action.concept.Collection.addEntry",

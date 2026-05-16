@@ -445,7 +445,7 @@ edges.sort((a, b) => a.id.localeCompare(b.id));
 
 const canvas = {
   version: 3,
-  packs: { 'rtp-statechart': '^0.1.0' },
+  pack: 'rtp-statechart',
   nodes,
   edges,
   defaultView: 'statechart',

@@ -305,7 +305,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
   // POST /api/graph/create
   if (url === "/api/graph/create" && req.method === "POST") {
-    let body: { path?: string; packs?: Record<string, string> }
+    let body: { path?: string; pack?: string }
     try {
       body = (await parseBody(req)) as typeof body
     } catch {
@@ -320,7 +320,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       sendJson(res, 400, { ok: false, error: "invalid path" })
       return
     }
-    const result = await createDocument(body.path, body.packs ?? {})
+    const result = await createDocument(body.path, body.pack ?? '')
     sendJson(res, result.ok ? 200 : 400, result)
     return
   }

@@ -64,7 +64,7 @@ function fixtureJson(name: string): string {
 function makeGraphJson(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
     version: 3,
-    packs: { test: '^0.0.1' },
+    pack: 'test',
     nodes: [
       { id: 'n1', kind: 'test.foo', props: { name: 'A' }, tags: [] },
       { id: 'n2', kind: 'test.foo', props: { name: 'B' }, tags: [] },
@@ -126,7 +126,7 @@ describe('loadGraphFromText — version validation', () => {
 
   it('throws when version field is missing', () => {
     registerPack(makeTestPack());
-    const json = JSON.stringify({ packs: {}, nodes: [], edges: [] });
+    const json = JSON.stringify({ nodes: [], edges: [] });
     expect(() => loadGraphFromText(json)).toThrow(/missing.*version/i);
   });
 
@@ -165,7 +165,7 @@ describe('loadGraphFromText — pack registration', () => {
 
   it('includes the pack id and the word "registered" in the error', () => {
     try {
-      loadGraphFromText(makeGraphJson({ packs: { 'unknown-pack': '^1.0.0' } }));
+      loadGraphFromText(makeGraphJson({ pack: 'unknown-pack' }));
       expect.fail('should have thrown');
     } catch (e) {
       const msg = (e as Error).message;

@@ -24,8 +24,8 @@ export function loadGraphFromText(json: string): Graph {
     throw new Error(`loadGraphFile: unsupported version ${String(file.version)}, expected 3`);
   }
 
-  if (typeof file.packs !== 'object' || file.packs === null || Array.isArray(file.packs)) {
-    throw new Error('loadGraphFile: "packs" must be a Record<PackId, string>');
+  if ('pack' in file && typeof file.pack !== 'string') {
+    throw new Error('loadGraphFile: "pack" must be a string');
   }
 
   if (!Array.isArray(file.nodes)) {
@@ -36,13 +36,11 @@ export function loadGraphFromText(json: string): Graph {
     throw new Error('loadGraphFile: "edges" must be an array');
   }
 
-  const packs = file.packs as Record<string, unknown>;
-  for (const packId of Object.keys(packs)) {
-    if (getPack(packId) === undefined) {
-      throw new Error(
-        `loadGraphFile: pack "${packId}" is referenced by the graph but not registered. Register the pack before loading.`
-      );
-    }
+  const pack = typeof file.pack === 'string' ? file.pack : '';
+  if (pack !== '' && getPack(pack) === undefined) {
+    throw new Error(
+      `loadGraphFile: pack "${pack}" is referenced by the graph but not registered. Register the pack before loading.`
+    );
   }
 
   const nodes = file.nodes as Node[];
@@ -77,7 +75,7 @@ export function loadGraphFromText(json: string): Graph {
     throw new Error(`loadGraphFile: validation errors:\n${validationErrors.join('\n')}`);
   }
 
-  return buildGraph(nodes, edges, packs as Record<string, string>);
+  return buildGraph(nodes, edges, pack);
 }
 
 export async function loadGraphFile(url: string): Promise<Graph> {

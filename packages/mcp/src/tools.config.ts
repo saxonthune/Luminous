@@ -32,7 +32,7 @@ const pathParam: ParamType = {
 export const toolConfig: Record<string, ToolGroupConfig> = {
   canvas: {
     description:
-      "Canvases are v3 structured visual documents stored as `.graph.json` files. Each references one or more packs (versioned libraries that define node and edge kinds). Use `list` to discover available documents; `read` to inspect a canvas; `create` to author a new one.",
+      "Canvases are v3 structured visual documents stored as `.graph.json` files. Each references a single pack (a library that defines node and edge kinds). Use `list` to discover available documents; `read` to inspect a canvas; `create` to author a new one.",
     actions: {
       list: {
         description: 'Returns all available canvas document paths.',
@@ -41,7 +41,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         params: {},
       },
       read: {
-        description: 'Loads the complete canvas: packs, all nodes (id, kind, props, tags), and all edges.',
+        description: 'Loads the complete canvas: pack, all nodes (id, kind, props, tags), and all edges.',
         method: 'GET',
         path: '/api/document/:path',
         params: { path: pathParam },
@@ -56,13 +56,10 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             innerType: 'string',
             description: "Graph filename to create, e.g. 'overview.graph.json'.",
           },
-          'packs?': {
+          'pack?': {
             type: 'described',
-            innerType: {
-              type: 'object',
-              properties: {},
-            },
-            description: "Map of packId → semver range that this canvas uses, e.g. {\"primitives\": \"^0.1.0\"}.",
+            innerType: 'string',
+            description: "Pack name this canvas uses, e.g. 'rtp-statechart'. Resolves to a sibling <name>.pack.json.",
           },
         },
       },
@@ -82,7 +79,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           kind: {
             type: 'described',
             innerType: 'string',
-            description: "Node kind defined by a registered pack, e.g. 'prim.box'. Read the canvas to see which packs are referenced.",
+            description: "Node kind defined by a registered pack, e.g. 'prim.box'. Read the canvas to see which pack is declared.",
           },
           'props?': {
             type: 'described',

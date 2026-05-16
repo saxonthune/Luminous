@@ -17,14 +17,14 @@ afterEach(async () => {
 
 describe('createDocument', () => {
   it('creates a new empty v3 graph file', async () => {
-    const result = await createDocument('test.graph.json', { primitives: '^0.1.0' })
+    const result = await createDocument('test.graph.json', 'primitives')
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     const raw = await readFile(join(tmpDir, 'test.graph.json'), 'utf-8')
     const parsed = JSON.parse(raw)
     expect(parsed.version).toBe(3)
-    expect(parsed.packs).toEqual({ primitives: '^0.1.0' })
+    expect(parsed.pack).toBe('primitives')
     expect(parsed.nodes).toEqual([])
     expect(parsed.edges).toEqual([])
   })
@@ -36,14 +36,14 @@ describe('createDocument', () => {
     expect(result.path).toBe('mygraph.graph.json')
   })
 
-  it('creates a graph with no packs when packs is omitted', async () => {
+  it('creates a graph with no pack when pack is omitted', async () => {
     const result = await createDocument('empty.graph.json')
     expect(result.ok).toBe(true)
     if (!result.ok) return
 
     const raw = await readFile(join(tmpDir, 'empty.graph.json'), 'utf-8')
     const parsed = JSON.parse(raw)
-    expect(parsed.packs).toEqual({})
+    expect(parsed.pack).toBe('')
   })
 
   it('fails with ok: false when file already exists', async () => {

@@ -1,8 +1,6 @@
 {
   "version": 3,
-  "packs": {
-    "test": "^0.0.1"
-  },
+  "pack": "test",
   "nodes": [
     {
       "id": "node-1",

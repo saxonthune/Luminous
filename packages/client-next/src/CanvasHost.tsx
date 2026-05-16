@@ -23,11 +23,10 @@ export function CanvasHost(props: CanvasHostProps) {
   const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);
   const [enabledLayers, setEnabledLayers] = createSignal<Record<string, boolean>>({});
 
-  const declaredPacks = createMemo<Pack[]>(() =>
-    Object.keys(props.graph.packs)
-      .map((id) => getPack(id))
-      .filter((p): p is Pack => Boolean(p))
-  );
+  const declaredPacks = createMemo<Pack[]>(() => {
+    const p = props.graph.pack ? getPack(props.graph.pack) : undefined;
+    return p ? [p] : [];
+  });
 
   const availableViews = createMemo<View[]>(() => declaredPacks().flatMap((p) => p.views));
   const availableLayers = createMemo<Layer[]>(() => declaredPacks().flatMap((p) => p.layers));

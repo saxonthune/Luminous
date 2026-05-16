@@ -38,8 +38,8 @@ function resolveDocPath(relativePath: string): string {
   return resolve(first, relativePath)
 }
 
-function emptyDoc(packs: Record<string, string> = {}): Document {
-  return { version: 3, packs, nodes: [], edges: [] }
+function emptyDoc(pack: string = ''): Document {
+  return { version: 3, pack, nodes: [], edges: [] }
 }
 
 async function loadDocument(filePath: string): Promise<Document> {
@@ -105,7 +105,7 @@ export async function getDocument(relativePath: string): Promise<Document> {
 
 export async function createDocument(
   relativePath: string,
-  packs: Record<string, string> = {}
+  pack: string = ''
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   if (!relativePath) return { ok: false, error: "missing path" }
   const absPath = resolveDocPath(relativePath)
@@ -115,7 +115,7 @@ export async function createDocument(
   } catch {
     // file does not exist — proceed
   }
-  const doc = emptyDoc(packs)
+  const doc = emptyDoc(pack)
   await saveDocument(absPath, doc)
   cache.set(relativePath, doc)
   return { ok: true, path: relativePath }

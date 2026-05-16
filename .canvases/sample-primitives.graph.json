@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "packs": { "primitives": "^0.1.0" },
+  "pack": "primitives",
   "nodes": [
     {
       "id": "box.alpha",

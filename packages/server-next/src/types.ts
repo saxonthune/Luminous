@@ -157,7 +157,7 @@ export interface V3Edge {
 
 export interface V3Document {
   version: 3
-  packs: Record<string, string>
+  pack: string
   nodes: V3Node[]
   edges: V3Edge[]
   defaultView?: string

@@ -67,8 +67,8 @@ export interface Graph {
   /** Adjacency indices for traversal. */
   outgoing: ReadonlyMap<NodeId, ReadonlySet<EdgeId>>;
   incoming: ReadonlyMap<NodeId, ReadonlySet<EdgeId>>;
-  /** Pack ids and semver ranges declared by this graph's source file. */
-  packs: Record<PackId, string>;
+  /** The single pack this graph declares, or '' if none. */
+  pack: string;
 }
 
 // ============================================================================
@@ -324,8 +324,8 @@ export interface GraphSource {
  */
 export interface GraphFileV3 {
   version: 3;
-  /** Pack ids and semver ranges this graph expects to be available. */
-  packs: Record<PackId, string>;
+  /** The single pack this graph declares. Absent means no pack. */
+  pack?: string;
   nodes: Node[];
   edges: Edge[];
   /** Which view id to open with. */

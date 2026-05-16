@@ -130,17 +130,17 @@ try {
 }
 
 const instructions = `\
-Luminous is a structured visual canvas tool for software design. It maintains v3 .graph.json files — each referencing one or more packs and containing nodes and edges.
+Luminous is a structured visual canvas tool for software design. It maintains v3 .graph.json files — each referencing a single pack and containing nodes and edges.
 
 Core concepts:
-- Pack: a versioned library (e.g. "primitives": "^0.1.0") that defines node and edge kinds along with their props schemas and default views. Canvases declare which packs they use.
+- Pack: a library (e.g. "primitives") that defines node and edge kinds along with their props schemas and default views. Each canvas declares one pack.
 - Node: a content element with a pack-defined kind (e.g. "prim.box"), props (kind-specific key-value data), and tags (free-form strings). Layout is computed by the viewer — nodes have no x/y/w/h in the file.
 - Edge: a directed connection from one node to another. Has a kind (e.g. "prim.arrow"), from/to node IDs, props, and tags. The server validates that both endpoints exist when adding an edge.
 
 Recommended workflow:
 1. canvas list — discover available canvas documents
-2. canvas read — inspect a canvas to see its packs, nodes, and edges
-3. canvas create — author a new canvas, specifying which packs it will use
+2. canvas read — inspect a canvas to see its pack, nodes, and edges
+3. canvas create — author a new canvas, specifying which pack it will use
 4. node add / edge add — add nodes and edges using kinds the pack defines
 5. batch — use for multi-step operations to reduce round-trips
 
