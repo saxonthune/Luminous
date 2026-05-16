@@ -2,14 +2,14 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  regionKind,
-  compositeKind,
-  stateKind,
-  transitionNodeKind,
-  conceptKind,
-  actionKind,
-} from '../packages/pack-rtp-statechart/src/schema/kinds.ts';
+
+// Inline ID derivation functions — mirrors rtp-statechart.pack.json idTemplate fields.
+const regionKind   = { idDerivation: ({ name }: { name: string }) => `region.${name}` };
+const compositeKind = { idDerivation: ({ path }: { path: string }) => `composite.${path}` };
+const stateKind    = { idDerivation: ({ path }: { path: string }) => `state.${path}` };
+const transitionNodeKind = { idDerivation: ({ sourceStateId, event }: { sourceStateId: string; event: string }) => `transition.${sourceStateId}.${event}` };
+const conceptKind  = { idDerivation: ({ normalizedName }: { normalizedName: string }) => `concept.${normalizedName}` };
+const actionKind   = { idDerivation: ({ conceptId, actionName }: { conceptId: string; actionName: string }) => `action.${conceptId}.${actionName}` };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');

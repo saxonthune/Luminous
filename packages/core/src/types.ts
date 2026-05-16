@@ -10,6 +10,7 @@
  *
  * Open contract questions are marked `// OPEN:`.
  */
+import type { RenderNode } from './render/types.ts';
 
 // ============================================================================
 // Primitives
@@ -94,6 +95,8 @@ export interface NodeKind {
   idDerivation: (input: unknown) => NodeId;
   /** Default size hint for the canvas. Overridable per view. */
   defaultSize?: { w: number; h: number };
+  /** Declarative renderer — interpreted instead of code when present. */
+  render?: Partial<Record<DisclosureLevel, RenderNode>>;
 }
 
 export interface EdgeKind {
@@ -104,6 +107,8 @@ export interface EdgeKind {
   /** UI hint, not enforced — which node kinds are legal at each end. */
   acceptsSource?: KindId[];
   acceptsTarget?: KindId[];
+  /** Declarative renderer — interpreted instead of code when present. */
+  render?: Partial<Record<DisclosureLevel, RenderNode>>;
 }
 
 // ============================================================================
@@ -146,8 +151,6 @@ export interface View {
   layout: LayoutChoice;
   filter?: GraphQuery;
   camera?: { x: number; y: number; zoom: number };
-  /** Per-kind renderer override; falls back to pack default if absent. */
-  rendererOverrides?: Record<KindId, RendererRef>;
   /** Zoom-scale → disclosure-level mapping. */
   zoomToLevel?: Array<{ minZoom: number; level: DisclosureLevel }>;
 }
@@ -253,14 +256,6 @@ export interface RenderContext {
   sectionColorOf: (nodeId: NodeId) => string | undefined;
 }
 
-export type NodeRenderer = (node: Node, ctx: RenderContext) => unknown;
-export type EdgeRenderer = (edge: Edge, ctx: RenderContext) => unknown;
-
-export interface RendererRef {
-  packId: PackId;
-  rendererId: string;
-}
-
 // ============================================================================
 // Packs — what a pipeline ships
 // ============================================================================
@@ -285,10 +280,6 @@ export interface Pack {
   // Schema (UI-free; loadable headless)
   nodeKinds: NodeKind[];
   edgeKinds: EdgeKind[];
-
-  // Presentation (requires UI runtime)
-  nodeRenderers: Record<KindId, Partial<Record<DisclosureLevel, NodeRenderer>>>;
-  edgeRenderers: Record<KindId, Partial<Record<DisclosureLevel, EdgeRenderer>>>;
 
   // Configuration (declarative)
   disclosureSchemas: DisclosureSchema[];

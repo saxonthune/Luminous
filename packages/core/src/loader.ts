@@ -37,42 +37,46 @@ export function loadGraphFromText(json: string): Graph {
   }
 
   const pack = typeof file.pack === 'string' ? file.pack : '';
-  if (pack !== '' && resolvePack(pack) === undefined) {
-    throw new Error(
-      `loadGraphFile: pack "${pack}" is referenced by the graph but not registered. Register the pack before loading.`
+  const packUnresolved = pack !== '' && resolvePack(pack) === undefined;
+  if (packUnresolved) {
+    console.warn(
+      `loadGraphFile: pack "${pack}" is not registered — sibling loading may have failed. Falling back to unvalidated rendering.`
     );
   }
 
   const nodes = file.nodes as Node[];
   const edges = file.edges as Edge[];
-  const validationErrors: string[] = [];
 
-  for (const node of nodes) {
-    const nodeKind = getNodeKind(node.kind);
-    if (nodeKind === undefined) {
-      validationErrors.push(`node "${node.id}": unknown kind "${node.kind}"`);
-      continue;
-    }
-    const result = nodeKind.propsSchema.safeParse(node.props);
-    if (!result.success) {
-      validationErrors.push(`node "${node.id}": props validation failed: ${String(result.error)}`);
-    }
-  }
+  if (!packUnresolved) {
+    const validationErrors: string[] = [];
 
-  for (const edge of edges) {
-    const edgeKind = getEdgeKind(edge.kind);
-    if (edgeKind === undefined) {
-      validationErrors.push(`edge "${edge.id}": unknown kind "${edge.kind}"`);
-      continue;
+    for (const node of nodes) {
+      const nodeKind = getNodeKind(node.kind);
+      if (nodeKind === undefined) {
+        validationErrors.push(`node "${node.id}": unknown kind "${node.kind}"`);
+        continue;
+      }
+      const result = nodeKind.propsSchema.safeParse(node.props);
+      if (!result.success) {
+        validationErrors.push(`node "${node.id}": props validation failed: ${String(result.error)}`);
+      }
     }
-    const result = edgeKind.propsSchema.safeParse(edge.props);
-    if (!result.success) {
-      validationErrors.push(`edge "${edge.id}": props validation failed: ${String(result.error)}`);
-    }
-  }
 
-  if (validationErrors.length > 0) {
-    throw new Error(`loadGraphFile: validation errors:\n${validationErrors.join('\n')}`);
+    for (const edge of edges) {
+      const edgeKind = getEdgeKind(edge.kind);
+      if (edgeKind === undefined) {
+        validationErrors.push(`edge "${edge.id}": unknown kind "${edge.kind}"`);
+        continue;
+      }
+      const result = edgeKind.propsSchema.safeParse(edge.props);
+      if (!result.success) {
+        validationErrors.push(`edge "${edge.id}": props validation failed: ${String(result.error)}`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      throw new Error(`loadGraphFile: validation errors:\n${validationErrors.join('\n')}`);
+    }
   }
 
   return buildGraph(nodes, edges, pack);

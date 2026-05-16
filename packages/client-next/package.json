@@ -20,8 +20,6 @@
     "@lezer/markdown": "^1.4.2",
     "@luminous/cactus": "workspace:*",
     "@luminous/core": "workspace:*",
-    "@luminous/pack-primitives": "workspace:*",
-    "@luminous/pack-rtp-statechart": "workspace:*",
     "d3-selection": "^3.0.0",
     "d3-transition": "^3.0.1",
     "d3-zoom": "^3.0.0",

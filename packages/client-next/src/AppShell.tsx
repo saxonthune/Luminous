@@ -1,6 +1,6 @@
 import { createSignal, createEffect, Match, Switch, onCleanup, onMount } from 'solid-js';
 import { loadGraphFromText, type Graph } from '@luminous/core';
-import { ensurePacksRegistered } from './registerPacks';
+import { loadAndRegisterSiblingPack } from './pack/siblingLoader';
 import { DocumentPicker } from './DocumentPicker';
 import { AppHeader } from './AppHeader';
 import { CanvasHost } from './CanvasHost';
@@ -16,8 +16,6 @@ type ShellState =
   | { kind: 'fatalError'; reason: string };
 
 export function AppShell() {
-  ensurePacksRegistered();
-
   const params = new URLSearchParams(window.location.search);
   const initialSrc = params.get('src');
 
@@ -53,8 +51,9 @@ export function AppShell() {
     }
     source
       .load()
-      .then((text) => {
+      .then(async (text) => {
         try {
+          await loadAndRegisterSiblingPack(source.id, text);
           const g = loadGraphFromText(text);
           setGraph(g);
           setShell({ kind: 'canvasMounted' });

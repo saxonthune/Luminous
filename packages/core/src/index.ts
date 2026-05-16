@@ -4,6 +4,8 @@ export * from './graph.ts';
 export * from './registry.ts';
 export * from './view.ts';
 export * from './loader.ts';
+export { parsePackJson, deserializePack } from './pack/parsePackJson.ts';
+export { getPrimitivesBuiltin, getRtpStatechartBuiltin } from './pack/builtins.ts';
 export {
   viewSwitcherSchema,
   layerToolbarSchema,

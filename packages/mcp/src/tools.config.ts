@@ -30,6 +30,31 @@ const pathParam: ParamType = {
 }
 
 export const toolConfig: Record<string, ToolGroupConfig> = {
+  pack: {
+    description:
+      "Inspect the pack declared by a canvas. Returns all node and edge kinds with their labels and props JSON Schemas — use this before node/add or edge/add to discover valid kinds and required props.",
+    actions: {
+      describe: {
+        description:
+          "Return the kind catalog (node kinds and edge kinds with labels and props JSON Schemas) for the pack used by the given canvas, or directly by pack name. Provide either canvas or pack.",
+        method: 'GET',
+        path: '/api/pack/:pack',
+        params: {
+          'canvas?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Path to a canvas whose pack you want to inspect, e.g. 'overview.graph.json'. Provide either canvas or pack.",
+          },
+          'pack?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Pack name to describe directly, e.g. 'rtp-statechart'. Provide either canvas or pack.",
+          },
+        },
+      },
+    },
+  },
+
   canvas: {
     description:
       "Canvases are v3 structured visual documents stored as `.graph.json` files. Each references a single pack (a library that defines node and edge kinds). Use `list` to discover available documents; `read` to inspect a canvas; `create` to author a new one.",
@@ -79,7 +104,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           kind: {
             type: 'described',
             innerType: 'string',
-            description: "Node kind defined by a registered pack, e.g. 'prim.box'. Read the canvas to see which pack is declared.",
+            description: "Node kind defined by the canvas's pack, e.g. 'prim.box'. Use pack/describe to see all available kinds and their props schemas.",
           },
           'props?': {
             type: 'described',
@@ -154,7 +179,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           kind: {
             type: 'described',
             innerType: 'string',
-            description: "Edge kind defined by a registered pack, e.g. 'prim.arrow'.",
+            description: "Edge kind defined by the canvas's pack, e.g. 'prim.arrow'. Use pack/describe to see all available kinds and their props schemas.",
           },
           from: {
             type: 'described',

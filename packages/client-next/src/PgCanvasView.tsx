@@ -1,8 +1,12 @@
 import { For, createResource, Show, createMemo, createSignal, createEffect } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
-import type { Graph, View, DisclosureLevel, RenderContext } from '@luminous/core';
-import { evaluateView, getNodeRenderer, getEdgeRenderer } from '@luminous/core';
+import type { Graph, View, DisclosureLevel, RenderContext, Node, Edge } from '@luminous/core';
+import {
+  evaluateView,
+  getNodeKind, getEdgeKind,
+  interpretRender, generateFallbackRender,
+} from '@luminous/core';
 import type { ChromeSchema, MenuSchema } from '@luminous/core';
 import {
   Canvas,
@@ -17,7 +21,6 @@ import type { LayoutResult, CanvasRef, EdgeDeclaration } from '@luminous/cactus'
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
-import { ensurePacksRegistered } from './registerPacks';
 import { levelFromZoom } from './disclosure/levelFromZoom';
 
 export interface ViewerHandle {
@@ -75,6 +78,57 @@ function bfsOrder(
   return order;
 }
 
+// Mirrors registry.ts DISCLOSURE_ORDER — walk from requested level downward.
+const DISCLOSURE_ORDER: DisclosureLevel[] = ['deep', 'open', 'card', 'peek'];
+
+function resolveAtLevel<T>(
+  record: Partial<Record<DisclosureLevel, T>>,
+  level: DisclosureLevel,
+): T | undefined {
+  const startIdx = DISCLOSURE_ORDER.indexOf(level);
+  for (let i = startIdx; i < DISCLOSURE_ORDER.length; i++) {
+    const r = record[DISCLOSURE_ORDER[i]];
+    if (r !== undefined) return r;
+  }
+  return undefined;
+}
+
+function resolveNodeRender(node: Node, ctx: RenderContext): JSX.Element {
+  const level = ctx.level();
+  const kind = getNodeKind(node.kind);
+  const content = node.props as Record<string, unknown>;
+
+  if (kind?.render) {
+    const renderNode = resolveAtLevel(kind.render, level);
+    if (renderNode) return interpretRender(renderNode, ctx, content);
+  }
+
+  return interpretRender(generateFallbackRender(kind, content), ctx, content);
+}
+
+function resolveEdgeParts(
+  edge: Edge,
+  level: DisclosureLevel,
+  ctx: RenderContext,
+): { labelText: string | undefined; label: (() => JSX.Element) | undefined } {
+  const kind = getEdgeKind(edge.kind);
+  const content = edge.props as Record<string, unknown>;
+
+  if (kind?.render) {
+    const renderNode = resolveAtLevel(kind.render, level);
+    if (renderNode) {
+      const captured = renderNode;
+      return { labelText: undefined, label: () => interpretRender(captured, ctx, content) };
+    }
+  }
+
+  const labelProp = content['label'];
+  if (typeof labelProp === 'string' && labelProp) {
+    return { labelText: labelProp, label: undefined };
+  }
+  return { labelText: undefined, label: undefined };
+}
+
 function renderNodes(
   graph: Graph,
   renderOrder: () => string[],
@@ -107,16 +161,7 @@ function renderNodes(
             h={() => sz().h}
             onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
           >
-            <Show
-              when={getNodeRenderer(node.kind, renderCtx.level())}
-              fallback={
-                <div style={{ padding: '4px', 'font-size': '11px', color: 'var(--fg-muted)' }}>
-                  <strong>{node.kind}</strong>
-                </div>
-              }
-            >
-              {(renderer) => renderer()(node, renderCtx) as JSX.Element}
-            </Show>
+            {resolveNodeRender(node, renderCtx)}
           </NodeContainer>
         );
       }}
@@ -136,7 +181,6 @@ function CanvasInner(props: {
   onEdges?: (edges: EdgeDeclaration[]) => void;
   exposeInspect?: (fn: (id: string) => void) => void;
 }): JSX.Element {
-  ensurePacksRegistered();
   const inspector = createInspector();
   const canvasCtx = useCanvasContext();
 
@@ -176,11 +220,7 @@ function CanvasInner(props: {
     const currentLevel = level();
 
     for (const edge of scene().arrows) {
-      const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
-      const capturedEdge = edge;
-      const rendered = edgeRenderer ? edgeRenderer(capturedEdge, renderCtx) : undefined;
-      const labelText = typeof rendered === 'string' ? rendered : undefined;
-      const label = rendered !== undefined ? () => rendered as JSX.Element : undefined;
+      const { labelText, label } = resolveEdgeParts(edge, currentLevel, renderCtx);
       decls.push({
         id: edge.id,
         sourceId: edge.from,
@@ -192,11 +232,7 @@ function CanvasInner(props: {
     }
 
     for (const edge of scene().summaryEdges) {
-      const edgeRenderer = getEdgeRenderer(edge.kind, currentLevel);
-      const capturedEdge = edge;
-      const rendered = edgeRenderer ? edgeRenderer(capturedEdge, renderCtx) : undefined;
-      const labelText = typeof rendered === 'string' ? rendered : undefined;
-      const label = rendered !== undefined ? () => rendered as JSX.Element : undefined;
+      const { labelText, label } = resolveEdgeParts(edge, currentLevel, renderCtx);
       decls.push({
         id: edge.id,
         sourceId: edge.from,
@@ -294,9 +330,7 @@ function CanvasInner(props: {
   const layoutEdges = createMemo(() => {
     const currentLevel = level();
     return scene().arrows.map((a) => {
-      const renderer = getEdgeRenderer(a.kind, currentLevel);
-      const rendered = renderer ? renderer(a, renderCtx) : undefined;
-      const labelText = typeof rendered === 'string' ? rendered : undefined;
+      const { labelText } = resolveEdgeParts(a, currentLevel, renderCtx);
       return {
         id: a.id ?? `${a.from}->${a.to}`,
         from: a.from,

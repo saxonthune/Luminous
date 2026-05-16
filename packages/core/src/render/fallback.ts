@@ -20,13 +20,16 @@ export function generateFallbackRender(
     heading = kind != null ? kind.label : 'Unknown';
   }
 
-  const restNodes: RenderNode[] = entries
-    .filter(([k]) => k !== headingKey)
-    .map(([k, v]) => ({
-      type: 'text',
-      value: `${k}: ${Array.isArray(v) ? (v as unknown[]).join(', ') : String(v ?? '')}`,
-      style: 'body',
-    }));
+  const restEntries = entries.filter(([k]) => k !== headingKey);
+
+  const kvItems = restEntries.map(([k, v]) => ({
+    key: k,
+    value: Array.isArray(v) ? (v as unknown[]).join(', ') : String(v ?? ''),
+  }));
+
+  const bodyNodes: RenderNode[] = kvItems.length > 0
+    ? [{ type: 'kv-list', items: kvItems }]
+    : [];
 
   return {
     type: 'card',
@@ -36,7 +39,7 @@ export function generateFallbackRender(
         gap: '4',
         children: [
           { type: 'text', value: heading, style: 'heading' },
-          ...restNodes,
+          ...bodyNodes,
         ],
       },
     ],

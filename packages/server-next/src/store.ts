@@ -1,5 +1,5 @@
 import { watch } from "node:fs"
-import { readFile, writeFile, access } from "node:fs/promises"
+import { readFile, writeFile, access, stat } from "node:fs/promises"
 import { resolve } from "node:path"
 import type { Document } from "./types.js"
 import { applyActionToDoc } from "./actions.js"
@@ -183,6 +183,16 @@ export async function applyBatch(
   scheduleSave(relativePath)
 
   return results
+}
+
+/**
+ * Read a pack file (*.pack.json) as raw text. Throws if the file does not exist.
+ * Path is resolved through the same root-namespace logic as documents.
+ */
+export async function readPackFile(relativePath: string): Promise<string> {
+  const absPath = resolveDocPath(relativePath)
+  await stat(absPath) // throws ENOENT if missing
+  return readFile(absPath, "utf-8")
 }
 
 export function watchDocuments(

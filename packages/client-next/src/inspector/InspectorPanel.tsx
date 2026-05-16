@@ -2,7 +2,7 @@ import { Show, For, onMount, onCleanup, createMemo } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { useContext } from 'solid-js';
 import type { Graph, View, Node, Edge } from '@luminous/core';
-import { getNodeRenderer, getEdgeRenderer } from '@luminous/core';
+import { getNodeKind, getEdgeKind, interpretRender, generateFallbackRender } from '@luminous/core';
 import { CanvasContext } from '@luminous/cactus';
 import { useInspector } from './InspectorContext';
 
@@ -134,17 +134,19 @@ export function InspectorPanel(props: InspectorPanelProps): JSX.Element {
 
     const nodeItem = props.graph.nodes.get(id);
     if (nodeItem) {
-      const renderer = getNodeRenderer(nodeItem.kind, 'open');
-      if (renderer) {
-        return renderer(nodeItem, renderCtx) as JSX.Element;
-      }
-    } else {
-      const edgeItem = props.graph.edges.get(id);
-      if (edgeItem) {
-        const renderer = getEdgeRenderer(edgeItem.kind, 'open');
-        if (renderer) {
-          return renderer(edgeItem, renderCtx) as JSX.Element;
-        }
+      const kind = getNodeKind(nodeItem.kind);
+      const content = nodeItem.props as Record<string, unknown>;
+      const renderNode = kind?.render?.['open'] ?? kind?.render?.['card'] ?? generateFallbackRender(kind, content);
+      return interpretRender(renderNode, renderCtx, content);
+    }
+
+    const edgeItem = props.graph.edges.get(id);
+    if (edgeItem) {
+      const kind = getEdgeKind(edgeItem.kind);
+      const content = edgeItem.props as Record<string, unknown>;
+      if (kind?.render?.['open'] ?? kind?.render?.['card']) {
+        const renderNode = kind?.render?.['open'] ?? kind?.render?.['card']!;
+        return interpretRender(renderNode, renderCtx, content);
       }
     }
 

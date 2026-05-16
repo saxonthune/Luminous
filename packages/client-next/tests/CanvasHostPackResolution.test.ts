@@ -36,8 +36,6 @@ const syntheticPack: Pack = {
   version: '1.0.0',
   nodeKinds: [{ id: 'test.node', label: 'Node', propsSchema: dummySchema, idDerivation: () => 'n' }],
   edgeKinds: [],
-  nodeRenderers: {},
-  edgeRenderers: {},
   disclosureSchemas: [],
   layers: [{ id: 'test-layer', name: 'Test Layer', edgeKinds: [], defaultState: 'on' }],
   views: [testView, testView2],

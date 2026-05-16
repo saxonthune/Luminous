@@ -5,9 +5,9 @@
  * This test validates the data pipeline that PgCanvasView drives.
  * DOM nesting assertion skipped per plan fallback.
  */
-import { describe, it, expect } from 'vitest';
-import { buildGraph, evaluateView } from '@luminous/core';
-import type { Node, Edge, View } from '@luminous/core';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { buildGraph, evaluateView, registerPack, resetRegistry, getNodeKind, getPrimitivesBuiltin } from '@luminous/core';
+import type { Node, Edge, View, Pack } from '@luminous/core';
 import { gridLayout, resolveAbsolutePositionByParentOf } from '@luminous/cactus';
 
 // ── Fixture ──────────────────────────────────────────────────────────────────
@@ -110,5 +110,49 @@ describe('PgCanvasView data pipeline', () => {
 
     expect(order.indexOf('region')).toBeLessThan(order.indexOf('composite'));
     expect(order.indexOf('composite')).toBeLessThan(order.indexOf('state'));
+  });
+});
+
+// ── Declarative render JSON via pack ─────────────────────────────────────────
+
+const dummySchema = {
+  parse: (x: unknown) => x,
+  safeParse: (x: unknown) => ({ success: true as const, data: x }),
+};
+
+describe('declarative render JSON on node kinds', () => {
+  beforeEach(() => {
+    resetRegistry();
+  });
+  afterEach(() => {
+    resetRegistry();
+  });
+
+  it('prim.box kind has render JSON after registering primitives pack', () => {
+    registerPack(getPrimitivesBuiltin());
+    const kind = getNodeKind('prim.box');
+    expect(kind?.render).toBeDefined();
+    expect(kind?.render?.card).toBeDefined();
+  });
+
+  it('a kind with render JSON has it accessible via getNodeKind', () => {
+    const testPack: Pack = {
+      id: 'test-declarative',
+      version: '0.0.1',
+      nodeKinds: [{
+        id: 'test.decl',
+        label: 'Decl',
+        propsSchema: dummySchema,
+        idDerivation: () => 'n',
+        render: { card: { type: 'text', value: 'hello', style: 'body' } },
+      }],
+      edgeKinds: [],
+      views: [],
+      layers: [],
+      disclosureSchemas: [],
+    };
+    registerPack(testPack);
+    const kind = getNodeKind('test.decl');
+    expect(kind?.render?.card).toEqual({ type: 'text', value: 'hello', style: 'body' });
   });
 });

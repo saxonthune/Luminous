@@ -4,7 +4,7 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments, resolveRoots } from "./workspace.js"
-import { getDocument, applyAction, applyBatch, flushAll, setRoots, watchDocuments, createDocument } from "./store.js"
+import { getDocument, applyAction, applyBatch, flushAll, setRoots, watchDocuments, createDocument, readPackFile } from "./store.js"
 import type { V2Document } from "./types.js"
 import { roots as diagRoots, bbox as diagBbox, outliers as diagOutliers, subtree as diagSubtree, outline as diagOutline, summary as diagSummary, query as diagQuery } from "./diag.js"
 import type { QueryFilter } from "./diag.js"
@@ -374,6 +374,24 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       console.error(`[api] action failed: ${action} on ${docPath}`, result)
     }
     sendJson(res, result.ok ? 200 : 400, result)
+    return
+  }
+
+  // GET /api/pack/:path — serve a *.pack.json file as raw JSON
+  if (url.startsWith("/api/pack/") && req.method === "GET") {
+    const packPath = decodeURIComponent(url.slice("/api/pack/".length))
+    if (!packPath || hasTraversal(packPath)) {
+      sendJson(res, 400, { error: "invalid path" })
+      return
+    }
+    try {
+      const content = await readPackFile(packPath)
+      setCorsHeaders(res)
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(content)
+    } catch {
+      sendJson(res, 404, { error: "pack not found" })
+    }
     return
   }
 

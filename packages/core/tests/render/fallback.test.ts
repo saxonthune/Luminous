@@ -48,22 +48,37 @@ describe('generateFallbackRender', () => {
     expect(heading['value']).toBe('Unknown');
   });
 
-  it('emits one text line per remaining field', () => {
+  it('emits a kv-list for remaining fields instead of individual text nodes', () => {
     const result = generateFallbackRender(undefined, { name: 'Node', count: 3, active: true });
     const vstack = (result.children as unknown[])[0] as Record<string, unknown>;
     const children = vstack['children'] as unknown[];
-    // heading + 2 remaining fields
-    expect(children.length).toBe(3);
-    const countLine = children[1] as Record<string, unknown>;
-    expect(countLine['type']).toBe('text');
-    expect(countLine['value']).toContain('count');
+    // heading + kv-list (not individual text lines)
+    expect(children.length).toBe(2);
+    const kvList = children[1] as Record<string, unknown>;
+    expect(kvList['type']).toBe('kv-list');
+    const items = kvList['items'] as Array<Record<string, unknown>>;
+    expect(items.some((i) => i['key'] === 'count')).toBe(true);
+    expect(items.some((i) => i['key'] === 'active')).toBe(true);
   });
 
-  it('formats array values with join in field lines', () => {
+  it('formats array values with join in kv-list items', () => {
     const result = generateFallbackRender(undefined, { name: 'N', tags: ['a', 'b'] });
     const vstack = (result.children as unknown[])[0] as Record<string, unknown>;
     const children = vstack['children'] as unknown[];
-    const tagsLine = children[1] as Record<string, unknown>;
-    expect(String(tagsLine['value'])).toContain('a, b');
+    const kvList = children[1] as Record<string, unknown>;
+    expect(kvList['type']).toBe('kv-list');
+    const items = kvList['items'] as Array<Record<string, unknown>>;
+    const tagsItem = items.find((i) => i['key'] === 'tags');
+    expect(tagsItem).toBeDefined();
+    expect(String(tagsItem!['value'])).toContain('a, b');
+  });
+
+  it('emits only a heading (no kv-list) when content has no remaining fields', () => {
+    const result = generateFallbackRender(undefined, { name: 'Solo' });
+    const vstack = (result.children as unknown[])[0] as Record<string, unknown>;
+    const children = vstack['children'] as unknown[];
+    // Only the heading text node; no kv-list for empty rest
+    expect(children.length).toBe(1);
+    expect((children[0] as Record<string, unknown>)['type']).toBe('text');
   });
 });

@@ -42,8 +42,6 @@ function makeTestPack(overrides: Partial<Pack> = {}): Pack {
         directed: true,
       },
     ],
-    nodeRenderers: {},
-    edgeRenderers: {},
     views: [],
     layers: [],
     disclosureSchemas: [],
@@ -154,24 +152,25 @@ describe('loadGraphFromText — invalid JSON', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Pack registration check
+// Pack registration — softened behaviour (sibling loading may not have run yet)
 // ---------------------------------------------------------------------------
 
 describe('loadGraphFromText — pack registration', () => {
-  it('throws when a referenced pack is not registered', () => {
-    const err = () => loadGraphFromText(makeGraphJson());
-    expect(err).toThrow(/pack "test".*registered/);
+  it('succeeds (with fallback rendering) when a referenced pack is not registered', () => {
+    // Soft fallback: unregistered pack → warn + build graph without kind validation.
+    const graph = loadGraphFromText(makeGraphJson());
+    expect(graph.pack).toBe('test');
+    expect(graph.nodes.size).toBe(2);
+    expect(graph.edges.size).toBe(1);
   });
 
-  it('includes the pack id and the word "registered" in the error', () => {
-    try {
-      loadGraphFromText(makeGraphJson({ pack: 'unknown-pack' }));
-      expect.fail('should have thrown');
-    } catch (e) {
-      const msg = (e as Error).message;
-      expect(msg).toContain('unknown-pack');
-      expect(msg).toContain('registered');
-    }
+  it('still validates kinds when the pack IS registered', () => {
+    registerPack(makeTestPack());
+    const json = makeGraphJson({
+      nodes: [{ id: 'n1', kind: 'test.unknown', props: {}, tags: [] }],
+      edges: [],
+    });
+    expect(() => loadGraphFromText(json)).toThrow(/unknown kind.*test\.unknown/);
   });
 });
 
