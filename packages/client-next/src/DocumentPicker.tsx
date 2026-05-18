@@ -7,16 +7,23 @@ interface DocumentPickerProps {
   loadingId?: string | null;
 }
 
+interface RootGroup {
+  root: string;
+  /** Resolved directory of the root, if the server reported one. */
+  rootDir?: string;
+  sources: CanvasSource[];
+}
+
 /** Group sources by their root, preserving first-seen order. */
-function groupByRoot(sources: CanvasSource[]): Array<[string, CanvasSource[]]> {
-  const groups = new Map<string, CanvasSource[]>();
+function groupByRoot(sources: CanvasSource[]): RootGroup[] {
+  const groups = new Map<string, RootGroup>();
   for (const source of sources) {
     const key = source.root || 'workspace';
-    const list = groups.get(key);
-    if (list) list.push(source);
-    else groups.set(key, [source]);
+    const group = groups.get(key);
+    if (group) group.sources.push(source);
+    else groups.set(key, { root: key, rootDir: source.rootDir, sources: [source] });
   }
-  return [...groups.entries()];
+  return [...groups.values()];
 }
 
 export function DocumentPicker(props: DocumentPickerProps) {
@@ -42,13 +49,20 @@ export function DocumentPicker(props: DocumentPickerProps) {
         >
           <div class="flex min-h-0 flex-col gap-5 overflow-y-auto">
             <For each={groups()}>
-              {([root, sources]) => (
+              {(group) => (
                 <section>
-                  <h2 class="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                    {root}
-                  </h2>
+                  <div class="mb-1">
+                    <h2 class="text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                      {group.root}
+                    </h2>
+                    <Show when={group.rootDir}>
+                      <p class="truncate text-[10px] text-fg-subtle" title={group.rootDir}>
+                        {group.rootDir}
+                      </p>
+                    </Show>
+                  </div>
                   <ul class="max-h-56 divide-y divide-border-subtle overflow-y-auto">
-                    <For each={sources}>
+                    <For each={group.sources}>
                       {(source) => {
                         const isLoading = () => props.loadingId === source.id;
                         return (

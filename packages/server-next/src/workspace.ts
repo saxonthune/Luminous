@@ -96,6 +96,7 @@ export async function scanDocuments(roots: WorkspaceRoot[]): Promise<DocumentMet
         path: `${root.name}/${rel}`,
         name: basename(absPath, ".graph.json"),
         root: root.name,
+        rootDir: root.dir,
         lastModified: s.mtimeMs,
       })
     }

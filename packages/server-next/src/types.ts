@@ -5,6 +5,8 @@ export interface DocumentMeta {
   name: string
   /** Grouping key — which workspace/collection the document belongs to. */
   root: string
+  /** Resolved absolute directory of the root. (Filesystem impl: the root dir.) */
+  rootDir: string
   /** Sort key for recency. (Filesystem impl: mtime in ms.) */
   lastModified: number
 }

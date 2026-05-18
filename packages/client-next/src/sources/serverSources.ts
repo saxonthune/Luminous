@@ -4,6 +4,7 @@ interface DocumentMeta {
   path: string;
   name: string;
   root?: string;
+  rootDir?: string;
   lastModified: number;
 }
 
@@ -25,6 +26,7 @@ export async function fetchServerSources(): Promise<CanvasSource[]> {
     id: doc.path,
     label: doc.name,
     root: rootOf(doc),
+    rootDir: doc.rootDir,
     load: () =>
       fetch('/api/document/' + encodeURIComponent(doc.path)).then((r) => r.text()),
   }));

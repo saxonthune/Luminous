@@ -42,6 +42,15 @@ export interface CanvasContextValue {
   unregisterHeaderHeight: (nodeId: string) => void;
   /** Reactive accessor — returns the current header-height map. Tracks version. */
   getHeaderHeights: () => ReadonlyMap<string, number>;
+  /**
+   * Fit the viewport to the given canvas-space rects. padding is in screen pixels.
+   * animate defaults to true; pass false to jump instantly.
+   */
+  fitView: (
+    rects: Array<{ x: number; y: number; width: number; height: number }>,
+    padding?: number,
+    animate?: boolean
+  ) => void;
 }
 
 export const CanvasContext = createContext<CanvasContextValue>();

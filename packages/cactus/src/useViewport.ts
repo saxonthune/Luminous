@@ -18,9 +18,14 @@ export interface UseViewportResult {
   transform: () => Transform;
   setContainerRef: (el: HTMLDivElement) => void;
   containerEl: () => HTMLDivElement | undefined;
+  /**
+   * padding is in screen pixels, applied on each edge of the viewport.
+   * animate defaults to true; pass false to jump instantly (e.g. initial load).
+   */
   fitView: (
     rects: Array<{ x: number; y: number; width: number; height: number }>,
-    padding?: number
+    padding?: number,
+    animate?: boolean
   ) => void;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -65,9 +70,12 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     if (container) select(container).on('.zoom', null);
   });
 
+  // padding is in screen pixels, applied on each edge of the viewport.
+  // animate defaults to true; pass false to jump instantly (e.g. initial load).
   const fitView = (
     rects: Array<{ x: number; y: number; width: number; height: number }>,
-    padding = 0.1
+    padding = 40,
+    animate = true
   ) => {
     if (!container || !zoomBehavior || rects.length === 0) return;
 
@@ -82,18 +90,25 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     const bboxWidth = maxX - minX;
     const bboxHeight = maxY - minY;
     const containerRect = container.getBoundingClientRect();
-    const availableWidth = containerRect.width * (1 - padding * 2);
-    const availableHeight = containerRect.height * (1 - padding * 2);
+    const availableWidth = Math.max(containerRect.width - padding * 2, 1);
+    const availableHeight = Math.max(containerRect.height - padding * 2, 1);
     const scaleX = availableWidth / bboxWidth;
     const scaleY = availableHeight / bboxHeight;
-    const scale = Math.min(scaleX, scaleY, maxZoom);
+    // Clamp to the zoom extent so d3 does not re-clamp the transform and
+    // break the centering math below.
+    const scale = Math.min(Math.max(Math.min(scaleX, scaleY), minZoom), maxZoom);
     const scaledWidth = bboxWidth * scale;
     const scaledHeight = bboxHeight * scale;
     const tx = (containerRect.width - scaledWidth) / 2 - minX * scale;
     const ty = (containerRect.height - scaledHeight) / 2 - minY * scale;
 
     const newTransform = zoomIdentity.translate(tx, ty).scale(scale);
-    select(container).transition().duration(300).call(zoomBehavior.transform, newTransform);
+    const sel = select(container);
+    if (animate) {
+      sel.transition().duration(300).call(zoomBehavior.transform, newTransform);
+    } else {
+      sel.call(zoomBehavior.transform, newTransform);
+    }
   };
 
   const zoomBy = (factor: number) => {

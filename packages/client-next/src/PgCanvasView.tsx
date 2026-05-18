@@ -1,4 +1,4 @@
-import { For, createResource, Show, createMemo, createSignal, createEffect } from 'solid-js';
+import { For, createResource, Show, createMemo, createSignal, createEffect, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
 import type { Graph, View, DisclosureLevel, RenderContext, Node, Edge } from '@luminous/core';
@@ -390,6 +390,25 @@ function CanvasInner(props: {
   };
   // eslint-disable-next-line solid/reactivity -- exposeRects is a one-shot registration callback
   props.exposeRects?.(getRects);
+
+  // Auto-fit the viewport to the graph once on initial load. The layout settles
+  // over several reactive passes as ResizeObserver measures node sizes, so we
+  // debounce: re-arm the timer on every layout change and fit once it goes quiet.
+  let autoFitDone = false;
+  let autoFitTimer: ReturnType<typeof setTimeout> | undefined;
+  createEffect(() => {
+    if (autoFitDone) return;
+    effectiveLayout(); // track layout changes through the measurement burst
+    if (getRects().length === 0) return;
+    if (autoFitTimer !== undefined) clearTimeout(autoFitTimer);
+    autoFitTimer = setTimeout(() => {
+      autoFitDone = true;
+      canvasCtx.fitView(getRects(), 64, false);
+    }, 150);
+  });
+  onCleanup(() => {
+    if (autoFitTimer !== undefined) clearTimeout(autoFitTimer);
+  });
 
   return (
     <InspectorContext.Provider value={inspector}>

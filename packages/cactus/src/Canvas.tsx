@@ -213,6 +213,7 @@ export function Canvas(props: CanvasProps) {
     registerHeaderHeight,
     unregisterHeaderHeight,
     getHeaderHeights,
+    fitView,
   };
   /* eslint-enable solid/reactivity */
 
