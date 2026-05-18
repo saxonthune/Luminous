@@ -21,6 +21,7 @@
       "render": {
         "card": {
           "type": "card",
+          "color": "{content.color}",
           "children": [
             {
               "type": "vstack",

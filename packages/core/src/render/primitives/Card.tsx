@@ -26,11 +26,13 @@ export default function Card(
   const shape = String(props['shape'] ?? 'rectangle');
   const padding = props['padding'] != null ? `${props['padding']}px` : '8px 12px';
 
+  const color = props['color'];
   const style: JSX.CSSProperties = {
     ...(toneMap[tone] ?? toneMap['default']),
     ...(shapeMap[shape] ?? shapeMap['rectangle']),
     padding,
     'box-sizing': 'border-box',
+    ...(typeof color === 'string' && color !== '' ? { border: `1px solid ${color}` } : {}),
   };
 
   return <div style={style}>{children()}</div>;

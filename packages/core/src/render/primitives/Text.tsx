@@ -20,9 +20,11 @@ export default function Text(
   _children: () => JSX.Element,
 ): JSX.Element {
   const value = String(props['value'] ?? '');
+  const color = props['color'];
   const style: JSX.CSSProperties = {
     ...(styleMap[String(props['style'] ?? 'body')] ?? styleMap['body']),
     ...(props['tone'] != null ? (toneMap[String(props['tone'])] ?? {}) : {}),
+    ...(typeof color === 'string' && color !== '' ? { color } : {}),
   };
   return <span style={style}>{value}</span>;
 }

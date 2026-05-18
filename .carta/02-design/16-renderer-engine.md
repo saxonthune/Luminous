@@ -44,9 +44,9 @@ The built-in vocabulary covers the common case for the canonical packs (see [doc
 
 | Primitive | Purpose | Common props |
 |---|---|---|
-| `text` | Plain text with style and interpolation | `value` (string with `{content.*}` refs), `style` (heading / body / caption / mono), `tone` (default / muted / subtle) |
-| `badge` | Small inline label | `value`, `tone` (default / muted / accent / danger) |
-| `chip` | Pill-shaped reference label, often used for summary-role edges | `value`, `tone` |
+| `text` | Plain text with style and interpolation | `value` (string with `{content.*}` refs), `style` (heading / body / caption / mono), `tone` (default / muted / subtle), `color` (any CSS color string — overrides tone text color) |
+| `badge` | Small inline label | `value`, `tone` (default / muted / accent / danger), `color` (any CSS color string — overrides tone background) |
+| `chip` | Pill-shaped reference label, often used for summary-role edges | `value`, `tone`, `color` (any CSS color string — overrides tone background) |
 | `icon` | Named icon from a built-in set | `name`, `size` |
 | `divider` | Horizontal rule | (none) |
 | `link` | Text that dispatches navigation | `value`, `target` |
@@ -61,7 +61,7 @@ The built-in vocabulary covers the common case for the canonical packs (see [doc
 |---|---|---|
 | `vstack` | Vertical stack | `gap`, `padding`, `align`, `justify` |
 | `hstack` | Horizontal stack | `gap`, `padding`, `align`, `justify` |
-| `card` | Bordered container with header / body / footer regions | `shape` (rectangle / pill / diamond / ellipse / hexagon), `padding`, `tone` |
+| `card` | Bordered container with header / body / footer regions | `shape` (rectangle / pill / diamond / ellipse / hexagon), `padding`, `tone`, `color` (any CSS color string — overrides tone border color; background stays from tone) |
 
 The `shape` attribute on `card` is the answer to flowchart-style packs that need diamonds for decisions and pills for start/end states. Shape is an aspect of the container, not a separate primitive.
 
@@ -112,6 +112,8 @@ Two concerns commonly assumed to need code, and why they do not.
 ### Reactivity
 
 The renderer JSON is a *template*. The interpreter re-applies the template when content changes. The template author does not write Solid signals or React hooks. They write `"{content.label}"` and the engine handles change detection. The pattern is identical to how a Solid component declares JSX over reactive signals — the renderer JSON is the JSX equivalent.
+
+`{content.*}` interpolation applies to **every string-valued prop**, not only `value`. So `"color": "{content.color}"`, `"tone": "{content.tone}"`, and `"style": "{content.style}"` are all valid — the interpreter resolves them the same way it resolves `value`. When the referenced field is absent from a node's content, interpolation returns an empty string; primitives treat an empty `color` as "no override" (tone defaults apply).
 
 ### Events
 

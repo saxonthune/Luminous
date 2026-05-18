@@ -15,6 +15,7 @@ export default function Chip(
 ): JSX.Element {
   const value = String(props['value'] ?? '');
   const tone = String(props['tone'] ?? 'default');
+  const color = props['color'];
   const style: JSX.CSSProperties = {
     display: 'inline-flex',
     'align-items': 'center',
@@ -24,6 +25,7 @@ export default function Chip(
     padding: '2px 8px',
     'white-space': 'nowrap',
     ...(toneMap[tone] ?? toneMap['default']),
+    ...(typeof color === 'string' && color !== '' ? { background: color } : {}),
   };
   return <span style={style}>{value}</span>;
 }

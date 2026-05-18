@@ -93,6 +93,91 @@ describe('chip primitive', () => {
   });
 });
 
+describe('badge color prop', () => {
+  it('sets background to hex color when color is provided', () => {
+    mount({ type: 'badge', value: 'ok', color: '#ff0000' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.background).toBe('rgb(255, 0, 0)');
+  });
+
+  it('leaves tone background intact when color is absent', () => {
+    mount({ type: 'badge', value: 'ok', tone: 'accent' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.background).not.toBe('');
+  });
+
+  it('does not override background when color is empty string', () => {
+    mount({ type: 'badge', value: 'ok', tone: 'accent', color: '' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.background).not.toBe('');
+  });
+});
+
+describe('chip color prop', () => {
+  it('sets background to hex color when color is provided', () => {
+    mount({ type: 'chip', value: 'tag', color: '#00ff00' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.background).toBe('rgb(0, 255, 0)');
+  });
+
+  it('leaves tone background intact when color is absent', () => {
+    mount({ type: 'chip', value: 'tag', tone: 'accent' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.background).not.toBe('');
+  });
+});
+
+describe('text color prop', () => {
+  it('sets text color to hex value when color is provided', () => {
+    mount({ type: 'text', value: 'hello', color: '#0000ff' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.color).toBe('rgb(0, 0, 255)');
+  });
+
+  it('leaves tone text color intact when color is absent', () => {
+    mount({ type: 'text', value: 'hello', tone: 'accent' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.color).toBe('rgb(59, 130, 246)');
+  });
+
+  it('does not set color when color is empty string', () => {
+    mount({ type: 'text', value: 'hello', color: '' });
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.color).toBe('');
+  });
+});
+
+describe('card color prop', () => {
+  it('sets border to hex color when color is provided', () => {
+    mount({ type: 'card', color: '#ff00ff' });
+    const el = container.querySelector('div');
+    expect(el).not.toBeNull();
+    expect(el!.style.border).toBe('1px solid rgb(255, 0, 255)');
+  });
+
+  it('leaves tone border intact when color is absent', () => {
+    mount({ type: 'card', tone: 'accent' });
+    const el = container.querySelector('div');
+    expect(el).not.toBeNull();
+    expect(el!.style.border).not.toBe('');
+  });
+
+  it('does not override border when color is empty string', () => {
+    mount({ type: 'card', tone: 'accent', color: '' });
+    const el = container.querySelector('div');
+    expect(el).not.toBeNull();
+    expect(el!.style.border).toBe('1px solid rgb(147, 197, 253)');
+  });
+});
+
 describe('icon primitive', () => {
   it('renders an SVG for known icon names', () => {
     mount({ type: 'icon', name: 'check', size: 16 });
