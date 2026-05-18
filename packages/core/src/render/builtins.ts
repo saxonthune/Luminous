@@ -13,6 +13,7 @@ import CodeBlock from './primitives/CodeBlock.tsx';
 import Image from './primitives/Image.tsx';
 import KvList from './primitives/KvList.tsx';
 
+// Canonical name list lives in primitive-names.ts (plain data, safe for headless import).
 registerPrimitive('text', Text);
 registerPrimitive('vstack', VStack);
 registerPrimitive('hstack', HStack);

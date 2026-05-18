@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "dev:next": "pnpm --filter @luminous/server dev -- --config $PWD/luminous.config.json --dir $PWD/.canvases & pnpm --filter @luminous/canvas dev",
     "generate:canvas": "tsx scripts/analyze-solidjs.ts",
-    "generate:rtp-canvas": "tsx scripts/build-rtp-canvas.ts"
+    "generate:rtp-canvas": "tsx scripts/build-rtp-canvas.ts",
+    "validate:pack": "tsx scripts/validate-pack.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

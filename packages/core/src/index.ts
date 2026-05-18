@@ -5,6 +5,8 @@ export * from './registry.ts';
 export * from './view.ts';
 export * from './loader.ts';
 export { parsePackJson, deserializePack } from './pack/parsePackJson.ts';
+export { validateGraphAndPack } from './validate.ts';
+export type { ValidationIssue, ValidationResult } from './validate.ts';
 export { getPrimitivesBuiltin, getRtpStatechartBuiltin } from './pack/builtins.ts';
 export {
   viewSwitcherSchema,

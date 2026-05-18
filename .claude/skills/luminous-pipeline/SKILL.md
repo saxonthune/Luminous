@@ -181,6 +181,8 @@ There are exactly four, ordered by zoom: **`peek` · `card` · `open` · `deep`*
 1. **`render` is a map keyed by level** — `{ "card": <RenderNode>, "open": <RenderNode> }`. The interpreter picks the render for the current zoom level. **The most common mistake is writing `render` as a flat `{ "type": "card", ... }` — that is wrong; the keys are read as level names and the kind renders nothing.** You need not supply all four levels — supply what you have; `card` is the sensible default to author first.
 2. **`disclosure`** declares, per kind, which prop fields are visible at each level — consumed by fallback rendering and inspectors.
 
+**Gate your pipeline output.** Before loading a `graph.json` + `pack.json` pair in Luminous, validate it locally: `tsx scripts/validate-pack.ts <graph.json> <pack.json>`. The script exits `1` on errors (warnings are non-fatal) and prints every issue including the flat-`render` mistake described above. You can also call `validateGraphAndPack(graphText, packText)` from `@luminous/core` directly in a pipeline script if you want to fail-fast with structured output.
+
 ### nodeKind / edgeKind fields
 
 | Field | Required | Notes |
