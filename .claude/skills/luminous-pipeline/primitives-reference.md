@@ -70,16 +70,18 @@ Horizontal rule with no props.
 
 ### `link`
 
-Clickable text that dispatches a navigation event.
+Clickable text. `target` opens an external URL; `onClick: "INSPECT"` opens the node in the inspector.
 
 ```json
-{ "type": "link", "value": "{content.name}", "target": "FOCUS_NODE" }
+{ "type": "link", "value": "{content.docsUrl}", "target": "{content.docsUrl}" }
+{ "type": "link", "value": "{content.name}", "onClick": "INSPECT" }
 ```
 
 | Prop | Type | Notes |
 |------|------|-------|
 | `value` | string | Display text |
-| `target` | string | Event name dispatched into the app statechart |
+| `target` | string | URL opened in a new tab when clicked |
+| `onClick` | string | Set to `"INSPECT"` to inspect this node instead of opening a URL |
 
 ### `markdown`
 
@@ -173,7 +175,7 @@ Bordered container with optional shape. The outer frame of most node renderers.
   "shape": "rectangle",
   "padding": 12,
   "tone": "default",
-  "onClick": "FOCUS_NODE",
+  "onClick": "INSPECT",
   "children": [ ... ]
 }
 ```
@@ -183,7 +185,7 @@ Bordered container with optional shape. The outer frame of most node renderers.
 | `shape` | enum | `rectangle` (default) · `pill` · `diamond` · `ellipse` · `hexagon` |
 | `padding` | number | Inner padding (px) |
 | `tone` | enum | Theme-token tone name |
-| `onClick` | string | Event dispatched on click (e.g. `"FOCUS_NODE"`) |
+| `onClick` | string | Set to `"INSPECT"` to open this node in the inspector |
 | `children` | array | Nested primitives |
 
 `shape` covers flowchart-style packs: `diamond` for decisions, `pill` for start/end, `rectangle` for process steps. Shape is an attribute of the container, not a separate primitive.
@@ -249,17 +251,20 @@ Common tokens:
 
 ## Events
 
-Renderers dispatch events as strings. The engine handles dispatch into the app statechart.
+`onClick` takes a string. The interpreter handles exactly one value today: **`"INSPECT"`**, which opens the node in the inspector (the node's id is passed automatically).
 
 ```json
-{ "type": "card", "onClick": "FOCUS_NODE" }
+{ "type": "card", "onClick": "INSPECT" }
 ```
 
-The node's id is sent as the event payload automatically. Use `"FOCUS_NODE"` for the standard focus interaction.
+Any other string is accepted but currently does nothing — a future dispatch bus will route them. Do not invent event names; use `"INSPECT"` or omit `onClick`.
 
 ---
 
 ## Worked Example — a complete nodeKind render
+
+Note that `render` is a **map keyed by disclosure level** (`peek` / `card` / `open` / `deep`).
+Each level's value is a RenderNode tree. This example authors two levels:
 
 ```json
 {
@@ -274,27 +279,30 @@ The node's id is sent as the event payload automatically. Use `"FOCUS_NODE"` for
     }
   },
   "render": {
-    "type": "card", "shape": "rectangle", "padding": 12,
-    "children": [
-      {
-        "type": "hstack", "gap": 6, "justify": "space-between",
-        "children": [
-          { "type": "text", "value": "{content.name}", "style": "heading" },
-          { "type": "badge", "value": "component", "tone": "muted" }
-        ]
-      },
-      { "type": "text", "value": "{content.filePath}", "style": "caption", "tone": "muted" },
-      {
-        "type": "if",
-        "when": "content.props.length > 0",
-        "then": {
-          "type": "for-each",
-          "items": "content.props",
-          "as": "prop",
-          "template": { "type": "chip", "value": "{prop}", "tone": "default" }
+    "peek": { "type": "text", "value": "{content.name}", "style": "heading" },
+    "card": {
+      "type": "card", "shape": "rectangle", "padding": 12,
+      "children": [
+        {
+          "type": "hstack", "gap": 6, "justify": "space-between",
+          "children": [
+            { "type": "text", "value": "{content.name}", "style": "heading" },
+            { "type": "badge", "value": "component", "tone": "muted" }
+          ]
+        },
+        { "type": "text", "value": "{content.filePath}", "style": "caption", "tone": "muted" },
+        {
+          "type": "if",
+          "when": "content.props.length > 0",
+          "then": {
+            "type": "for-each",
+            "items": "content.props",
+            "as": "prop",
+            "template": { "type": "chip", "value": "{prop}", "tone": "default" }
+          }
         }
-      }
-    ]
+      ]
+    }
   }
 }
 ```

@@ -214,6 +214,15 @@ function buildEdges(
 
 const PACK_ID = 'domain'; // change to your domain name
 
+// Disclosure levels are fixed: 'peek' | 'card' | 'open' | 'deep'.
+// `render` is a MAP keyed by those levels — NOT a flat render tree.
+const ZOOM_TO_LEVEL = [
+  { minZoom: 0,   level: 'peek' },
+  { minZoom: 0.4, level: 'card' },
+  { minZoom: 1.2, level: 'open' },
+  { minZoom: 3.0, level: 'deep' },
+];
+
 const pack = {
   id: PACK_ID,
   version: '0.1.0',
@@ -230,19 +239,26 @@ const pack = {
           filePath: { type: 'string' },
         },
         required: ['name'],
+        additionalProperties: false,
       },
+      // idTemplate is optional — used only for interactive (MCP) node creation.
+      // A pipeline writes node ids directly, so this is irrelevant to pipeline output.
+      idTemplate: 'component.{name}',
+      // render: map of disclosure level -> RenderNode tree. Author what you need.
       render: {
-        type: 'card', shape: 'rectangle', padding: 12,
-        children: [
-          {
-            type: 'hstack', gap: 6, justify: 'space-between',
-            children: [
-              { type: 'text', value: '{content.name}', style: 'heading' },
-              { type: 'badge', value: 'component', tone: 'muted' },
-            ],
-          },
-          { type: 'text', value: '{content.filePath}', style: 'caption', tone: 'muted' },
-        ],
+        card: {
+          type: 'card', shape: 'rectangle', padding: 12,
+          children: [
+            {
+              type: 'hstack', gap: 6, justify: 'space-between',
+              children: [
+                { type: 'text', value: '{content.name}', style: 'heading' },
+                { type: 'badge', value: 'component', tone: 'muted' },
+              ],
+            },
+            { type: 'text', value: '{content.filePath}', style: 'caption', tone: 'muted' },
+          ],
+        },
       },
     },
     {
@@ -255,13 +271,17 @@ const pack = {
           componentId: { type: 'string' },
         },
         required: ['name'],
+        additionalProperties: false,
       },
+      idTemplate: 'signal.{name}',
       render: {
-        type: 'card', shape: 'rectangle', padding: 8,
-        children: [
-          { type: 'text', value: '{content.name}', style: 'body' },
-          { type: 'badge', value: 'signal', tone: 'accent' },
-        ],
+        card: {
+          type: 'card', shape: 'rectangle', padding: 8,
+          children: [
+            { type: 'text', value: '{content.name}', style: 'body' },
+            { type: 'badge', value: 'signal', tone: 'accent' },
+          ],
+        },
       },
     },
   ],
@@ -271,43 +291,74 @@ const pack = {
       id: 'domain.renders',
       label: 'renders',
       directed: true,
-      props: { type: 'object', properties: {} },
-      render: {},
+      props: { type: 'object', additionalProperties: false },
+      // Optional endpoint constraints; omit if any node may connect.
+      acceptsSource: ['domain.component'],
+      acceptsTarget: ['domain.component'],
+      // No `render` — edges are drawn from their view role (arrow/contain/summary).
     },
     {
       id: 'domain.creates',
       label: 'creates',
       directed: true,
-      props: { type: 'object', properties: {} },
-      render: {},
+      props: { type: 'object', additionalProperties: false },
+      acceptsSource: ['domain.component'],
+      acceptsTarget: ['domain.signal'],
     },
   ],
 
   views: [
     {
       id: 'component-tree',
-      label: 'Component Tree',
-      roles: [
-        { kind: 'domain.component', role: 'spatial' },
-        { kind: 'domain.signal',    role: 'latent' },
-        { kind: 'domain.renders',   role: 'contain' },
-        { kind: 'domain.creates',   role: 'hidden' },
-      ],
+      name: 'Component Tree',          // field is `name`, not `label`
+      description: 'Components nested by what they render.',
+      zoomToLevel: ZOOM_TO_LEVEL,
+      nodeRoles: {                     // map of nodeKind id -> role
+        'domain.component': 'spatial',
+        'domain.signal':    'latent',
+      },
+      edgeRoles: {                     // map of edgeKind id -> role
+        'domain.renders': 'contain',
+        'domain.creates': 'hidden',
+      },
+      layers: {},
+      layout: { algorithm: 'elk' },
     },
     {
       id: 'reactivity',
-      label: 'Reactivity',
-      roles: [
-        { kind: 'domain.component', role: 'spatial' },
-        { kind: 'domain.signal',    role: 'spatial' },
-        { kind: 'domain.renders',   role: 'hidden' },
-        { kind: 'domain.creates',   role: 'arrow' },
-      ],
+      name: 'Reactivity',
+      description: 'Components and the signals they create.',
+      zoomToLevel: ZOOM_TO_LEVEL,
+      nodeRoles: {
+        'domain.component': 'spatial',
+        'domain.signal':    'spatial',
+      },
+      edgeRoles: {
+        'domain.renders': 'hidden',
+        'domain.creates': 'arrow',
+      },
+      layers: {},
+      layout: { algorithm: 'force' },
     },
   ],
 
-  layers: [],
-  disclosure: [],
+  layers: [],          // toggleable overlays; leave empty for a v1 pack
+  disclosure: [        // which props are visible at each level
+    {
+      kind: 'domain.component',
+      peek: ['name'],
+      card: ['name', 'filePath'],
+      open: ['name', 'filePath'],
+      deep: ['name', 'filePath'],
+    },
+    {
+      kind: 'domain.signal',
+      peek: ['name'],
+      card: ['name'],
+      open: ['name', 'componentId'],
+      deep: ['name', 'componentId'],
+    },
+  ],
 };
 
 // ── Main ──────────────────────────────────────────────────────────────────────
