@@ -268,6 +268,14 @@ export function Canvas(props: CanvasProps) {
           : <DotGrid transform={transform()} patternId={props.patternId} />
         }
 
+        <Show when={(props.edges?.length ?? 0) > 0}>
+          <svg data-cactus-edge-layer-lines width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="lines" zoom={() => transform().k} />
+            </g>
+          </svg>
+        </Show>
+
         <div
           style={{
             transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
@@ -280,9 +288,9 @@ export function Canvas(props: CanvasProps) {
         </div>
 
         <Show when={(props.edges?.length ?? 0) > 0}>
-          <svg data-cactus-edge-layer width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+          <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} />
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} />
             </g>
           </svg>
         </Show>

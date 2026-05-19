@@ -5,6 +5,8 @@ import { EdgeLabel } from './EdgeLabel.js';
 interface EdgeLayerProps {
   edges: EdgeDeclaration[];
   getNodeRects: () => ReadonlyMap<string, { x: number; y: number; w: number; h: number }>;
+  layer: 'lines' | 'labels';
+  zoom: () => number;
 }
 
 const LABEL_CAP = 28;
@@ -48,6 +50,14 @@ function lineExitsBox(
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
+
+  // Counter-scale label text so on-screen size stays readable across zoom levels.
+  const labelFontSize = createMemo(() => {
+    const k = props.zoom();
+    const effective = Math.min(20, Math.max(11, 10 * k));
+    return effective / k;
+  });
+  const labelHaloWidth = createMemo(() => labelFontSize() * 0.35);
 
   const revealedPopover = createMemo(() => {
     const id = revealedId();
@@ -95,29 +105,31 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
             <Show when={endpoints()}>
               {(pts) => (
                 <>
-                  <line
-                    x1={pts().x1}
-                    y1={pts().y1}
-                    x2={pts().x2}
-                    y2={pts().y2}
-                    stroke={color}
-                    stroke-width={width}
-                    stroke-dasharray={strokeDasharray}
-                    stroke-linecap="round"
-                  />
-                  <Show when={arrowHead}>
-                    <path d={arrowHeadPath(pts().x1, pts().y1, pts().x2, pts().y2)} fill={color} />
+                  <Show when={props.layer === 'lines'}>
+                    <line
+                      x1={pts().x1}
+                      y1={pts().y1}
+                      x2={pts().x2}
+                      y2={pts().y2}
+                      stroke={color}
+                      stroke-width={width}
+                      stroke-dasharray={strokeDasharray}
+                      stroke-linecap="round"
+                    />
+                    <Show when={arrowHead}>
+                      <path d={arrowHeadPath(pts().x1, pts().y1, pts().x2, pts().y2)} fill={color} />
+                    </Show>
                   </Show>
-                  <Show when={edge.labelText || edge.label}>
+                  <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
                     <text
                       x={(pts().x1 + pts().x2) / 2}
                       y={(pts().y1 + pts().y2) / 2}
                       text-anchor="middle"
                       dominant-baseline="middle"
-                      font-size="10"
+                      font-size={labelFontSize()}
                       fill={color}
                       stroke="var(--cactus-canvas-bg, #ffffff)"
-                      stroke-width="4"
+                      stroke-width={labelHaloWidth()}
                       stroke-linejoin="round"
                       paint-order="stroke fill"
                       style={{
@@ -139,12 +151,14 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           );
         }}
       </For>
-      <Show when={revealedPopover()}>
-        {(mp) => (
-          <EdgeLabel x={mp().x} y={mp().y} onClick={() => setRevealedId(null)}>
-            <span style={{ 'font-size': '10px', color: 'var(--cactus-fg, #111827)' }}>{mp().text}</span>
-          </EdgeLabel>
-        )}
+      <Show when={props.layer === 'labels'}>
+        <Show when={revealedPopover()}>
+          {(mp) => (
+            <EdgeLabel x={mp().x} y={mp().y} onClick={() => setRevealedId(null)}>
+              <span style={{ 'font-size': '10px', color: 'var(--cactus-fg, #111827)' }}>{mp().text}</span>
+            </EdgeLabel>
+          )}
+        </Show>
       </Show>
     </>
   );
