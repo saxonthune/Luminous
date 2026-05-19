@@ -108,11 +108,18 @@ same illegibility bug and want the same counter-scale treatment.
 
 ## Engine/domain boundary note
 
-Counter-scaling is a *visual* concern — it belongs in cactus or the render layer,
-driven by the zoom factor cactus already owns. Disclosure *levels* (what content
-appears at `peek` vs `open`) are *meaning* — they belong in the domain layer's
-pack-defined renders. The two cooperate: the domain picks the representation per
-level; cactus guarantees whatever text is shown lands at a legible device size.
+Counter-scaling for **heading text** belongs in `core/src/render/primitives/Text.tsx`.
+`Text` already receives `RenderContext`, which exposes `zoom()` precisely so
+primitives can use it. This is the right layer: it is a visual/legibility concern
+(how text renders at a given zoom), not domain meaning (what content to show).
+Body-text legibility culling belongs there too — both are zoom-driven render
+decisions, not pack-level content choices.
+
+Disclosure *levels* (what content appears at `peek` vs `open`) remain domain
+meaning — they belong in the domain layer's pack-defined renders. The two
+cooperate: the domain picks the representation per level; the `Text` primitive
+guarantees whatever heading is shown stays legible, and culls body text that
+would render as noise.
 
 ## References
 

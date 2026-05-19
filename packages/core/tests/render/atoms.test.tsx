@@ -132,6 +132,64 @@ describe('chip color prop', () => {
   });
 });
 
+describe('text heading counter-scale', () => {
+  it('at normal zoom (k=1) heading font-size is 14px', () => {
+    const ctx: RenderContext = { ...mockCtx, zoom: () => 1 };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'Title', style: 'heading' }, ctx, {}), container);
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    expect(el!.style.fontSize).toBe('14px');
+  });
+
+  it('at low zoom (k=0.15) heading font-size yields ≥11px effective on screen', () => {
+    const k = 0.15;
+    const ctx: RenderContext = { ...mockCtx, zoom: () => k };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'Title', style: 'heading' }, ctx, {}), container);
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    const cssSize = parseFloat(el!.style.fontSize);
+    expect(cssSize * k).toBeGreaterThanOrEqual(11);
+  });
+
+  it('at high zoom (k=3) heading font-size caps at 2× base effective on screen', () => {
+    const k = 3;
+    const ctx: RenderContext = { ...mockCtx, zoom: () => k };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'Title', style: 'heading' }, ctx, {}), container);
+    const el = container.querySelector('span');
+    expect(el).not.toBeNull();
+    const cssSize = parseFloat(el!.style.fontSize);
+    expect(cssSize * k).toBeLessThanOrEqual(28);
+  });
+});
+
+describe('text body legibility cull', () => {
+  it('body text renders at zoom where effective size is above floor', () => {
+    const ctx: RenderContext = { ...mockCtx, zoom: () => 0.7 };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'body', style: 'body' }, ctx, {}), container);
+    expect(container.textContent).toBe('body');
+  });
+
+  it('body text renders nothing when effective size is below legibility floor', () => {
+    // 12px * 0.5 = 6 < 7 → cull
+    const ctx: RenderContext = { ...mockCtx, zoom: () => 0.5 };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'body', style: 'body' }, ctx, {}), container);
+    expect(container.textContent).toBe('');
+  });
+
+  it('caption text (11px base) renders nothing below floor', () => {
+    // 11px * 0.5 = 5.5 < 7 → cull
+    const ctx: RenderContext = { ...mockCtx, zoom: () => 0.5 };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'cap', style: 'caption' }, ctx, {}), container);
+    expect(container.textContent).toBe('');
+  });
+
+  it('mono text renders nothing below floor', () => {
+    const ctx: RenderContext = { ...mockCtx, zoom: () => 0.5 };
+    cleanup = render(() => interpretRender({ type: 'text', value: 'mono', style: 'mono' }, ctx, {}), container);
+    expect(container.textContent).toBe('');
+  });
+});
+
 describe('text color prop', () => {
   it('sets text color to hex value when color is provided', () => {
     mount({ type: 'text', value: 'hello', color: '#0000ff' });

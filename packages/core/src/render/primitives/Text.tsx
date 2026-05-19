@@ -1,5 +1,9 @@
+import { createMemo, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
 import type { RenderContext } from '../../types.ts';
+
+const LEGIBILITY_FLOOR = 7;
+const BASE_PX: Record<string, number> = { heading: 14, body: 12, caption: 11, mono: 12 };
 
 const styleMap: Record<string, JSX.CSSProperties> = {
   heading: { 'font-size': '14px', 'font-weight': '600' },
@@ -16,15 +20,35 @@ const toneMap: Record<string, JSX.CSSProperties> = {
 
 export default function Text(
   props: Record<string, unknown>,
-  _ctx: RenderContext,
+  ctx: RenderContext,
   _children: () => JSX.Element,
 ): JSX.Element {
   const value = String(props['value'] ?? '');
   const color = props['color'];
-  const style: JSX.CSSProperties = {
-    ...(styleMap[String(props['style'] ?? 'body')] ?? styleMap['body']),
+  const styleName = String(props['style'] ?? 'body');
+
+  const baseStyle: JSX.CSSProperties = {
+    ...(styleMap[styleName] ?? styleMap['body']),
     ...(props['tone'] != null ? (toneMap[String(props['tone'])] ?? {}) : {}),
     ...(typeof color === 'string' && color !== '' ? { color } : {}),
   };
-  return <span style={style}>{value}</span>;
+
+  if (styleName === 'heading') {
+    const base = BASE_PX['heading']!;
+    // Counter-scale: keep heading legible at any zoom (floor 11px, cap 2×base on screen).
+    const fontSize = createMemo(() => {
+      const k = ctx.zoom();
+      const effective = Math.min(base * 2, Math.max(11, base * k));
+      return `${effective / k}px`;
+    });
+    return <span style={{ ...baseStyle, 'font-size': fontSize() }}>{value}</span>;
+  }
+
+  // body / caption / mono: geometric sizing, culled below legibility floor
+  const basePx = BASE_PX[styleName] ?? 12;
+  return (
+    <Show when={basePx * ctx.zoom() >= LEGIBILITY_FLOOR} fallback={null}>
+      <span style={baseStyle}>{value}</span>
+    </Show>
+  );
 }
