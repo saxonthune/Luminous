@@ -19,7 +19,7 @@ function inlineMarkup(text: string): JSX.Element[] {
     const token = match[0];
     if (token.startsWith('`')) {
       parts.push(
-        <code style={{ 'font-family': 'monospace', 'font-size': '11px', background: '#f3f4f6', 'border-radius': '2px', padding: '0 3px' }}>
+        <code style={{ 'font-family': 'monospace', 'font-size': '11px', background: 'var(--cactus-surface-alt, #f3f4f6)', 'border-radius': '2px', padding: '0 3px' }}>
           {token.slice(1, -1)}
         </code>
       );

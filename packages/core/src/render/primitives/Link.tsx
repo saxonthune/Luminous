@@ -13,7 +13,7 @@ export default function Link(
   const onClick = props['onClick'] as (() => void) | undefined;
 
   const style: JSX.CSSProperties = {
-    color: '#3b82f6',
+    color: 'var(--cactus-accent, #3b82f6)',
     'text-decoration': 'underline',
     cursor: 'pointer',
     'font-size': '12px',

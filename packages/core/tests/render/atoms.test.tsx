@@ -144,7 +144,8 @@ describe('text color prop', () => {
     mount({ type: 'text', value: 'hello', tone: 'accent' });
     const el = container.querySelector('span');
     expect(el).not.toBeNull();
-    expect(el!.style.color).toBe('rgb(59, 130, 246)');
+    // accent tone themes through the cactus contract (light fallback #3b82f6)
+    expect(el!.style.color).toBe('var(--cactus-accent, #3b82f6)');
   });
 
   it('does not set color when color is empty string', () => {
@@ -174,7 +175,7 @@ describe('card color prop', () => {
     mount({ type: 'card', tone: 'accent', color: '' });
     const el = container.querySelector('div');
     expect(el).not.toBeNull();
-    expect(el!.style.border).toBe('1px solid rgb(147, 197, 253)');
+    expect(el!.style.border).toBe('1px solid var(--cactus-accent, #93c5fd)');
   });
 });
 

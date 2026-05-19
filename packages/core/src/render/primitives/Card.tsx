@@ -2,10 +2,22 @@ import type { JSX } from 'solid-js';
 import type { RenderContext } from '../../types.ts';
 
 const toneMap: Record<string, JSX.CSSProperties> = {
-  default: { background: '#fff', border: '1px solid #d0d0d0' },
-  muted: { background: '#f5f5f5', border: '1px solid #e0e0e0' },
-  accent: { background: '#eff6ff', border: '1px solid #93c5fd' },
-  danger: { background: '#fef2f2', border: '1px solid #fca5a5' },
+  default: {
+    background: 'var(--cactus-surface, #fff)',
+    border: '1px solid var(--cactus-border, #d0d0d0)',
+  },
+  muted: {
+    background: 'var(--cactus-surface-alt, #f5f5f5)',
+    border: '1px solid var(--cactus-border-subtle, #e0e0e0)',
+  },
+  accent: {
+    background: 'var(--cactus-selection, #eff6ff)',
+    border: '1px solid var(--cactus-accent, #93c5fd)',
+  },
+  danger: {
+    background: 'var(--cactus-danger-subtle, #fef2f2)',
+    border: '1px solid var(--cactus-danger, #fca5a5)',
+  },
 };
 
 // Shape is applied via CSS — exactness is 02b polish; prop accepted and applied.

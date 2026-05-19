@@ -33,14 +33,14 @@ export default function KvList(
   };
 
   const keyStyle: JSX.CSSProperties = {
-    color: '#6b7280',
+    color: 'var(--cactus-fg-muted, #6b7280)',
     'font-size': '11px',
     'min-width': '60px',
     'flex-shrink': '0',
   };
 
   const valStyle: JSX.CSSProperties = {
-    color: '#111827',
+    color: 'var(--cactus-fg, #111827)',
     'font-size': '12px',
   };
 

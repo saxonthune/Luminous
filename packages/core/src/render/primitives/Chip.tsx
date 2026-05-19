@@ -2,10 +2,10 @@ import type { JSX } from 'solid-js';
 import type { RenderContext } from '../../types.ts';
 
 const toneMap: Record<string, JSX.CSSProperties> = {
-  default: { background: '#e5e7eb', color: '#374151' },
-  muted: { background: '#f3f4f6', color: '#6b7280' },
-  accent: { background: '#dbeafe', color: '#1d4ed8' },
-  danger: { background: '#fee2e2', color: '#dc2626' },
+  default: { background: 'var(--cactus-surface-alt, #e5e7eb)', color: 'var(--cactus-fg, #374151)' },
+  muted: { background: 'var(--cactus-surface-alt, #f3f4f6)', color: 'var(--cactus-fg-muted, #6b7280)' },
+  accent: { background: 'var(--cactus-selection, #dbeafe)', color: 'var(--cactus-accent, #1d4ed8)' },
+  danger: { background: 'var(--cactus-danger-subtle, #fee2e2)', color: 'var(--cactus-danger, #dc2626)' },
 };
 
 export default function Chip(

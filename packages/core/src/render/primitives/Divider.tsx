@@ -10,7 +10,7 @@ export default function Divider(
     display: 'block',
     width: '100%',
     height: '1px',
-    background: '#e5e7eb',
+    background: 'var(--cactus-border, #e5e7eb)',
     border: 'none',
     margin: '4px 0',
   };

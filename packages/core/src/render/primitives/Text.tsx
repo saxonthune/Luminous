@@ -4,14 +4,14 @@ import type { RenderContext } from '../../types.ts';
 const styleMap: Record<string, JSX.CSSProperties> = {
   heading: { 'font-size': '14px', 'font-weight': '600' },
   body: { 'font-size': '12px' },
-  caption: { 'font-size': '11px', color: '#888' },
+  caption: { 'font-size': '11px', color: 'var(--cactus-fg-subtle, #888)' },
   mono: { 'font-size': '12px', 'font-family': 'monospace' },
 };
 
 const toneMap: Record<string, JSX.CSSProperties> = {
-  muted: { color: '#888' },
-  accent: { color: '#3b82f6' },
-  danger: { color: '#ef4444' },
+  muted: { color: 'var(--cactus-fg-muted, #888)' },
+  accent: { color: 'var(--cactus-accent, #3b82f6)' },
+  danger: { color: 'var(--cactus-danger, #ef4444)' },
 };
 
 export default function Text(

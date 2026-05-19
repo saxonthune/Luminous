@@ -36,7 +36,7 @@ export default function Icon(
       <span
         style={{
           ...style,
-          background: '#d1d5db',
+          background: 'var(--cactus-grid-dot, #d1d5db)',
           'border-radius': '2px',
           'vertical-align': 'middle',
         }}
