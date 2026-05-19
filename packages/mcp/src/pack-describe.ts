@@ -63,5 +63,10 @@ export async function describePackForCanvas(serverUrl: string, canvasPath: strin
   if (!canvas.pack) {
     throw new Error(`Canvas '${canvasPath}' has no pack declared`)
   }
-  return describePack(serverUrl, canvas.pack)
+  // The pack is a sibling file of the canvas — resolve it within the canvas's
+  // directory rather than passing the bare name (which the server would
+  // resolve against the first workspace root and fail to find).
+  const slash = canvasPath.lastIndexOf('/')
+  const dir = slash !== -1 ? canvasPath.slice(0, slash + 1) : ''
+  return describePack(serverUrl, `${dir}${canvas.pack}.pack.json`)
 }

@@ -5,9 +5,6 @@ import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments, resolveRoots } from "./workspace.js"
 import { getDocument, applyAction, applyBatch, flushAll, setRoots, watchDocuments, createDocument, readPackFile } from "./store.js"
-import type { V2Document } from "./types.js"
-import { roots as diagRoots, bbox as diagBbox, outliers as diagOutliers, subtree as diagSubtree, outline as diagOutline, summary as diagSummary, query as diagQuery } from "./diag.js"
-import type { QueryFilter } from "./diag.js"
 
 const port = Number(process.env.PORT ?? 4080)
 
@@ -119,7 +116,7 @@ function hasTraversal(p: string): boolean {
   return p.includes("..") || p.startsWith("/")
 }
 
-const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === "OPTIONS") {
     setCorsHeaders(res)
     res.writeHead(204)
@@ -152,154 +149,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     console.log(`[api] GET document: ${docPath}`)
     const doc = await getDocument(docPath)
     sendJson(res, 200, doc)
-    return
-  }
-
-  // GET /api/diag/roots/:path
-  if (url.startsWith("/api/diag/roots/") && req.method === "GET") {
-    const docPath = decodeURIComponent(url.slice("/api/diag/roots/".length))
-    if (!docPath || hasTraversal(docPath)) {
-      sendJson(res, 400, { error: "invalid path" })
-      return
-    }
-    const doc = await getDocument(docPath)
-    sendJson(res, 200, diagRoots(doc as unknown as V2Document))
-    return
-  }
-
-  // GET /api/diag/outliers/:path
-  if (url.startsWith("/api/diag/outliers/") && req.method === "GET") {
-    const docPath = decodeURIComponent(url.slice("/api/diag/outliers/".length))
-    if (!docPath || hasTraversal(docPath)) {
-      sendJson(res, 400, { error: "invalid path" })
-      return
-    }
-    const doc = await getDocument(docPath)
-    sendJson(res, 200, diagOutliers(doc as unknown as V2Document))
-    return
-  }
-
-  // GET /api/diag/bbox/:path/:id  — split on last slash to extract id
-  if (url.startsWith("/api/diag/bbox/") && req.method === "GET") {
-    const raw = decodeURIComponent(url.slice("/api/diag/bbox/".length))
-    const lastSlash = raw.lastIndexOf("/")
-    if (lastSlash === -1) {
-      sendJson(res, 400, { error: "missing id" })
-      return
-    }
-    const docPath = raw.slice(0, lastSlash)
-    const nodeId = raw.slice(lastSlash + 1)
-    if (!docPath || hasTraversal(docPath) || !nodeId) {
-      sendJson(res, 400, { error: "invalid path or id" })
-      return
-    }
-    const doc = await getDocument(docPath)
-    const result = diagBbox(doc as unknown as V2Document, nodeId)
-    if (result === null) {
-      sendJson(res, 404, { error: "node not found" })
-      return
-    }
-    sendJson(res, 200, result)
-    return
-  }
-
-  // GET /api/diag/subtree/:path/:id  — split on last slash to extract id
-  if (url.startsWith("/api/diag/subtree/") && req.method === "GET") {
-    const raw = decodeURIComponent(url.slice("/api/diag/subtree/".length))
-    const lastSlash = raw.lastIndexOf("/")
-    if (lastSlash === -1) {
-      sendJson(res, 400, { error: "missing id" })
-      return
-    }
-    const docPath = raw.slice(0, lastSlash)
-    const nodeId = raw.slice(lastSlash + 1)
-    if (!docPath || hasTraversal(docPath) || !nodeId) {
-      sendJson(res, 400, { error: "invalid path or id" })
-      return
-    }
-    const doc = await getDocument(docPath)
-    const result = diagSubtree(doc as unknown as V2Document, nodeId)
-    if (result === null) {
-      sendJson(res, 404, { error: "node not found" })
-      return
-    }
-    sendJson(res, 200, result)
-    return
-  }
-
-  // GET /api/diag/outline/:path/:id  — subtree from a specific node (id is last segment, not .json)
-  // GET /api/diag/outline/:path        — all roots (last segment ends in .json)
-  if (url.startsWith("/api/diag/outline/") && req.method === "GET") {
-    const raw = decodeURIComponent(url.slice("/api/diag/outline/".length))
-    const lastSlash = raw.lastIndexOf("/")
-    const lastSegment = lastSlash !== -1 ? raw.slice(lastSlash + 1) : raw
-    // If the last segment ends in .json it's the canvas filename — path-only (all roots)
-    if (lastSegment.endsWith(".json")) {
-      const docPath = raw
-      if (!docPath || hasTraversal(docPath)) {
-        sendJson(res, 400, { error: "invalid path" })
-        return
-      }
-      const doc = await getDocument(docPath)
-      sendJson(res, 200, diagOutline(doc as unknown as V2Document, null))
-      return
-    }
-    // Otherwise last segment is a node id — split on lastSlash
-    if (lastSlash === -1) {
-      sendJson(res, 400, { error: "missing id or invalid path" })
-      return
-    }
-    const docPath = raw.slice(0, lastSlash)
-    const nodeId = lastSegment
-    if (!docPath || hasTraversal(docPath) || !nodeId) {
-      sendJson(res, 400, { error: "invalid path or id" })
-      return
-    }
-    const doc = await getDocument(docPath)
-    sendJson(res, 200, diagOutline(doc as unknown as V2Document, nodeId))
-    return
-  }
-
-  // GET /api/diag/summary/:path
-  if (url.startsWith("/api/diag/summary/") && req.method === "GET") {
-    const docPath = decodeURIComponent(url.slice("/api/diag/summary/".length))
-    if (!docPath || hasTraversal(docPath)) {
-      sendJson(res, 400, { error: "invalid path" })
-      return
-    }
-    const doc = await getDocument(docPath)
-    sendJson(res, 200, diagSummary(doc as unknown as V2Document))
-    return
-  }
-
-  // POST /api/diag/query
-  if (url === "/api/diag/query" && req.method === "POST") {
-    let body: { path?: string; filter?: unknown; fields?: unknown }
-    try {
-      body = (await parseBody(req)) as typeof body
-    } catch {
-      sendJson(res, 400, { error: "invalid JSON" })
-      return
-    }
-    const docPath = body.path
-    if (!docPath || hasTraversal(docPath)) {
-      sendJson(res, 400, { error: "invalid path" })
-      return
-    }
-    if (
-      typeof body.filter !== 'object' ||
-      body.filter === null ||
-      Array.isArray(body.filter)
-    ) {
-      sendJson(res, 400, { error: "filter must be an object" })
-      return
-    }
-    const filter = body.filter as QueryFilter
-    const fields = Array.isArray(body.fields)
-      ? (body.fields as Array<'title' | 'schemaName' | 'parent' | 'geometry'>)
-      : undefined
-    const doc = await getDocument(docPath)
-    sendJson(res, 200, diagQuery(doc as unknown as V2Document, filter, fields))
     return
   }
 
@@ -396,6 +245,19 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   }
 
   sendJson(res, 404, { error: "not found" })
+}
+
+// Every request is funnelled through a single catch — a thrown handler must
+// produce a 500, never take the process down.
+const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+  handleRequest(req, res).catch((err) => {
+    console.error("[api] unhandled error:", err)
+    if (res.headersSent) {
+      res.end()
+    } else {
+      sendJson(res, 500, { error: "internal server error" })
+    }
+  })
 })
 
 server.on("upgrade", (req: IncomingMessage, socket: Socket, _head: Buffer) => {
@@ -435,3 +297,12 @@ async function shutdown(): Promise<void> {
 
 process.on("SIGINT", shutdown)
 process.on("SIGTERM", shutdown)
+
+// Last-resort safety net — log and keep serving rather than exit. A dropped
+// request is recoverable; a dead storage server is not.
+process.on("unhandledRejection", (reason) => {
+  console.error("[server] unhandled rejection:", reason)
+})
+process.on("uncaughtException", (err) => {
+  console.error("[server] uncaught exception:", err)
+})
