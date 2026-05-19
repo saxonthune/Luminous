@@ -120,6 +120,15 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
       'elk.spacing.edgeEdge': '12',
       'elk.spacing.edgeLabel': '6',
       'elk.edgeLabels.inline': 'false',
+      // Crossing reduction: layer-sweep only reorders nodes within their
+      // existing layers, so this untangles edges without changing the layout's
+      // overall flow. thoroughness is the main lever (default 7).
+      'elk.layered.thoroughness': '70',
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+      'elk.layered.crossingMinimization.semiInteractive': 'false',
+      'elk.layered.crossingMinimization.greedySwitch.type': 'TWO_SIDED',
+      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+      'elk.layered.cycleBreaking.strategy': 'GREEDY',
     },
     children: rootIds.map((rid) =>
       buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers)
