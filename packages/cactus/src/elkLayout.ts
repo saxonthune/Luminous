@@ -78,19 +78,36 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
 
   const elk = new ELK();
 
-  // Collect all node IDs in the graph for edge filtering
+  // Collect node IDs that actually appear in the ELK graph. Opaque containers
+  // are leaves to ELK — buildElkNode omits their descendants — so we must not
+  // descend into them here, or edges to hidden children would reference shapes
+  // ELK never received ("Referenced shape does not exist").
   const allNodeIds = new Set<string>();
   function collectIds(id: string): void {
     allNodeIds.add(id);
+    if (opaqueContainers?.has(id)) return;
     for (const cid of childrenOf.get(id) ?? []) {
       collectIds(cid);
     }
   }
   for (const rid of rootIds) collectIds(rid);
 
-  const filteredEdges = edges.filter(
-    (e) => allNodeIds.has(e.from) && allNodeIds.has(e.to)
-  );
+  // Map any node that lives inside an opaque container to that container, so
+  // edges touching hidden descendants attach to the visible opaque box.
+  const remap = new Map<string, string>();
+  function mapDescendants(opaqueId: string, target: string): void {
+    for (const cid of childrenOf.get(opaqueId) ?? []) {
+      remap.set(cid, target);
+      mapDescendants(cid, target);
+    }
+  }
+  for (const oc of opaqueContainers ?? []) mapDescendants(oc, oc);
+
+  const resolve = (id: string): string => remap.get(id) ?? id;
+
+  const filteredEdges = edges
+    .map((e) => ({ ...e, from: resolve(e.from), to: resolve(e.to) }))
+    .filter((e) => allNodeIds.has(e.from) && allNodeIds.has(e.to) && e.from !== e.to);
 
   const graph: ElkNode = {
     id: '__root__',
