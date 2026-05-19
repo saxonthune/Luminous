@@ -32,8 +32,12 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
       w: m ? m.w : props.w(),
       h: m ? m.h : props.h(),
     });
-    onCleanup(() => ctx.unregisterNodeRect(props.nodeId));
   });
+  // Unregister only when the component is destroyed — NOT on every effect
+  // re-run. An onCleanup *inside* the render effect fires before each
+  // re-execution, briefly deleting the rect and exposing an inconsistent
+  // registry to layout, which turns the layout↔measurement cycle divergent.
+  onCleanup(() => ctx.unregisterNodeRect(props.nodeId));
 
   onMount(() => {
     if (!divEl || typeof ResizeObserver === 'undefined') return;

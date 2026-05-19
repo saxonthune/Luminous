@@ -20,9 +20,11 @@ export function NodeHeader(props: NodeHeaderProps): JSX.Element {
     const h = measured();
     if (h !== null && h > 0) {
       ctx.registerHeaderHeight(props.nodeId, h);
-      onCleanup(() => ctx.unregisterHeaderHeight(props.nodeId));
     }
   });
+  // Unregister only on component destruction — not on every effect re-run.
+  // (See NodeContainer for why an in-effect onCleanup breaks layout.)
+  onCleanup(() => ctx.unregisterHeaderHeight(props.nodeId));
 
   onMount(() => {
     if (!el || typeof ResizeObserver === 'undefined') return;

@@ -6,6 +6,7 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "build": "pnpm -r run build",
     "build:all": "pnpm -r run build",
     "test": "pnpm -r --parallel test",

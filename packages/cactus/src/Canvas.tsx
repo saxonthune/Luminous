@@ -102,6 +102,12 @@ export function Canvas(props: CanvasProps) {
   const nodeRectsData = new Map<string, NodeRect>();
   const [nodeRectsVersion, setNodeRectsVersion] = createSignal(0);
   const registerNodeRect = (id: string, rect: NodeRect) => {
+    // Idempotent: skip the reactive bump when the rect is unchanged, so a
+    // re-registration with identical geometry is a true no-op for layout.
+    const prev = nodeRectsData.get(id);
+    if (prev && prev.x === rect.x && prev.y === rect.y && prev.w === rect.w && prev.h === rect.h) {
+      return;
+    }
     nodeRectsData.set(id, rect);
     setNodeRectsVersion((v) => v + 1);
   };
@@ -118,6 +124,7 @@ export function Canvas(props: CanvasProps) {
   const headerHeightsData = new Map<string, number>();
   const [headerHeightsVersion, setHeaderHeightsVersion] = createSignal(0);
   const registerHeaderHeight = (nodeId: string, height: number) => {
+    if (headerHeightsData.get(nodeId) === height) return;
     headerHeightsData.set(nodeId, height);
     setHeaderHeightsVersion((v) => v + 1);
   };
