@@ -1,4 +1,4 @@
-import { createRenderEffect, createSignal, onCleanup, onMount, type JSX } from 'solid-js';
+import { createRenderEffect, createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { useCanvasContext } from './CanvasContext.js';
 
 export interface NodeContainerProps {
@@ -7,6 +7,7 @@ export interface NodeContainerProps {
   y: () => number;
   w: () => number;
   h: () => number;
+  softContainer?: () => boolean;
   onPointerDown?: (e: PointerEvent) => void;
   onContextMenu?: (e: MouseEvent) => void;
   children?: JSX.Element;
@@ -70,6 +71,20 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
       onPointerDown={(e) => props.onPointerDown?.(e)}
       onContextMenu={(e) => props.onContextMenu?.(e)}
     >
+      <Show when={props.softContainer?.()}>
+        <div
+          data-soft-container="true"
+          style={{
+            position: 'absolute',
+            inset: '0',
+            'z-index': '-1',
+            background: 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
+            border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+            'border-radius': '8px',
+            'pointer-events': 'none',
+          }}
+        />
+      </Show>
       {props.children}
     </div>
   );

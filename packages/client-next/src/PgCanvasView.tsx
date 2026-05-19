@@ -159,6 +159,7 @@ function renderNodes(
             y={() => abs().y}
             w={() => sz().w}
             h={() => sz().h}
+            softContainer={() => renderCtx.hasChildren(nodeId)}
             onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
           >
             {resolveNodeRender(node, renderCtx)}

@@ -20,6 +20,9 @@ beforeAll(() => {
   }
 });
 import { ConnectionHandle } from '../src/ConnectionHandle';
+import { NodeContainer } from '../src/NodeContainer';
+import { CanvasContext } from '../src/CanvasContext';
+import type { CanvasContextValue } from '../src/CanvasContext';
 
 function renderIntoContainer(ui: () => unknown): { container: HTMLElement; cleanup: () => void } {
   const container = document.createElement('div');
@@ -121,6 +124,63 @@ describe('ConnectionHandle', () => {
     const el = container.firstElementChild as HTMLElement;
     el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     expect(onStart).toHaveBeenCalledWith('node-1', null, expect.any(Number), expect.any(Number));
+    cleanup();
+  });
+});
+
+const mockCanvasCtx: CanvasContextValue = {
+  transform: () => ({ x: 0, y: 0, k: 1 }),
+  screenToCanvas: (x, y) => ({ x, y }),
+  startConnection: () => {},
+  connectionDrag: () => null,
+  selectedIds: () => [],
+  clearSelection: () => {},
+  isSelected: () => false,
+  onNodePointerDown: () => {},
+  setSelectedIds: () => {},
+  ctrlHeld: () => false,
+  registerNodeRect: () => {},
+  unregisterNodeRect: () => {},
+  getNodeRects: () => new Map(),
+  registerHeaderHeight: () => {},
+  unregisterHeaderHeight: () => {},
+  getHeaderHeights: () => new Map(),
+  fitView: () => {},
+};
+
+function renderNodeContainer(ui: () => import('solid-js').JSX.Element) {
+  return renderIntoContainer(() => (
+    <CanvasContext.Provider value={mockCanvasCtx}>
+      {ui()}
+    </CanvasContext.Provider>
+  ));
+}
+
+describe('NodeContainer', () => {
+  it('renders backing div with data-soft-container when softContainer returns true', () => {
+    const { container, cleanup } = renderNodeContainer(() =>
+      <NodeContainer nodeId="n1" x={() => 0} y={() => 0} w={() => 120} h={() => 60} softContainer={() => true} />
+    );
+    const backing = container.querySelector('[data-soft-container="true"]');
+    expect(backing).not.toBeNull();
+    cleanup();
+  });
+
+  it('does not render backing div when softContainer is omitted', () => {
+    const { container, cleanup } = renderNodeContainer(() =>
+      <NodeContainer nodeId="n2" x={() => 0} y={() => 0} w={() => 120} h={() => 60} />
+    );
+    const backing = container.querySelector('[data-soft-container="true"]');
+    expect(backing).toBeNull();
+    cleanup();
+  });
+
+  it('does not render backing div when softContainer returns false', () => {
+    const { container, cleanup } = renderNodeContainer(() =>
+      <NodeContainer nodeId="n3" x={() => 0} y={() => 0} w={() => 120} h={() => 60} softContainer={() => false} />
+    );
+    const backing = container.querySelector('[data-soft-container="true"]');
+    expect(backing).toBeNull();
     cleanup();
   });
 });

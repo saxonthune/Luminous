@@ -28,6 +28,7 @@ export const CACTUS_TOKENS = [
   'resize-handle',
   'shadow-sm',
   'shadow-lg',
+  'container-tint',
 ] as const;
 
 export type CactusToken = (typeof CACTUS_TOKENS)[number];
