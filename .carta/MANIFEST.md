@@ -112,6 +112,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc03.04 | `04-visual-perception-research.md` | Research synthesis on cognitive load theory, Gestalt principles, node-link diagram effectiveness, and information visualization best practices — applied to Luminous canvas pipelines | research, visualization, perception, cognitive-load, gestalt, pipelines | doc02.05 | — | — |
 | doc03.05 | `05-reference-graphs-and-ui-frameworks.md` | Research session synthesizing the browser rendering pipeline, Solid's reactive primitives, Qwik's resumability, and the framing of UI frameworks as DSLs over a live reference graph — with implications for Milestone 1's static analysis pipeline | research, reactivity, solid, qwik, rendering, pipeline, reference-graph, dsl | doc01.03.01, doc02.06.01, doc03.01 | — | — |
 | doc03.06 | `06-tinyforum-as-shared-ai-context.md` | Framing Milestone 2: Luminous makes tinyForum easier to build with AI by producing artifacts that humans read spatially and AI agents read as rich structured context — canvases as the shared medium between both consumers | research, tinyforum, milestone-2, dogfooding, ai-context, canvas, mcp | doc01.01, doc01.03.02, doc02.01 | — | — |
+| doc03.07 | `07-semantic-zoom-counterscale.md` | Research on level-of-detail semantic zoom and counter-scaled text — how to guarantee canvas text legibility under d3-zoom geometric scaling | research, semantic-zoom, zoom, typography, legibility, cactus | doc02.05 | — | — |
 
 ## Tag Index
 
@@ -132,7 +133,7 @@ Quick lookup for file-path→doc mapping:
 | `bevy` | doc03.03 |
 | `boundaries` | doc02.19 |
 | `boundary` | doc02.20 |
-| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.20 |
+| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.20, doc03.07 |
 | `cactus-boundary` | doc02.08 |
 | `canvas` | doc01.01, doc02.05.01, doc02.05.02, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
@@ -177,6 +178,7 @@ Quick lookup for file-path→doc mapping:
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |
 | `layout` | doc02.05.03, doc02.05.04 |
+| `legibility` | doc03.07 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc02.04, doc02.15, doc03.06 |
 | `menus` | doc02.20 |
@@ -209,12 +211,13 @@ Quick lookup for file-path→doc mapping:
 | `reference-graph` | doc03.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc03.05 |
-| `research` | doc03.00, doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06 |
+| `research` | doc03.00, doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07 |
 | `retrieval` | doc00.04 |
 | `roadmap` | doc01.03.01 |
 | `rtp` | doc02.10.03 |
 | `schema` | doc02.06.02, doc02.14, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
+| `semantic-zoom` | doc03.07 |
 | `server` | doc02.03 |
 | `shell` | doc02.12 |
 | `software-design` | doc01.01 |
@@ -229,6 +232,7 @@ Quick lookup for file-path→doc mapping:
 | `tldraw` | doc03.03 |
 | `tools` | doc02.04, doc02.15 |
 | `types` | doc02.05.02, doc02.06.02 |
+| `typography` | doc03.07 |
 | `ui` | doc02.12 |
 | `unfolding` | doc02.01, doc02.02 |
 | `use-cases` | doc02.10.00 |
@@ -239,3 +243,4 @@ Quick lookup for file-path→doc mapping:
 | `visualization` | doc01.01, doc03.04 |
 | `vocabulary` | doc03.02 |
 | `xstate` | doc02.10.03 |
+| `zoom` | doc03.07 |
