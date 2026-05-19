@@ -1,4 +1,5 @@
 import type { LayoutRequest, LayoutResult } from './layout-types.js';
+import { packRects } from './packing.js';
 
 export type { LayoutRequest, LayoutResult };
 
@@ -20,6 +21,7 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
     headerHeight = 24,
     headerHeights,
     edges,
+    layoutPolicy,
   } = req;
 
   const nodeSize = opts?.nodeSize ?? { w: 120, h: 60 };
@@ -74,41 +76,60 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
       layoutNode(childId);
     }
 
-    const cols = Math.ceil(Math.sqrt(children.length));
-    const { x: gapX, y: gapY } = gapsFor(id);
+    const policy = layoutPolicy?.get(id) ?? 'pack';
 
-    let curX = padding;
-    let curY = headerFor(id) + padding;
-    let col = 0;
-    let rowH = 0;
+    if (policy === 'pack') {
+      const packInput = children.map((cid) => {
+        const s = sizes.get(cid)!;
+        return { id: cid, w: s.w, h: s.h };
+      });
+      const packed = packRects(packInput, { gap: baseGap });
+      const offsetX = padding;
+      const offsetY = headerFor(id) + padding;
+      for (const [cid, pos] of packed.positions) {
+        positions.set(cid, { x: pos.x + offsetX, y: pos.y + offsetY });
+      }
+      sizes.set(id, {
+        w: packed.size.w + padding * 2,
+        h: packed.size.h + headerFor(id) + padding * 2,
+      });
+    } else {
+      const cols = Math.ceil(Math.sqrt(children.length));
+      const { x: gapX, y: gapY } = gapsFor(id);
 
-    for (const childId of children) {
-      const childSize = sizes.get(childId)!;
+      let curX = padding;
+      let curY = headerFor(id) + padding;
+      let col = 0;
+      let rowH = 0;
 
-      if (col > 0 && col % cols === 0) {
-        curX = padding;
-        curY += rowH + gapY;
-        rowH = 0;
-        col = 0;
+      for (const childId of children) {
+        const childSize = sizes.get(childId)!;
+
+        if (col > 0 && col % cols === 0) {
+          curX = padding;
+          curY += rowH + gapY;
+          rowH = 0;
+          col = 0;
+        }
+
+        positions.set(childId, { x: curX, y: curY });
+        rowH = Math.max(rowH, childSize.h);
+        curX += childSize.w + gapX;
+        col++;
       }
 
-      positions.set(childId, { x: curX, y: curY });
-      rowH = Math.max(rowH, childSize.h);
-      curX += childSize.w + gapX;
-      col++;
-    }
+      // Bounding box of placed children
+      let maxRight = 0;
+      let maxBottom = 0;
+      for (const childId of children) {
+        const pos = positions.get(childId)!;
+        const sz = sizes.get(childId)!;
+        maxRight = Math.max(maxRight, pos.x + sz.w);
+        maxBottom = Math.max(maxBottom, pos.y + sz.h);
+      }
 
-    // Bounding box of placed children
-    let maxRight = 0;
-    let maxBottom = 0;
-    for (const childId of children) {
-      const pos = positions.get(childId)!;
-      const sz = sizes.get(childId)!;
-      maxRight = Math.max(maxRight, pos.x + sz.w);
-      maxBottom = Math.max(maxBottom, pos.y + sz.h);
+      sizes.set(id, { w: maxRight + padding, h: maxBottom + padding });
     }
-
-    sizes.set(id, { w: maxRight + padding, h: maxBottom + padding });
   }
 
   for (const rootId of rootIds) {

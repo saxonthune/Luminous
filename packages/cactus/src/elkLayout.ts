@@ -6,6 +6,7 @@ export type { LayoutRequest, LayoutResult };
 
 export interface ElkLayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
+  opaqueContainers?: ReadonlySet<string>;
 }
 
 function buildElkNode(
@@ -15,11 +16,12 @@ function buildElkNode(
   defaultSize: { w: number; h: number },
   headerHeight: number,
   headerHeights?: ReadonlyMap<string, number>,
+  opaqueContainers?: ReadonlySet<string>,
 ): ElkNode {
   const children = childrenOf.get(id) ?? [];
   const size = nodeSizes?.get(id);
 
-  if (children.length === 0) {
+  if (children.length === 0 || opaqueContainers?.has(id)) {
     return {
       id,
       width: size?.w ?? defaultSize.w,
@@ -39,7 +41,7 @@ function buildElkNode(
       'elk.padding': `[top=${topPad},left=8,right=8,bottom=8]`,
     },
     children: children.map((cid) =>
-      buildElkNode(cid, childrenOf, nodeSizes, defaultSize, headerHeight, headerHeights)
+      buildElkNode(cid, childrenOf, nodeSizes, defaultSize, headerHeight, headerHeights, opaqueContainers)
     ),
   };
 }
@@ -72,6 +74,7 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
   } = req;
 
   const direction = opts?.direction ?? 'RIGHT';
+  const opaqueContainers = opts?.opaqueContainers;
 
   const elk = new ELK();
 
@@ -102,7 +105,7 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
       'elk.edgeLabels.inline': 'false',
     },
     children: rootIds.map((rid) =>
-      buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights)
+      buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers)
     ),
     edges: filteredEdges.map((e) => ({
       id: e.id,

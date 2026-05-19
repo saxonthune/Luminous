@@ -31,6 +31,7 @@ describe('gridLayout', () => {
         childrenOf,
         headerHeight: 20,
         edges: [],
+        layoutPolicy: new Map([['root', 'grid']]),
       },
       { nodeSize: { w: 100, h: 50 }, padding: 10, gap: 5 },
     );
@@ -86,6 +87,7 @@ describe('gridLayout', () => {
         nodeSizes,
         headerHeight: 20,
         edges: [],
+        layoutPolicy: new Map([['parent', 'grid']]),
       },
       { nodeSize: { w: 120, h: 60 }, padding: 10, gap: 5 },
     );

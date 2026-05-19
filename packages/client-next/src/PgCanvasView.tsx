@@ -341,22 +341,16 @@ function CanvasInner(props: {
     });
   });
 
-  // Both layouts are created unconditionally so the chosen one can swap reactively
-  // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
-  const [elkResult] = createResource(
-    () => props.algorithm === 'elk'
-      ? {
-          rootIds: containment().rootIds,
-          childrenOf: containment().childrenOf,
-          edges: layoutEdges(),
-          nodeSizes: measuredLeafSizes(),
-          headerHeight: HEADER_HEIGHT,
-          headerHeights: measuredHeaderHeights(),
-        }
-      : null,
-    (input): Promise<LayoutResult> => elkLayout(input, { direction: 'RIGHT' }),
-  );
+  // All containers default to 'pack'. This map is the extension point for future per-node overrides.
+  const layoutPolicy = createMemo((): ReadonlyMap<string, 'pack' | 'grid'> => {
+    const map = new Map<string, 'pack' | 'grid'>();
+    for (const [id, kids] of containment().childrenOf) {
+      if (kids.length > 0) map.set(id, 'pack');
+    }
+    return map;
+  });
 
+  // gridResult: both the grid-mode output and the pack pre-pass for elk mode.
   const gridResult = createMemo(() => gridLayout({
     rootIds: containment().rootIds,
     childrenOf: containment().childrenOf,
@@ -364,11 +358,72 @@ function CanvasInner(props: {
     headerHeight: HEADER_HEIGHT,
     headerHeights: measuredHeaderHeights(),
     edges: layoutEdges(),
+    layoutPolicy: layoutPolicy(),
   }));
 
-  const baseLayout = createMemo<LayoutResult | null>(
-    () => props.algorithm === 'elk' ? (elkResult() ?? null) : gridResult(),
+  // Both layouts are created unconditionally so the chosen one can swap reactively
+  // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
+  const [elkResult] = createResource(
+    () => {
+      if (props.algorithm !== 'elk') return null;
+      const ct = containment();
+      const gr = gridResult();
+      const policy = layoutPolicy();
+
+      // All 'pack' containers are opaque leaves to ELK — their sizes come from gridResult.
+      const opaqueContainers = new Set<string>();
+      for (const [id, p] of policy) {
+        if (p === 'pack') opaqueContainers.add(id);
+      }
+
+      // Merge packed container sizes into nodeSizes so ELK can use them as fixed boxes.
+      const mergedSizes = new Map(measuredLeafSizes());
+      for (const id of opaqueContainers) {
+        const sz = gr.sizes.get(id);
+        if (sz) mergedSizes.set(id, sz);
+      }
+
+      return {
+        req: {
+          rootIds: ct.rootIds,
+          childrenOf: ct.childrenOf,
+          edges: layoutEdges(),
+          nodeSizes: mergedSizes as ReadonlyMap<string, { w: number; h: number }>,
+          headerHeight: HEADER_HEIGHT,
+          headerHeights: measuredHeaderHeights(),
+        },
+        opaqueContainers,
+      };
+    },
+    (input): Promise<LayoutResult> =>
+      elkLayout(input.req, { direction: 'RIGHT', opaqueContainers: input.opaqueContainers }),
   );
+
+  const baseLayout = createMemo<LayoutResult | null>(() => {
+    if (props.algorithm !== 'elk') return gridResult();
+
+    const elkRes = elkResult();
+    if (!elkRes) return null;
+
+    const gr = gridResult();
+    const ct = containment();
+
+    // Positions: start with gridResult (parent-relative for non-roots), override roots with elk absolute positions.
+    const positions = new Map(gr.positions);
+    for (const rootId of ct.rootIds) {
+      const elkPos = elkRes.positions.get(rootId);
+      if (elkPos) positions.set(rootId, elkPos);
+    }
+
+    // Sizes: gridResult covers all nodes. Override with elk sizes where elk has them
+    // (for roots elk returns what we gave it, so values agree).
+    const sizes = new Map(gr.sizes);
+    for (const [id, sz] of elkRes.sizes) {
+      sizes.set(id, sz);
+    }
+
+    return { positions, sizes };
+  });
 
   createEffect(() => {
     const base = baseLayout();

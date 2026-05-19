@@ -12,6 +12,8 @@ export interface LayoutRequest {
     to: string;
     label?: { w: number; h: number };
   }>;
+  /** Per-parent layout choice. Key is a parent node id. Unset parents default to 'pack'. */
+  layoutPolicy?: ReadonlyMap<string, 'pack' | 'grid'>;
 }
 
 export interface LayoutResult {

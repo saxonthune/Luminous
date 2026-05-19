@@ -33,6 +33,8 @@ export type { GridLayoutOptions } from './gridLayout.js';
 export { elkLayout } from './elkLayout.js';
 export type { ElkLayoutOptions } from './elkLayout.js';
 export type { LayoutRequest, LayoutResult } from './layout-types.js';
+export { packRects } from './packing.js';
+export type { PackRect, PackOptions, PackResult } from './packing.js';
 export { useNodeLinks } from './useNodeLinks.js';
 export type { Transform } from './useViewport.js';
 export type { CanvasProps, CanvasRef, ConnectionPreviewCoords } from './Canvas.js';
