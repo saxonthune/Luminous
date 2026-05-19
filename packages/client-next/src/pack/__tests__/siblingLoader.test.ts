@@ -80,15 +80,17 @@ describe('loadAndRegisterSiblingPack — successful sibling load', () => {
     expect(resolvePack('test-pack')).toBeDefined();
   });
 
-  it('does not re-fetch if the pack is already registered', async () => {
+  it('re-fetches after the registry has been reset', async () => {
     const mockFetch = vi.fn((_url: string) =>
       Promise.resolve(new Response(minimalPackJson, { status: 200 }))
     );
     vi.stubGlobal('fetch', mockFetch);
 
     await loadAndRegisterSiblingPack('workspace/graphs/foo.graph.json', graphTextWithPack);
+    resetRegistry();
     await loadAndRegisterSiblingPack('workspace/graphs/foo.graph.json', graphTextWithPack);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(resolvePack('test-pack')).toBeDefined();
   });
 });
 

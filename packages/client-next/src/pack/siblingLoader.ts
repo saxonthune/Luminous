@@ -1,4 +1,4 @@
-import { parsePackJson, registerPack, resolvePack, getPrimitivesBuiltin, getRtpStatechartBuiltin } from '@luminous/core';
+import { parsePackJson, registerPack, getPrimitivesBuiltin, getRtpStatechartBuiltin } from '@luminous/core';
 
 /** Built-in packs, used as a fallback when sibling resolution fails. */
 const BUILTINS: Record<string, () => import('@luminous/core').Pack> = {
@@ -32,7 +32,7 @@ export function peekPackName(graphText: string): string {
 
 /**
  * Given a source ID and already-loaded graph text, load and register the
- * appropriate pack if not already registered:
+ * co-located pack (the caller resets the registry before each call):
  *   1. Try fetching the sibling <packName>.pack.json from the server.
  *   2. If the pack is "primitives" and the sibling 404s, use the shipped builtin.
  *   3. If the fetch fails or the pack is malformed, log and proceed
@@ -46,7 +46,6 @@ export async function loadAndRegisterSiblingPack(
 ): Promise<void> {
   const packName = peekPackName(graphText);
   if (!packName) return;
-  if (resolvePack(packName) !== undefined) return;
 
   const url = siblingPackUrl(sourceId, packName);
   let text: string | null = null;

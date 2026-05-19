@@ -1,5 +1,5 @@
 import { createSignal, createEffect, Match, Switch, onCleanup, onMount } from 'solid-js';
-import { loadGraphFromText, type Graph } from '@luminous/core';
+import { loadGraphFromText, resetRegistry, type Graph } from '@luminous/core';
 import { loadAndRegisterSiblingPack } from './pack/siblingLoader';
 import { DocumentPicker } from './DocumentPicker';
 import { AppHeader } from './AppHeader';
@@ -53,6 +53,7 @@ export function AppShell() {
       .load()
       .then(async (text) => {
         try {
+          resetRegistry();
           await loadAndRegisterSiblingPack(source.id, text);
           const g = loadGraphFromText(text);
           setGraph(g);
