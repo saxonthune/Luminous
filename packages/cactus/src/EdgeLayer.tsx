@@ -126,7 +126,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                       y={(pts().y1 + pts().y2) / 2}
                       text-anchor="middle"
                       dominant-baseline="middle"
-                      font-size={labelFontSize()}
+                      font-size={`${labelFontSize()}`}
                       fill={color}
                       stroke="var(--cactus-canvas-bg, #ffffff)"
                       stroke-width={labelHaloWidth()}
