@@ -95,6 +95,13 @@ Same as node, plus:
 | `from` | yes | `id` of the source node |
 | `to` | yes | `id` of the target node |
 
+**Edge labels.** Two paths exist, tried in order:
+
+1. **`edgeKind.render`** — a level-keyed map (same shape as `nodeKind.render`) producing a styled JSX label drawn on the connector. Wins if present.
+2. **`edge.props.label`** — a non-empty string drawn on the arrow, truncated and click-revealable. Quick path; requires the edgeKind's `props` JSON Schema to declare `"label"` (an `additionalProperties: false` schema with no `label` property will reject it at validation time).
+
+An edge with neither is drawn bare from its view role (`arrow`, `contain`, or `summary`). See the `render` row in the kind-fields table below for an `edgeKind.render` example.
+
 ---
 
 ## pack.json Format
@@ -136,10 +143,18 @@ Same as node, plus:
       "id": "domain.renders",
       "label": "renders",
       "directed": true,
-      "props": { "type": "object", "additionalProperties": false },
+      "props": {
+        "type": "object",
+        "properties": { "label": { "type": "string" } },
+        "additionalProperties": false
+      },
       "acceptsSource": ["domain.component"],   // optional — valid source kinds
-      "acceptsTarget": ["domain.component"]    // optional — valid target kinds
-      // no "render" — edges are drawn from their view role (arrow/contain/summary)
+      "acceptsTarget": ["domain.component"],   // optional — valid target kinds
+      // edges may carry a "render" (level-keyed map, same shape as a nodeKind's)
+      // OR rely on a "label" prop; absent both, drawn from view role (arrow/contain/summary)
+      "render": {
+        "card": { "type": "text", "value": "{content.label}", "style": "caption" }
+      }
     }
   ],
 
@@ -190,11 +205,31 @@ There are exactly four, ordered by zoom: **`peek` · `card` · `open` · `deep`*
 | `id` | yes | Namespaced with a prefix (e.g. `solid.`, `rust.`, `flow.`) |
 | `label` | yes | Human-readable label shown in the UI |
 | `props` | yes | JSON Schema for node/edge props |
-| `render` | no | Map of disclosure level → RenderNode. Omit to use fallback rendering |
+| `render` | no | Map of disclosure level → RenderNode. Applies to **both** nodeKinds and edgeKinds. For an edgeKind it produces the label drawn on the connector. Omit to use fallback rendering. |
 | `idTemplate` | no | Template for deriving an id from props — interactive creation only |
 | `defaultSize` | no | `{ "w": number, "h": number }` — initial node size |
 | `directed` | edgeKind | `true` for directed edges |
 | `acceptsSource` / `acceptsTarget` | edgeKind, no | Arrays of kind ids constraining edge endpoints |
+
+#### `edgeKind.render` example
+
+`render` on an edgeKind works exactly like on a nodeKind — a level-keyed map of RenderNode trees. Precedence: `edgeKind.render` wins; else a non-empty `edge.props.label` string is used; else the edge is drawn bare from its view role.
+
+```jsonc
+"render": {
+  "card": { "type": "text", "value": "{content.label}", "style": "caption" }
+}
+```
+
+For `edge.props.label` to pass validation the edgeKind's `props` schema must permit it — an `additionalProperties: false` schema with no `label` property will reject the edge at validation time:
+
+```jsonc
+"props": {
+  "type": "object",
+  "properties": { "label": { "type": "string" } },
+  "additionalProperties": false
+}
+```
 
 ### view fields
 
