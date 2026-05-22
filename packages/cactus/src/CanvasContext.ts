@@ -36,11 +36,15 @@ export interface CanvasContextValue {
   unregisterNodeRect: (id: string) => void;
   /** Reactive accessor — returns the current node rect map. Tracks rect version. */
   getNodeRects: () => ReadonlyMap<string, NodeRect>;
-  /** Register a node's measured header height. Called by <NodeHeader>. */
+  /**
+   * @deprecated Header heights are now computed by measureDeepLod (deepLodMeasure.tsx)
+   * and no longer driven by live-DOM measurement in NodeHeader. These stubs remain for
+   * backwards compat with any external consumers; they will be removed in a future cleanup.
+   */
   registerHeaderHeight: (nodeId: string, height: number) => void;
-  /** Unregister on cleanup. */
+  /** @deprecated See registerHeaderHeight. */
   unregisterHeaderHeight: (nodeId: string) => void;
-  /** Reactive accessor — returns the current header-height map. Tracks version. */
+  /** @deprecated See registerHeaderHeight. */
   getHeaderHeights: () => ReadonlyMap<string, number>;
   /**
    * Fit the viewport to the given canvas-space rects. padding is in screen pixels.
