@@ -134,6 +134,8 @@ export function InspectorPanel(props: InspectorPanelProps): JSX.Element {
       inspect: open,
       hasChildren: (_id: string) => false,
       sectionColorOf: (_id: string) => undefined as string | undefined,
+      currentNodeId: () => id,
+      expanded: () => true,
     };
 
     const nodeItem = props.graph.nodes.get(id);

@@ -130,6 +130,29 @@ Key/value rows. Each item is a fixed-key, interpolated-value pair.
 
 Layout primitives are containers. They have `children` arrays of other primitives.
 
+### `clamp`
+
+Wraps any content region and limits it to a fixed number of visible lines. When the content overflows, the node shows a CSS ellipsis and becomes click-to-inspect (opens the inspector panel showing the full content). Use this to bound prose-heavy fields so node sizes stay predictable.
+
+`text` with `style: "body"` or `style: "caption"` auto-clamps to 4 lines by default — explicit `clamp` wrappers are only needed when you want a different line count or want to clamp non-text content.
+
+```json
+{
+  "type": "clamp",
+  "lines": 8,
+  "children": [
+    { "type": "text", "value": "{content.description}", "style": "body" }
+  ]
+}
+```
+
+| Prop | Type | Notes |
+|------|------|-------|
+| `lines` | number | Max visible lines before ellipsis. Default: 3 |
+| `children` | array | Any primitives whose combined text content may overflow |
+
+**Inspector behaviour:** clicking an overflowed clamp region opens the inspector, which renders at full-expand (no clamp applied). No separate popover or modal is created.
+
 ### `vstack`
 
 Vertical stack of children.

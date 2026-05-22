@@ -12,6 +12,7 @@ import Markdown from './primitives/Markdown.tsx';
 import CodeBlock from './primitives/CodeBlock.tsx';
 import Image from './primitives/Image.tsx';
 import KvList from './primitives/KvList.tsx';
+import Clamp from './primitives/Clamp.tsx';
 
 // Canonical name list lives in primitive-names.ts (plain data, safe for headless import).
 registerPrimitive('text', Text);
@@ -27,3 +28,4 @@ registerPrimitive('markdown', Markdown);
 registerPrimitive('code-block', CodeBlock);
 registerPrimitive('image', Image);
 registerPrimitive('kv-list', KvList);
+registerPrimitive('clamp', Clamp);

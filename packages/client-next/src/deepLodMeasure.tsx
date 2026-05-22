@@ -124,6 +124,9 @@ export function measureDeepLod(
         hasChildren: (id) => (containment.childrenOf.get(id)?.length ?? 0) > 0,
         inspect: () => {},
         sectionColorOf: () => undefined,
+        currentNodeId: () => nodeId,
+        // Do NOT set expanded: true here. Measurement must see the clamped (visible)
+        // form so that node sizes stay bounded by what's actually rendered on canvas.
       };
 
       const content = node.props as Record<string, unknown>;

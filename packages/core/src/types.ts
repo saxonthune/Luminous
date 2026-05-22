@@ -254,6 +254,10 @@ export interface RenderContext {
   /** Section color for this node — the palette color of its top-level
    *  container ancestor. Undefined for top-level nodes. */
   sectionColorOf: (nodeId: NodeId) => string | undefined;
+  /** The node currently being rendered — lets clamp primitives call inspect without an explicit id. */
+  currentNodeId?: () => NodeId | undefined;
+  /** True in the inspector panel — suppresses clamping so full content is visible. */
+  expanded?: () => boolean;
 }
 
 // ============================================================================

@@ -1,8 +1,10 @@
 import { createMemo, Show } from 'solid-js';
 import type { JSX } from 'solid-js';
 import type { RenderContext } from '../../types.ts';
+import { useOverflowInspect } from '../useOverflowInspect.ts';
 
 const LEGIBILITY_FLOOR = 7;
+const AUTO_CLAMP_LINES = 4;
 const BASE_PX: Record<string, number> = { heading: 14, body: 12, caption: 11, mono: 12 };
 
 const styleMap: Record<string, JSX.CSSProperties> = {
@@ -45,16 +47,48 @@ export default function Text(
   }
 
   // body / caption / mono: geometric sizing, culled below legibility floor.
-  // max-width caps runaway inline text that would bloat deep-LOD measurements;
-  // follow-up task `text-overflow-clamp` will replace this with a real overflow primitive.
   const basePx = BASE_PX[styleName] ?? 12;
-  const wrapStyle: JSX.CSSProperties =
-    styleName === 'body' || styleName === 'caption'
-      ? { 'max-width': '320px', 'white-space': 'normal', 'overflow-wrap': 'break-word' }
-      : {};
+  const isClampable = styleName === 'body' || styleName === 'caption';
+
+  // Auto-clamp default for body/caption. Pack authors who need different behavior
+  // should wrap content in a 'clamp' primitive explicitly.
+  if (isClampable && !ctx.expanded?.()) {
+    const { overflowed, setRef, onMouseDown, onClick } = useOverflowInspect(ctx);
+
+    return (
+      <Show when={basePx * ctx.zoom() >= LEGIBILITY_FLOOR} fallback={null}>
+        <div
+          ref={setRef}
+          style={{
+            'max-width': '320px',
+            'white-space': 'normal',
+            'overflow-wrap': 'break-word',
+            display: '-webkit-box',
+            '-webkit-box-orient': 'vertical',
+            '-webkit-line-clamp': String(AUTO_CLAMP_LINES),
+            'line-clamp': String(AUTO_CLAMP_LINES),
+            overflow: 'hidden',
+            'text-overflow': 'ellipsis',
+            ...(overflowed() ? { cursor: 'pointer' } : {}),
+          }}
+          title={overflowed() ? 'Click to expand' : undefined}
+          onMouseDown={onMouseDown}
+          onClick={onClick}
+        >
+          <span style={baseStyle}>{value}</span>
+        </div>
+      </Show>
+    );
+  }
+
   return (
     <Show when={basePx * ctx.zoom() >= LEGIBILITY_FLOOR} fallback={null}>
-      <span style={{ ...baseStyle, ...wrapStyle }}>{value}</span>
+      <span style={{
+        ...baseStyle,
+        ...(isClampable
+          ? { 'max-width': '320px', 'white-space': 'normal', 'overflow-wrap': 'break-word' }
+          : {}),
+      }}>{value}</span>
     </Show>
   );
 }

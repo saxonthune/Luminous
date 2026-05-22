@@ -154,6 +154,7 @@ function renderNodes(
           undefined,
           { equals: (a, b) => a.w === b.w && a.h === b.h },
         );
+        const nodeCtx = { ...renderCtx, currentNodeId: () => nodeId };
         return (
           <NodeContainer
             nodeId={nodeId}
@@ -164,7 +165,7 @@ function renderNodes(
             softContainer={() => renderCtx.hasChildren(nodeId)}
             onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
           >
-            {resolveNodeRender(node, renderCtx)}
+            {resolveNodeRender(node, nodeCtx)}
           </NodeContainer>
         );
       }}
