@@ -85,7 +85,7 @@ function FallbackProps(props: {
 }
 
 export function InspectorPanel(props: InspectorPanelProps): JSX.Element {
-  const { target, open, back, close, stack } = useInspector();
+  const { target, open, back, close, stack, debugMode } = useInspector();
   const canvasCtx = useContext(CanvasContext);
 
   onMount(() => {
@@ -120,6 +120,10 @@ export function InspectorPanel(props: InspectorPanelProps): JSX.Element {
     const item = currentItem();
     if (!item) {
       return <p style={{ color: '#999', 'font-style': 'italic' }}>Not in graph</p>;
+    }
+
+    if (debugMode()) {
+      return <FallbackProps item={item} graph={props.graph} open={open} />;
     }
 
     const renderCtx = {

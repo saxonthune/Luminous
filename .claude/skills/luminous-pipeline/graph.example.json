@@ -1,0 +1,53 @@
+{
+  "version": 3,
+  "pack": "example-domain",
+  "defaultView": "flow",
+  "nodes": [
+    {
+      "id": "screen.Home",
+      "kind": "example.screen",
+      "props": {
+        "name": "Home",
+        "description": "Landing surface.",
+        "tier": 0
+      },
+      "tags": ["landing"]
+    },
+    {
+      "id": "screen.Settings",
+      "kind": "example.screen",
+      "props": {
+        "name": "Settings",
+        "description": "User preferences."
+      },
+      "tags": []
+    },
+    {
+      "id": "action.openSettings",
+      "kind": "example.action",
+      "props": {
+        "name": "openSettings",
+        "signature": "openSettings(): void"
+      },
+      "tags": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.example.transitions-to.screen.Home.screen.Settings",
+      "kind": "example.transitions-to",
+      "from": "screen.Home",
+      "to": "screen.Settings",
+      "props": { "label": "Open settings" },
+      "tags": []
+    },
+    {
+      "id": "edge.example.invokes.screen.Home.action.openSettings",
+      "kind": "example.invokes",
+      "from": "screen.Home",
+      "to": "action.openSettings",
+      "props": {},
+      "tags": []
+    }
+  ]
+}

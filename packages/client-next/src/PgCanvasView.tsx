@@ -182,13 +182,13 @@ function CanvasInner(props: {
   spacing?: number;
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
-  exposeInspect?: (fn: (id: string) => void) => void;
+  exposeInspect?: (fn: (id: string, opts?: { debug?: boolean }) => void) => void;
 }): JSX.Element {
   const inspector = createInspector();
   const canvasCtx = useCanvasContext();
 
   // eslint-disable-next-line solid/reactivity -- exposeInspect is a one-shot registration callback
-  props.exposeInspect?.((id) => inspector.open(id));
+  props.exposeInspect?.((id, opts) => inspector.open(id, opts));
 
   const scene = createMemo(() => evaluateView(props.graph, props.view));
   const containment = createMemo(() => scene().containment);
@@ -499,7 +499,7 @@ function CanvasInner(props: {
 export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
   let canvasHandle: CanvasRef | undefined;
   let getRects: (() => NodeRect[]) | undefined;
-  let inspectFn: ((id: string) => void) | undefined;
+  let inspectFn: ((id: string, opts?: { debug?: boolean }) => void) | undefined;
 
   const [edges, setEdges] = createSignal<EdgeDeclaration[]>([]);
 
@@ -515,6 +515,8 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
   const handleAction = (id: string, payload?: unknown) => {
     if (id === 'NODE.INSPECT') {
       inspectFn?.((payload as { nodeId: string }).nodeId);
+    } else if (id === 'NODE.DEBUG') {
+      inspectFn?.((payload as { nodeId: string }).nodeId, { debug: true });
     } else {
       props.onAction?.(id, payload);
     }

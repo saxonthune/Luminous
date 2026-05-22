@@ -51,7 +51,7 @@ function makeInspectorValue(initialStack: string[]): {
   const open = (id: string) => setStack((prev) => [...prev, id]);
   const back = () => setStack((prev) => prev.slice(0, -1));
   const close = () => setStack([]);
-  return { value: { target, open, back, close, stack }, stackSignal: stack };
+  return { value: { target, open, back, close, stack, debugMode: () => false }, stackSignal: stack };
 }
 
 let container: HTMLDivElement;

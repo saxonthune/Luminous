@@ -1,9 +1,8 @@
-import { parsePackJson, registerPack, getPrimitivesBuiltin, getRtpStatechartBuiltin } from '@luminous/core';
+import { parsePackJson, registerPack, getPrimitivesBuiltin } from '@luminous/core';
 
 /** Built-in packs, used as a fallback when sibling resolution fails. */
 const BUILTINS: Record<string, () => import('@luminous/core').Pack> = {
   primitives: getPrimitivesBuiltin,
-  'rtp-statechart': getRtpStatechartBuiltin,
 };
 
 /**

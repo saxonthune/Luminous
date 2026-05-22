@@ -48,7 +48,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           'pack?': {
             type: 'described',
             innerType: 'string',
-            description: "Pack name to describe directly, e.g. 'rtp-statechart'. Provide either canvas or pack.",
+            description: "Pack name to describe directly, e.g. 'primitives'. Provide either canvas or pack.",
           },
         },
       },
@@ -84,7 +84,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           'pack?': {
             type: 'described',
             innerType: 'string',
-            description: "Pack name this canvas uses, e.g. 'rtp-statechart'. Resolves to a sibling <name>.pack.json.",
+            description: "Pack name this canvas uses, e.g. 'primitives'. Resolves to a sibling <name>.pack.json.",
           },
         },
       },

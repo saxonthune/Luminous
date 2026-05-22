@@ -29,9 +29,12 @@ function renderIntoContainer(ui: () => unknown): { container: HTMLElement; clean
   return { container, cleanup };
 }
 
-/** Query the edge SVG layer specifically (ignores NodeContainer drag handle SVGs). */
-function getEdgeSvg(container: HTMLElement): Element | null {
-  return container.querySelector('[data-cactus-edge-layer]');
+/** Query the two edge SVG layers (lines layer and labels layer). */
+function getEdgeLayers(container: HTMLElement): { lines: Element | null; labels: Element | null } {
+  return {
+    lines: container.querySelector('[data-cactus-edge-layer-lines]'),
+    labels: container.querySelector('[data-cactus-edge-layer-labels]'),
+  };
 }
 
 describe('Canvas edge rendering', () => {
@@ -52,10 +55,10 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
-    expect(edgeSvg).not.toBeNull();
+    const { lines } = getEdgeLayers(container);
+    expect(lines).not.toBeNull();
 
-    const line = edgeSvg!.querySelector('line');
+    const line = lines!.querySelector('line');
     expect(line).not.toBeNull();
 
     // Edge-to-edge routing: line from src center (130,120) toward tgt center
@@ -88,9 +91,9 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
-    expect(edgeSvg).not.toBeNull();
-    const path = edgeSvg!.querySelector('path');
+    const { lines } = getEdgeLayers(container);
+    expect(lines).not.toBeNull();
+    const path = lines!.querySelector('path');
     expect(path).not.toBeNull();
 
     cleanup();
@@ -103,8 +106,9 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
-    expect(edgeSvg).toBeNull();
+    const { lines, labels } = getEdgeLayers(container);
+    expect(lines).toBeNull();
+    expect(labels).toBeNull();
 
     cleanup();
   });
@@ -127,10 +131,10 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
-    expect(edgeSvg).not.toBeNull();
+    const { labels } = getEdgeLayers(container);
+    expect(labels).not.toBeNull();
 
-    const text = edgeSvg!.querySelector('text');
+    const text = labels!.querySelector('text');
     expect(text).not.toBeNull();
     expect(text!.textContent).toMatch(/…$/);
     expect(text!.textContent!.length).toBeLessThanOrEqual(29);
@@ -156,8 +160,8 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
-    const text = edgeSvg!.querySelector('text');
+    const { labels } = getEdgeLayers(container);
+    const text = labels!.querySelector('text');
     expect(text).not.toBeNull();
     expect(text!.textContent).toBe(shortLabel);
 
@@ -182,24 +186,24 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
-    expect(edgeSvg).not.toBeNull();
+    const { labels } = getEdgeLayers(container);
+    expect(labels).not.toBeNull();
 
     // No popover before click
-    expect(edgeSvg!.querySelector('foreignObject')).toBeNull();
+    expect(labels!.querySelector('foreignObject')).toBeNull();
 
     // Click truncated label
-    const text = edgeSvg!.querySelector('text')!;
+    const text = labels!.querySelector('text')!;
     text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     // Popover should appear with full text
-    const fo = edgeSvg!.querySelector('foreignObject');
+    const fo = labels!.querySelector('foreignObject');
     expect(fo).not.toBeNull();
     expect(fo!.textContent).toContain(longLabel);
 
     // Click the same label text again to toggle (collapse)
     text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(edgeSvg!.querySelector('foreignObject')).toBeNull();
+    expect(labels!.querySelector('foreignObject')).toBeNull();
 
     cleanup();
   });
@@ -219,10 +223,10 @@ describe('Canvas edge rendering', () => {
       </Canvas>
     ));
 
-    const edgeSvg = getEdgeSvg(container);
+    const { lines: linesLayer } = getEdgeLayers(container);
     // SVG layer exists (edges prop is non-empty), but no line should be drawn
     // because node-missing is not registered.
-    const lines = edgeSvg?.querySelectorAll('line') ?? [];
+    const lines = linesLayer?.querySelectorAll('line') ?? [];
     expect(lines.length).toBe(0);
 
     cleanup();

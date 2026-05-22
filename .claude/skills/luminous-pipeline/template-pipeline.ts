@@ -2,7 +2,6 @@
  * Template: Pipeline script for producing a Luminous graph.json + pack.json.
  *
  * Replace every <DOMAIN> placeholder with your domain's vocabulary.
- * This template is modelled on scripts/build-rtp-graph.ts in the Luminous repo.
  *
  * Usage (Node.js / tsx):
  *   npx tsx template-pipeline.ts

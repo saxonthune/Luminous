@@ -87,6 +87,10 @@ export function nodeContextMenuSchema(
         type: 'action',
         action: { id: 'NODE.INSPECT', label: 'Inspect', payload: { nodeId: node.id } },
       },
+      {
+        type: 'action',
+        action: { id: 'NODE.DEBUG', label: 'Debug', payload: { nodeId: node.id } },
+      },
     ],
   };
 }

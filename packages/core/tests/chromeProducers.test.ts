@@ -125,17 +125,25 @@ describe('layoutToolbarSchema', () => {
 // --- nodeContextMenuSchema ---
 
 describe('nodeContextMenuSchema', () => {
-  it('returns a menu with an Inspect action', () => {
+  it('returns a menu with Inspect and Debug actions', () => {
     const node = makeNode('n1');
     const result = nodeContextMenuSchema(node, []);
 
     expect(result).not.toBeUndefined();
-    expect(result!.items).toHaveLength(1);
-    const item = result!.items[0]!;
-    expect(item.type).toBe('action');
-    if (item.type === 'action') {
-      expect(item.action.id).toBe('NODE.INSPECT');
-      expect(item.action.payload).toEqual({ nodeId: 'n1' });
+    expect(result!.items).toHaveLength(2);
+
+    const inspect = result!.items[0]!;
+    expect(inspect.type).toBe('action');
+    if (inspect.type === 'action') {
+      expect(inspect.action.id).toBe('NODE.INSPECT');
+      expect(inspect.action.payload).toEqual({ nodeId: 'n1' });
+    }
+
+    const debug = result!.items[1]!;
+    expect(debug.type).toBe('action');
+    if (debug.type === 'action') {
+      expect(debug.action.id).toBe('NODE.DEBUG');
+      expect(debug.action.payload).toEqual({ nodeId: 'n1' });
     }
   });
 });

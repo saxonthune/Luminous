@@ -12,7 +12,7 @@ describe('fetchServerSources', () => {
         return Promise.resolve({
           json: () => Promise.resolve({
             documents: [
-              { path: 'Luminous/rtp-statechart.graph.json', name: 'rtp-statechart', root: 'Luminous', lastModified: 1000 },
+              { path: 'Luminous/sample-primitives.graph.json', name: 'sample-primitives', root: 'Luminous', lastModified: 1000 },
               { path: 'RankThePlanet/poc.graph.json', name: 'poc', root: 'RankThePlanet', lastModified: 2000 },
             ],
           }),
@@ -24,7 +24,7 @@ describe('fetchServerSources', () => {
     const sources = await fetchServerSources();
     expect(sources).toHaveLength(2);
     expect(sources.map((s) => s.id)).toEqual([
-      'Luminous/rtp-statechart.graph.json',
+      'Luminous/sample-primitives.graph.json',
       'RankThePlanet/poc.graph.json',
     ]);
     expect(sources.map((s) => s.root)).toEqual(['Luminous', 'RankThePlanet']);
@@ -54,12 +54,12 @@ describe('fetchServerSources', () => {
         return Promise.resolve({
           json: () => Promise.resolve({
             documents: [
-              { path: 'Luminous/rtp-statechart.graph.json', name: 'rtp-statechart', root: 'Luminous', lastModified: 1000 },
+              { path: 'Luminous/sample-primitives.graph.json', name: 'sample-primitives', root: 'Luminous', lastModified: 1000 },
             ],
           }),
         });
       }
-      if (url === '/api/document/' + encodeURIComponent('Luminous/rtp-statechart.graph.json')) {
+      if (url === '/api/document/' + encodeURIComponent('Luminous/sample-primitives.graph.json')) {
         return Promise.resolve({ text: () => Promise.resolve('{"version":3}') });
       }
       return Promise.reject(new Error('unexpected fetch: ' + url));
@@ -70,7 +70,7 @@ describe('fetchServerSources', () => {
     const text = await sources[0].load();
 
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/document/' + encodeURIComponent('Luminous/rtp-statechart.graph.json')
+      '/api/document/' + encodeURIComponent('Luminous/sample-primitives.graph.json')
     );
     expect(text).toBe('{"version":3}');
   });
