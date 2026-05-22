@@ -11,6 +11,13 @@ export interface ElkLayoutOptions {
   spacing?: number;
 }
 
+/**
+ * Width of one tier band in the synthetic positions we hand to ELK's
+ * INTERACTIVE layerer. The exact number doesn't matter; only the *ordering*
+ * of x values determines layer assignment.
+ */
+const TIER_BAND_PX = 1000;
+
 function buildElkNode(
   id: string,
   childrenOf: ReadonlyMap<string, ReadonlyArray<string>>,
@@ -19,11 +26,11 @@ function buildElkNode(
   headerHeight: number,
   headerHeights?: ReadonlyMap<string, number>,
   opaqueContainers?: ReadonlySet<string>,
-  layerHints?: ReadonlyMap<string, number>,
+  positionHints?: ReadonlyMap<string, number>,
 ): ElkNode {
   const children = childrenOf.get(id) ?? [];
   const size = nodeSizes?.get(id);
-  const hint = layerHints?.get(id);
+  const xHint = positionHints?.get(id);
 
   if (children.length === 0 || opaqueContainers?.has(id)) {
     const leaf: ElkNode = {
@@ -31,10 +38,11 @@ function buildElkNode(
       width: size?.w ?? defaultSize.w,
       height: size?.h ?? defaultSize.h,
     };
-    if (hint !== undefined) {
-      leaf.layoutOptions = {
-        'elk.layered.layering.layerChoiceConstraint': String(hint),
-      };
+    if (xHint !== undefined) {
+      // Same value on both axes so this works for either RIGHT or DOWN flow —
+      // the interactive layerer reads the coord along the flow direction.
+      leaf.x = xHint;
+      leaf.y = xHint;
     }
     return leaf;
   }
@@ -46,19 +54,21 @@ function buildElkNode(
   const layoutOptions: Record<string, string> = {
     'elk.padding': `[top=${topPad},left=8,right=8,bottom=8]`,
   };
-  if (hint !== undefined) {
-    layoutOptions['elk.layered.layering.layerChoiceConstraint'] = String(hint);
-  }
 
-  return {
+  const node: ElkNode = {
     id,
     width: minW,
     height: minH,
     layoutOptions,
     children: children.map((cid) =>
-      buildElkNode(cid, childrenOf, nodeSizes, defaultSize, headerHeight, headerHeights, opaqueContainers, layerHints)
+      buildElkNode(cid, childrenOf, nodeSizes, defaultSize, headerHeight, headerHeights, opaqueContainers, positionHints)
     ),
   };
+  if (xHint !== undefined) {
+    node.x = xHint;
+    node.y = xHint;
+  }
+  return node;
 }
 
 function collectPositionsAndSizes(
@@ -91,6 +101,36 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
 
   const direction = opts?.direction ?? 'RIGHT';
   const opaqueContainers = opts?.opaqueContainers;
+
+  // INTERACTIVE layering: elkjs implements `InteractiveLayerer` (it does NOT
+  // implement `layerChoiceConstraint`, despite registering the option). To
+  // honor tier hints we set the layering strategy to INTERACTIVE and hand each
+  // leaf an x-coordinate; the layerer assigns layers by x ordering. Nodes
+  // without a hint go to (maxTier+1)*BAND so they sit after the last hinted
+  // tier rather than collapsing into layer 0.
+  let positionHints: ReadonlyMap<string, number> | undefined;
+  let useInteractive = false;
+  if (layerHints && layerHints.size > 0) {
+    useInteractive = true;
+    let maxTier = 0;
+    for (const t of layerHints.values()) {
+      if (t > maxTier) maxTier = t;
+    }
+    const fallbackX = (maxTier + 1) * TIER_BAND_PX;
+    const positions = new Map<string, number>();
+    const visit = (id: string): void => {
+      const isLeaf = (childrenOf.get(id) ?? []).length === 0 || opaqueContainers?.has(id);
+      if (isLeaf) {
+        const hint = layerHints.get(id);
+        positions.set(id, hint !== undefined ? hint * TIER_BAND_PX : fallbackX);
+      }
+      if (!opaqueContainers?.has(id)) {
+        for (const cid of childrenOf.get(id) ?? []) visit(cid);
+      }
+    };
+    for (const rid of rootIds) visit(rid);
+    positionHints = positions;
+  }
 
   // Spacing multiplier: scaling the spacing constants keeps ELK's node ordering
   // (crossing minimization is deterministic for the same graph), so the layout
@@ -153,10 +193,13 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
       'elk.layered.crossingMinimization.semiInteractive': 'false',
       'elk.layered.crossingMinimization.greedySwitch.type': 'TWO_SIDED',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.cycleBreaking.strategy': 'GREEDY',
+      'elk.layered.cycleBreaking.strategy': useInteractive ? 'INTERACTIVE' : 'GREEDY',
+      ...(useInteractive
+        ? { 'elk.layered.layering.strategy': 'INTERACTIVE' }
+        : {}),
     },
     children: rootIds.map((rid) =>
-      buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers, layerHints)
+      buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers, positionHints)
     ),
     edges: filteredEdges.map((e) => ({
       id: e.id,

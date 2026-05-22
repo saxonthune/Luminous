@@ -407,7 +407,7 @@ function CanvasInner(props: {
     },
     (input): Promise<LayoutResult> =>
       elkLayout(input.req, {
-        direction: 'RIGHT',
+        direction: 'DOWN',
         opaqueContainers: input.opaqueContainers,
         spacing: input.spacing,
       }),
