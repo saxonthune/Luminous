@@ -91,6 +91,10 @@ All paths are relative to the workspace root, **without** the `.carta/` prefix (
 | `carta rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
 | `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
 
+### Pack/graph schema changes
+
+When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.
+
 ## Tech Stack
 
 Solid.js, TypeScript 5.9, Vite, Tailwind, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest

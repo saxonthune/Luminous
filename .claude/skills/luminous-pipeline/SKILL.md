@@ -244,6 +244,20 @@ For `edge.props.label` to pass validation the edgeKind's `props` schema must per
 | `layers` | Map of layer id → `on` \| `off` \| `peek` |
 | `layout` | `{ "algorithm": "elk" \| "force" }` |
 
+### Layout hints
+
+A nodeKind may declare optional integer props that the ELK layout engine reads as placement hints. These are normal `props` entries in the nodeKind's JSON Schema — not a new top-level slot.
+
+**`tier`** — integer ≥ 0 on a node instance's `props`. Lower values place the node closer to the layout's starting edge (left, with `RIGHT` direction). Soft hint: ELK may override it when cycle-breaking demands. Ignored by non-ELK algorithms.
+
+```json
+// nodeKind props schema
+"props": { "tier": { "type": "integer", "minimum": 0 } }
+
+// node instance
+{ "id": "n1", "kind": "component", "props": { "tier": 0 } }
+```
+
 ### roles
 
 A role tells a view how to present a kind. Node kinds go in `nodeRoles`, edge kinds in `edgeRoles`:
