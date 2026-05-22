@@ -42,7 +42,8 @@
           "description": { "type": "string" },
           "tags": { "type": "array", "items": { "type": "string" } },
           "surface": { "type": "string" },
-          "reads": { "type": "array", "items": { "type": "string" } }
+          "reads": { "type": "array", "items": { "type": "string" } },
+          "tier": { "type": "integer", "minimum": 0 }
         },
         "required": ["description"],
         "additionalProperties": false

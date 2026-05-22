@@ -456,7 +456,8 @@
           "all-collections",
           "all-entries",
           "viewport"
-        ]
+        ],
+        "tier": 0
       },
       "tags": [
         "landing",

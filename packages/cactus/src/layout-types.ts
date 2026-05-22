@@ -14,6 +14,8 @@ export interface LayoutRequest {
   }>;
   /** Per-parent layout choice. Key is a parent node id. Unset parents default to 'pack'. */
   layoutPolicy?: ReadonlyMap<string, 'pack' | 'grid'>;
+  /** Per-node soft layering hints. Lower = closer to layout start. */
+  layerHints?: ReadonlyMap<string, number>;
 }
 
 export interface LayoutResult {

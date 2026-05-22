@@ -19,31 +19,44 @@ function buildElkNode(
   headerHeight: number,
   headerHeights?: ReadonlyMap<string, number>,
   opaqueContainers?: ReadonlySet<string>,
+  layerHints?: ReadonlyMap<string, number>,
 ): ElkNode {
   const children = childrenOf.get(id) ?? [];
   const size = nodeSizes?.get(id);
+  const hint = layerHints?.get(id);
 
   if (children.length === 0 || opaqueContainers?.has(id)) {
-    return {
+    const leaf: ElkNode = {
       id,
       width: size?.w ?? defaultSize.w,
       height: size?.h ?? defaultSize.h,
     };
+    if (hint !== undefined) {
+      leaf.layoutOptions = {
+        'elk.layered.layering.layerChoiceConstraint': String(hint),
+      };
+    }
+    return leaf;
   }
 
   const minW = size?.w ?? 200;
   const minH = size?.h ?? 120;
   const topPad = headerHeights?.get(id) ?? headerHeight;
 
+  const layoutOptions: Record<string, string> = {
+    'elk.padding': `[top=${topPad},left=8,right=8,bottom=8]`,
+  };
+  if (hint !== undefined) {
+    layoutOptions['elk.layered.layering.layerChoiceConstraint'] = String(hint);
+  }
+
   return {
     id,
     width: minW,
     height: minH,
-    layoutOptions: {
-      'elk.padding': `[top=${topPad},left=8,right=8,bottom=8]`,
-    },
+    layoutOptions,
     children: children.map((cid) =>
-      buildElkNode(cid, childrenOf, nodeSizes, defaultSize, headerHeight, headerHeights, opaqueContainers)
+      buildElkNode(cid, childrenOf, nodeSizes, defaultSize, headerHeight, headerHeights, opaqueContainers, layerHints)
     ),
   };
 }
@@ -73,6 +86,7 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
     defaultNodeSize = { w: 120, h: 60 },
     headerHeight = 24,
     headerHeights,
+    layerHints,
   } = req;
 
   const direction = opts?.direction ?? 'RIGHT';
@@ -142,7 +156,7 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
       'elk.layered.cycleBreaking.strategy': 'GREEDY',
     },
     children: rootIds.map((rid) =>
-      buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers)
+      buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers, layerHints)
     ),
     edges: filteredEdges.map((e) => ({
       id: e.id,

@@ -385,6 +385,12 @@ function CanvasInner(props: {
         if (sz) mergedSizes.set(id, sz);
       }
 
+      const layerHints = new Map<string, number>();
+      for (const [id, node] of props.graph.nodes) {
+        const t = (node.props as Record<string, unknown> | undefined)?.tier;
+        if (typeof t === 'number' && Number.isFinite(t)) layerHints.set(id, t);
+      }
+
       return {
         req: {
           rootIds: ct.rootIds,
@@ -393,6 +399,7 @@ function CanvasInner(props: {
           nodeSizes: mergedSizes as ReadonlyMap<string, { w: number; h: number }>,
           headerHeight: HEADER_HEIGHT,
           headerHeights: measuredHeaderHeights(),
+          layerHints,
         },
         opaqueContainers,
         spacing: props.spacing ?? 1,

@@ -31,6 +31,9 @@ export interface EdgeGeometry {
 }
 
 const BUNDLE_SPACING = 18;
+// Fraction of line length that labels in a bundle spread across, centered on
+// the midpoint. 0.4 means the outermost labels sit at t = 0.3 and t = 0.7.
+const LABEL_T_SPAN = 0.4;
 
 function lineExitsBox(
   cx: number,
@@ -91,6 +94,7 @@ export function routeEdges(
     let { x: x1, y: y1 } = start;
     let { x: x2, y: y2 } = end;
 
+    let labelT = 0.5;
     const bundle = bundles.get(pairKey(e.sourceId, e.targetId));
     if (bundle && bundle.length > 1) {
       // Fan-out perpendicular to the canonical pair axis (low-id → high-id).
@@ -115,6 +119,13 @@ export function routeEdges(
       y1 += oy;
       x2 += ox;
       y2 += oy;
+
+      // Stagger labels along their own line so wide labels on near-parallel
+      // bundles don't horizontally collide. Spread t across LABEL_T_SPAN
+      // centered at 0.5, deterministic by bundle index.
+      if (bundle.length > 1) {
+        labelT = 0.5 + (LABEL_T_SPAN * (index - center)) / Math.max(1, bundle.length - 1);
+      }
     }
 
     out.set(e.id, {
@@ -122,8 +133,8 @@ export function routeEdges(
       y1,
       x2,
       y2,
-      labelX: (x1 + x2) / 2,
-      labelY: (y1 + y2) / 2,
+      labelX: x1 + (x2 - x1) * labelT,
+      labelY: y1 + (y2 - y1) * labelT,
     });
   }
 
