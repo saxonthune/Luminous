@@ -22,6 +22,7 @@ import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
 import { levelFromZoom } from './disclosure/levelFromZoom';
+import { measureDeepLod } from './deepLodMeasure';
 
 export interface ViewerHandle {
   fitView: () => void;
@@ -290,43 +291,13 @@ function CanvasInner(props: {
     return { ...base, positions };
   }
 
-  // Stability guard: only propagate new leaf sizes when ≥1px change occurs, preventing
-  // layout thrash during the initial ResizeObserver burst.
-  let prevLeafSizes: ReadonlyMap<string, { w: number; h: number }> = new Map();
-  const measuredLeafSizes = createMemo<ReadonlyMap<string, { w: number; h: number }>>(() => {
-    const rects = canvasCtx.getNodeRects();
-    const childrenMap = containment().childrenOf;
-    const next = new Map<string, { w: number; h: number }>();
-    let changed = false;
-    for (const [id, rect] of rects) {
-      const kids = childrenMap.get(id);
-      if (kids && kids.length > 0) continue;
-      next.set(id, { w: rect.w, h: rect.h });
-      const p = prevLeafSizes.get(id);
-      if (!p || Math.abs(p.w - rect.w) >= 1 || Math.abs(p.h - rect.h) >= 1) changed = true;
-    }
-    if (!changed && next.size === prevLeafSizes.size) return prevLeafSizes;
-    prevLeafSizes = next;
-    return next;
-  });
-
   // headerHeight: 60 ≈ label 22px + tag chip + description 24px + padding 8+8.
-  // Per-parent overrides come from measuredHeaderHeights; 60 is the fallback for unmigrated renderers.
+  // Per-node overrides come from deepLodGeometry().headerHeights; 60 is the fallback.
   const HEADER_HEIGHT = 60;
 
-  // Stability guard: only propagate new header heights when ≥1px change occurs.
-  let prevHeaders: ReadonlyMap<string, number> = new Map();
-  const measuredHeaderHeights = createMemo<ReadonlyMap<string, number>>(() => {
-    const heights = canvasCtx.getHeaderHeights();
-    let changed = heights.size !== prevHeaders.size;
-    for (const [id, h] of heights) {
-      const p = prevHeaders.get(id);
-      if (p === undefined || Math.abs(p - h) >= 1) changed = true;
-    }
-    if (!changed) return prevHeaders;
-    prevHeaders = new Map(heights);
-    return prevHeaders;
-  });
+  // Deep-LOD geometry: measure every node at its finest disclosure level once,
+  // keyed on graph identity. Does NOT track zoom or LOD — layout is stable under zoom.
+  const deepLodGeometry = createMemo(() => measureDeepLod(props.graph, props.view));
 
   // Edge inputs for layout, carrying estimated label dimensions so both layouts
   // reserve space for labels. Matches EdgeLayer's SVG <text font-size=10> + 28-char cap.
@@ -356,9 +327,9 @@ function CanvasInner(props: {
   const gridResult = createMemo(() => gridLayout({
     rootIds: containment().rootIds,
     childrenOf: containment().childrenOf,
-    nodeSizes: measuredLeafSizes(),
+    nodeSizes: deepLodGeometry().sizes,
     headerHeight: HEADER_HEIGHT,
-    headerHeights: measuredHeaderHeights(),
+    headerHeights: deepLodGeometry().headerHeights,
     edges: layoutEdges(),
     layoutPolicy: layoutPolicy(),
   }));
@@ -379,7 +350,9 @@ function CanvasInner(props: {
       }
 
       // Merge packed container sizes into nodeSizes so ELK can use them as fixed boxes.
-      const mergedSizes = new Map(measuredLeafSizes());
+      // Start from deep-LOD sizes (all nodes), then override pack containers with
+      // their grid-computed sizes (which account for children).
+      const mergedSizes = new Map(deepLodGeometry().sizes);
       for (const id of opaqueContainers) {
         const sz = gr.sizes.get(id);
         if (sz) mergedSizes.set(id, sz);
@@ -398,7 +371,7 @@ function CanvasInner(props: {
           edges: layoutEdges(),
           nodeSizes: mergedSizes as ReadonlyMap<string, { w: number; h: number }>,
           headerHeight: HEADER_HEIGHT,
-          headerHeights: measuredHeaderHeights(),
+          headerHeights: deepLodGeometry().headerHeights,
           layerHints,
         },
         opaqueContainers,

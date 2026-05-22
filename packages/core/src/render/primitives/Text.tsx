@@ -44,11 +44,17 @@ export default function Text(
     return <span style={{ ...baseStyle, 'font-size': fontSize() }}>{value}</span>;
   }
 
-  // body / caption / mono: geometric sizing, culled below legibility floor
+  // body / caption / mono: geometric sizing, culled below legibility floor.
+  // max-width caps runaway inline text that would bloat deep-LOD measurements;
+  // follow-up task `text-overflow-clamp` will replace this with a real overflow primitive.
   const basePx = BASE_PX[styleName] ?? 12;
+  const wrapStyle: JSX.CSSProperties =
+    styleName === 'body' || styleName === 'caption'
+      ? { 'max-width': '320px', 'white-space': 'normal', 'overflow-wrap': 'break-word' }
+      : {};
   return (
     <Show when={basePx * ctx.zoom() >= LEGIBILITY_FLOOR} fallback={null}>
-      <span style={baseStyle}>{value}</span>
+      <span style={{ ...baseStyle, ...wrapStyle }}>{value}</span>
     </Show>
   );
 }
