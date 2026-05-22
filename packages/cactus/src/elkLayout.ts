@@ -7,6 +7,8 @@ export type { LayoutRequest, LayoutResult };
 export interface ElkLayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
   opaqueContainers?: ReadonlySet<string>;
+  /** Multiplier applied to all inter-node spacing. 1 = default density. */
+  spacing?: number;
 }
 
 function buildElkNode(
@@ -76,6 +78,12 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
   const direction = opts?.direction ?? 'RIGHT';
   const opaqueContainers = opts?.opaqueContainers;
 
+  // Spacing multiplier: scaling the spacing constants keeps ELK's node ordering
+  // (crossing minimization is deterministic for the same graph), so the layout
+  // spreads out without changing its arrangement.
+  const spacing = opts?.spacing ?? 1;
+  const s = (base: number) => String(Math.round(base * spacing));
+
   const elk = new ELK();
 
   // Collect node IDs that actually appear in the ELK graph. Opaque containers
@@ -115,8 +123,11 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
       'elk.algorithm': 'layered',
       'elk.direction': direction,
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '50',
-      'elk.spacing.edgeNode': '20',
+      'elk.layered.spacing.nodeNodeBetweenLayers': s(50),
+      'elk.spacing.nodeNode': s(20),
+      'elk.layered.spacing.edgeNodeBetweenLayers': s(20),
+      'elk.spacing.componentComponent': s(40),
+      'elk.spacing.edgeNode': s(20),
       'elk.spacing.edgeEdge': '12',
       'elk.spacing.edgeLabel': '6',
       'elk.edgeLabels.inline': 'false',

@@ -66,6 +66,12 @@ export function layoutToolbarSchema(
           payload: { algorithm: a },
         })),
       },
+      ...(algorithm === 'elk'
+        ? ([
+            { type: 'separator' },
+            { type: 'button', action: { id: 'LAYOUT.SPACE_OUT', label: 'Space out' } },
+          ] as const)
+        : []),
     ],
   };
 }

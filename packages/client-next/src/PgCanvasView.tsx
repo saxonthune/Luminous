@@ -35,6 +35,7 @@ export interface PgCanvasViewProps {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk';
+  spacing?: number;
   ref?: (handle: ViewerHandle) => void;
   chrome?: ChromeSchema;
   onAction?: (id: string, payload?: unknown) => void;
@@ -178,6 +179,7 @@ function CanvasInner(props: {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk';
+  spacing?: number;
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
   exposeInspect?: (fn: (id: string) => void) => void;
@@ -393,10 +395,15 @@ function CanvasInner(props: {
           headerHeights: measuredHeaderHeights(),
         },
         opaqueContainers,
+        spacing: props.spacing ?? 1,
       };
     },
     (input): Promise<LayoutResult> =>
-      elkLayout(input.req, { direction: 'RIGHT', opaqueContainers: input.opaqueContainers }),
+      elkLayout(input.req, {
+        direction: 'RIGHT',
+        opaqueContainers: input.opaqueContainers,
+        spacing: input.spacing,
+      }),
   );
 
   const baseLayout = createMemo<LayoutResult | null>(() => {
@@ -519,6 +526,7 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
         graph={props.graph}
         view={props.view}
         algorithm={props.algorithm}
+        spacing={props.spacing}
         exposeRects={(g) => { getRects = g; emit(); }}
         onEdges={setEdges}
         exposeInspect={(fn) => { inspectFn = fn; }}
