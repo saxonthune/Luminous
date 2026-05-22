@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'solid-js';
-import type { Transform } from './useViewport.js';
-import type { ConnectionDragState } from './useConnectionDrag.js';
+import type { Transform } from './interactions/useViewport.js';
+import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
 
 export interface NodeRect {
   x: number;

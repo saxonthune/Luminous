@@ -1,10 +1,11 @@
 import { createMemo, createSignal, For, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
+import { routeEdges, type NodeRect } from './edgeRouting.js';
 
 interface EdgeLayerProps {
   edges: EdgeDeclaration[];
-  getNodeRects: () => ReadonlyMap<string, { x: number; y: number; w: number; h: number }>;
+  getNodeRects: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
   zoom: () => number;
 }
@@ -24,30 +25,6 @@ function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8)
   return `M ${x2} ${y2} L ${baseX1} ${baseY1} L ${baseX2} ${baseY2} Z`;
 }
 
-/**
- * Intersect a line from a box's center toward an external point with the
- * box's perimeter. Returns the perimeter point, used to terminate edges
- * at the node border rather than the node center.
- */
-function lineExitsBox(
-  cx: number,
-  cy: number,
-  w: number,
-  h: number,
-  toX: number,
-  toY: number,
-): { x: number; y: number } {
-  const dx = toX - cx;
-  const dy = toY - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-  const halfW = w / 2;
-  const halfH = h / 2;
-  const tx = dx === 0 ? Infinity : halfW / Math.abs(dx);
-  const ty = dy === 0 ? Infinity : halfH / Math.abs(dy);
-  const t = Math.min(tx, ty);
-  return { x: cx + t * dx, y: cy + t * dy };
-}
-
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
 
@@ -59,37 +36,23 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   });
   const labelHaloWidth = createMemo(() => labelFontSize() * 0.35);
 
+  const routed = createMemo(() => routeEdges(props.edges, props.getNodeRects()));
+
   const revealedPopover = createMemo(() => {
     const id = revealedId();
     if (!id) return null;
     const edge = props.edges.find((e) => e.id === id);
     if (!edge?.labelText) return null;
-    const rects = props.getNodeRects();
-    const src = rects.get(edge.sourceId);
-    const tgt = rects.get(edge.targetId);
-    if (!src || !tgt) return null;
-    const x = (src.x + src.w / 2 + tgt.x + tgt.w / 2) / 2;
-    const y = (src.y + src.h / 2 + tgt.y + tgt.h / 2) / 2;
-    return { x, y, text: edge.labelText };
+    const geom = routed().get(edge.id);
+    if (!geom) return null;
+    return { x: geom.labelX, y: geom.labelY, text: edge.labelText };
   });
 
   return (
     <>
       <For each={props.edges}>
         {(edge) => {
-          const endpoints = createMemo(() => {
-            const rects = props.getNodeRects();
-            const src = rects.get(edge.sourceId);
-            const tgt = rects.get(edge.targetId);
-            if (!src || !tgt) return null;
-            const sx = src.x + src.w / 2;
-            const sy = src.y + src.h / 2;
-            const tx = tgt.x + tgt.w / 2;
-            const ty = tgt.y + tgt.h / 2;
-            const start = lineExitsBox(sx, sy, src.w, src.h, tx, ty);
-            const end = lineExitsBox(tx, ty, tgt.w, tgt.h, sx, sy);
-            return { x1: start.x, y1: start.y, x2: end.x, y2: end.y };
-          });
+          const endpoints = createMemo(() => routed().get(edge.id) ?? null);
 
           const dash = edge.styling?.dash;
           const strokeDasharray =
@@ -122,8 +85,8 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                   </Show>
                   <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
                     <text
-                      x={(pts().x1 + pts().x2) / 2}
-                      y={(pts().y1 + pts().y2) / 2}
+                      x={pts().labelX}
+                      y={pts().labelY}
                       text-anchor="middle"
                       dominant-baseline="middle"
                       font-size={`${labelFontSize()}`}

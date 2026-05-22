@@ -5,9 +5,9 @@ import {
   computeAttach,
   computeDetach,
   computeContainerFit,
-} from '../src/containerOps';
-import type { ContainerNode } from '../src/containerOps';
-import { type NodeGeometry } from '../src/geometry.js';
+} from '../src/geometry/containerOps';
+import type { ContainerNode } from '../src/geometry/containerOps';
+import { type NodeGeometry } from '../src/geometry/geometry.js';
 
 // ===== HELPERS =====
 

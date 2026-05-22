@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js';
-import type { Transform } from './useViewport.js';
+import type { Transform } from './interactions/useViewport.js';
 
 export interface DotGridProps {
   transform: Transform;

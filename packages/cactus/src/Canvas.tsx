@@ -1,10 +1,10 @@
 import { createSignal, createMemo, onCleanup, Show, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { useViewport, type UseViewportOptions, type Transform } from './useViewport.js';
+import { useViewport, type UseViewportOptions, type Transform } from './interactions/useViewport.js';
 import { observeLongTasks } from './perf.js';
-import { useConnectionDrag } from './useConnectionDrag.js';
-import { useBoxSelect } from './useBoxSelect.js';
-import { useSelection } from './useSelection.js';
+import { useConnectionDrag } from './interactions/useConnectionDrag.js';
+import { useBoxSelect } from './interactions/useBoxSelect.js';
+import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import { EdgeLayer } from './EdgeLayer.js';

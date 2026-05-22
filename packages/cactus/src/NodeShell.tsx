@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js';
 import { useCanvasContext } from './CanvasContext.js';
 import { ConnectionHandle } from './ConnectionHandle.js';
-import type { ResizeDirection } from './useNodeResize.js';
+import type { ResizeDirection } from './interactions/useNodeResize.js';
 
 export interface NodeShellProps {
   nodeId: string;

@@ -1,5 +1,5 @@
 import { createSignal } from 'solid-js';
-import { traceCallback, markInteraction } from './perf.js';
+import { traceCallback, markInteraction } from '../perf.js';
 
 export interface ConnectionDragState {
   sourceNodeId: string;

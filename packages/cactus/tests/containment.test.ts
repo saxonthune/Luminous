@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { findContainerAt } from '../src/containment';
+import { findContainerAt } from '../src/geometry/containment';
 
 // jsdom does not implement elementsFromPoint; stub it before each test.
 beforeEach(() => {
