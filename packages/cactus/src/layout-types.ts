@@ -6,6 +6,10 @@ export interface LayoutRequest {
   defaultNodeSize?: { w: number; h: number };
   headerHeight?: number;
   headerHeights?: ReadonlyMap<string, number>;
+  /** Per-container minimum width from the container's own visible content (e.g.
+   * the rendered card). Used so a container that renders wide content is sized
+   * to fit that content even when its children pack narrower. */
+  headerWidths?: ReadonlyMap<string, number>;
   edges: ReadonlyArray<{
     id: string;
     from: string;

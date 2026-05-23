@@ -331,6 +331,7 @@ function CanvasInner(props: {
     nodeSizes: deepLodGeometry().sizes,
     headerHeight: HEADER_HEIGHT,
     headerHeights: deepLodGeometry().headerHeights,
+    headerWidths: deepLodGeometry().headerWidths,
     edges: layoutEdges(),
     layoutPolicy: layoutPolicy(),
   }));
@@ -373,6 +374,7 @@ function CanvasInner(props: {
           nodeSizes: mergedSizes as ReadonlyMap<string, { w: number; h: number }>,
           headerHeight: HEADER_HEIGHT,
           headerHeights: deepLodGeometry().headerHeights,
+          headerWidths: deepLodGeometry().headerWidths,
           layerHints,
         },
         opaqueContainers,

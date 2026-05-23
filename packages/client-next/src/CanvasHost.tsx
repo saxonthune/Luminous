@@ -19,7 +19,7 @@ interface CanvasHostProps {
 }
 
 export function CanvasHost(props: CanvasHostProps) {
-  const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('grid');
+  const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('elk');
   // Transient ELK spacing multiplier — each "Space out" click bumps it; not persisted.
   const [spacing, setSpacing] = createSignal(1);
   const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);

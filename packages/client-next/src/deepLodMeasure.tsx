@@ -53,17 +53,23 @@ function nodeContentKey(nodeId: string, graph: Graph): string {
 // Module-level caches survive across re-renders; invalidated by content key change.
 const sizeCache = new Map<string, { w: number; h: number }>();
 const headerCache = new Map<string, number>();
+const headerWidthCache = new Map<string, number>();
 
 const DEFAULT_SIZE = { w: 120, h: 60 };
 
 export function measureDeepLod(
   graph: Graph,
   view: View,
-): { sizes: Map<NodeId, { w: number; h: number }>; headerHeights: Map<NodeId, number> } {
+): {
+  sizes: Map<NodeId, { w: number; h: number }>;
+  headerHeights: Map<NodeId, number>;
+  headerWidths: Map<NodeId, number>;
+} {
   const sizes = new Map<NodeId, { w: number; h: number }>();
   const headerHeights = new Map<NodeId, number>();
+  const headerWidths = new Map<NodeId, number>();
 
-  if (typeof document === 'undefined') return { sizes, headerHeights };
+  if (typeof document === 'undefined') return { sizes, headerHeights, headerWidths };
 
   // Compute containment so hasChildren is accurate during measurement.
   const { containment } = evaluateView(graph, view);
@@ -82,6 +88,8 @@ export function measureDeepLod(
         sizes.set(nodeId, cached);
         const cachedH = headerCache.get(cKey);
         if (cachedH !== undefined) headerHeights.set(nodeId, cachedH);
+        const cachedW = headerWidthCache.get(cKey);
+        if (cachedW !== undefined) headerWidths.set(nodeId, cachedW);
         continue;
       }
 
@@ -159,6 +167,14 @@ export function measureDeepLod(
           const h = capturedHeaderHeights[capturedHeaderHeights.length - 1]!;
           headerCache.set(cKey, h);
           headerHeights.set(nodeId, h);
+        } else if ((containment.childrenOf.get(nodeId)?.length ?? 0) > 0) {
+          // Container node whose render did NOT use NodeHeader. Treat its full
+          // measured size as the header band so layout packs children below the
+          // container's own visible content instead of overlapping it.
+          headerCache.set(cKey, sz.h);
+          headerHeights.set(nodeId, sz.h);
+          headerWidthCache.set(cKey, sz.w);
+          headerWidths.set(nodeId, sz.w);
         }
       } catch {
         // Measurement failed for this node — fall back to default size.
@@ -172,5 +188,5 @@ export function measureDeepLod(
     document.body.removeChild(host);
   }
 
-  return { sizes, headerHeights };
+  return { sizes, headerHeights, headerWidths };
 }

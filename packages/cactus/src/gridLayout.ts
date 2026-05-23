@@ -20,6 +20,7 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
     nodeSizes,
     headerHeight = 24,
     headerHeights,
+    headerWidths,
     edges,
     layoutPolicy,
   } = req;
@@ -29,6 +30,7 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
   const baseGap = opts?.gap ?? 8;
 
   const headerFor = (id: string) => headerHeights?.get(id) ?? headerHeight;
+  const headerWidthFor = (id: string) => headerWidths?.get(id) ?? 0;
 
   // Map each node to its parent (ROOT_KEY for top-level nodes) so edge labels
   // can be attributed to the grid that lays out both endpoints.
@@ -90,7 +92,7 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
         positions.set(cid, { x: pos.x + offsetX, y: pos.y + offsetY });
       }
       sizes.set(id, {
-        w: packed.size.w + padding * 2,
+        w: Math.max(packed.size.w + padding * 2, headerWidthFor(id)),
         h: packed.size.h + headerFor(id) + padding * 2,
       });
     } else {
@@ -128,7 +130,10 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
         maxBottom = Math.max(maxBottom, pos.y + sz.h);
       }
 
-      sizes.set(id, { w: maxRight + padding, h: maxBottom + padding });
+      sizes.set(id, {
+        w: Math.max(maxRight + padding, headerWidthFor(id)),
+        h: maxBottom + padding,
+      });
     }
   }
 
