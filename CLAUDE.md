@@ -52,6 +52,10 @@ See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full det
 - **Diagram pipelines.** Scripts that read source code via static analysis and emit `.canvas.json`. The pipeline is the reusable artifact — shareable across projects and communities. Each pipeline defines its own node types from the forces of its domain; we don't pre-build a universal schema of typed nodes.
 - **Willing to delete.** No backward compatibility with features nobody uses.
 
+### Graph vs pack: different update frequencies
+
+A `.graph.json` and its `.pack.json` change at very different rates. Graphs churn — every pipeline run, every authored edit. Packs are stable libraries: kinds, schemas, render templates, view defaults. This asymmetry decides where settings live: anything that should *travel with the data* (per-canvas one-offs, pipeline-derived hints) belongs on the graph; anything that should *travel with the vocabulary* (layout defaults, disclosure, view definitions) belongs on the pack. When in doubt, ask "would another canvas using this pack want the same thing?" — yes → pack, no → graph.
+
 ## Canvas Engine
 
 The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable Solid primitives.

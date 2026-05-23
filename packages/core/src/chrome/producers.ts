@@ -47,8 +47,8 @@ export function layerToolbarSchema(
 }
 
 export function layoutToolbarSchema(
-  algorithm: 'grid' | 'elk',
-  availableAlgorithms: Array<'grid' | 'elk'>,
+  algorithm: 'grid' | 'elk' | 'mrtree',
+  availableAlgorithms: Array<'grid' | 'elk' | 'mrtree'>,
 ): ToolbarSchema {
   return {
     id: 'layout-toolbar',
@@ -66,7 +66,7 @@ export function layoutToolbarSchema(
           payload: { algorithm: a },
         })),
       },
-      ...(algorithm === 'elk'
+      ...(algorithm === 'elk' || algorithm === 'mrtree'
         ? ([
             { type: 'separator' },
             { type: 'button', action: { id: 'LAYOUT.SPACE_OUT', label: 'Space out' } },

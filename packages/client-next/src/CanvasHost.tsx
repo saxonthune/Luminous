@@ -1,4 +1,4 @@
-import { createSignal, createMemo, Show } from 'solid-js';
+import { createSignal, createMemo, createEffect, Show } from 'solid-js';
 import type { Graph, View, Layer, Pack } from '@luminous/core';
 import {
   resolvePack,
@@ -11,7 +11,7 @@ import {
 import type { ChromeSchema } from '@luminous/core';
 import { PgCanvasView, type ViewerHandle } from './PgCanvasView';
 
-type LayoutAlgorithm = 'grid' | 'elk';
+type LayoutAlgorithm = 'grid' | 'elk' | 'mrtree';
 
 interface CanvasHostProps {
   graph: Graph;
@@ -19,6 +19,9 @@ interface CanvasHostProps {
 }
 
 export function CanvasHost(props: CanvasHostProps) {
+  // The active view declares a default layout (pack-level vocabulary). The
+  // toolbar lets the user override at runtime; switching views re-applies the
+  // new view's default.
   const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('elk');
   // Transient ELK spacing multiplier — each "Space out" click bumps it; not persisted.
   const [spacing, setSpacing] = createSignal(1);
@@ -38,6 +41,18 @@ export function CanvasHost(props: CanvasHostProps) {
     () => availableViews().find((v) => v.id === activeViewId()) ?? availableViews()[0],
   );
 
+  // Apply the active view's declared layout whenever the view changes. The
+  // toolbar still calls setAlgorithm directly to override; that override sticks
+  // until the user switches views again.
+  createEffect(() => {
+    const v = activeView();
+    if (!v) return;
+    const declared = v.layout?.algorithm;
+    if (declared === 'grid' || declared === 'elk' || declared === 'mrtree') {
+      setAlgorithm(declared);
+    }
+  });
+
   const chrome = createMemo<ChromeSchema>(() => {
     const view = activeView();
     if (!view) return {};
@@ -46,7 +61,7 @@ export function CanvasHost(props: CanvasHostProps) {
     return {
       left: [viewSwitcherSchema(availableViews(), currentViewId)],
       top: layerTb.controls.length > 0 ? [layerTb] : [],
-      right: [layoutToolbarSchema(algorithm(), ['grid', 'elk'])],
+      right: [layoutToolbarSchema(algorithm(), ['grid', 'elk', 'mrtree'])],
     };
   });
 

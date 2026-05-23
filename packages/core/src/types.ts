@@ -159,6 +159,8 @@ export type LayoutChoice =
   | { algorithm: 'manual' }
   | { algorithm: 'dagre'; options?: Record<string, unknown> }
   | { algorithm: 'elk'; options?: Record<string, unknown> }
+  | { algorithm: 'mrtree'; options?: Record<string, unknown> }
+  | { algorithm: 'grid'; options?: Record<string, unknown> }
   | { algorithm: 'treemap'; options?: Record<string, unknown> }
   | { algorithm: 'hierarchy'; options?: Record<string, unknown> }
   | { algorithm: 'force'; options?: Record<string, unknown> };

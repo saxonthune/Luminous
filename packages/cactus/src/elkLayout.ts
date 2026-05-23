@@ -9,6 +9,13 @@ export interface ElkLayoutOptions {
   opaqueContainers?: ReadonlySet<string>;
   /** Multiplier applied to all inter-node spacing. 1 = default density. */
   spacing?: number;
+  /**
+   * Which ELK algorithm to run. 'layered' (default) is the general DAG layouter
+   * with tier hints; 'mrtree' is a dedicated Reingold-Tilford tree layouter
+   * that produces tighter, more centered trees but assumes a strict tree
+   * (no back edges, no diamonds).
+   */
+  algorithm?: 'layered' | 'mrtree';
 }
 
 /**
@@ -101,6 +108,7 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
 
   const direction = opts?.direction ?? 'RIGHT';
   const opaqueContainers = opts?.opaqueContainers;
+  const algorithm = opts?.algorithm ?? 'layered';
 
   // INTERACTIVE layering: elkjs implements `InteractiveLayerer` (it does NOT
   // implement `layerChoiceConstraint`, despite registering the option). To
@@ -171,33 +179,50 @@ export async function elkLayout(req: LayoutRequest, opts?: ElkLayoutOptions): Pr
     .map((e) => ({ ...e, from: resolve(e.from), to: resolve(e.to) }))
     .filter((e) => allNodeIds.has(e.from) && allNodeIds.has(e.to) && e.from !== e.to);
 
+  const layoutOptions: Record<string, string> =
+    algorithm === 'mrtree'
+      ? {
+          // mrtree is a strict-tree layouter. It honors direction and node-node
+          // spacing; layered.* options are silently ignored. AVOID_OVERLAP
+          // re-routes the straight tree edges around displaced subtrees.
+          'elk.algorithm': 'mrtree',
+          'elk.direction': direction,
+          'elk.spacing.nodeNode': s(40),
+          'elk.spacing.edgeNode': s(20),
+          'elk.spacing.edgeEdge': '12',
+          'elk.spacing.componentComponent': s(40),
+          'elk.spacing.edgeLabel': '6',
+          'elk.mrtree.edgeRoutingMode': 'AVOID_OVERLAP',
+        }
+      : {
+          'elk.algorithm': 'layered',
+          'elk.direction': direction,
+          'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+          'elk.layered.spacing.nodeNodeBetweenLayers': s(50),
+          'elk.spacing.nodeNode': s(20),
+          'elk.layered.spacing.edgeNodeBetweenLayers': s(20),
+          'elk.spacing.componentComponent': s(40),
+          'elk.spacing.edgeNode': s(20),
+          'elk.spacing.edgeEdge': '12',
+          'elk.spacing.edgeLabel': '6',
+          'elk.edgeLabels.inline': 'false',
+          // Crossing reduction: layer-sweep only reorders nodes within their
+          // existing layers, so this untangles edges without changing the
+          // layout's overall flow. thoroughness is the main lever (default 7).
+          'elk.layered.thoroughness': '70',
+          'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+          'elk.layered.crossingMinimization.semiInteractive': 'false',
+          'elk.layered.crossingMinimization.greedySwitch.type': 'TWO_SIDED',
+          'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+          'elk.layered.cycleBreaking.strategy': useInteractive ? 'INTERACTIVE' : 'GREEDY',
+          ...(useInteractive
+            ? { 'elk.layered.layering.strategy': 'INTERACTIVE' }
+            : {}),
+        };
+
   const graph: ElkNode = {
     id: '__root__',
-    layoutOptions: {
-      'elk.algorithm': 'layered',
-      'elk.direction': direction,
-      'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-      'elk.layered.spacing.nodeNodeBetweenLayers': s(50),
-      'elk.spacing.nodeNode': s(20),
-      'elk.layered.spacing.edgeNodeBetweenLayers': s(20),
-      'elk.spacing.componentComponent': s(40),
-      'elk.spacing.edgeNode': s(20),
-      'elk.spacing.edgeEdge': '12',
-      'elk.spacing.edgeLabel': '6',
-      'elk.edgeLabels.inline': 'false',
-      // Crossing reduction: layer-sweep only reorders nodes within their
-      // existing layers, so this untangles edges without changing the layout's
-      // overall flow. thoroughness is the main lever (default 7).
-      'elk.layered.thoroughness': '70',
-      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-      'elk.layered.crossingMinimization.semiInteractive': 'false',
-      'elk.layered.crossingMinimization.greedySwitch.type': 'TWO_SIDED',
-      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.cycleBreaking.strategy': useInteractive ? 'INTERACTIVE' : 'GREEDY',
-      ...(useInteractive
-        ? { 'elk.layered.layering.strategy': 'INTERACTIVE' }
-        : {}),
-    },
+    layoutOptions,
     children: rootIds.map((rid) =>
       buildElkNode(rid, childrenOf, nodeSizes, defaultNodeSize, headerHeight, headerHeights, opaqueContainers, positionHints)
     ),

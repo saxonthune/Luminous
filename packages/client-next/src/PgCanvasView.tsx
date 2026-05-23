@@ -35,7 +35,7 @@ type NodeRect = { id: string; x: number; y: number; width: number; height: numbe
 export interface PgCanvasViewProps {
   graph: Graph;
   view: View;
-  algorithm?: 'grid' | 'elk';
+  algorithm?: 'grid' | 'elk' | 'mrtree';
   spacing?: number;
   ref?: (handle: ViewerHandle) => void;
   chrome?: ChromeSchema;
@@ -180,7 +180,7 @@ function renderNodes(
 function CanvasInner(props: {
   graph: Graph;
   view: View;
-  algorithm?: 'grid' | 'elk';
+  algorithm?: 'grid' | 'elk' | 'mrtree';
   spacing?: number;
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
@@ -340,7 +340,7 @@ function CanvasInner(props: {
   // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
   const [elkResult] = createResource(
     () => {
-      if (props.algorithm !== 'elk') return null;
+      if (props.algorithm !== 'elk' && props.algorithm !== 'mrtree') return null;
       const ct = containment();
       const gr = gridResult();
       const policy = layoutPolicy();
@@ -379,6 +379,7 @@ function CanvasInner(props: {
         },
         opaqueContainers,
         spacing: props.spacing ?? 1,
+        algorithm: props.algorithm === 'mrtree' ? ('mrtree' as const) : ('layered' as const),
       };
     },
     (input): Promise<LayoutResult> =>
@@ -386,11 +387,12 @@ function CanvasInner(props: {
         direction: 'DOWN',
         opaqueContainers: input.opaqueContainers,
         spacing: input.spacing,
+        algorithm: input.algorithm,
       }),
   );
 
   const baseLayout = createMemo<LayoutResult | null>(() => {
-    if (props.algorithm !== 'elk') return gridResult();
+    if (props.algorithm !== 'elk' && props.algorithm !== 'mrtree') return gridResult();
 
     const elkRes = elkResult();
     if (!elkRes) return null;
