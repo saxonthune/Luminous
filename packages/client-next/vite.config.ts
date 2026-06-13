@@ -29,12 +29,4 @@ export default defineConfig({
       '/ws': { target: 'http://localhost:4080', ws: true },
     },
   },
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        viewer: resolve(__dirname, 'viewer.html'),
-      },
-    },
-  },
 })

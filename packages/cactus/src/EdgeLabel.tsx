@@ -7,6 +7,7 @@ export interface EdgeLabelProps {
   class?: string;
   style?: JSX.CSSProperties;
   onContextMenu?: (event: MouseEvent) => void;
+  onClick?: (event: MouseEvent) => void;
 }
 
 export function EdgeLabel(props: EdgeLabelProps): JSX.Element {
@@ -34,20 +35,21 @@ export function EdgeLabel(props: EdgeLabelProps): JSX.Element {
         <div
           class={props.class}
           style={{
-            "pointer-events": props.onContextMenu ? 'auto' : 'none',
-            cursor: props.onContextMenu ? 'context-menu' : undefined,
+            "pointer-events": (props.onContextMenu || props.onClick) ? 'auto' : 'none',
+            cursor: props.onClick ? 'pointer' : props.onContextMenu ? 'context-menu' : undefined,
             "border-radius": '9999px',
             "padding-left": '8px',
             "padding-right": '8px',
             "padding-top": '2px',
             "padding-bottom": '2px',
-            "background-color": 'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            "background-color": 'color-mix(in srgb, var(--cactus-surface, #ffffff) 85%, transparent)',
             "backdrop-filter": 'blur(4px)',
             "user-select": 'none',
             "white-space": 'nowrap',
             ...props.style,
           }}
-          onContextMenu={props.onContextMenu}
+          onContextMenu={(e) => props.onContextMenu?.(e)}
+          onClick={(e) => props.onClick?.(e)}
         >
           {props.children}
         </div>

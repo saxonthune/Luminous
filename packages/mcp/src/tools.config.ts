@@ -4,8 +4,10 @@ export type ParamType =
   | 'boolean'
   | { type: 'object'; properties: Record<string, ParamType>; required?: string[] }
   | { type: 'array'; items: ParamType }
+  | { type: 'described'; innerType: ParamType; description: string }
 
 export interface ActionConfig {
+  description?: string
   method: 'GET' | 'POST'
   path: string
   params: Record<string, ParamType>
@@ -21,220 +23,237 @@ export interface BatchToolConfig {
   path: string
 }
 
+const pathParam: ParamType = {
+  type: 'described',
+  innerType: 'string',
+  description: "Path to the graph document, e.g. 'project.graph.json'. Get available paths from canvas list.",
+}
+
 export const toolConfig: Record<string, ToolGroupConfig> = {
-  canvas: {
-    description: "Browse and read canvas documents. 'list' discovers available canvases; 'read' loads a full document including its schemas, structure, content, and edges.",
+  pack: {
+    description:
+      "Inspect the pack declared by a canvas. Returns all node and edge kinds with their labels and props JSON Schemas — use this before node/add or edge/add to discover valid kinds and required props.",
     actions: {
-      list: { method: 'GET', path: '/api/documents', params: {} },
-      read: { method: 'GET', path: '/api/document/:path', params: { path: 'string' } },
+      describe: {
+        description:
+          "Return the kind catalog (node kinds and edge kinds with labels and props JSON Schemas) for the pack used by the given canvas, or directly by pack name. Provide either canvas or pack.",
+        method: 'GET',
+        path: '/api/pack/:pack',
+        params: {
+          'canvas?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Path to a canvas whose pack you want to inspect, e.g. 'overview.graph.json'. Provide either canvas or pack.",
+          },
+          'pack?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Pack name to describe directly, e.g. 'primitives'. Provide either canvas or pack.",
+          },
+        },
+      },
+    },
+  },
+
+  canvas: {
+    description:
+      "Canvases are v3 structured visual documents stored as `.graph.json` files. Each references a single pack (a library that defines node and edge kinds). Use `list` to discover available documents; `read` to inspect a canvas; `create` to author a new one.",
+    actions: {
+      list: {
+        description: 'Returns all available canvas document paths.',
+        method: 'GET',
+        path: '/api/documents',
+        params: {},
+      },
+      read: {
+        description: 'Loads the complete canvas: pack, all nodes (id, kind, props, tags), and all edges.',
+        method: 'GET',
+        path: '/api/document/:path',
+        params: { path: pathParam },
+      },
+      create: {
+        description: "Create a new empty v3 canvas file. Fails if the file already exists.",
+        method: 'POST',
+        path: '/api/graph/create',
+        params: {
+          path: {
+            type: 'described',
+            innerType: 'string',
+            description: "Graph filename to create, e.g. 'overview.graph.json'.",
+          },
+          'pack?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Pack name this canvas uses, e.g. 'primitives'. Resolves to a sibling <name>.pack.json.",
+          },
+        },
+      },
     },
   },
 
   node: {
-    description: "Create and mutate nodes on a canvas. Nodes are schema-driven: each node references a schemaName from the canvas's schemas table. Position and size live in geometry; field values live in content. Use 'create' to add a node, 'setContent' to update its field values, 'setGeometry' to move/resize, 'setParent' to nest/unnest, 'setOrder' to reorder siblings, 'delete' to remove. Order is a fractional-index string (e.g. 'a000000', 'a500000', 'b000000') — provide one that sorts after the intended previous sibling.",
+    description:
+      "Nodes are the content elements of a v3 canvas. Each node has a `kind` (a dot-namespaced string defined by a pack, e.g. `prim.box`), `props` (kind-specific key-value data), and `tags` (free-form string labels). Layout is computed by the viewer — nodes have no position in the file.",
     actions: {
-      create: {
+      add: {
+        description: 'Add a new node to the canvas.',
         method: 'POST',
-        path: '/api/node/create',
+        path: '/api/node/add',
         params: {
-          path: 'string',
-          schemaName: 'string',
-          'parent?': 'string',
-          order: 'string',
-          geometry: {
-            type: 'object',
-            properties: {
-              x: 'number', y: 'number', w: 'number', h: 'number',
+          path: pathParam,
+          kind: {
+            type: 'described',
+            innerType: 'string',
+            description: "Node kind defined by the canvas's pack, e.g. 'prim.box'. Use pack/describe to see all available kinds and their props schemas.",
+          },
+          'props?': {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: {},
             },
-            required: ['x', 'y', 'w', 'h'],
+            description: "Kind-specific properties. Keys and value types are defined by the pack's schema for this kind.",
           },
-          'content?': {
-            type: 'object',
-            properties: {},
+          'tags?': {
+            type: 'described',
+            innerType: { type: 'array', items: 'string' },
+            description: "Free-form string labels attached to the node.",
           },
-          'id?': 'string',
-        },
-      },
-      setContent: {
-        method: 'POST',
-        path: '/api/node/setContent',
-        params: {
-          path: 'string',
-          id: 'string',
-          fields: {
-            type: 'object',
-            properties: {},
+          'id?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Optional node ID. Server generates a UUID if omitted.",
           },
         },
       },
-      setParent: {
+      setProps: {
+        description: "Shallow-merge new props into an existing node. Existing props not in the update are preserved.",
         method: 'POST',
-        path: '/api/node/setParent',
+        path: '/api/node/setProps',
         params: {
-          path: 'string',
+          path: pathParam,
           id: 'string',
-          'parent?': 'string',
-          order: 'string',
-        },
-      },
-      setOrder: {
-        method: 'POST',
-        path: '/api/node/setOrder',
-        params: { path: 'string', id: 'string', order: 'string' },
-      },
-      setGeometry: {
-        method: 'POST',
-        path: '/api/node/setGeometry',
-        params: {
-          path: 'string',
-          id: 'string',
-          geometry: {
-            type: 'object',
-            properties: {
-              x: 'number', y: 'number', w: 'number', h: 'number',
+          props: {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: {},
             },
-            required: ['x', 'y', 'w', 'h'],
+            description: "Props to merge. Existing keys not listed here are unchanged.",
+          },
+        },
+      },
+      setTags: {
+        description: "Replace the tags array on an existing node.",
+        method: 'POST',
+        path: '/api/node/setTags',
+        params: {
+          path: pathParam,
+          id: 'string',
+          tags: {
+            type: 'described',
+            innerType: { type: 'array', items: 'string' },
+            description: "New tags array. Replaces the previous tags entirely.",
           },
         },
       },
       delete: {
+        description: "Remove a node from the canvas. Also removes any edges that reference this node as an endpoint.",
         method: 'POST',
         path: '/api/node/delete',
-        params: { path: 'string', id: 'string' },
+        params: { path: pathParam, id: 'string' },
       },
     },
   },
 
   edge: {
-    description: "Connect nodes to express relationships. Edges are freeform — any node to any node, optional label and optional schemaName. Direction is visual only.",
+    description:
+      "Edges are directed connections between nodes in a v3 canvas. Each edge has a `kind` (pack-defined, e.g. `prim.arrow`), a `from` node ID, a `to` node ID, `props`, and `tags`. Endpoints must reference existing nodes — the server validates this on `add`.",
     actions: {
-      connect: {
+      add: {
+        description: "Create a directed edge from one node to another. Returns an error if either endpoint node does not exist.",
         method: 'POST',
-        path: '/api/edge/connect',
+        path: '/api/edge/add',
         params: {
-          path: 'string',
-          fromId: 'string',
-          toId: 'string',
-          'label?': 'string',
-          'schemaName?': 'string',
-          'id?': 'string',
-        },
-      },
-      disconnect: {
-        method: 'POST',
-        path: '/api/edge/disconnect',
-        params: { path: 'string', id: 'string' },
-      },
-      relabel: {
-        method: 'POST',
-        path: '/api/edge/relabel',
-        params: { path: 'string', id: 'string', 'label?': 'string' },
-      },
-    },
-  },
-
-  schema: {
-    description: "Define and remove node schemas in a canvas. Schemas declare what a kind of node 'is' — its primitives (drag-bar, title, markdown, container) and how they bind to content fields. Schemas are stored in the canvas file alongside structure and content.",
-    actions: {
-      define: {
-        method: 'POST',
-        path: '/api/schema/define',
-        params: {
-          path: 'string',
-          schema: {
-            type: 'object',
-            properties: {
-              name: 'string',
-              label: 'string',
-              primitives: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    type: 'string',
-                    'bind?': 'string',
-                    'name?': 'string',
-                  },
-                  required: ['type'],
-                },
-              },
-              'accepts?': {
-                type: 'array',
-                items: 'string',
-              },
+          path: pathParam,
+          kind: {
+            type: 'described',
+            innerType: 'string',
+            description: "Edge kind defined by the canvas's pack, e.g. 'prim.arrow'. Use pack/describe to see all available kinds and their props schemas.",
+          },
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "ID of the source node. Must exist in the canvas.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "ID of the target node. Must exist in the canvas.",
+          },
+          'props?': {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: {},
             },
-            required: ['name', 'label', 'primitives'],
+            description: "Kind-specific properties.",
+          },
+          'tags?': {
+            type: 'described',
+            innerType: { type: 'array', items: 'string' },
+            description: "Free-form string labels.",
+          },
+          'id?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Optional edge ID. Server generates a UUID if omitted.",
           },
         },
       },
-      delete: {
+      setProps: {
+        description: "Shallow-merge new props into an existing edge.",
         method: 'POST',
-        path: '/api/schema/delete',
-        params: { path: 'string', name: 'string' },
-      },
-    },
-  },
-
-  diag: {
-    description: "Read-only diagnostics and structural queries for canvas comprehension. 'roots' returns per-category root summaries (count, max height, x/y range). 'bbox' returns one node's geometry plus the bounding box of its descendants. 'outliers' lists nodes with implausible geometry. 'subtree' returns one node and all its descendants with geometries. 'outline' returns the nesting tree as nested JSON with titles — use this to comprehend overall canvas structure. 'outlineFrom' returns the nesting tree from a specific node. 'summary' returns counts by schema, edge count, max depth, and bounding box — use this for a cheap top-level overview. 'query' filters and projects nodes by type/parent/ids with selectable fields — use this to find specific subsets.",
-    actions: {
-      roots: {
-        method: 'GET',
-        path: '/api/diag/roots/:path',
-        params: { path: 'string' },
-      },
-      bbox: {
-        method: 'GET',
-        path: '/api/diag/bbox/:path/:id',
-        params: { path: 'string', id: 'string' },
-      },
-      outliers: {
-        method: 'GET',
-        path: '/api/diag/outliers/:path',
-        params: { path: 'string' },
-      },
-      subtree: {
-        method: 'GET',
-        path: '/api/diag/subtree/:path/:id',
-        params: { path: 'string', id: 'string' },
-      },
-      outline: {
-        method: 'GET',
-        path: '/api/diag/outline/:path',
-        params: { path: 'string' },
-      },
-      outlineFrom: {
-        method: 'GET',
-        path: '/api/diag/outline/:path/:id',
-        params: { path: 'string', id: 'string' },
-      },
-      summary: {
-        method: 'GET',
-        path: '/api/diag/summary/:path',
-        params: { path: 'string' },
-      },
-      query: {
-        method: 'POST',
-        path: '/api/diag/query',
+        path: '/api/edge/setProps',
         params: {
-          path: 'string',
-          filter: {
-            type: 'object',
-            properties: {
-              type: 'string',
-              parent: 'string',
-              ids: { type: 'array', items: 'string' },
-              root: 'boolean',
+          path: pathParam,
+          id: 'string',
+          props: {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: {},
             },
+            description: "Props to merge. Existing keys not listed here are unchanged.",
           },
-          'fields?': { type: 'array', items: 'string' },
         },
+      },
+      setTags: {
+        description: "Replace the tags array on an existing edge.",
+        method: 'POST',
+        path: '/api/edge/setTags',
+        params: {
+          path: pathParam,
+          id: 'string',
+          tags: {
+            type: 'described',
+            innerType: { type: 'array', items: 'string' },
+            description: "New tags array. Replaces the previous tags entirely.",
+          },
+        },
+      },
+      remove: {
+        description: "Remove an edge.",
+        method: 'POST',
+        path: '/api/edge/remove',
+        params: { path: pathParam, id: 'string' },
       },
     },
   },
 }
 
 export const batchToolConfig: BatchToolConfig = {
-  description: "Apply multiple v2 actions in a single atomic batch. Actions are an ordered array — each can declare a 'ref' name, and later actions can reference generated IDs via '$ref:<name>' in string param values. Supports all v2 action types: node/create, node/setContent, node/setParent, node/setOrder, node/setGeometry, node/delete, edge/connect, edge/disconnect, edge/relabel, schema/define, schema/delete.",
+  description:
+    "Apply multiple v3 actions atomically in a single request. Actions execute in order; if any action fails the entire batch fails (fail-fast, no rollback, no partial save). Use `ref` on an add action to name it, then reference its generated ID in later actions via '$ref:<name>' as a string parameter value. Supports all node and edge actions. Example: add a node with ref 'n1', then add an edge using '$ref:n1' as the from ID.",
   path: '/api/action/batch',
 }

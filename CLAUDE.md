@@ -28,7 +28,7 @@ geometry → schema → document → server
                   ↘ vscode
 ```
 
-These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc01.02.01) for the migration plan.
+These still work but carry schema-first assumptions that contradict the unfolding direction. See PDR (doc02.01) for the migration plan.
 
 ## Current Milestone
 
@@ -52,9 +52,22 @@ See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full det
 - **Diagram pipelines.** Scripts that read source code via static analysis and emit `.canvas.json`. The pipeline is the reusable artifact — shareable across projects and communities. Each pipeline defines its own node types from the forces of its domain; we don't pre-build a universal schema of typed nodes.
 - **Willing to delete.** No backward compatibility with features nobody uses.
 
+### Graph vs pack: different update frequencies
+
+A `.graph.json` and its `.pack.json` change at very different rates. Graphs churn — every pipeline run, every authored edit. Packs are stable libraries: kinds, schemas, render templates, view defaults. This asymmetry decides where settings live: anything that should *travel with the data* (per-canvas one-offs, pipeline-derived hints) belongs on the graph; anything that should *travel with the vocabulary* (layout defaults, disclosure, view definitions) belongs on the pack. When in doubt, ask "would another canvas using this pack want the same thing?" — yes → pack, no → graph.
+
 ## Canvas Engine
 
-The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable Solid primitives. The engine supports everything we need; restrictions are in the domain layer above it.
+The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-agnostic — not React Flow. Uses d3-zoom, DOM data-attribute hit-testing, composable Solid primitives.
+
+**Engine/domain boundary.** Luminous translates the intention of graph + pack declarations into a visual canvas; cactus *is* that visual API. So the split is not "engine supports everything, domain restricts" — it's by *kind of concern*:
+
+- **Visual and interaction concerns belong in cactus** — how the canvas looks and behaves: layout, drag, snapping, collision-free placement, hit-testing. These are not domain logic and should not leak into the domain layer.
+- **Meaning belongs in the domain layer** (`client-next`) — what nodes and edges *are*, the graph + pack declaration, what is semantically allowed.
+
+cactus operates on the rendered projection (the DOM — `data-container-id` nesting, measured rects), not the abstract graph. The domain layer declares intent and persists results; it does not compute visual geometry.
+
+This boundary is a first-class design principle under active test — see PDR D8 (doc02.01) for the rationale and the experimental hypothesis (does enforcing it yield more maintainable, faster-to-iterate software).
 
 ## Docs / Specs
 
@@ -80,8 +93,32 @@ All paths are relative to the workspace root, **without** the `.carta/` prefix (
 | `carta punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
 | `carta flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
 | `carta rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
-| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc01.02.01`) | (none) |
+| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
+
+### Pack/graph schema changes
+
+When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.
 
 ## Tech Stack
 
 Solid.js, TypeScript 5.9, Vite, Tailwind, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest
+
+## Type Checking
+
+Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).
+
+- `pnpm -r typecheck` or `make typecheck` — runs `tsgo --noEmit` across all packages
+- `npx tsgo --noEmit -p <tsconfig>` — check a single package
+- Build scripts (`tsc -b`, `tsc -p`) stay as-is — tsgo does not emit in the beta
+
+## Searching and reading files
+
+Use the dedicated tools — they're allowlisted and don't trigger approval prompts. Shell pipelines that wrap file access (`cd`, `xargs`, `sh -c`, output redirection, `find … | cat`) do trigger prompts. This list grows as new anti-patterns surface.
+
+- DON'T `find … -name '*.ts' | xargs cat` — DO use Glob to list, then Read each file (Read takes parallel calls).
+- DON'T `cd some/dir && cmd` — DO pass absolute paths; for unavoidable multi-step shell use a single subshell `(cd dir && cmd)`.
+- DON'T `find … | xargs -I{} sh -c '…'` — DO use Glob/Grep, or Read files individually.
+- DON'T `grep -r pattern path/` — DO use the Grep tool.
+- DON'T `cat file` to read — DO use the Read tool.
+- DON'T loop the shell over files (`for f in …; do cat $f; done`) — variable expansion blocks auto-approval; DO issue parallel Read calls, one per file.
+- DON'T `wc -l *.ts` or other glob-expanded shell over many files — DO use Glob to list paths, then Read each (Read reports line counts).

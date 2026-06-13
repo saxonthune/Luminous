@@ -105,18 +105,19 @@ describe('observeLongTasks', () => {
   });
 
   it('returns a no-op cleanup if PerformanceObserver is unavailable', () => {
-    const original = (globalThis as any).PerformanceObserver;
-    (globalThis as any).PerformanceObserver = undefined;
+    const g = globalThis as { PerformanceObserver?: unknown };
+    const original = g.PerformanceObserver;
+    g.PerformanceObserver = undefined;
     const cleanup = observeLongTasks();
     expect(typeof cleanup).toBe('function');
     expect(() => cleanup()).not.toThrow();
-    (globalThis as any).PerformanceObserver = original;
+    g.PerformanceObserver = original;
   });
 });
 
 describe('no-ops in production', () => {
   it('traceCallback returns fn unchanged when DEV is false', async () => {
-    vi.stubEnv('DEV', false as any);
+    vi.stubEnv('DEV', false);
     vi.resetModules();
     const { traceCallback: tc } = await import('../src/perf.js');
     const fn = vi.fn();
@@ -126,7 +127,7 @@ describe('no-ops in production', () => {
   });
 
   it('markInteraction returns no-op end when DEV is false', async () => {
-    vi.stubEnv('DEV', false as any);
+    vi.stubEnv('DEV', false);
     vi.resetModules();
     const { markInteraction: mi } = await import('../src/perf.js');
     performance.clearMarks();
@@ -138,7 +139,7 @@ describe('no-ops in production', () => {
   });
 
   it('observeLongTasks returns no-op when DEV is false', async () => {
-    vi.stubEnv('DEV', false as any);
+    vi.stubEnv('DEV', false);
     vi.resetModules();
     const { observeLongTasks: ol } = await import('../src/perf.js');
     const cleanup = ol();

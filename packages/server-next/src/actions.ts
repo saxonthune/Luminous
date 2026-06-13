@@ -9,151 +9,98 @@ export function applyActionToDoc(
   params: Record<string, unknown>
 ): ActionResult {
   switch (action) {
-    case "node/create": {
-      const { schemaName, parent, order, geometry, content, id: clientId } = params
-      if (schemaName === undefined) return { ok: false, error: "missing param: schemaName" }
-      if (order === undefined) return { ok: false, error: "missing param: order" }
-      if (geometry === undefined) return { ok: false, error: "missing param: geometry" }
+    case "node/add": {
+      const { kind, props, tags, id: clientId } = params
+      if (kind === undefined) return { ok: false, error: "missing param: kind" }
       const id = (clientId as string | undefined) ?? randomUUID()
-      doc.structure[id] = {
+      doc.nodes.push({
         id,
-        schemaName: schemaName as string,
-        parent: (parent as string | null) ?? null,
-        order: order as string,
-        geometry: geometry as { x: number; y: number; w: number; h: number },
-      }
-      doc.content[id] = (content as Record<string, unknown>) ?? {}
+        kind: kind as string,
+        props: (props as Record<string, unknown>) ?? {},
+        tags: (tags as string[]) ?? [],
+      })
       return { ok: true, id }
     }
 
-    case "node/setContent": {
-      const { id, fields } = params
+    case "node/setProps": {
+      const { id, props } = params
       if (id === undefined) return { ok: false, error: "missing param: id" }
-      if (fields === undefined) return { ok: false, error: "missing param: fields" }
-      if (!doc.structure[id as string]) return { ok: false, error: "not found" }
-      doc.content[id as string] = {
-        ...(doc.content[id as string] ?? {}),
-        ...(fields as Record<string, unknown>),
-      }
+      if (props === undefined) return { ok: false, error: "missing param: props" }
+      const node = doc.nodes.find(n => n.id === id)
+      if (!node) return { ok: false, error: `not found: ${id}` }
+      node.props = { ...node.props, ...(props as Record<string, unknown>) }
       return { ok: true }
     }
 
-    case "node/setParent": {
-      const { id, parent, order } = params
+    case "node/setTags": {
+      const { id, tags } = params
       if (id === undefined) return { ok: false, error: "missing param: id" }
-      if (order === undefined) return { ok: false, error: "missing param: order" }
-      const node = doc.structure[id as string]
-      if (!node) return { ok: false, error: "not found" }
-      node.parent = (parent as string | null) ?? null
-      node.order = order as string
-      return { ok: true }
-    }
-
-    case "node/setOrder": {
-      const { id, order } = params
-      if (id === undefined) return { ok: false, error: "missing param: id" }
-      if (order === undefined) return { ok: false, error: "missing param: order" }
-      const node = doc.structure[id as string]
-      if (!node) return { ok: false, error: "not found" }
-      node.order = order as string
-      return { ok: true }
-    }
-
-    case "node/setGeometry": {
-      const { id, geometry } = params
-      if (id === undefined) return { ok: false, error: "missing param: id" }
-      if (geometry === undefined) return { ok: false, error: "missing param: geometry" }
-      const node = doc.structure[id as string]
-      if (!node) return { ok: false, error: "not found" }
-      node.geometry = geometry as { x: number; y: number; w: number; h: number }
+      if (tags === undefined) return { ok: false, error: "missing param: tags" }
+      const node = doc.nodes.find(n => n.id === id)
+      if (!node) return { ok: false, error: `not found: ${id}` }
+      node.tags = tags as string[]
       return { ok: true }
     }
 
     case "node/delete": {
       const { id } = params
       if (id === undefined) return { ok: false, error: "missing param: id" }
-      if (!doc.structure[id as string]) return { ok: false, error: "not found" }
-      delete doc.structure[id as string]
-      delete doc.content[id as string]
-      // Re-parent any node whose parent === id to null
-      for (const node of Object.values(doc.structure)) {
-        if (node.parent === id) {
-          node.parent = null
-        }
-      }
-      // Remove edges referencing this id
-      for (const edgeId of Object.keys(doc.edges)) {
-        const edge = doc.edges[edgeId]
-        if (edge.fromId === id || edge.toId === id) {
-          delete doc.edges[edgeId]
-        }
-      }
+      const idx = doc.nodes.findIndex(n => n.id === id)
+      if (idx === -1) return { ok: false, error: `not found: ${id}` }
+      doc.nodes.splice(idx, 1)
+      doc.edges = doc.edges.filter(e => e.from !== id && e.to !== id)
       return { ok: true }
     }
 
-    case "edge/connect": {
-      const { fromId, toId, label, schemaName, id: clientId } = params
-      if (fromId === undefined) return { ok: false, error: "missing param: fromId" }
-      if (toId === undefined) return { ok: false, error: "missing param: toId" }
-      const id = (clientId as string | undefined) ?? randomUUID()
-      doc.edges[id] = {
-        id,
-        fromId: fromId as string,
-        toId: toId as string,
-        label: (label as string | null) ?? null,
-        ...(schemaName !== undefined ? { schemaName: schemaName as string } : {}),
+    case "edge/add": {
+      const { kind, from, to, props, tags, id: clientId } = params
+      if (kind === undefined) return { ok: false, error: "missing param: kind" }
+      if (from === undefined) return { ok: false, error: "missing param: from" }
+      if (to === undefined) return { ok: false, error: "missing param: to" }
+      if (!doc.nodes.find(n => n.id === from)) {
+        return { ok: false, error: `edge endpoint not found: ${from}` }
       }
+      if (!doc.nodes.find(n => n.id === to)) {
+        return { ok: false, error: `edge endpoint not found: ${to}` }
+      }
+      const id = (clientId as string | undefined) ?? randomUUID()
+      doc.edges.push({
+        id,
+        kind: kind as string,
+        from: from as string,
+        to: to as string,
+        props: (props as Record<string, unknown>) ?? {},
+        tags: (tags as string[]) ?? [],
+      })
       return { ok: true, id }
     }
 
-    case "edge/disconnect": {
+    case "edge/setProps": {
+      const { id, props } = params
+      if (id === undefined) return { ok: false, error: "missing param: id" }
+      if (props === undefined) return { ok: false, error: "missing param: props" }
+      const edge = doc.edges.find(e => e.id === id)
+      if (!edge) return { ok: false, error: `not found: ${id}` }
+      edge.props = { ...edge.props, ...(props as Record<string, unknown>) }
+      return { ok: true }
+    }
+
+    case "edge/setTags": {
+      const { id, tags } = params
+      if (id === undefined) return { ok: false, error: "missing param: id" }
+      if (tags === undefined) return { ok: false, error: "missing param: tags" }
+      const edge = doc.edges.find(e => e.id === id)
+      if (!edge) return { ok: false, error: `not found: ${id}` }
+      edge.tags = tags as string[]
+      return { ok: true }
+    }
+
+    case "edge/remove": {
       const { id } = params
       if (id === undefined) return { ok: false, error: "missing param: id" }
-      if (!doc.edges[id as string]) return { ok: false, error: "not found" }
-      delete doc.edges[id as string]
-      return { ok: true }
-    }
-
-    case "edge/relabel": {
-      const { id, label } = params
-      if (id === undefined) return { ok: false, error: "missing param: id" }
-      const edge = doc.edges[id as string]
-      if (!edge) return { ok: false, error: "not found" }
-      edge.label = (label as string | null) ?? null
-      return { ok: true }
-    }
-
-    case "edge/setRouting": {
-      const { id, routing } = params
-      if (id === undefined) return { ok: false, error: "missing param: id" }
-      const edge = doc.edges[id as string]
-      if (!edge) return { ok: false, error: "not found" }
-      edge.routing = routing as import("./types.js").EdgeRouting
-      return { ok: true }
-    }
-
-    case "edge/clearRouting": {
-      const { id } = params
-      if (id === undefined) return { ok: false, error: "missing param: id" }
-      const edge = doc.edges[id as string]
-      if (!edge) return { ok: false, error: "not found" }
-      delete edge.routing
-      return { ok: true }
-    }
-
-    case "schema/define": {
-      const { schema } = params
-      if (schema === undefined) return { ok: false, error: "missing param: schema" }
-      const s = schema as { name: string; [key: string]: unknown }
-      if (!s.name) return { ok: false, error: "missing param: schema.name" }
-      doc.schemas[s.name] = s as unknown as import("./types.js").Schema
-      return { ok: true }
-    }
-
-    case "schema/delete": {
-      const { name } = params
-      if (name === undefined) return { ok: false, error: "missing param: name" }
-      delete doc.schemas[name as string]
+      const idx = doc.edges.findIndex(e => e.id === id)
+      if (idx === -1) return { ok: false, error: `not found: ${id}` }
+      doc.edges.splice(idx, 1)
       return { ok: true }
     }
 

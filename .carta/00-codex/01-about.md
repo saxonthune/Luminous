@@ -41,7 +41,7 @@ Each addition should be the simplest doc that captures what you just decided. It
 ## How to Read
 
 - `MANIFEST.md` is the machine-readable index — AI agents start there to find anything
-- Documents use `docXX.YY.ZZ` cross-references (e.g., `doc01.02.02` = second doc in first group)
+- Documents use `docXX.YY.ZZ` cross-references (e.g., `doc02.02` = second doc in first group)
 - YAML frontmatter on every doc provides title, status, summary, tags, and dependency refs
 
 ## One Canonical Location

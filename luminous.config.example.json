@@ -1,0 +1,4 @@
+{
+  "//": "Copy to luminous.config.json (gitignored) and list the repos to surface. Paths are resolved relative to this file. Root names are directory basenames.",
+  "roots": [".", "../RankThePlanet"]
+}

@@ -1,0 +1,192 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://luminous.dev/schemas/pack.schema.json",
+  "title": "Luminous pack",
+  "description": "Vocabulary file co-located with a graph.json. Defines nodeKinds, edgeKinds, views, and optional disclosure/layers/render. Mirrors what packages/core/src/validate.ts enforces.",
+  "type": "object",
+  "required": ["id", "version", "nodeKinds", "edgeKinds", "views"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Must equal the file's basename. `my-domain.pack.json` -> \"my-domain\"."
+    },
+    "version": {
+      "type": "string",
+      "description": "Informational only; never resolved against."
+    },
+    "description": { "type": "string" },
+    "nodeKinds": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/NodeKind" }
+    },
+    "edgeKinds": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/EdgeKind" }
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/View" }
+    },
+    "layers": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Layer" }
+    },
+    "disclosure": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Disclosure" }
+    }
+  },
+  "definitions": {
+    "JsonSchema": {
+      "description": "A JSON Schema object. Used for nodeKind/edgeKind props validation. Compiled by Ajv at load time; set `additionalProperties: false` to reject unknown props.",
+      "type": "object"
+    },
+    "RenderMap": {
+      "description": "Map keyed by disclosure level. Each value is a RenderNode tree. Writing this as a flat RenderNode (e.g. {\"type\":\"card\",...}) is the most common mistake -- the keys are read as level names and the kind renders nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "peek": { "type": "object" },
+        "card": { "type": "object" },
+        "open": { "type": "object" },
+        "deep": { "type": "object" }
+      }
+    },
+    "NodeKind": {
+      "type": "object",
+      "required": ["id", "label", "props"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Namespaced (e.g. `solid.component`, `rtp.action`). Unique within the pack."
+        },
+        "label": { "type": "string" },
+        "props": { "$ref": "#/definitions/JsonSchema" },
+        "idTemplate": {
+          "type": "string",
+          "description": "Template like `component.{name}`. Used ONLY by interactive creation (MCP). Pipelines must derive ids themselves."
+        },
+        "defaultSize": {
+          "type": "object",
+          "required": ["w", "h"],
+          "additionalProperties": false,
+          "properties": {
+            "w": { "type": "number" },
+            "h": { "type": "number" }
+          }
+        },
+        "render": { "$ref": "#/definitions/RenderMap" }
+      }
+    },
+    "EdgeKind": {
+      "type": "object",
+      "required": ["id", "label", "props"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "props": {
+          "$ref": "#/definitions/JsonSchema",
+          "description": "If edges should carry a `label` prop, the schema must permit it. An `additionalProperties: false` schema with no `label` property rejects the edge at validation time."
+        },
+        "directed": { "type": "boolean" },
+        "acceptsSource": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "nodeKind ids constraining valid sources. Omit to allow any."
+        },
+        "acceptsTarget": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "render": {
+          "$ref": "#/definitions/RenderMap",
+          "description": "Edge labels resolve in this precedence: edgeKind.render > edge.props.label > view role (arrow/contain/summary)."
+        }
+      }
+    },
+    "View": {
+      "type": "object",
+      "required": ["id", "name", "zoomToLevel", "nodeRoles", "edgeRoles", "layers", "layout"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "Human-readable label. The field is `name`, NOT `label`."
+        },
+        "description": { "type": "string" },
+        "zoomToLevel": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["minZoom", "level"],
+            "additionalProperties": false,
+            "properties": {
+              "minZoom": { "type": "number" },
+              "level": { "enum": ["peek", "card", "open", "deep"] }
+            }
+          }
+        },
+        "nodeRoles": {
+          "type": "object",
+          "description": "Map of nodeKind id -> role. A kind not listed defaults to `hidden` in this view.",
+          "additionalProperties": {
+            "enum": ["spatial", "latent", "hidden"]
+          }
+        },
+        "edgeRoles": {
+          "type": "object",
+          "description": "Map of edgeKind id -> role.",
+          "additionalProperties": {
+            "enum": ["arrow", "contain", "summary", "hidden"]
+          }
+        },
+        "layers": {
+          "type": "object",
+          "description": "Map of layer id -> initial state. Empty object {} is valid.",
+          "additionalProperties": {
+            "enum": ["on", "off", "peek"]
+          }
+        },
+        "layout": {
+          "type": "object",
+          "required": ["algorithm"],
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": { "enum": ["elk", "force"] }
+          }
+        }
+      }
+    },
+    "Layer": {
+      "type": "object",
+      "required": ["id", "name", "edgeKinds", "defaultState"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "edgeKinds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "defaultState": { "enum": ["on", "off", "peek"] }
+      }
+    },
+    "Disclosure": {
+      "type": "object",
+      "required": ["kind", "peek", "card", "open", "deep"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string" },
+        "peek": { "type": "array", "items": { "type": "string" } },
+        "card": { "type": "array", "items": { "type": "string" } },
+        "open": { "type": "array", "items": { "type": "string" } },
+        "deep": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

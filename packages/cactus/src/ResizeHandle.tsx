@@ -1,5 +1,5 @@
 import type { JSX } from 'solid-js';
-import type { ResizeDirection } from './useNodeResize.js';
+import type { ResizeDirection } from './interactions/useNodeResize.js';
 
 export interface ResizeHandleProps {
   nodeId: string;
@@ -28,7 +28,7 @@ export function ResizeHandle(props: ResizeHandleProps): JSX.Element {
           'pointer-events': 'none',
           width: '16px',
           height: '16px',
-          background: 'linear-gradient(135deg, transparent 50%, var(--color-resize-handle) 50%)',
+          background: 'linear-gradient(135deg, transparent 50%, var(--cactus-resize-handle, #94a3b8) 50%)',
         }}
       />
     </>

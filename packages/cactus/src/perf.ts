@@ -5,7 +5,7 @@ const FRAME_BUDGET = 16; // ms — one animation frame
  * Logs a console.warn if execution exceeds FRAME_BUDGET (16ms).
  * In production, returns `fn` unchanged (no overhead).
  */
-export function traceCallback<T extends (...args: any[]) => any>(name: string, fn: T): T {
+export function traceCallback<T extends (...args: never[]) => unknown>(name: string, fn: T): T {
   if (!import.meta.env.DEV) return fn;
   return function (this: unknown, ...args: Parameters<T>): ReturnType<T> {
     const startMark = `cactus:${name}:start`;

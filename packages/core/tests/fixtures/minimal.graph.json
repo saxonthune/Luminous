@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "pack": "test",
+  "nodes": [
+    {
+      "id": "node-1",
+      "kind": "test.foo",
+      "props": { "name": "Alpha" },
+      "tags": []
+    },
+    {
+      "id": "node-2",
+      "kind": "test.foo",
+      "props": { "name": "Beta" },
+      "tags": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "kind": "test.bar",
+      "from": "node-1",
+      "to": "node-2",
+      "props": {},
+      "tags": []
+    }
+  ]
+}

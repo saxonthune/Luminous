@@ -1,0 +1,52 @@
+{
+  "version": 3,
+  "pack": "primitives",
+  "nodes": [
+    {
+      "id": "box.alpha",
+      "kind": "prim.box",
+      "props": { "label": "Alpha", "tag": "module", "color": "#4a90e2", "description": "First sample box." },
+      "tags": []
+    },
+    {
+      "id": "box.beta",
+      "kind": "prim.box",
+      "props": { "label": "Beta", "tag": "module", "color": "#e2884a", "description": "Second sample box." },
+      "tags": []
+    },
+    {
+      "id": "box.beta.parser",
+      "kind": "prim.box",
+      "props": { "label": "Parser", "tag": "submodule", "color": "#e2a874", "description": "Tokenises input." },
+      "tags": []
+    },
+    {
+      "id": "box.beta.evaluator",
+      "kind": "prim.box",
+      "props": { "label": "Evaluator", "tag": "submodule", "color": "#e2a874", "description": "Reduces the AST." },
+      "tags": []
+    },
+    {
+      "id": "box.beta.cache",
+      "kind": "prim.box",
+      "props": { "label": "Cache", "tag": "submodule", "color": "#e2a874" },
+      "tags": []
+    },
+    {
+      "id": "box.gamma",
+      "kind": "prim.box",
+      "props": { "label": "Gamma", "tag": "concept", "color": "#7ab06d" },
+      "tags": []
+    }
+  ],
+  "edges": [
+    { "id": "arrow.a-b", "kind": "prim.arrow", "from": "box.alpha", "to": "box.beta", "props": { "label": "depends on" }, "tags": [] },
+    { "id": "arrow.b-c", "kind": "prim.arrow", "from": "box.beta",  "to": "box.gamma", "props": {}, "tags": [] },
+    { "id": "contains.beta.parser",    "kind": "prim.contains", "from": "box.beta.parser",    "to": "box.beta", "props": {}, "tags": [] },
+    { "id": "contains.beta.evaluator", "kind": "prim.contains", "from": "box.beta.evaluator", "to": "box.beta", "props": {}, "tags": [] },
+    { "id": "contains.beta.cache",     "kind": "prim.contains", "from": "box.beta.cache",     "to": "box.beta", "props": {}, "tags": [] },
+    { "id": "arrow.parser-evaluator", "kind": "prim.arrow", "from": "box.beta.parser", "to": "box.beta.evaluator", "props": { "label": "feeds" }, "tags": [] },
+    { "id": "arrow.evaluator-cache",  "kind": "prim.arrow", "from": "box.beta.evaluator", "to": "box.beta.cache", "props": { "label": "writes" }, "tags": [] }
+  ],
+  "defaultView": "architecture"
+}

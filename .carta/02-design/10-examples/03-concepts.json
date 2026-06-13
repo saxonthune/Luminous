@@ -1,0 +1,170 @@
+{
+  "concepts": [
+    {
+      "name": "Collection",
+      "normalizedName": "Collection",
+      "purpose": "Let a user organize a set of Location entries under one shared review template, so they can build a personal record of any kind of place-bound activity (cafés ranked, restaurants visited, days journaled).",
+      "state": "- `name` — user-provided label.\n- `entries` — set of `(Location, Review)` pairs. The same Location may appear in many Collections; each appearance is a distinct entry with its own Review.\n- `created`, `last_modified` — for sorting and sync.\n- `appearance` — visual identity used on the map (color, pin style). Set on creation; editable.\n\nThe Collection's review template lives in the Review concept (§3), not here. The Collection knows that *its* entries' Reviews share a template, but does not own the template's structure.",
+      "operationalPrinciple": "A user creates a Collection \"Drip Coffee,\" authors its Review template (via §3) to include stars and coffee-style, and `addEntry(BlueBottleMintPlaza, review)` where the Review carries the per-place data. Later they add Blue Bottle to a different Collection \"Geo Diary\" with a different Review template; the two entries are independent. Browsing Drip Coffee shows only the coffee-shaped entries.",
+      "actions": [
+        {
+          "name": "create",
+          "signature": "create(name)",
+          "description": "start an empty Collection."
+        },
+        {
+          "name": "addEntry",
+          "signature": "addEntry(location, review)",
+          "description": "append an entry. Same Location across Collections = multiple entries."
+        },
+        {
+          "name": "removeEntry",
+          "signature": "removeEntry(entry)",
+          "description": "drop an entry from this Collection. Does not delete the Location or its Reviews in other Collections."
+        },
+        {
+          "name": "import",
+          "signature": "import(source)",
+          "description": "ingest an external collection (KML, GeoJSON, RTP bundle, third-party share URL). Becomes a first-class Collection owned by the user."
+        },
+        {
+          "name": "export",
+          "signature": "export(format)",
+          "description": "emit the Collection as a portable bundle for backup or sharing."
+        },
+        {
+          "name": "share",
+          "signature": "share(audience)",
+          "description": "produce a shareable artifact (deferred to a later sharing concept)."
+        }
+      ]
+    },
+    {
+      "name": "Location",
+      "normalizedName": "Location",
+      "purpose": "Let a user designate a real-world place once, and refer to it from anywhere in the app, regardless of which provider supplied its identity.",
+      "state": "- `coordinates` — `(lat, lng)`. Always present.\n- `displayName` — human-readable label.\n- `sourceType` — which provider asserted this Location: `google`, `osm`, `apple`, `manual`, etc.\n- `sourceId` — stable id within that provider (`place_id`, OSM node id, generated UUID for `manual`).\n- `cachedMetadata` — provider-supplied snapshot at import time (address, category, etc.).\n- `refreshable` — whether the source can be re-queried for updated metadata.\n\n`(sourceType, sourceId)` is the identity. Two Locations with the same `(lat, lng)` from different providers are distinct.",
+      "operationalPrinciple": "A user searches \"Blue Bottle Mint Plaza\" via the Google provider and resolves a Location. They add it to two Collections. Later they tap the Location and choose \"Open in Google Maps\"; the OS hands off to the Google Maps app, which opens at the same coordinates. Their entries in both Collections are unaffected.",
+      "actions": [
+        {
+          "name": "resolve",
+          "signature": "resolve(query, provider)",
+          "description": "search a provider for a place; return a candidate Location."
+        },
+        {
+          "name": "dropPin",
+          "signature": "dropPin(coordinates)",
+          "description": "create a `manual` Location with a generated UUID."
+        },
+        {
+          "name": "import",
+          "signature": "import(externalRef)",
+          "description": "adopt a Location from a KML placemark, GeoJSON feature, or shared URL."
+        },
+        {
+          "name": "addToCollection",
+          "signature": "addToCollection(collection, data)",
+          "description": "make this Location an entry in a Collection (this is `Collection.addEntry` viewed from the Location's side; see synchronization below)."
+        },
+        {
+          "name": "openExternally",
+          "signature": "openExternally(target)",
+          "description": "hand off to an external map app (e.g. Google Maps, Apple Maps) for navigation, street view, or richer details. RTP does not reimplement those affordances; it cedes them by handoff."
+        },
+        {
+          "name": "refresh",
+          "signature": "refresh()",
+          "description": "if `refreshable`, re-query the provider to update `cachedMetadata`."
+        },
+        {
+          "name": "merge",
+          "signature": "merge(other)",
+          "description": "user-confirmed reconciliation when two Locations from different providers refer to the same real place."
+        }
+      ]
+    },
+    {
+      "name": "Review",
+      "normalizedName": "Review",
+      "purpose": "Let a user capture a structured evaluation of a Location within the context of a particular Collection — restaurants reviewed by stars and dish notes; coffee shops by roast style and a power-ranking position; diary entries by date and freeform text.\n\nA Review has two faces, kept inside one concept because they share a single purpose (defining and capturing the evaluation):\n\n1. A **template** — the shape of the form, authored once per Collection.\n2. An **instance** — the filled-in data for a specific entry.",
+      "state": "Per Collection (template):\n\n- `template` — an ordered list of fields. Each field has a `name`, a `type` (e.g. `stars`, `text`, `enum`, `boolean`, `date`, `power-ranking`), per-type configuration (e.g. `stars: 1–5`; `enum: [light, medium, dark]`), and a `required` flag.\n- `template_version` — bumped when the template changes; used to reconcile instances.\n\nPer entry (instance):\n\n- `data` — a map of `field-name → value`, conforming to the template at the recorded version.\n- `recorded_template_version` — the template version this instance was written against.\n- `created`, `last_modified`.",
+      "operationalPrinciple": "A user creating \"Drip Coffee\" authors the template: a 1–5 stars field, a `light|medium|dark` style enum, a Visited boolean, a power-ranking field, a freeform notes field. Later, sitting at a café, they `start(DripCoffee, BlueBottleMintPlaza)`. The app shows the template's form; they fill in stars=4, style=light, visited=true, notes=\"excellent\", and `submit`. The entry now carries this Review. Browsing the Collection, they see entries shaped exactly by their template.",
+      "actions": [
+        {
+          "name": "defineTemplate",
+          "signature": "defineTemplate(collection, fields)",
+          "description": "initial template at Collection creation."
+        },
+        {
+          "name": "editTemplate",
+          "signature": "editTemplate(collection, newFields)",
+          "description": "modify. Existing instances reconcile (missing required fields prompt; removed fields archived but not destroyed)."
+        },
+        {
+          "name": "useBuiltIn",
+          "signature": "useBuiltIn(collection, templateName)",
+          "description": "adopt a built-in template (Coffee Ranking, Wishlist, Geo Diary, etc.) as the starting point."
+        },
+        {
+          "name": "start",
+          "signature": "start(collection, location)",
+          "description": "produce a draft Review for a Location in this Collection. Pre-filled with sensible defaults (today's date, Unvisited, etc.)."
+        },
+        {
+          "name": "submit",
+          "signature": "submit(review, data)",
+          "description": "commit the instance. Becomes the entry's Review."
+        },
+        {
+          "name": "edit",
+          "signature": "edit(review, data)",
+          "description": "change values within the template."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(field)",
+          "description": "unset a field where \"not set\" is meaningful (distinct from \"false\" for booleans, etc.)."
+        }
+      ]
+    },
+    {
+      "name": "Map Overview",
+      "normalizedName": "MapOverview",
+      "purpose": "Give the user, on every app launch, an immediate spatial view of everything they care about — all Collections, all entries, with enough visual encoding to read the state of their world at a glance.",
+      "state": "- `viewport` — current `(center, zoom, bearing)`. Persisted across launches.\n- `visiblePins` — for each entry across all Collections, a pin styled by:\n  - **fill color** = the owning Collection's `appearance` color\n  - **outline** = same color as fill for visited entries; pin is **gray with a colored outline** for unvisited entries (where the schema has a Visited/Unvisited concept)\n- `collectionFilter` — set of Collections currently shown. Defaults to \"all.\"\n- `selectedPin` — currently focused entry, if any.",
+      "operationalPrinciple": "A user taps the RTP icon. Within ~200ms, they see their last viewport with pins from all their Collections: orange-filled pins for \"Drip Coffee\" (visited), orange-outlined gray pins for cafés on their wishlist, green-filled pins for \"NYT Top 100\" places they've been, green-outlined gray pins for the rest of the NYT list. Without any further action, they understand the state of their world. Tapping a pin reveals which Collection it belongs to and the entry's data.",
+      "actions": [
+        {
+          "name": "open",
+          "signature": "open()",
+          "description": "launch action. Restore `viewport`, render `visiblePins` for all Collections in `collectionFilter`. Renders before any background data has loaded (see doc01.01 §\"Cold-start playbook\")."
+        },
+        {
+          "name": "pan",
+          "signature": "pan(delta)",
+          "description": "standard map navigation. Updates `viewport`."
+        },
+        {
+          "name": "zoom",
+          "signature": "zoom(delta)",
+          "description": "standard map navigation. Updates `viewport`."
+        },
+        {
+          "name": "selectPin",
+          "signature": "selectPin(pin)",
+          "description": "focus an entry; reveal its Collection and per-entry data."
+        },
+        {
+          "name": "toggleCollection",
+          "signature": "toggleCollection(collection)",
+          "description": "add/remove a Collection from `collectionFilter`. Persistent."
+        },
+        {
+          "name": "jumpToCollection",
+          "signature": "jumpToCollection(collection)",
+          "description": "fit viewport to that Collection's entries."
+        }
+      ]
+    }
+  ]
+}

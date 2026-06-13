@@ -1,0 +1,185 @@
+/* Cactus engine stylesheet.
+ *
+ * Every color is var(--cactus-NAME, FALLBACK) — the token contract (doc02.05.05).
+ * Fallbacks render a usable light appearance with zero theme CSS loaded.
+ * To theme: load cactus-themes.css and apply .cactus-theme-light/-dark, or
+ * fill the --cactus-* tokens from a host theme system. */
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+
+.cactus-chrome-toolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--cactus-overlay, #ffffff);
+  border: 1px solid var(--cactus-border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: var(--cactus-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  font-size: 13px;
+}
+
+/* ── Button ──────────────────────────────────────────────── */
+
+.cactus-chrome-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cactus-fg, #111827);
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.cactus-chrome-btn:hover {
+  background: var(--cactus-surface-alt, #f3f4f6);
+}
+
+.cactus-chrome-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cactus-chrome-btn[data-tone="danger"] {
+  color: var(--cactus-danger, #dc2626);
+}
+
+.cactus-chrome-btn[data-tone="danger"]:hover {
+  background: var(--cactus-danger-subtle, #fef2f2);
+}
+
+.cactus-chrome-btn[data-tone="primary"] {
+  color: var(--cactus-accent, #2563eb);
+}
+
+/* ── Toggle group / set ──────────────────────────────────── */
+
+.cactus-chrome-toggle-group,
+.cactus-chrome-toggle-set {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  background: var(--cactus-surface-alt, #f3f4f6);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+/* ── Toggle item ─────────────────────────────────────────── */
+
+.cactus-chrome-toggle-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--cactus-fg, #111827);
+  cursor: pointer;
+  font-size: inherit;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.cactus-chrome-toggle-item:hover {
+  background: var(--cactus-surface, #ffffff);
+}
+
+.cactus-chrome-toggle-item[data-pressed],
+.cactus-chrome-toggle-item[aria-checked="true"] {
+  background: var(--cactus-accent, #2563eb);
+  color: var(--cactus-on-accent, #ffffff);
+}
+
+.cactus-chrome-toggle-item[data-disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Separator ───────────────────────────────────────────── */
+
+.cactus-chrome-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--cactus-border, #e5e7eb);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ── Spacer ──────────────────────────────────────────────── */
+
+.cactus-chrome-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+/* ── Menu content ────────────────────────────────────────── */
+
+.cactus-chrome-menu-content {
+  background: var(--cactus-overlay, #ffffff);
+  border: 1px solid var(--cactus-border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: var(--cactus-shadow-lg, 0 10px 15px rgba(0, 0, 0, 0.1));
+  padding: 4px;
+  min-width: 160px;
+  outline: none;
+}
+
+/* ── Menu item ───────────────────────────────────────────── */
+
+.cactus-chrome-menu-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--cactus-fg, #111827);
+  outline: none;
+  user-select: none;
+}
+
+.cactus-chrome-menu-item[data-highlighted] {
+  background: var(--cactus-selection, rgba(37, 99, 235, 0.1));
+}
+
+.cactus-chrome-menu-item[data-disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cactus-chrome-menu-item[data-tone="danger"] {
+  color: var(--cactus-danger, #dc2626);
+}
+
+.cactus-chrome-menu-item[data-tone="danger"][data-highlighted] {
+  background: var(--cactus-danger-subtle, #fef2f2);
+}
+
+.cactus-chrome-menu-item[data-tone="primary"] {
+  color: var(--cactus-accent, #2563eb);
+}
+
+/* ── Menu separator ──────────────────────────────────────── */
+
+.cactus-chrome-menu-sep {
+  height: 1px;
+  background: var(--cactus-border, #e5e7eb);
+  margin: 4px 0;
+  border: none;
+}
+
+/* ── Menu hotkey ─────────────────────────────────────────── */
+
+.cactus-chrome-menu-hotkey {
+  color: var(--cactus-fg-muted, #6b7280);
+  font-size: 11px;
+  margin-left: 16px;
+}

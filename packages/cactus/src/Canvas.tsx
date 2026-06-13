@@ -1,11 +1,18 @@
-import { createSignal, onCleanup, Show, type JSX } from 'solid-js';
-import { useViewport, type UseViewportOptions, type Transform } from './useViewport.js';
+import { createSignal, createMemo, onCleanup, Show, type JSX } from 'solid-js';
+import { Portal } from 'solid-js/web';
+import { useViewport, type UseViewportOptions, type Transform } from './interactions/useViewport.js';
 import { observeLongTasks } from './perf.js';
-import { useConnectionDrag } from './useConnectionDrag.js';
-import { useBoxSelect } from './useBoxSelect.js';
-import { useSelection } from './useSelection.js';
+import { useConnectionDrag } from './interactions/useConnectionDrag.js';
+import { useBoxSelect } from './interactions/useBoxSelect.js';
+import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
-import { CanvasContext, type CanvasContextValue } from './CanvasContext.js';
+import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
+import { EdgeLayer } from './EdgeLayer.js';
+import type { EdgeDeclaration } from './types.js';
+import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
+import { ChromeSlots } from './chrome/ChromeSlots.js';
+import { MenuRoot } from './chrome/ChromePrimitives.js';
+import { useHotkeys } from './chrome/useHotkeys.js';
 
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
@@ -16,6 +23,14 @@ export interface ConnectionPreviewCoords {
   currentY: number;
 }
 
+/**
+ * Cactus is domain-agnostic. It accepts opaque node and edge declarations with
+ * geometry hints. It does not know about kinds, views, roles, layers, disclosure,
+ * or packs. All domain concepts are the host's responsibility.
+ *
+ * Node positions are tracked internally via CanvasContext (NodeContainer registers
+ * on mount). Edge geometry is computed from these positions.
+ */
 export interface CanvasProps {
   viewportOptions?: UseViewportOptions;
   connectionDrag?: {
@@ -25,7 +40,8 @@ export interface CanvasProps {
   boxSelect?: {
     getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
   };
-  renderEdges?: (transform: Transform) => JSX.Element;
+  /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
+  edges?: EdgeDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
   class?: string;
   children: JSX.Element;
@@ -38,6 +54,14 @@ export interface CanvasProps {
   onBackgroundContextMenu?: (event: MouseEvent) => void;
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element;
   ref?: (handle: CanvasRef) => void;
+  /** Declarative toolbar schema rendered in screen-space slots (top/left/right/bottom). */
+  chrome?: ChromeSchema;
+  /** Dispatches action ids from chrome controls and hotkeys. */
+  onAction?: (id: string, payload?: unknown) => void;
+  /** Returns a MenuSchema for a node right-click, or undefined for no menu. */
+  nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
+  /** Returns a MenuSchema for a background right-click, or undefined for no menu. */
+  backgroundContextMenu?: () => MenuSchema | undefined;
 }
 
 export interface CanvasRef {
@@ -49,8 +73,69 @@ export interface CanvasRef {
   clearSelection: () => void;
 }
 
+/** Flatten all Action records from a ChromeSchema for hotkey registration. */
+function flattenActions(chrome: ChromeSchema | undefined): Action[] {
+  if (!chrome) return [];
+  const actions: Action[] = [];
+  const slots = [chrome.top, chrome.left, chrome.right, chrome.bottom];
+  for (const slot of slots) {
+    if (!slot) continue;
+    for (const toolbar of slot) {
+      for (const ctrl of toolbar.controls) {
+        if (ctrl.type === 'button') actions.push(ctrl.action);
+        else if (ctrl.type === 'toggle-group' || ctrl.type === 'toggle-set') {
+          actions.push(...ctrl.actions);
+        }
+      }
+    }
+  }
+  return actions;
+}
+
 export function Canvas(props: CanvasProps) {
+  // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
+  // parents are expected to remount Canvas if the configuration changes.
+  /* eslint-disable solid/reactivity */
   const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(props.viewportOptions);
+
+  // Node rect registry — populated by NodeContainer via context; consumed by EdgeLayer.
+  const nodeRectsData = new Map<string, NodeRect>();
+  const [nodeRectsVersion, setNodeRectsVersion] = createSignal(0);
+  const registerNodeRect = (id: string, rect: NodeRect) => {
+    // Idempotent: skip the reactive bump when the rect is unchanged, so a
+    // re-registration with identical geometry is a true no-op for layout.
+    const prev = nodeRectsData.get(id);
+    if (prev && prev.x === rect.x && prev.y === rect.y && prev.w === rect.w && prev.h === rect.h) {
+      return;
+    }
+    nodeRectsData.set(id, rect);
+    setNodeRectsVersion((v) => v + 1);
+  };
+  const unregisterNodeRect = (id: string) => {
+    nodeRectsData.delete(id);
+    setNodeRectsVersion((v) => v + 1);
+  };
+  const getNodeRects = (): ReadonlyMap<string, NodeRect> => {
+    nodeRectsVersion(); // reactive dependency — re-evaluates when any rect changes
+    return nodeRectsData;
+  };
+
+  // Header-height registry — populated by <NodeHeader> via context; consumed by layout.
+  const headerHeightsData = new Map<string, number>();
+  const [headerHeightsVersion, setHeaderHeightsVersion] = createSignal(0);
+  const registerHeaderHeight = (nodeId: string, height: number) => {
+    if (headerHeightsData.get(nodeId) === height) return;
+    headerHeightsData.set(nodeId, height);
+    setHeaderHeightsVersion((v) => v + 1);
+  };
+  const unregisterHeaderHeight = (nodeId: string) => {
+    headerHeightsData.delete(nodeId);
+    setHeaderHeightsVersion((v) => v + 1);
+  };
+  const getHeaderHeights = (): ReadonlyMap<string, number> => {
+    headerHeightsVersion(); // reactive dependency
+    return headerHeightsData;
+  };
 
   const connectionDragResult = useConnectionDrag(
     props.connectionDrag
@@ -98,6 +183,17 @@ export function Canvas(props: CanvasProps) {
     window.removeEventListener('keyup', handleKeyUp);
   });
 
+  // Context menu state — rendered in a Portal at cursor position.
+  const [ctxMenuState, setCtxMenuState] = createSignal<{
+    x: number;
+    y: number;
+    schema: MenuSchema;
+  } | null>(null);
+
+  // Hotkeys: flatten actions from the chrome schema and register a global keydown listener.
+  const allActions = createMemo(() => flattenActions(props.chrome));
+  useHotkeys(allActions, (id, payload) => props.onAction?.(id, payload));
+
   props.ref?.({
     fitView,
     screenToCanvas,
@@ -118,6 +214,44 @@ export function Canvas(props: CanvasProps) {
     onNodePointerDown,
     setSelectedIds,
     ctrlHeld,
+    registerNodeRect,
+    unregisterNodeRect,
+    getNodeRects,
+    registerHeaderHeight,
+    unregisterHeaderHeight,
+    getHeaderHeights,
+    fitView,
+  };
+  /* eslint-enable solid/reactivity */
+
+  const handleContextMenu = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const container = target.closest?.('[data-container-id]');
+
+    if (container && props.nodeContextMenu) {
+      const nodeId = container.getAttribute('data-container-id')!;
+      const schema = props.nodeContextMenu(nodeId);
+      if (schema && schema.items.length > 0) {
+        e.preventDefault();
+        setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+        return;
+      }
+    }
+
+    if (!container) {
+      if (props.backgroundContextMenu) {
+        const schema = props.backgroundContextMenu();
+        if (schema && schema.items.length > 0) {
+          e.preventDefault();
+          setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+          return;
+        }
+      }
+      if (props.onBackgroundContextMenu) {
+        e.preventDefault();
+        props.onBackgroundContextMenu(e);
+      }
+    }
   };
 
   return (
@@ -125,7 +259,7 @@ export function Canvas(props: CanvasProps) {
       <div
         ref={setContainerRef}
         class={props.class}
-        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none' }}
+        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
         onPointerDown={(e) => {
           if (props.onBackgroundPointerDown) {
             const target = e.target as HTMLElement;
@@ -134,19 +268,20 @@ export function Canvas(props: CanvasProps) {
             }
           }
         }}
-        onContextMenu={(e) => {
-          if (!props.onBackgroundContextMenu) return;
-          const target = e.target as HTMLElement;
-          // If the right-click landed on (or inside) a node, let the node handle it.
-          if (target.closest?.('[data-container-id]')) return;
-          e.preventDefault();
-          props.onBackgroundContextMenu(e);
-        }}
+        onContextMenu={handleContextMenu}
       >
         {props.renderBackground
           ? props.renderBackground(transform(), props.patternId)
           : <DotGrid transform={transform()} patternId={props.patternId} />
         }
+
+        <Show when={(props.edges?.length ?? 0) > 0}>
+          <svg data-cactus-edge-layer-lines width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="lines" zoom={() => transform().k} />
+            </g>
+          </svg>
+        </Show>
 
         <div
           style={{
@@ -159,10 +294,10 @@ export function Canvas(props: CanvasProps) {
           {props.children}
         </div>
 
-        <Show when={props.renderEdges}>
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
+        <Show when={(props.edges?.length ?? 0) > 0}>
+          <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              {props.renderEdges!(transform())}
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} />
             </g>
           </svg>
         </Show>
@@ -198,14 +333,33 @@ export function Canvas(props: CanvasProps) {
                 top: `${rect().y}px`,
                 width: `${rect().width}px`,
                 height: `${rect().height}px`,
-                border: '1px solid var(--color-accent)',
-                "background-color": 'var(--color-accent-10)',
+                border: '1px solid var(--cactus-accent, #2563eb)',
+                "background-color": 'var(--cactus-selection, rgba(37, 99, 235, 0.1))',
                 "pointer-events": 'none',
               }}
             />
           )}
         </Show>
+
+        {/* Screen-space chrome toolbars — anchored to viewport, resist pan/zoom */}
+        <ChromeSlots schema={props.chrome} onAction={props.onAction} />
       </div>
+
+      {/* Context menu — rendered outside the canvas container for correct stacking */}
+      <Show when={ctxMenuState()}>
+        {(state) => (
+          <Portal>
+            <MenuRoot
+              schema={state().schema}
+              open
+              onOpenChange={(open) => { if (!open) setCtxMenuState(null); }}
+              anchorX={state().x}
+              anchorY={state().y}
+              onAction={props.onAction}
+            />
+          </Portal>
+        )}
+      </Show>
     </CanvasContext.Provider>
   );
 }

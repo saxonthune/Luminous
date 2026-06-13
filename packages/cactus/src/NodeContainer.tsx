@@ -1,4 +1,5 @@
-import type { JSX } from 'solid-js';
+import { createRenderEffect, onCleanup, Show, type JSX } from 'solid-js';
+import { useCanvasContext } from './CanvasContext.js';
 
 export interface NodeContainerProps {
   nodeId: string;
@@ -6,12 +7,33 @@ export interface NodeContainerProps {
   y: () => number;
   w: () => number;
   h: () => number;
+  softContainer?: () => boolean;
   onPointerDown?: (e: PointerEvent) => void;
   onContextMenu?: (e: MouseEvent) => void;
   children?: JSX.Element;
 }
 
 export function NodeContainer(props: NodeContainerProps): JSX.Element {
+  const ctx = useCanvasContext();
+
+  // createRenderEffect runs synchronously during the render pass so that
+  // node rects are registered before the EdgeLayer (which comes after in
+  // the Canvas JSX) reads them for geometry computation.
+  // Sizes come from deep-LOD measurement (deepLodMeasure.tsx), not from live DOM.
+  createRenderEffect(() => {
+    ctx.registerNodeRect(props.nodeId, {
+      x: props.x(),
+      y: props.y(),
+      w: props.w(),
+      h: props.h(),
+    });
+  });
+  // Unregister only when the component is destroyed — NOT on every effect
+  // re-run. An onCleanup *inside* the render effect fires before each
+  // re-execution, briefly deleting the rect and exposing an inconsistent
+  // registry to layout, which turns the layout↔measurement cycle divergent.
+  onCleanup(() => ctx.unregisterNodeRect(props.nodeId));
+
   return (
     <div
       data-node-id={props.nodeId}
@@ -24,25 +46,27 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         left: `${props.x()}px`,
         top: `${props.y()}px`,
         width: `${props.w()}px`,
-        'min-height': `${props.h()}px`,
+        height: `${props.h()}px`,
+        overflow: 'hidden',
       }}
-      onPointerDown={props.onPointerDown}
-      onContextMenu={props.onContextMenu}
+      onPointerDown={(e) => props.onPointerDown?.(e)}
+      onContextMenu={(e) => props.onContextMenu?.(e)}
     >
+      <Show when={props.softContainer?.()}>
+        <div
+          data-soft-container="true"
+          style={{
+            position: 'absolute',
+            inset: '0',
+            'z-index': '-1',
+            background: 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
+            border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+            'border-radius': '8px',
+            'pointer-events': 'none',
+          }}
+        />
+      </Show>
       {props.children}
-      {/* Universal drag gripper — bottom-left corner, always present */}
-      <div
-        data-drag-handle="true"
-        data-no-pan="true"
-        class="absolute bottom-0 left-0 w-4 h-4 cursor-grab active:cursor-grabbing opacity-30 hover:opacity-70 transition-opacity rounded-bl-lg"
-        style={{ 'pointer-events': 'auto' }}
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" style={{ 'pointer-events': 'none' }}>
-          <line x1="3" y1="8" x2="8" y2="3" stroke="var(--color-resize-handle, #888)" stroke-width="1.5" stroke-linecap="round" />
-          <line x1="3" y1="12" x2="12" y2="3" stroke="var(--color-resize-handle, #888)" stroke-width="1.5" stroke-linecap="round" />
-          <line x1="7" y1="12" x2="12" y2="7" stroke="var(--color-resize-handle, #888)" stroke-width="1.5" stroke-linecap="round" />
-        </svg>
-      </div>
     </div>
   );
 }

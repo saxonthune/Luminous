@@ -12,7 +12,7 @@ export function ConnectionPreview(props: ConnectionPreviewProps): JSX.Element {
     <path
       d={props.d}
       fill="none"
-      stroke={props.stroke ?? 'var(--color-accent)'}
+      stroke={props.stroke ?? 'var(--cactus-accent, #2563eb)'}
       stroke-width={props.strokeWidth ?? 2}
       stroke-dasharray={(props.strokeDasharray ?? '4 4') === 'none' ? undefined : (props.strokeDasharray ?? '4 4')}
       style={{ "pointer-events": 'none' }}

@@ -1,0 +1,31 @@
+import { registerPrimitive } from './registry.ts';
+import Text from './primitives/Text.tsx';
+import VStack from './primitives/VStack.tsx';
+import HStack from './primitives/HStack.tsx';
+import Card from './primitives/Card.tsx';
+import Badge from './primitives/Badge.tsx';
+import Chip from './primitives/Chip.tsx';
+import Icon from './primitives/Icon.tsx';
+import Divider from './primitives/Divider.tsx';
+import Link from './primitives/Link.tsx';
+import Markdown from './primitives/Markdown.tsx';
+import CodeBlock from './primitives/CodeBlock.tsx';
+import Image from './primitives/Image.tsx';
+import KvList from './primitives/KvList.tsx';
+import Clamp from './primitives/Clamp.tsx';
+
+// Canonical name list lives in primitive-names.ts (plain data, safe for headless import).
+registerPrimitive('text', Text);
+registerPrimitive('vstack', VStack);
+registerPrimitive('hstack', HStack);
+registerPrimitive('card', Card);
+registerPrimitive('badge', Badge);
+registerPrimitive('chip', Chip);
+registerPrimitive('icon', Icon);
+registerPrimitive('divider', Divider);
+registerPrimitive('link', Link);
+registerPrimitive('markdown', Markdown);
+registerPrimitive('code-block', CodeBlock);
+registerPrimitive('image', Image);
+registerPrimitive('kv-list', KvList);
+registerPrimitive('clamp', Clamp);

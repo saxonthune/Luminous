@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://luminous.dev/schemas/graph.schema.json",
+  "title": "Luminous graph (v3)",
+  "description": "The model file. Co-located with a `<pack>.pack.json` resolved via the `pack` field. Mirrors what packages/core/src/validate.ts enforces on the graph side.",
+  "type": "object",
+  "required": ["version", "pack", "nodes", "edges", "defaultView"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 3,
+      "description": "Always 3."
+    },
+    "pack": {
+      "type": "string",
+      "description": "Basename of the sibling `.pack.json` (resolved in the same directory). Use \"primitives\" to skip pack authoring."
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Edge" }
+    },
+    "defaultView": {
+      "type": "string",
+      "description": "Must match a `views[].id` in the resolved pack."
+    }
+  },
+  "definitions": {
+    "Node": {
+      "type": "object",
+      "required": ["id", "kind", "props", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable, derived from source content. NEVER a random UUID -- random ids defeat diffable pipeline re-runs."
+        },
+        "kind": {
+          "type": "string",
+          "description": "Must match a `nodeKinds[].id` in the resolved pack."
+        },
+        "props": {
+          "type": "object",
+          "description": "Validated against the matching nodeKind's `props` JSON Schema. Specific prop names may have engine-side effects: `tier` (integer >= 0) is read as a soft ELK layering hint when the view uses `layout.algorithm: \"elk\"`."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Free-form string array; may be empty."
+        }
+      }
+    },
+    "Edge": {
+      "type": "object",
+      "required": ["id", "kind", "from", "to", "props", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable. Canonical form: `edge.<edgeKind>.<fromId>.<toId>` (add a disambiguator suffix for parallel edges)."
+        },
+        "kind": { "type": "string" },
+        "from": {
+          "type": "string",
+          "description": "id of the source node. The server rejects edges to unknown nodes at add-time."
+        },
+        "to": { "type": "string" },
+        "props": { "type": "object" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

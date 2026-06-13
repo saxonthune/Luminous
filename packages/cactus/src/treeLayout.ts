@@ -47,7 +47,7 @@ export function treeLayout(
     const candidates = nodes.filter((n) => inDegree.get(n.id) === minDeg).map((n) => n.id)
     candidates.sort()
     roots = [candidates[0]]
-    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.DEV) {
       console.warn('[treeLayout] Cycle detected — picking arbitrary root:', candidates[0])
     }
   }
@@ -70,7 +70,7 @@ export function treeLayout(
     for (const childId of children.get(id) ?? []) {
       if (rank.has(childId)) {
         // Already visited (diamond/cycle back-edge) — skip
-        if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        if (import.meta.env.DEV) {
           if (rank.get(childId)! <= r) {
             console.warn('[treeLayout] Back edge or diamond detected:', id, '->', childId)
           }
@@ -129,7 +129,7 @@ export function treeLayout(
 
   // Initial x assignment: left-to-right within each rank
   const x = new Map<string, number>()
-  for (const [r, ids] of rankOrder) {
+  for (const [, ids] of rankOrder) {
     let curX = 0
     for (const id of ids) {
       x.set(id, curX)

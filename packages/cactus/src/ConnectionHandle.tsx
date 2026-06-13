@@ -30,7 +30,7 @@ export function ConnectionHandle(props: ConnectionHandleProps): JSX.Element {
       ref={el}
       style={props.style}
       class={props.class}
-      onPointerDown={props.type === 'source' ? handlePointerDown : undefined}
+      onPointerDown={(e) => { if (props.type === 'source') handlePointerDown(e); }}
       {...(props.type === 'target'
         ? {
             'data-connection-target': 'true',

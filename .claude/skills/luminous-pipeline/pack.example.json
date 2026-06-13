@@ -1,0 +1,150 @@
+{
+  "id": "example-domain",
+  "version": "0.1.0",
+  "description": "Minimal-but-realistic pack covering every field a pipeline author will touch: two nodeKinds (one with a layout-hint prop), one edgeKind, one view, one layer, and disclosure entries.",
+
+  "nodeKinds": [
+    {
+      "id": "example.screen",
+      "label": "Screen",
+      "props": {
+        "type": "object",
+        "properties": {
+          "name":        { "type": "string" },
+          "description": { "type": "string" },
+          "tier":        {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Soft ELK layer hint read by the engine. Lower = closer to the layout's starting edge (left under direction RIGHT). ELK may override when cycle-breaking requires it; other algorithms ignore the field."
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "idTemplate": "screen.{name}",
+      "defaultSize": { "w": 220, "h": 120 },
+      "render": {
+        "card": {
+          "type": "card",
+          "children": [
+            { "type": "text", "value": "{content.name}", "style": "heading" }
+          ]
+        },
+        "open": {
+          "type": "card",
+          "children": [
+            {
+              "type": "vstack",
+              "gap": "4",
+              "children": [
+                { "type": "text", "value": "{content.name}", "style": "heading" },
+                { "type": "text", "value": "{content.description}", "style": "caption" }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "example.action",
+      "label": "Action",
+      "props": {
+        "type": "object",
+        "properties": {
+          "name":      { "type": "string" },
+          "signature": { "type": "string" }
+        },
+        "required": ["name", "signature"],
+        "additionalProperties": false
+      },
+      "idTemplate": "action.{name}",
+      "render": {
+        "card": {
+          "type": "text",
+          "value": "{content.signature}",
+          "style": "mono"
+        }
+      }
+    }
+  ],
+
+  "edgeKinds": [
+    {
+      "id": "example.transitions-to",
+      "label": "transitions to",
+      "directed": true,
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "acceptsSource": ["example.screen"],
+      "acceptsTarget": ["example.screen"]
+    },
+    {
+      "id": "example.invokes",
+      "label": "invokes",
+      "directed": true,
+      "props": { "type": "object", "additionalProperties": false },
+      "acceptsSource": ["example.screen"],
+      "acceptsTarget": ["example.action"],
+      "render": {
+        "card": { "type": "text", "value": "{content.label}", "style": "caption" }
+      }
+    }
+  ],
+
+  "views": [
+    {
+      "id": "flow",
+      "name": "Flow",
+      "description": "Screens with transitions between them; actions hidden.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "example.screen": "spatial",
+        "example.action": "hidden"
+      },
+      "edgeRoles": {
+        "example.transitions-to": "arrow",
+        "example.invokes":        "hidden"
+      },
+      "layers": {
+        "transitions": "on"
+      },
+      "layout": { "algorithm": "elk" }
+    }
+  ],
+
+  "layers": [
+    {
+      "id": "transitions",
+      "name": "Transitions",
+      "edgeKinds": ["example.transitions-to"],
+      "defaultState": "on"
+    }
+  ],
+
+  "disclosure": [
+    {
+      "kind": "example.screen",
+      "peek": ["name"],
+      "card": ["name"],
+      "open": ["name", "description"],
+      "deep": ["name", "description", "tier"]
+    },
+    {
+      "kind": "example.action",
+      "peek": ["name"],
+      "card": ["signature"],
+      "open": ["name", "signature"],
+      "deep": ["name", "signature"]
+    }
+  ]
+}

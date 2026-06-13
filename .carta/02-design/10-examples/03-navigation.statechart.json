@@ -1,0 +1,347 @@
+{
+  "id": "rtp-navigation",
+  "type": "parallel",
+  "description": "Top-level parallel machine. The user's experience at any moment is the product of the active `nav` state (which primary screen they are on) and the active `overlay` state (which sheet/modal is on top, if any). Events are defined on the surface where the user invokes them; cross-region targets use absolute paths.",
+  "states": {
+
+    "nav": {
+      "description": "The primary screen the user is on. Persistent — does not change when overlays open and close.",
+      "initial": "MapOverview",
+      "states": {
+
+        "MapOverview": {
+          "description": "The everything view. Default landing surface. Shows pins for every entry in every visible Collection, colored by Collection appearance and styled by visited/unvisited state. See doc01.03 §4.",
+          "tags": ["landing", "map"],
+          "meta": {
+            "surface": "MapOverview",
+            "reads": ["all-collections", "all-entries", "viewport"]
+          },
+          "on": {
+            "TAP_PIN": {
+              "target": "EntryDetail",
+              "description": "User taps a pin on the map to inspect that entry.",
+              "actions": ["MapOverview.selectPin"]
+            },
+            "TAP_COLLECTION_TOGGLE": {
+              "description": "User toggles a Collection's visibility from the legend. Stays on this surface; the pin set updates.",
+              "actions": ["MapOverview.toggleCollection"]
+            },
+            "TAP_JUMP_TO_COLLECTION": {
+              "description": "User picks a Collection from the legend to fit the viewport to its entries.",
+              "actions": ["MapOverview.jumpToCollection"]
+            },
+            "TAP_COLLECTIONS_BUTTON": {
+              "target": "CollectionList",
+              "description": "User opens the list of Collections to manage them."
+            },
+            "TAP_ADD_HERE": {
+              "target": "#rtp-navigation.overlay.AddToCollection",
+              "description": "User drops a pin at their current location (or a tapped map point) and chooses which Collection to add it to. Starts the Location-first flow from doc01.02 §3.",
+              "actions": ["Location.dropPin"]
+            },
+            "TAP_SETTINGS": {
+              "target": "Settings",
+              "description": "User opens settings (providers, BYOK keys, sync target)."
+            }
+          }
+        },
+
+        "CollectionList": {
+          "description": "Manage the user's Collections. Create new ones, open existing ones, import external lists.",
+          "tags": ["list"],
+          "meta": {
+            "surface": "CollectionList",
+            "reads": ["collections"]
+          },
+          "on": {
+            "TAP_COLLECTION": {
+              "target": "CollectionDetail",
+              "description": "User opens a Collection to see its entries."
+            },
+            "TAP_NEW_COLLECTION": {
+              "target": "#rtp-navigation.overlay.SchemaBuilder",
+              "description": "User starts a new Collection. Opens the SchemaBuilder overlay to author the Review template before any entries can be added.",
+              "actions": ["Collection.create"]
+            },
+            "TAP_IMPORT": {
+              "target": "#rtp-navigation.overlay.ImportFlow",
+              "description": "User imports an external collection (KML, GeoJSON, RTP bundle, third-party share URL).",
+              "actions": ["Collection.import"]
+            },
+            "BACK": {
+              "target": "MapOverview",
+              "description": "Return to the everything view."
+            }
+          }
+        },
+
+        "CollectionDetail": {
+          "description": "One Collection: its entries shown as either a map or a list projection (toggleable). Entry point for adding/removing entries, editing the template, and exporting/sharing.",
+          "tags": ["detail"],
+          "meta": {
+            "surface": "CollectionDetail",
+            "reads": ["collection", "entries", "appearance"]
+          },
+          "initial": "mapProjection",
+          "states": {
+            "mapProjection": {
+              "description": "Entries shown as pins on a map fitted to the Collection's bounds.",
+              "tags": ["map"],
+              "on": {
+                "TAP_TOGGLE_PROJECTION": {
+                  "target": "listProjection",
+                  "description": "User switches to the list view of this Collection."
+                }
+              }
+            },
+            "listProjection": {
+              "description": "Entries shown as a scrollable list, sortable by date, distance, or power-ranking.",
+              "tags": ["list"],
+              "on": {
+                "TAP_TOGGLE_PROJECTION": {
+                  "target": "mapProjection",
+                  "description": "User switches to the map view of this Collection."
+                }
+              }
+            }
+          },
+          "on": {
+            "TAP_ENTRY": {
+              "target": "EntryDetail",
+              "description": "User opens a single entry to inspect its Location and Review."
+            },
+            "TAP_ADD_ENTRY": {
+              "target": "#rtp-navigation.overlay.LocationPicker",
+              "description": "User starts the Collection-first add flow. LocationPicker resolves a Location, then ReviewForm captures the per-entry Review."
+            },
+            "TAP_EDIT_TEMPLATE": {
+              "target": "#rtp-navigation.overlay.SchemaBuilder",
+              "description": "User opens the Review template editor for this Collection.",
+              "actions": ["Review.editTemplate"]
+            },
+            "TAP_EXPORT": {
+              "description": "User exports this Collection as a portable bundle (KML / GeoJSON / RTP bundle).",
+              "actions": ["Collection.export"]
+            },
+            "TAP_SHARE": {
+              "description": "User produces a shareable artifact. Sharing concept deferred — see doc01.04.",
+              "actions": ["Collection.share"]
+            },
+            "BACK": {
+              "target": "MapOverview",
+              "description": "Return to the everything view."
+            }
+          }
+        },
+
+        "EntryDetail": {
+          "description": "One entry — the (Location, Review) pair. Read-mostly surface; mutation goes through the ReviewForm overlay. Hosts the 'open externally' handoff to Google Maps / Apple Maps / etc.",
+          "tags": ["detail"],
+          "meta": {
+            "surface": "EntryDetail",
+            "reads": ["entry", "location", "review"]
+          },
+          "on": {
+            "TAP_EDIT_REVIEW": {
+              "target": "#rtp-navigation.overlay.ReviewForm",
+              "description": "User edits the Review for this entry.",
+              "actions": ["Review.edit"]
+            },
+            "TAP_OPEN_EXTERNAL": {
+              "description": "User hands off to an external map app (Google Maps, Apple Maps, OsmAnd, ...) for navigation or street view. RTP does not track what happens after.",
+              "actions": ["Location.openExternally"]
+            },
+            "TAP_REFRESH_LOCATION": {
+              "description": "If the Location is refreshable, re-query the provider for updated metadata.",
+              "actions": ["Location.refresh"]
+            },
+            "TAP_REMOVE_ENTRY": {
+              "target": "CollectionDetail",
+              "description": "User removes this entry from the Collection. Does not delete the Location — it may exist in other Collections.",
+              "actions": ["Collection.removeEntry"]
+            },
+            "BACK": {
+              "target": "CollectionDetail",
+              "description": "Return to the Collection."
+            }
+          }
+        },
+
+        "Settings": {
+          "description": "Configure providers, BYOK keys, sync target. Surface is intentionally under-specified until the relevant concept actions exist.",
+          "tags": ["modal"],
+          "meta": {
+            "surface": "Settings",
+            "reads": ["settings"]
+          },
+          "on": {
+            "BACK": {
+              "target": "MapOverview",
+              "description": "Return to the everything view."
+            }
+          }
+        }
+      }
+    },
+
+    "overlay": {
+      "description": "What sheet/modal is currently overlaid on top of the nav surface. Transitions to non-`none` open an overlay; transitions back to `none` close it. Multi-target transitions can simultaneously close an overlay and change the underlying nav state (see ReviewForm.submitting.SUBMITTED).",
+      "initial": "none",
+      "states": {
+
+        "none": {
+          "description": "Rest state — no overlay. The user sees only the underlying nav surface.",
+          "tags": ["rest"]
+        },
+
+        "LocationPicker": {
+          "description": "Resolve, drop, or import a Location. Search via a configured provider, drop a manual pin, or import from a URL / file (KML, share link).",
+          "tags": ["picker"],
+          "meta": {
+            "surface": "LocationPicker",
+            "reads": ["provider-results"]
+          },
+          "on": {
+            "TYPE_QUERY": {
+              "description": "User types a search query; provider returns candidates.",
+              "actions": ["Location.resolve"]
+            },
+            "DROP_PIN": {
+              "description": "User long-presses the map to drop a manual pin.",
+              "actions": ["Location.dropPin"]
+            },
+            "PASTE_URL_OR_FILE": {
+              "description": "User pastes a share URL or selects a KML/GeoJSON file.",
+              "actions": ["Location.import"]
+            },
+            "PICK_RESULT": {
+              "target": "ReviewForm",
+              "description": "User picks one candidate; advance to fill out the Review."
+            },
+            "CLOSE": {
+              "target": "none",
+              "description": "Cancel the add flow; close the overlay."
+            }
+          }
+        },
+
+        "AddToCollection": {
+          "description": "Location-first flow: a Location is already chosen (dropped pin, shared link, etc.). User picks which Collection to add it to.",
+          "tags": ["picker"],
+          "meta": {
+            "surface": "AddToCollection",
+            "reads": ["collections", "candidate-location"]
+          },
+          "on": {
+            "PICK_COLLECTION": {
+              "target": "ReviewForm",
+              "description": "User picks a Collection; advance to fill out the Review.",
+              "actions": ["Location.addToCollection"]
+            },
+            "TAP_NEW_COLLECTION": {
+              "target": "SchemaBuilder",
+              "description": "None of the existing Collections fit; create a new one.",
+              "actions": ["Collection.create"]
+            },
+            "CLOSE": {
+              "target": "none",
+              "description": "Cancel; close the overlay. Underlying nav remains where it was."
+            }
+          }
+        },
+
+        "ReviewForm": {
+          "description": "Author or edit a Review instance against the Collection's template. Two substates: `editing` (the form is open) and `submitting` (commit in flight).",
+          "tags": ["form"],
+          "meta": {
+            "surface": "ReviewForm",
+            "reads": ["template", "draft-review"]
+          },
+          "initial": "editing",
+          "states": {
+            "editing": {
+              "description": "User is filling in template fields.",
+              "on": {
+                "EDIT_FIELD": {
+                  "description": "User changes the value of any field.",
+                  "actions": ["Review.edit"]
+                },
+                "CLEAR_FIELD": {
+                  "description": "User explicitly unsets a field. Distinct from 'false' for booleans (three-state widget).",
+                  "actions": ["Review.clear"]
+                },
+                "TAP_SUBMIT": {
+                  "target": "submitting",
+                  "description": "User submits the Review.",
+                  "actions": ["Review.submit"]
+                },
+                "TAP_CANCEL": {
+                  "target": "#rtp-navigation.overlay.none",
+                  "description": "User cancels without saving. Draft is discarded, overlay closes."
+                }
+              }
+            },
+            "submitting": {
+              "description": "Submit in flight. Brief transient state; transitions both close the overlay and route nav to EntryDetail of the just-saved entry.",
+              "on": {
+                "SUBMITTED": {
+                  "target": "#rtp-navigation.overlay.none",
+                  "description": "Submit succeeded; close the overlay. (Underlying nav routing to EntryDetail will be handled by an action once the visualizer tolerates multi-target transitions; see doc02.02.01.)"
+                }
+              }
+            }
+          }
+        },
+
+        "SchemaBuilder": {
+          "description": "Author or edit a Collection's Review template — the schema that governs every Review in this Collection. Add/remove/reorder fields; pick field types (stars, enum, boolean, date, power-ranking, text). Adopt a built-in template as a starting point.",
+          "tags": ["form"],
+          "meta": {
+            "surface": "SchemaBuilder",
+            "reads": ["template"]
+          },
+          "on": {
+            "DEFINE_TEMPLATE": {
+              "description": "Initial template authoring at Collection creation.",
+              "actions": ["Review.defineTemplate"]
+            },
+            "EDIT_TEMPLATE": {
+              "description": "Modify an existing template. Existing Reviews reconcile against the new shape.",
+              "actions": ["Review.editTemplate"]
+            },
+            "USE_BUILT_IN": {
+              "description": "Adopt a built-in template (Coffee Ranking, Wishlist, Geo Diary) as the starting point.",
+              "actions": ["Review.useBuiltIn"]
+            },
+            "DONE": {
+              "target": "none",
+              "description": "Template authored or edited; close the overlay. Caller's underlying nav resumes — typically CollectionDetail."
+            },
+            "CLOSE": {
+              "target": "none",
+              "description": "Cancel without committing template changes."
+            }
+          }
+        },
+
+        "ImportFlow": {
+          "description": "Import an external collection. Stub — concrete steps (source picker, schema mapping, preview, confirm) will be detailed when the import surface is unfolded.",
+          "tags": ["modal"],
+          "meta": {
+            "surface": "ImportFlow"
+          },
+          "on": {
+            "DONE": {
+              "target": "none",
+              "description": "Import committed; close the overlay. Underlying nav (CollectionList) refreshes."
+            },
+            "CLOSE": {
+              "target": "none",
+              "description": "Cancel the import."
+            }
+          }
+        }
+      }
+    }
+  }
+}

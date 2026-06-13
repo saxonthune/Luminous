@@ -1,0 +1,85 @@
+{
+  "_placeholder": true,
+  "_note": "Tool-agnostic, XState v5-shaped. Runtime binding deferred until the toolchain doc selects one. See 12-app-shell-statechart.md (doc02.12) for prose.",
+  "id": "luminous-app-shell",
+  "type": "parallel",
+  "states": {
+    "shell": {
+      "initial": "booting",
+      "states": {
+        "booting": {
+          "meta": {
+            "surface": "loading-splash",
+            "reads": []
+          },
+          "on": {
+            "SOURCES_LOADED": { "target": "picker", "actions": ["setSources", "maybeAutoSelectFromUrl"] },
+            "SOURCES_FAILED": { "target": "fatalError", "actions": ["setError"] }
+          }
+        },
+        "picker": {
+          "meta": {
+            "surface": "document-picker",
+            "reads": ["sources"]
+          },
+          "on": {
+            "SELECT_DOC": { "target": "loadingDoc", "actions": ["setSourceId", "writeUrlSrc"] }
+          }
+        },
+        "loadingDoc": {
+          "meta": {
+            "surface": "document-picker-with-spinner",
+            "reads": ["sources", "sourceId"]
+          },
+          "on": {
+            "GRAPH_LOADED": { "target": "canvasMounted", "actions": ["setGraph"] },
+            "GRAPH_FAILED": { "target": "picker", "actions": ["clearSourceId", "clearUrlSrc", "enqueueToast"] }
+          }
+        },
+        "canvasMounted": {
+          "meta": {
+            "surface": "canvas",
+            "reads": ["graph", "sourceId"]
+          },
+          "on": {
+            "BACK": { "target": "picker", "actions": ["clearGraph", "clearSourceId", "clearUrlSrc"] }
+          }
+        },
+        "fatalError": {
+          "meta": {
+            "surface": "fatal-error",
+            "reads": ["error"]
+          },
+          "on": {
+            "RETRY": { "target": "booting", "actions": ["clearError"] }
+          }
+        }
+      }
+    },
+    "theme": {
+      "initial": "light",
+      "_note": "Initial state is overridden at boot from localStorage if present.",
+      "states": {
+        "light":  { "on": { "CYCLE_THEME": { "target": "dusk",   "actions": ["persistTheme"] } } },
+        "dusk":   { "on": { "CYCLE_THEME": { "target": "ground", "actions": ["persistTheme"] } } },
+        "ground": { "on": { "CYCLE_THEME": { "target": "light",  "actions": ["persistTheme"] } } }
+      }
+    }
+  },
+  "context": {
+    "sources":  { "type": "CanvasSource[] | null", "initial": null },
+    "sourceId": { "type": "string | null",        "initial": null },
+    "graph":    { "type": "Graph | null",         "initial": null },
+    "error":    { "type": "string | null",        "initial": null },
+    "toasts":   { "type": "Toast[]",              "initial": [] }
+  },
+  "invariants": [
+    { "id": "UI-INV-1", "description": "canvasMounted requires non-null graph and sourceId" },
+    { "id": "UI-INV-2", "description": "BACK from canvasMounted atomically clears graph, sourceId, and ?src=" },
+    { "id": "UI-INV-3", "description": "?src= is a projection of (shell, sourceId), not an input" },
+    { "id": "UI-INV-4", "description": "picker is reachable only when sources is non-empty" }
+  ],
+  "globalKeymap": {
+    "F2": "CYCLE_THEME"
+  }
+}
