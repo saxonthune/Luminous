@@ -113,12 +113,6 @@ Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc
 
 ## Searching and reading files
 
-Use the dedicated tools — they're allowlisted and don't trigger approval prompts. Shell pipelines that wrap file access (`cd`, `xargs`, `sh -c`, output redirection, `find … | cat`) do trigger prompts. This list grows as new anti-patterns surface.
-
-- DON'T `find … -name '*.ts' | xargs cat` — DO use Glob to list, then Read each file (Read takes parallel calls).
-- DON'T `cd some/dir && cmd` — DO pass absolute paths; for unavoidable multi-step shell use a single subshell `(cd dir && cmd)`.
-- DON'T `find … | xargs -I{} sh -c '…'` — DO use Glob/Grep, or Read files individually.
-- DON'T `grep -r pattern path/` — DO use the Grep tool.
-- DON'T `cat file` to read — DO use the Read tool.
-- DON'T loop the shell over files (`for f in …; do cat $f; done`) — variable expansion blocks auto-approval; DO issue parallel Read calls, one per file.
-- DON'T `wc -l *.ts` or other glob-expanded shell over many files — DO use Glob to list paths, then Read each (Read reports line counts).
+Shell hygiene rules — use the dedicated tools and avoid command forms that
+trigger approval prompts — live in the user-level `~/.claude/CLAUDE.md`, shared
+across all repos.
