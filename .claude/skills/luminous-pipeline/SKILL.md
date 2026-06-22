@@ -258,6 +258,25 @@ A nodeKind may declare optional integer props that the ELK layout engine reads a
 { "id": "n1", "kind": "component", "props": { "tier": 0 } }
 ```
 
+**`childLayout`** — optional string prop on a **container** node's `props`. Controls how that container arranges its children. Ignored on leaf nodes.
+
+| Value | Behaviour |
+|-------|-----------|
+| `pack` (default) | Area-minimizing bin-packer (`packRects`), sorts children by height descending |
+| `grid` | √n-column grid in `childrenOf` order |
+| `stack-v` | Single vertical column in `childrenOf` order |
+| `stack-h` | Single horizontal row in `childrenOf` order |
+
+`stack-v` and `stack-h` preserve child order — they do **not** sort by size.
+
+```json
+// nodeKind props schema
+"props": { "childLayout": { "enum": ["pack", "grid", "stack-v", "stack-h"] } }
+
+// node instance
+{ "id": "layer1", "kind": "tier-container", "props": { "childLayout": "stack-v" } }
+```
+
 ### roles
 
 A role tells a view how to present a kind. Node kinds go in `nodeRoles`, edge kinds in `edgeRoles`:

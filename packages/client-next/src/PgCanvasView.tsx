@@ -317,11 +317,18 @@ function CanvasInner(props: {
     });
   });
 
-  // All containers default to 'pack'. This map is the extension point for future per-node overrides.
-  const layoutPolicy = createMemo((): ReadonlyMap<string, 'pack' | 'grid'> => {
-    const map = new Map<string, 'pack' | 'grid'>();
+  // Resolve the effective childLayout policy for a container node.
+  // Future: check a transient session-override overlay here before falling back to the graph prop.
+  function resolveChildLayout(id: string): 'pack' | 'grid' | 'stack-v' | 'stack-h' {
+    const raw = (props.graph.nodes.get(id)?.props as Record<string, unknown> | undefined)?.childLayout;
+    if (raw === 'pack' || raw === 'grid' || raw === 'stack-v' || raw === 'stack-h') return raw;
+    return 'pack';
+  }
+
+  const layoutPolicy = createMemo((): ReadonlyMap<string, 'pack' | 'grid' | 'stack-v' | 'stack-h'> => {
+    const map = new Map<string, 'pack' | 'grid' | 'stack-v' | 'stack-h'>();
     for (const [id, kids] of containment().childrenOf) {
-      if (kids.length > 0) map.set(id, 'pack');
+      if (kids.length > 0) map.set(id, resolveChildLayout(id));
     }
     return map;
   });
@@ -347,10 +354,10 @@ function CanvasInner(props: {
       const gr = gridResult();
       const policy = layoutPolicy();
 
-      // All 'pack' containers are opaque leaves to ELK — their sizes come from gridResult.
+      // All cactus-arranged containers are opaque leaves to ELK — their sizes come from gridResult.
       const opaqueContainers = new Set<string>();
       for (const [id, p] of policy) {
-        if (p === 'pack') opaqueContainers.add(id);
+        if (p === 'pack' || p === 'grid' || p === 'stack-v' || p === 'stack-h') opaqueContainers.add(id);
       }
 
       // Merge packed container sizes into nodeSizes so ELK can use them as fixed boxes.

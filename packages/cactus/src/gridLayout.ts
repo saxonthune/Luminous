@@ -95,6 +95,34 @@ export function gridLayout(req: LayoutRequest, opts?: GridLayoutOptions): Layout
         w: Math.max(packed.size.w + padding * 2, headerWidthFor(id)),
         h: packed.size.h + headerFor(id) + padding * 2,
       });
+    } else if (policy === 'stack-v') {
+      let curY = headerFor(id) + padding;
+      let maxChildW = 0;
+      for (const childId of children) {
+        const childSize = sizes.get(childId)!;
+        positions.set(childId, { x: padding, y: curY });
+        maxChildW = Math.max(maxChildW, childSize.w);
+        curY += childSize.h + baseGap;
+      }
+      const contentH = curY - baseGap - (headerFor(id) + padding);
+      sizes.set(id, {
+        w: Math.max(maxChildW + padding * 2, headerWidthFor(id)),
+        h: contentH + headerFor(id) + padding * 2,
+      });
+    } else if (policy === 'stack-h') {
+      let curX = padding;
+      let maxChildH = 0;
+      for (const childId of children) {
+        const childSize = sizes.get(childId)!;
+        positions.set(childId, { x: curX, y: headerFor(id) + padding });
+        maxChildH = Math.max(maxChildH, childSize.h);
+        curX += childSize.w + baseGap;
+      }
+      const contentW = curX - baseGap - padding;
+      sizes.set(id, {
+        w: Math.max(contentW + padding * 2, headerWidthFor(id)),
+        h: maxChildH + headerFor(id) + padding * 2,
+      });
     } else {
       const cols = Math.ceil(Math.sqrt(children.length));
       const { x: gapX, y: gapY } = gapsFor(id);

@@ -182,6 +182,122 @@ describe('gridLayout', () => {
     expect(sizes.get('r2')).toEqual({ w: 100, h: 50 });
   });
 
+  it('stack-v: 3 children share the same x and have strictly increasing y in childrenOf order', () => {
+    const children = ['c1', 'c2', 'c3'];
+    const childrenOf = new Map([['root', children]]);
+    const nodeSizes = new Map([
+      ['c1', { w: 80, h: 40 }],
+      ['c2', { w: 100, h: 60 }],
+      ['c3', { w: 60, h: 50 }],
+    ]);
+    const { positions, sizes } = gridLayout(
+      {
+        rootIds: ['root'],
+        childrenOf,
+        nodeSizes,
+        headerHeight: 20,
+        edges: [],
+        layoutPolicy: new Map([['root', 'stack-v']]),
+      },
+      { padding: 10, gap: 8 },
+    );
+
+    // padding=10, headerHeight=20
+    // c1: x=10, y=30
+    // c2: x=10, y=30+40+8=78
+    // c3: x=10, y=78+60+8=146
+    expect(positions.get('c1')).toEqual({ x: 10, y: 30 });
+    expect(positions.get('c2')).toEqual({ x: 10, y: 78 });
+    expect(positions.get('c3')).toEqual({ x: 10, y: 146 });
+
+    // All share same x
+    const allX = children.map((id) => positions.get(id)!.x);
+    expect(new Set(allX).size).toBe(1);
+
+    // y values strictly increasing
+    const ys = children.map((id) => positions.get(id)!.y);
+    expect(ys[0]).toBeLessThan(ys[1]);
+    expect(ys[1]).toBeLessThan(ys[2]);
+
+    // Container size:
+    // w = max(maxChildW + padding*2, 0) = max(100+20, 0) = 120
+    // contentH = 40+8+60+8+50 = 166
+    // h = contentH + headerHeight + padding*2 = 166 + 20 + 20 = 206
+    expect(sizes.get('root')).toEqual({ w: 120, h: 206 });
+  });
+
+  it('stack-h: 3 children share the same y and have strictly increasing x in childrenOf order', () => {
+    const children = ['c1', 'c2', 'c3'];
+    const childrenOf = new Map([['root', children]]);
+    const nodeSizes = new Map([
+      ['c1', { w: 80, h: 40 }],
+      ['c2', { w: 100, h: 60 }],
+      ['c3', { w: 60, h: 50 }],
+    ]);
+    const { positions, sizes } = gridLayout(
+      {
+        rootIds: ['root'],
+        childrenOf,
+        nodeSizes,
+        headerHeight: 20,
+        edges: [],
+        layoutPolicy: new Map([['root', 'stack-h']]),
+      },
+      { padding: 10, gap: 8 },
+    );
+
+    // padding=10, headerHeight=20
+    // c1: x=10, y=30
+    // c2: x=10+80+8=98, y=30
+    // c3: x=98+100+8=206, y=30
+    expect(positions.get('c1')).toEqual({ x: 10, y: 30 });
+    expect(positions.get('c2')).toEqual({ x: 98, y: 30 });
+    expect(positions.get('c3')).toEqual({ x: 206, y: 30 });
+
+    // All share same y
+    const allY = children.map((id) => positions.get(id)!.y);
+    expect(new Set(allY).size).toBe(1);
+
+    // x values strictly increasing
+    const xs = children.map((id) => positions.get(id)!.x);
+    expect(xs[0]).toBeLessThan(xs[1]);
+    expect(xs[1]).toBeLessThan(xs[2]);
+
+    // Container size:
+    // contentW = 80+8+100+8+60 = 256
+    // w = max(contentW + padding*2, 0) = max(256+20, 0) = 276
+    // h = maxChildH + headerHeight + padding*2 = 60 + 20 + 20 = 100
+    expect(sizes.get('root')).toEqual({ w: 276, h: 100 });
+  });
+
+  it('stack-v: order preserved — varied heights do not cause size-based reordering', () => {
+    // c1 is tallest (would be sorted first by packRects); stack must preserve c1,c2,c3 order
+    const children = ['c1', 'c2', 'c3'];
+    const childrenOf = new Map([['root', children]]);
+    const nodeSizes = new Map([
+      ['c1', { w: 80, h: 200 }], // tallest — packRects would put this first
+      ['c2', { w: 80, h: 50 }],
+      ['c3', { w: 80, h: 100 }],
+    ]);
+    const { positions } = gridLayout(
+      {
+        rootIds: ['root'],
+        childrenOf,
+        nodeSizes,
+        headerHeight: 0,
+        edges: [],
+        layoutPolicy: new Map([['root', 'stack-v']]),
+      },
+      { padding: 0, gap: 0 },
+    );
+
+    // With padding=0, gap=0, header=0:
+    // c1 at y=0, c2 at y=200, c3 at y=250
+    expect(positions.get('c1')!.y).toBe(0);
+    expect(positions.get('c2')!.y).toBe(200);
+    expect(positions.get('c3')!.y).toBe(250);
+  });
+
   it('edges field is accepted and ignored by grid layout', () => {
     const { positions, sizes } = gridLayout({
       rootIds: ['a', 'b'],
