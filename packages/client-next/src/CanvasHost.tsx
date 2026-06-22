@@ -23,6 +23,7 @@ export function CanvasHost(props: CanvasHostProps) {
   // toolbar lets the user override at runtime; switching views re-applies the
   // new view's default.
   const [algorithm, setAlgorithm] = createSignal<LayoutAlgorithm>('elk');
+  const [direction, setDirection] = createSignal<'RIGHT' | 'DOWN' | undefined>(undefined);
   // Transient ELK spacing multiplier — each "Space out" click bumps it; not persisted.
   const [spacing, setSpacing] = createSignal(1);
   const [viewerHandle, setViewerHandle] = createSignal<ViewerHandle | undefined>(undefined);
@@ -47,9 +48,14 @@ export function CanvasHost(props: CanvasHostProps) {
   createEffect(() => {
     const v = activeView();
     if (!v) return;
-    const declared = v.layout?.algorithm;
-    if (declared === 'grid' || declared === 'elk' || declared === 'mrtree') {
-      setAlgorithm(declared);
+    const lay = v.layout;
+    if (lay.algorithm === 'grid' || lay.algorithm === 'elk' || lay.algorithm === 'mrtree') {
+      setAlgorithm(lay.algorithm);
+    }
+    if (lay.algorithm === 'elk' || lay.algorithm === 'mrtree') {
+      setDirection(lay.direction);
+    } else {
+      setDirection(undefined);
     }
   });
 
@@ -110,6 +116,7 @@ export function CanvasHost(props: CanvasHostProps) {
               graph={props.graph}
               view={view()}
               algorithm={algorithm()}
+              direction={direction()}
               spacing={spacing()}
               ref={setViewerHandle}
               chrome={chrome()}

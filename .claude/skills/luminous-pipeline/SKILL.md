@@ -172,7 +172,7 @@ An edge with neither is drawn bare from its view role (`arrow`, `contain`, or `s
       "nodeRoles": { "domain.component": "spatial" },  // map of nodeKind id → role
       "edgeRoles": { "domain.renders": "contain" },    // map of edgeKind id → role
       "layers": {},                                    // map of layer id → on|off|peek
-      "layout": { "algorithm": "elk" }                 // "elk" or "force"
+      "layout": { "algorithm": "elk", "direction": "RIGHT" }  // algorithm: "grid"|"elk"|"mrtree"; direction: "RIGHT"|"DOWN" (ELK/mrtree only, default RIGHT)
     }
   ],
 
@@ -242,7 +242,7 @@ For `edge.props.label` to pass validation the edgeKind's `props` schema must per
 | `nodeRoles` | Map of nodeKind id → role |
 | `edgeRoles` | Map of edgeKind id → role |
 | `layers` | Map of layer id → `on` \| `off` \| `peek` |
-| `layout` | `{ "algorithm": "elk" \| "force" }` |
+| `layout` | `{ "algorithm": "grid" \| "elk" \| "mrtree", "direction"?: "RIGHT" \| "DOWN" }` — `direction` applies to `elk`/`mrtree` only; default `RIGHT` |
 
 ### Layout hints
 

@@ -36,6 +36,7 @@ export interface PgCanvasViewProps {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk' | 'mrtree';
+  direction?: 'RIGHT' | 'DOWN';
   spacing?: number;
   ref?: (handle: ViewerHandle) => void;
   chrome?: ChromeSchema;
@@ -181,6 +182,7 @@ function CanvasInner(props: {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk' | 'mrtree';
+  direction?: 'RIGHT' | 'DOWN';
   spacing?: number;
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
@@ -379,12 +381,13 @@ function CanvasInner(props: {
         },
         opaqueContainers,
         spacing: props.spacing ?? 1,
+        direction: props.direction,
         algorithm: props.algorithm === 'mrtree' ? ('mrtree' as const) : ('layered' as const),
       };
     },
     (input): Promise<LayoutResult> =>
       elkLayout(input.req, {
-        direction: 'DOWN',
+        direction: input.direction,
         opaqueContainers: input.opaqueContainers,
         spacing: input.spacing,
         algorithm: input.algorithm,
@@ -513,6 +516,7 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
         graph={props.graph}
         view={props.view}
         algorithm={props.algorithm}
+        direction={props.direction}
         spacing={props.spacing}
         exposeRects={(g) => { getRects = g; emit(); }}
         onEdges={setEdges}

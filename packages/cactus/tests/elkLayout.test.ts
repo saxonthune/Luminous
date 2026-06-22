@@ -29,6 +29,21 @@ describe('elkLayout', () => {
     expect(posB.x).toBeGreaterThan(posA.x);
   });
 
+  it('places child b below child a when direction is DOWN', async () => {
+    const result = await elkLayout(
+      {
+        rootIds: ['root'],
+        childrenOf: new Map([['root', ['a', 'b']]]),
+        edges: [{ id: 'e1', from: 'a', to: 'b' }],
+      },
+      { direction: 'DOWN' },
+    );
+
+    const posA = result.positions.get('a')!;
+    const posB = result.positions.get('b')!;
+    expect(posB.y).toBeGreaterThan(posA.y);
+  });
+
   it('composite size is at least as large as children bounding box plus padding', async () => {
     const nodeSize = { w: 80, h: 40 };
     const result = await elkLayout(

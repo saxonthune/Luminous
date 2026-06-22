@@ -158,8 +158,8 @@ export interface View {
 export type LayoutChoice =
   | { algorithm: 'manual' }
   | { algorithm: 'dagre'; options?: Record<string, unknown> }
-  | { algorithm: 'elk'; options?: Record<string, unknown> }
-  | { algorithm: 'mrtree'; options?: Record<string, unknown> }
+  | { algorithm: 'elk'; direction?: 'RIGHT' | 'DOWN'; options?: Record<string, unknown> }
+  | { algorithm: 'mrtree'; direction?: 'RIGHT' | 'DOWN'; options?: Record<string, unknown> }
   | { algorithm: 'grid'; options?: Record<string, unknown> }
   | { algorithm: 'treemap'; options?: Record<string, unknown> }
   | { algorithm: 'hierarchy'; options?: Record<string, unknown> }
