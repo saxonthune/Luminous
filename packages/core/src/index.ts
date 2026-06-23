@@ -4,6 +4,7 @@ export * from './graph.ts';
 export * from './registry.ts';
 export * from './view.ts';
 export * from './loader.ts';
+export * from './query.ts';
 export { parsePackJson, deserializePack } from './pack/parsePackJson.ts';
 export { validateGraphAndPack } from './validate.ts';
 export type { ValidationIssue, ValidationResult } from './validate.ts';

@@ -167,9 +167,55 @@ export type LayoutChoice =
   | { algorithm: 'hierarchy'; options?: Record<string, unknown> }
   | { algorithm: 'force'; options?: Record<string, unknown> };
 
-// OPEN: GraphQuery shape — textual DSL, JSON pattern, or both. PDR §15.3.
-// For now, leave as unknown so the contract doesn't pre-commit.
-export type GraphQuery = unknown;
+/** A predicate over a single prop value, addressed by dot-path into node/edge props. */
+export type PropPredicate =
+  | { op: 'eq'; value: unknown }
+  | { op: 'ne'; value: unknown }
+  | { op: 'exists' }
+  | { op: 'absent' }
+  | { op: 'in'; values: unknown[] }
+  | { op: 'gt'; value: number }
+  | { op: 'gte'; value: number }
+  | { op: 'lt'; value: number }
+  | { op: 'lte'; value: number }
+  | { op: 'contains'; value: string }
+  | { op: 'regex'; value: string };
+
+/** Tag constraints. `any` = at least one; `all` = every; `none` = excludes all. */
+export interface TagMatch {
+  any?: string[];
+  all?: string[];
+  none?: string[];
+}
+
+/**
+ * Structured query over a graph's nodes or edges. A node/edge matches when ALL
+ * present top-level constraints match. `from`/`to` apply only to edges (ignored
+ * for node queries). Boolean composition nests via and/or/not.
+ *
+ * Resolves PDR §15.3 (the GraphQuery open question).
+ */
+export interface GraphQuery {
+  /** Match kind exactly, or against a set (any-of). */
+  kind?: KindId | KindId[];
+  /** Tag constraints. */
+  tags?: TagMatch;
+  /**
+   * Prop predicates by dot-path (e.g. "name", "meta.owner"). A bare scalar
+   * value is shorthand for { op: 'eq', value }. All entries AND-combined.
+   */
+  props?: Record<string, PropPredicate | string | number | boolean | null>;
+  /** Edge-only: source node id, exact or any-of. */
+  from?: NodeId | NodeId[];
+  /** Edge-only: target node id, exact or any-of. */
+  to?: NodeId | NodeId[];
+  /** All subqueries must match. */
+  and?: GraphQuery[];
+  /** At least one subquery must match. */
+  or?: GraphQuery[];
+  /** Subquery must NOT match. */
+  not?: GraphQuery;
+}
 
 // ============================================================================
 // Containment — computed, not stored

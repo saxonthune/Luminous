@@ -3,6 +3,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { toolConfig, batchToolConfig, type ActionConfig, type ToolGroupConfig, type ParamType } from './tools.config.js'
 import { describePack, describePackForCanvas } from './pack-describe.js'
+import { getNode, listNodes, listEdges, neighborhoodOf } from './query-tools.js'
+import { listViews, project } from './view-tools.js'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -140,17 +142,18 @@ Core concepts:
 
 Recommended workflow:
 1. canvas list — discover available canvas documents
-2. canvas read — inspect a canvas to see its pack, nodes, and edges
+2. query getNode / listNodes / listEdges / neighborhood — orient yourself in the graph without loading it all into context
 3. pack describe — inspect the pack's kind catalog (node and edge kinds with props JSON Schemas) — use before node/add or edge/add to discover valid kinds and required props
-4. canvas create — author a new canvas, specifying which pack it will use
-5. node add / edge add — add nodes and edges using kinds the pack defines
-6. batch — use for multi-step operations to reduce round-trips
+4. canvas read — inspect the full canvas when you need everything at once
+5. canvas create — author a new canvas, specifying which pack it will use
+6. node add / edge add — add nodes and edges using kinds the pack defines
+7. batch — use for multi-step operations to reduce round-trips
 
 All mutations go through the same API that the browser canvas uses — there is no separate write path.
 
 Prefer the batch tool for multi-step operations. Batch executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences).`
+Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
@@ -218,6 +221,56 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`HTTP ${res.status}: ${await res.text()}`)
       }
       const result = await res.json()
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
+  // Handle locally-computed tools (local: true in toolConfig) — they build the graph
+  // from raw storage data and run queries in-process rather than proxying to the server.
+  if (name === 'view') {
+    const a = args as { action: string; path: string; viewId?: string }
+    try {
+      let result: unknown
+      if (a.action === 'list') {
+        result = await listViews(serverUrl, a.path)
+      } else if (a.action === 'project') {
+        result = await project(serverUrl, a.path, a.viewId)
+      } else {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'view'` }],
+          isError: true,
+        }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
+  if (name === 'query') {
+    const a = args as { action: string; path: string; id?: string; filter?: unknown; hops?: number }
+    try {
+      let result: unknown
+      if (a.action === 'getNode') {
+        if (!a.id) throw new Error("'id' is required for query/getNode")
+        result = await getNode(serverUrl, a.path, a.id)
+      } else if (a.action === 'listNodes') {
+        result = await listNodes(serverUrl, a.path, a.filter as Parameters<typeof listNodes>[2])
+      } else if (a.action === 'listEdges') {
+        result = await listEdges(serverUrl, a.path, a.filter as Parameters<typeof listEdges>[2])
+      } else if (a.action === 'neighborhood') {
+        if (!a.id) throw new Error("'id' is required for query/neighborhood")
+        result = await neighborhoodOf(serverUrl, a.path, a.id, a.hops)
+      } else {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'query'` }],
+          isError: true,
+        }
+      }
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
