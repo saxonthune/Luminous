@@ -141,8 +141,9 @@ vite.config.ts.timestamp-*
 # Temp docs (pre-extraction working notes, not part of the project)
 .temp-docs/
 
-# Todo task runtime state
-.todo-tasks/
+# Todo task: runtime state is ignored selectively by .todo-tasks/.gitignore
+# (inbox/, .running/, .archived/, *.log, .version). tasks/ and results/ stay
+# tracked so the lifecycle bookkeeping can commit specs/outcomes to trunk.
 
 # Playwright
 test-results/
