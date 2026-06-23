@@ -60,6 +60,8 @@ export interface CanvasContextValue {
   layoutOverride: (id: string) => ChildLayoutPolicy | undefined;
   /** Set or clear a transient layout override for a container node. Pass undefined to clear. */
   setLayoutOverride: (id: string, policy: ChildLayoutPolicy | undefined) => void;
+  /** Ticks on every setLayoutOverride call (even re-applying the current layout). */
+  layoutApply: () => { id: string; seq: number } | null;
 }
 
 export const CanvasContext = createContext<CanvasContextValue>();

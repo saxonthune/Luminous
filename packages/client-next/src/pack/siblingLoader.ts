@@ -38,10 +38,12 @@ export function peekPackName(graphText: string): string {
 /**
  * Given a source ID and already-loaded graph text, load and register the
  * co-located pack (the caller resets the registry before each call):
- *   1. Try fetching the sibling <packName>.pack.json from the server.
- *   2. If the pack is "primitives" and the sibling 404s, use the shipped builtin.
- *   3. If the fetch fails or the pack is malformed, log and proceed
- *      (the loader will fall back to unvalidated/fallback rendering).
+ *   1. Try fetching the sibling <packName>.pack.json and registering it.
+ *   2. On ANY failure to use the sibling — missing, a non-JSON 200 (e.g. an SPA
+ *      index.html fallback served by a static host for a missing file), malformed
+ *      JSON, or a registration conflict — fall back to the shipped builtin if one
+ *      exists for this pack.
+ *   3. If neither works, log and proceed (unvalidated/fallback rendering).
  *
  * Never throws.
  */
@@ -66,8 +68,20 @@ export async function loadAndRegisterSiblingPack(
     console.warn(`[siblingLoader] fetch error for pack "${packName}":`, e);
   }
 
-  // If the sibling 404'd but the pack ships as a built-in, use the shipped copy.
-  if (text === null && BUILTINS[packName]) {
+  // Prefer the fetched sibling. A static host (vite preview, GitHub Pages) may
+  // answer a missing .pack.json with a 200 SPA fallback rather than a 404, so a
+  // non-null body is not proof of a real pack — parse/register can still fail.
+  // Any failure here drops through to the builtin below.
+  if (text !== null) {
+    try {
+      registerPack(parsePackJson(text));
+      return;
+    } catch (e) {
+      console.warn(`[siblingLoader] sibling pack "${packName}" unusable, trying builtin:`, e);
+    }
+  }
+
+  if (BUILTINS[packName]) {
     try {
       registerPack(BUILTINS[packName]());
     } catch (e) {
@@ -76,22 +90,5 @@ export async function loadAndRegisterSiblingPack(
     return;
   }
 
-  if (text === null) {
-    console.warn(`[siblingLoader] pack "${packName}" not found at ${url}; falling back to unvalidated rendering`);
-    return;
-  }
-
-  let pack;
-  try {
-    pack = parsePackJson(text);
-  } catch (e) {
-    console.warn(`[siblingLoader] pack "${packName}" is malformed:`, e);
-    return;
-  }
-
-  try {
-    registerPack(pack);
-  } catch (e) {
-    console.warn(`[siblingLoader] failed to register pack "${packName}":`, e);
-  }
+  console.warn(`[siblingLoader] pack "${packName}" not found at ${url}; falling back to unvalidated rendering`);
 }

@@ -82,6 +82,10 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
       <Show when={props.isContainer?.()}>
         <div
           data-layout-picker
+          // Stop pointerdown here so interacting with the picker never reaches the
+          // container's drag handler — drag starts on pointerdown, before click, so
+          // the buttons' onClick stopPropagation alone wouldn't prevent the drag.
+          onPointerDown={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             top: '2px',

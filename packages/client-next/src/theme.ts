@@ -11,7 +11,7 @@ export const THEMES: ReadonlyArray<{ id: Theme; label: string; icon: string }> =
 const ids = THEMES.map((t) => t.id);
 const STORAGE_KEY = 'luminous-theme';
 const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-const initial: Theme = stored && ids.includes(stored) ? stored : 'light';
+const initial: Theme = stored && ids.includes(stored) ? stored : 'ground';
 
 export const [theme, setTheme] = createSignal<Theme>(initial);
 

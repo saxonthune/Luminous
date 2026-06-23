@@ -148,6 +148,7 @@ const mockCanvasCtx: CanvasContextValue = {
   fitView: () => {},
   layoutOverride: () => undefined,
   setLayoutOverride: () => {},
+  layoutApply: () => null,
 };
 
 function renderNodeContainer(ui: () => import('solid-js').JSX.Element) {

@@ -148,7 +148,7 @@ export function Canvas(props: CanvasProps) {
   const selection = useSelection({});
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
 
-  const { layoutOverride, setLayoutOverride } = createLayoutOverrides();
+  const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
 
   const boxSelectResult = useBoxSelect(
     props.boxSelect
@@ -226,6 +226,7 @@ export function Canvas(props: CanvasProps) {
     fitView,
     layoutOverride,
     setLayoutOverride,
+    layoutApply,
   };
   /* eslint-enable solid/reactivity */
 

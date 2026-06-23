@@ -124,6 +124,7 @@ export function measureDeepLod(
         fitView: () => {},
         layoutOverride: () => undefined,
         setLayoutOverride: () => {},
+        layoutApply: () => null,
       };
 
       const renderCtx: RenderContext = {

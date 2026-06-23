@@ -1,4 +1,4 @@
-import { For, createResource, Show, createMemo, createSignal, createEffect, onCleanup } from 'solid-js';
+import { For, createResource, Show, createMemo, createSignal, createEffect, onCleanup, untrack } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
 import type { Graph, View, DisclosureLevel, RenderContext, Node, Edge } from '@luminous/core';
@@ -335,6 +335,30 @@ function CanvasInner(props: {
       if (kids.length > 0) map.set(id, resolveChildLayout(id));
     }
     return map;
+  });
+
+  // Drag pins are ephemeral. Applying a layout to a container (every layout-picker
+  // click, INCLUDING re-clicking the already-active layout) re-places that
+  // container's direct children, so their manual drags are discarded — applying a
+  // layout always wins over a stale pin. Driven by layoutApply (an explicit
+  // per-click tick) rather than the policy value, so re-applying the current
+  // layout still resets. containment is read untracked so only the click fires it.
+  let lastApplySeq = -1;
+  createEffect(() => {
+    const apply = canvasCtx.layoutApply();
+    if (!apply || apply.seq === lastApplySeq) return;
+    lastApplySeq = apply.seq;
+    const children = untrack(() => containment().childrenOf.get(apply.id) ?? []);
+    if (children.length === 0) return;
+    setNodeOverrides((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Map(prev);
+      let changed = false;
+      for (const child of children) {
+        if (next.delete(child)) changed = true;
+      }
+      return changed ? next : prev;
+    });
   });
 
   // Per-node soft layering hints for the top-level pass, read from the `tier` prop.
