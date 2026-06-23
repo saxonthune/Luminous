@@ -12,8 +12,7 @@ import {
   Canvas,
   NodeContainer,
   resolveAbsolutePositionByParentOf,
-  gridLayout,
-  elkLayout,
+  composeLayout,
   useCanvasContext,
   useNodeDrag,
 } from '@luminous/cactus';
@@ -338,99 +337,43 @@ function CanvasInner(props: {
     return map;
   });
 
-  // gridResult: both the grid-mode output and the pack pre-pass for elk mode.
-  const gridResult = createMemo(() => gridLayout({
-    rootIds: containment().rootIds,
-    childrenOf: containment().childrenOf,
-    nodeSizes: deepLodGeometry().sizes,
-    headerHeight: HEADER_HEIGHT,
-    headerHeights: deepLodGeometry().headerHeights,
-    headerWidths: deepLodGeometry().headerWidths,
-    edges: layoutEdges(),
-    layoutPolicy: layoutPolicy(),
-  }));
-
-  // Both layouts are created unconditionally so the chosen one can swap reactively
-  // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
-  const [elkResult] = createResource(
-    () => {
-      if (props.algorithm !== 'elk' && props.algorithm !== 'mrtree') return null;
-      const ct = containment();
-      const gr = gridResult();
-      const policy = layoutPolicy();
-
-      // All cactus-arranged containers are opaque leaves to ELK — their sizes come from gridResult.
-      const opaqueContainers = new Set<string>();
-      for (const [id, p] of policy) {
-        if (p === 'pack' || p === 'grid' || p === 'stack-v' || p === 'stack-h') opaqueContainers.add(id);
-      }
-
-      // Merge packed container sizes into nodeSizes so ELK can use them as fixed boxes.
-      // Start from deep-LOD sizes (all nodes), then override pack containers with
-      // their grid-computed sizes (which account for children).
-      const mergedSizes = new Map(deepLodGeometry().sizes);
-      for (const id of opaqueContainers) {
-        const sz = gr.sizes.get(id);
-        if (sz) mergedSizes.set(id, sz);
-      }
-
-      const layerHints = new Map<string, number>();
-      for (const [id, node] of props.graph.nodes) {
-        const t = (node.props as Record<string, unknown> | undefined)?.tier;
-        if (typeof t === 'number' && Number.isFinite(t)) layerHints.set(id, t);
-      }
-
-      return {
-        req: {
-          rootIds: ct.rootIds,
-          childrenOf: ct.childrenOf,
-          edges: layoutEdges(),
-          nodeSizes: mergedSizes as ReadonlyMap<string, { w: number; h: number }>,
-          headerHeight: HEADER_HEIGHT,
-          headerHeights: deepLodGeometry().headerHeights,
-          headerWidths: deepLodGeometry().headerWidths,
-          layerHints,
-        },
-        opaqueContainers,
-        spacing: props.spacing ?? 1,
-        direction: props.direction,
-        algorithm: props.algorithm === 'mrtree' ? ('mrtree' as const) : ('layered' as const),
-      };
-    },
-    (input): Promise<LayoutResult> =>
-      elkLayout(input.req, {
-        direction: input.direction,
-        opaqueContainers: input.opaqueContainers,
-        spacing: input.spacing,
-        algorithm: input.algorithm,
-      }),
-  );
-
-  const baseLayout = createMemo<LayoutResult | null>(() => {
-    if (props.algorithm !== 'elk' && props.algorithm !== 'mrtree') return gridResult();
-
-    const elkRes = elkResult();
-    if (!elkRes) return null;
-
-    const gr = gridResult();
-    const ct = containment();
-
-    // Positions: start with gridResult (parent-relative for non-roots), override roots with elk absolute positions.
-    const positions = new Map(gr.positions);
-    for (const rootId of ct.rootIds) {
-      const elkPos = elkRes.positions.get(rootId);
-      if (elkPos) positions.set(rootId, elkPos);
+  // Per-node soft layering hints for the top-level pass, read from the `tier` prop.
+  const layerHints = createMemo(() => {
+    const hints = new Map<string, number>();
+    for (const [id, node] of props.graph.nodes) {
+      const t = (node.props as Record<string, unknown> | undefined)?.tier;
+      if (typeof t === 'number' && Number.isFinite(t)) hints.set(id, t);
     }
-
-    // Sizes: gridResult covers all nodes. Override with elk sizes where elk has them
-    // (for roots elk returns what we gave it, so values agree).
-    const sizes = new Map(gr.sizes);
-    for (const [id, sz] of elkRes.sizes) {
-      sizes.set(id, sz);
-    }
-
-    return { positions, sizes };
+    return hints;
   });
+
+  // Single layout solve. cactus owns the full composition (interior pass +
+  // top-level pass + merge); the domain just declares intent and renders the
+  // result. Because both phases derive from one snapshot, the container box size
+  // and its children's positions can never come from desynced passes — the whole
+  // layout swaps atomically when policy/algorithm changes.
+  const [baseLayout] = createResource(
+    () => ({
+      rootIds: containment().rootIds,
+      childrenOf: containment().childrenOf,
+      nodeSizes: deepLodGeometry().sizes,
+      headerHeight: HEADER_HEIGHT,
+      headerHeights: deepLodGeometry().headerHeights,
+      headerWidths: deepLodGeometry().headerWidths,
+      edges: layoutEdges(),
+      policies: layoutPolicy(),
+      layerHints: layerHints(),
+      top: {
+        algorithm:
+          props.algorithm === 'elk' ? ('elk' as const)
+          : props.algorithm === 'mrtree' ? ('mrtree' as const)
+          : ('grid' as const),
+        direction: props.direction,
+        spacing: props.spacing ?? 1,
+      },
+    }),
+    composeLayout,
+  );
 
   createEffect(() => {
     const base = baseLayout();

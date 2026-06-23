@@ -34,6 +34,8 @@ export { gridLayout } from './gridLayout.js';
 export type { GridLayoutOptions } from './gridLayout.js';
 export { elkLayout } from './elkLayout.js';
 export type { ElkLayoutOptions } from './elkLayout.js';
+export { composeLayout } from './composeLayout.js';
+export type { ComposeLayoutInput } from './composeLayout.js';
 export type { ChildLayoutPolicy, LayoutRequest, LayoutResult } from './layout-types.js';
 export { packRects } from './packing.js';
 export type { PackRect, PackOptions, PackResult } from './packing.js';

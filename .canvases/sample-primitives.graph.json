@@ -1,55 +1,26 @@
 {
   "version": 3,
   "pack": "primitives",
+  "info": "# Sample Primitives\n\nA tiny expression interpreter, shown four ways. Use the **view switcher** (top-left) to reproject the *same* nodes and edges — *Architecture*, *Dependency Flow*, *Hierarchy*, and *Relationships*.",
   "nodes": [
-    {
-      "id": "box.alpha",
-      "kind": "prim.box",
-      "props": { "label": "Alpha", "tag": "module", "color": "#4a90e2", "description": "First sample box." },
-      "tags": []
-    },
-    {
-      "id": "box.beta",
-      "kind": "prim.box",
-      "props": { "label": "Beta", "tag": "module", "color": "#e2884a", "description": "Second sample box." },
-      "tags": []
-    },
-    {
-      "id": "box.beta.parser",
-      "kind": "prim.box",
-      "props": { "label": "Parser", "tag": "submodule", "color": "#e2a874", "description": "Tokenises input." },
-      "tags": []
-    },
-    {
-      "id": "box.beta.evaluator",
-      "kind": "prim.box",
-      "props": { "label": "Evaluator", "tag": "submodule", "color": "#e2a874", "description": "Reduces the AST." },
-      "tags": []
-    },
-    {
-      "id": "box.beta.cache",
-      "kind": "prim.box",
-      "props": { "label": "Cache", "tag": "submodule", "color": "#e2a874" },
-      "tags": []
-    },
-    {
-      "id": "box.gamma",
-      "kind": "prim.box",
-      "props": { "label": "Gamma", "tag": "concept", "color": "#7ab06d" },
-      "tags": []
-    }
+    { "id": "cli",         "kind": "prim.box", "props": { "label": "CLI",         "tag": "module",    "color": "#4a90e2", "description": "Command-line entry point." }, "tags": [] },
+    { "id": "interpreter", "kind": "prim.box", "props": { "label": "Interpreter", "tag": "module",    "color": "#e2884a", "description": "Parses and evaluates expressions." }, "tags": [] },
+    { "id": "parser",      "kind": "prim.box", "props": { "label": "Parser",      "tag": "submodule", "color": "#e2a874", "description": "Tokenises input." }, "tags": [] },
+    { "id": "evaluator",   "kind": "prim.box", "props": { "label": "Evaluator",   "tag": "submodule", "color": "#e2a874", "description": "Reduces the AST." }, "tags": [] },
+    { "id": "cache",       "kind": "prim.box", "props": { "label": "Cache",       "tag": "submodule", "color": "#e2a874", "description": "Memoises results." }, "tags": [] },
+    { "id": "runtime",     "kind": "prim.box", "props": { "label": "Runtime",     "tag": "concept",   "color": "#7ab06d", "description": "Built-in functions and values." }, "tags": [] }
   ],
   "edges": [
-    { "id": "arrow.a-b", "kind": "prim.arrow", "from": "box.alpha", "to": "box.beta", "props": { "label": "depends on" }, "tags": [] },
-    { "id": "arrow.b-c", "kind": "prim.arrow", "from": "box.beta",  "to": "box.gamma", "props": {}, "tags": [] },
-    { "id": "contains.beta.parser",    "kind": "prim.contains", "from": "box.beta.parser",    "to": "box.beta", "props": {}, "tags": [] },
-    { "id": "contains.beta.evaluator", "kind": "prim.contains", "from": "box.beta.evaluator", "to": "box.beta", "props": {}, "tags": [] },
-    { "id": "contains.beta.cache",     "kind": "prim.contains", "from": "box.beta.cache",     "to": "box.beta", "props": {}, "tags": [] },
-    { "id": "arrow.parser-evaluator", "kind": "prim.arrow", "from": "box.beta.parser", "to": "box.beta.evaluator", "props": { "label": "feeds" }, "tags": [] },
-    { "id": "arrow.evaluator-cache",  "kind": "prim.arrow", "from": "box.beta.evaluator", "to": "box.beta.cache", "props": { "label": "writes" }, "tags": [] },
-    { "id": "relates.alpha-gamma",     "kind": "prim.relates", "from": "box.alpha",          "to": "box.gamma", "props": { "label": "kindred concept" }, "tags": [] },
-    { "id": "relates.parser-cache",    "kind": "prim.relates", "from": "box.beta.parser",    "to": "box.beta.cache", "props": { "label": "warms" }, "tags": [] },
-    { "id": "relates.evaluator-alpha", "kind": "prim.relates", "from": "box.beta.evaluator", "to": "box.alpha", "props": { "label": "configured by" }, "tags": [] }
+    { "id": "dep.cli-interpreter",     "kind": "prim.arrow",    "from": "cli",         "to": "interpreter", "props": { "label": "depends on" }, "tags": [] },
+    { "id": "dep.interpreter-runtime", "kind": "prim.arrow",    "from": "interpreter", "to": "runtime",     "props": { "label": "resolves against" }, "tags": [] },
+    { "id": "contains.parser",         "kind": "prim.contains", "from": "parser",      "to": "interpreter", "props": {}, "tags": [] },
+    { "id": "contains.evaluator",      "kind": "prim.contains", "from": "evaluator",   "to": "interpreter", "props": {}, "tags": [] },
+    { "id": "contains.cache",          "kind": "prim.contains", "from": "cache",       "to": "interpreter", "props": {}, "tags": [] },
+    { "id": "flow.parser-evaluator",   "kind": "prim.arrow",    "from": "parser",      "to": "evaluator",   "props": { "label": "feeds" }, "tags": [] },
+    { "id": "flow.evaluator-cache",    "kind": "prim.arrow",    "from": "evaluator",   "to": "cache",       "props": { "label": "writes" }, "tags": [] },
+    { "id": "rel.cli-runtime",         "kind": "prim.relates",  "from": "cli",         "to": "runtime",     "props": { "label": "shares config" }, "tags": [] },
+    { "id": "rel.parser-cache",        "kind": "prim.relates",  "from": "parser",      "to": "cache",       "props": { "label": "warms" }, "tags": [] },
+    { "id": "rel.evaluator-cli",       "kind": "prim.relates",  "from": "evaluator",   "to": "cli",         "props": { "label": "configured by" }, "tags": [] }
   ],
   "defaultView": "architecture"
 }
