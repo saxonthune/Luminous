@@ -138,6 +138,7 @@ function renderNodes(
   layout: () => LayoutResult,
   parentOf: () => ReadonlyMap<string, string>,
   renderCtx: RenderContext,
+  resolveChildLayout: (id: string) => 'pack' | 'grid' | 'stack-v' | 'stack-h',
   onPointerDown?: (nodeId: string, e: PointerEvent) => void,
 ): JSX.Element {
   return (
@@ -164,6 +165,8 @@ function renderNodes(
             w={() => sz().w}
             h={() => sz().h}
             softContainer={() => renderCtx.hasChildren(nodeId)}
+            isContainer={() => renderCtx.hasChildren(nodeId)}
+            layoutPolicy={() => resolveChildLayout(nodeId)}
             onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
           >
             {resolveNodeRender(node, nodeCtx)}
@@ -318,8 +321,10 @@ function CanvasInner(props: {
   });
 
   // Resolve the effective childLayout policy for a container node.
-  // Future: check a transient session-override overlay here before falling back to the graph prop.
+  // Checks the transient session override first, then falls back to the graph prop.
   function resolveChildLayout(id: string): 'pack' | 'grid' | 'stack-v' | 'stack-h' {
+    const o = canvasCtx.layoutOverride(id);
+    if (o) return o;
     const raw = (props.graph.nodes.get(id)?.props as Record<string, unknown> | undefined)?.childLayout;
     if (raw === 'pack' || raw === 'grid' || raw === 'stack-v' || raw === 'stack-h') return raw;
     return 'pack';
@@ -475,7 +480,7 @@ function CanvasInner(props: {
         fallback={<div style={{ padding: '8px', color: 'var(--fg-muted)' }}>Computing layout…</div>}
       >
         {/* eslint-disable-next-line solid/reactivity -- renderNodes returns JSX evaluated inside the Show's tracked scope */}
-        {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, dragPointerDown)}
+        {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, resolveChildLayout, dragPointerDown)}
       </Show>
       <Portal mount={document.body}>
         <InspectorPanel graph={props.graph} view={props.view} />

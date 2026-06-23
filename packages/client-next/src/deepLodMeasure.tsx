@@ -122,6 +122,8 @@ export function measureDeepLod(
         unregisterHeaderHeight: () => {},
         getHeaderHeights: () => new Map(),
         fitView: () => {},
+        layoutOverride: () => undefined,
+        setLayoutOverride: () => {},
       };
 
       const renderCtx: RenderContext = {

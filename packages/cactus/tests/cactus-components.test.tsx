@@ -146,6 +146,8 @@ const mockCanvasCtx: CanvasContextValue = {
   unregisterHeaderHeight: () => {},
   getHeaderHeights: () => new Map(),
   fitView: () => {},
+  layoutOverride: () => undefined,
+  setLayoutOverride: () => {},
 };
 
 function renderNodeContainer(ui: () => import('solid-js').JSX.Element) {

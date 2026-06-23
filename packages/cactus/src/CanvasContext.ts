@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'solid-js';
 import type { Transform } from './interactions/useViewport.js';
 import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
+import type { ChildLayoutPolicy } from './layout-types.js';
 
 export interface NodeRect {
   x: number;
@@ -55,6 +56,10 @@ export interface CanvasContextValue {
     padding?: number,
     animate?: boolean
   ) => void;
+  /** Returns the transient layout override for a container node, or undefined if none. */
+  layoutOverride: (id: string) => ChildLayoutPolicy | undefined;
+  /** Set or clear a transient layout override for a container node. Pass undefined to clear. */
+  setLayoutOverride: (id: string, policy: ChildLayoutPolicy | undefined) => void;
 }
 
 export const CanvasContext = createContext<CanvasContextValue>();
