@@ -2,6 +2,21 @@ import { createMemo, createSignal, For, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
 import { routeEdges, type NodeRect } from './edgeRouting.js';
+import { useCanvasContext } from './CanvasContext.js';
+
+export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
+
+export function edgeEmphasis(
+  edge: { sourceId: string; targetId: string },
+  selectedIds: ReadonlyArray<string>,
+): EdgeEmphasis {
+  if (selectedIds.length === 0) return 'neutral';
+  return selectedIds.includes(edge.sourceId) || selectedIds.includes(edge.targetId)
+    ? 'incident'
+    : 'dimmed';
+}
+
+const DIMMED_OPACITY = 0.15;
 
 interface EdgeLayerProps {
   edges: EdgeDeclaration[];
@@ -76,6 +91,7 @@ function chooseLabelAnchor(
 }
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
+  const { selectedIds } = useCanvasContext();
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
 
   // Counter-scale label text so on-screen size stays readable across zoom levels.
@@ -142,6 +158,9 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
             };
           });
 
+          const emphasis = createMemo(() => edgeEmphasis(edge, selectedIds()));
+          const opacity = createMemo(() => (emphasis() === 'dimmed' ? DIMMED_OPACITY : 1));
+
           const dash = edge.styling?.dash;
           const strokeDasharray =
             dash === 'dashed' ? '6 3' : dash === 'dotted' ? '2 3' : undefined;
@@ -166,9 +185,10 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                       stroke-width={width}
                       stroke-dasharray={strokeDasharray}
                       stroke-linecap="round"
+                      opacity={opacity()}
                     />
                     <Show when={arrowHead}>
-                      <path d={arrowHeadPath(pts().x1, pts().y1, pts().x2, pts().y2)} fill={color} />
+                      <path d={arrowHeadPath(pts().x1, pts().y1, pts().x2, pts().y2)} fill={color} opacity={opacity()} />
                     </Show>
                   </Show>
                   <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
@@ -181,6 +201,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                           height={box().h}
                           rx={3}
                           fill="var(--cactus-canvas-bg, #ffffff)"
+                          opacity={opacity()}
                           style={{ 'pointer-events': 'none' }}
                         />
                       )}
@@ -196,6 +217,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                       stroke-width={labelHaloWidth()}
                       stroke-linejoin="round"
                       paint-order="stroke fill"
+                      opacity={opacity()}
                       style={{
                         'pointer-events': edge.labelText ? 'auto' : 'none',
                         cursor: edge.labelText ? 'pointer' : undefined,
