@@ -1,5 +1,6 @@
 {
   "canvases": [
-    { "path": "sample-primitives.graph.json", "name": "Sample Primitives", "root": "demos" }
+    { "path": "sample-primitives.graph.json", "name": "Sample Primitives", "root": "demos" },
+    { "path": "stress-773.graph.json", "name": "Stress Test (773 nodes / 1642 edges)", "root": "demos" }
   ]
 }
