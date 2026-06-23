@@ -76,6 +76,7 @@ A pipeline produces two sibling files sharing a basename:
 | `nodes` | yes | Array of node objects |
 | `edges` | yes | Array of edge objects |
 | `defaultView` | yes | Must match a `views[].id` in the pack |
+| `info` | no | Optional markdown string describing this canvas; surfaced as a blue (i) button in the app header that opens an info modal. Useful for narrating what the canvas shows and how to read its views. |
 
 ### Node shape
 

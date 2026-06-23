@@ -70,6 +70,8 @@ export interface Graph {
   incoming: ReadonlyMap<NodeId, ReadonlySet<EdgeId>>;
   /** The single pack this graph declares, or '' if none. */
   pack: string;
+  /** Optional markdown describing this canvas, shown in the info modal. */
+  info?: string;
 }
 
 // ============================================================================
@@ -327,6 +329,8 @@ export interface GraphFileV3 {
   edges: Edge[];
   /** Which view id to open with. */
   defaultView?: ViewId;
+  /** Optional markdown describing this canvas, shown in the info modal. */
+  info?: string;
 }
 
 // ============================================================================

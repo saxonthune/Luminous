@@ -146,6 +146,7 @@ export function AppShell() {
         showBack={shell().kind === 'canvasMounted'}
         onBack={onBack}
         onCycleTheme={cycleTheme}
+        info={graph()?.info}
       />
       <div style={{ flex: '1 1 auto', 'min-height': 0, display: 'flex', 'flex-direction': 'column' }}>
         <Switch>
