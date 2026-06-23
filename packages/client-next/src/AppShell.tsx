@@ -5,7 +5,7 @@ import { DocumentPicker } from './DocumentPicker';
 import { AppHeader } from './AppHeader';
 import { CanvasHost } from './CanvasHost';
 import { ToastTray, type Toast } from './ToastTray';
-import { fetchServerSources, type CanvasSource } from './sources';
+import { fetchServerSources, fetchStaticSources, type CanvasSource } from './sources';
 import { theme, cycleTheme, persistTheme } from './theme';
 
 type ShellState =
@@ -96,7 +96,8 @@ export function AppShell() {
   }
 
   function boot() {
-    fetchServerSources()
+    const fetchSources = __GITHUB_PAGES__ ? fetchStaticSources : fetchServerSources;
+    fetchSources()
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);

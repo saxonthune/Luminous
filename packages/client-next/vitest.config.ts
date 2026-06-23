@@ -3,6 +3,9 @@ import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
   plugins: [solidPlugin()],
+  define: {
+    __GITHUB_PAGES__: 'false',
+  },
   test: {
     globals: true,
     environment: 'jsdom',

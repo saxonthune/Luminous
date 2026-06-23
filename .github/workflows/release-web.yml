@@ -24,14 +24,25 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate project canvas
         run: pnpm generate:canvas
+      - name: Stage generated canvas for bundling
+        # TODO: wire in solidjs-analysis pack once it exists alongside the graph
+        run: |
+          if [ -f .canvases/solidjs-analysis.canvas.json ]; then
+            cp .canvases/solidjs-analysis.canvas.json packages/client-next/public/canvases/solidjs-analysis.graph.json
+            node -e "
+              const fs = require('fs');
+              const p = 'packages/client-next/public/canvases/index.json';
+              const m = JSON.parse(fs.readFileSync(p, 'utf8'));
+              if (!m.canvases.find(c => c.path === 'solidjs-analysis.graph.json')) {
+                m.canvases.push({ path: 'solidjs-analysis.graph.json', name: 'Luminous – Solid.js Analysis', root: 'Luminous' });
+                fs.writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
+              }
+            "
+          fi
       - name: Build web client
         run: pnpm build
         env:
           GITHUB_PAGES: 'true'
-      - name: Copy canvas into dist
-        run: |
-          mkdir -p packages/client-next/dist/canvases
-          cp .canvases/solidjs-analysis.canvas.json packages/client-next/dist/canvases/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: packages/client-next/dist

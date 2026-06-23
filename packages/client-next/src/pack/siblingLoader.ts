@@ -6,12 +6,18 @@ const BUILTINS: Record<string, () => import('@luminous/core').Pack> = {
 };
 
 /**
- * Given a document source ID (e.g. "workspace/.canvases/foo.graph.json") and a
- * pack name, return the URL to fetch the sibling pack file from the server.
+ * Given a document source ID, a pack name, and a flag for static mode, return
+ * the URL to fetch the sibling pack file.
+ *
+ * Static: co-located in public/canvases/ under BASE_URL.
+ * Server: served via /api/pack/.
  */
-export function siblingPackUrl(sourceId: string, packName: string): string {
+export function siblingPackUrl(sourceId: string, packName: string, isStatic = __GITHUB_PAGES__): string {
   const lastSlash = sourceId.lastIndexOf('/');
   const dir = lastSlash !== -1 ? sourceId.slice(0, lastSlash + 1) : '';
+  if (isStatic) {
+    return `${import.meta.env.BASE_URL}canvases/${dir}${packName}.pack.json`;
+  }
   const siblingPath = `${dir}${packName}.pack.json`;
   return `/api/pack/${encodeURIComponent(siblingPath)}`;
 }

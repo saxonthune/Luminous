@@ -1,0 +1,5 @@
+{
+  "canvases": [
+    { "path": "sample-primitives.graph.json", "name": "Sample Primitives", "root": "demos" }
+  ]
+}
