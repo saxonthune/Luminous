@@ -157,7 +157,8 @@
           "required": ["algorithm"],
           "additionalProperties": false,
           "properties": {
-            "algorithm": { "enum": ["elk", "force"] }
+            "algorithm": { "enum": ["grid", "elk", "mrtree"] },
+            "direction": { "enum": ["RIGHT", "DOWN"] }
           }
         }
       }

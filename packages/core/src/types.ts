@@ -70,6 +70,8 @@ export interface Graph {
   incoming: ReadonlyMap<NodeId, ReadonlySet<EdgeId>>;
   /** The single pack this graph declares, or '' if none. */
   pack: string;
+  /** Optional markdown describing this canvas, shown in the info modal. */
+  info?: string;
 }
 
 // ============================================================================
@@ -158,8 +160,8 @@ export interface View {
 export type LayoutChoice =
   | { algorithm: 'manual' }
   | { algorithm: 'dagre'; options?: Record<string, unknown> }
-  | { algorithm: 'elk'; options?: Record<string, unknown> }
-  | { algorithm: 'mrtree'; options?: Record<string, unknown> }
+  | { algorithm: 'elk'; direction?: 'RIGHT' | 'DOWN'; options?: Record<string, unknown> }
+  | { algorithm: 'mrtree'; direction?: 'RIGHT' | 'DOWN'; options?: Record<string, unknown> }
   | { algorithm: 'grid'; options?: Record<string, unknown> }
   | { algorithm: 'treemap'; options?: Record<string, unknown> }
   | { algorithm: 'hierarchy'; options?: Record<string, unknown> }
@@ -327,6 +329,8 @@ export interface GraphFileV3 {
   edges: Edge[];
   /** Which view id to open with. */
   defaultView?: ViewId;
+  /** Optional markdown describing this canvas, shown in the info modal. */
+  info?: string;
 }
 
 // ============================================================================

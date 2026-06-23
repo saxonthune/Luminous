@@ -255,6 +255,31 @@ describe('loadGraphFromText — kind validation', () => {
 });
 
 // ---------------------------------------------------------------------------
+// info field
+// ---------------------------------------------------------------------------
+
+describe('loadGraphFromText — info field', () => {
+  it('round-trips info string through the graph', () => {
+    registerPack(makeTestPack());
+    const graph = loadGraphFromText(makeGraphJson({ info: '# Hello' }));
+    expect(graph.info).toBe('# Hello');
+  });
+
+  it('yields info === undefined when info is absent', () => {
+    registerPack(makeTestPack());
+    const graph = loadGraphFromText(makeGraphJson());
+    expect(graph.info).toBeUndefined();
+  });
+
+  it('throws a clear error when info is not a string', () => {
+    registerPack(makeTestPack());
+    expect(() => loadGraphFromText(makeGraphJson({ info: 42 }))).toThrow(
+      'loadGraphFile: "info" must be a string'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // buildGraph propagation
 // ---------------------------------------------------------------------------
 

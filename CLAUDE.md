@@ -13,11 +13,11 @@ Monorepo (pnpm workspaces). Two tracks:
 ### Active development (new unfolding architecture)
 
 ```
-server-next  (dumb storage + Yjs sync)
+server-next  (dumb storage + file-change notifications)
 client-next  (Solid.js canvas, all domain logic)
 ```
 
-- `@luminous/server` (`packages/server-next`) — filesystem serving, WebSocket Yjs sync, no domain logic
+- `@luminous/server` (`packages/server-next`) — filesystem serving, WebSocket file-change notifications, no domain logic
 - `@luminous/canvas` (`packages/client-next`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting
 
 ### Legacy (schema-first, being superseded)
@@ -48,7 +48,7 @@ See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full det
 
 - **Polymorphic nodes.** Notes are the primary node type, but the data model is a discriminated union — portals, pipeline-generated nodes (components, signals), and future types share base properties (position, size, nesting) and differ by `type` field.
 - **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
-- **Server is storage, client is intelligence.** Server serves files and syncs Yjs. Client owns all domain logic.
+- **Server is storage, client is intelligence.** Server serves files and broadcasts file-change notifications over WebSocket. Client owns all domain logic.
 - **Diagram pipelines.** Scripts that read source code via static analysis and emit `.canvas.json`. The pipeline is the reusable artifact — shareable across projects and communities. Each pipeline defines its own node types from the forces of its domain; we don't pre-build a universal schema of typed nodes.
 - **Willing to delete.** No backward compatibility with features nobody uses.
 
@@ -101,7 +101,7 @@ When a change adds or modifies a field in the pack or graph schema — including
 
 ## Tech Stack
 
-Solid.js, TypeScript 5.9, Vite, Tailwind, Yjs (CRDT), d3-zoom, Playwright (E2E), Vitest
+Solid.js, TypeScript 5.9, Vite, Tailwind, d3-zoom, Playwright (E2E), Vitest
 
 ## Type Checking
 
@@ -113,12 +113,6 @@ Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc
 
 ## Searching and reading files
 
-Use the dedicated tools — they're allowlisted and don't trigger approval prompts. Shell pipelines that wrap file access (`cd`, `xargs`, `sh -c`, output redirection, `find … | cat`) do trigger prompts. This list grows as new anti-patterns surface.
-
-- DON'T `find … -name '*.ts' | xargs cat` — DO use Glob to list, then Read each file (Read takes parallel calls).
-- DON'T `cd some/dir && cmd` — DO pass absolute paths; for unavoidable multi-step shell use a single subshell `(cd dir && cmd)`.
-- DON'T `find … | xargs -I{} sh -c '…'` — DO use Glob/Grep, or Read files individually.
-- DON'T `grep -r pattern path/` — DO use the Grep tool.
-- DON'T `cat file` to read — DO use the Read tool.
-- DON'T loop the shell over files (`for f in …; do cat $f; done`) — variable expansion blocks auto-approval; DO issue parallel Read calls, one per file.
-- DON'T `wc -l *.ts` or other glob-expanded shell over many files — DO use Glob to list paths, then Read each (Read reports line counts).
+Shell hygiene rules — use the dedicated tools and avoid command forms that
+trigger approval prompts — live in the user-level `~/.claude/CLAUDE.md`, shared
+across all repos.

@@ -10,7 +10,7 @@ import type {
   ContainmentWarning,
 } from './types.ts';
 
-export function buildGraph(nodes: readonly Node[], edges: readonly Edge[], pack: string = ''): Graph {
+export function buildGraph(nodes: readonly Node[], edges: readonly Edge[], pack: string = '', info?: string): Graph {
   const nodeMap = new Map<NodeId, Node>();
   for (const node of nodes) {
     if (nodeMap.has(node.id)) {
@@ -60,6 +60,7 @@ export function buildGraph(nodes: readonly Node[], edges: readonly Edge[], pack:
     outgoing,
     incoming,
     pack,
+    info,
   };
 }
 

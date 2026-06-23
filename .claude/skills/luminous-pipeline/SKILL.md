@@ -76,6 +76,7 @@ A pipeline produces two sibling files sharing a basename:
 | `nodes` | yes | Array of node objects |
 | `edges` | yes | Array of edge objects |
 | `defaultView` | yes | Must match a `views[].id` in the pack |
+| `info` | no | Optional markdown string describing this canvas; surfaced as a blue (i) button in the app header that opens an info modal. Useful for narrating what the canvas shows and how to read its views. |
 
 ### Node shape
 
@@ -172,7 +173,7 @@ An edge with neither is drawn bare from its view role (`arrow`, `contain`, or `s
       "nodeRoles": { "domain.component": "spatial" },  // map of nodeKind id → role
       "edgeRoles": { "domain.renders": "contain" },    // map of edgeKind id → role
       "layers": {},                                    // map of layer id → on|off|peek
-      "layout": { "algorithm": "elk" }                 // "elk" or "force"
+      "layout": { "algorithm": "elk", "direction": "RIGHT" }  // algorithm: "grid"|"elk"|"mrtree"; direction: "RIGHT"|"DOWN" (ELK/mrtree only, default RIGHT)
     }
   ],
 
@@ -242,7 +243,7 @@ For `edge.props.label` to pass validation the edgeKind's `props` schema must per
 | `nodeRoles` | Map of nodeKind id → role |
 | `edgeRoles` | Map of edgeKind id → role |
 | `layers` | Map of layer id → `on` \| `off` \| `peek` |
-| `layout` | `{ "algorithm": "elk" \| "force" }` |
+| `layout` | `{ "algorithm": "grid" \| "elk" \| "mrtree", "direction"?: "RIGHT" \| "DOWN" }` — `direction` applies to `elk`/`mrtree` only; default `RIGHT` |
 
 ### Layout hints
 
@@ -256,6 +257,25 @@ A nodeKind may declare optional integer props that the ELK layout engine reads a
 
 // node instance
 { "id": "n1", "kind": "component", "props": { "tier": 0 } }
+```
+
+**`childLayout`** — optional string prop on a **container** node's `props`. Controls how that container arranges its children. Ignored on leaf nodes.
+
+| Value | Behaviour |
+|-------|-----------|
+| `pack` (default) | Area-minimizing bin-packer (`packRects`), sorts children by height descending |
+| `grid` | √n-column grid in `childrenOf` order |
+| `stack-v` | Single vertical column in `childrenOf` order |
+| `stack-h` | Single horizontal row in `childrenOf` order |
+
+`stack-v` and `stack-h` preserve child order — they do **not** sort by size.
+
+```json
+// nodeKind props schema
+"props": { "childLayout": { "enum": ["pack", "grid", "stack-v", "stack-h"] } }
+
+// node instance
+{ "id": "layer1", "kind": "tier-container", "props": { "childLayout": "stack-v" } }
 ```
 
 ### roles

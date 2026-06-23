@@ -28,6 +28,10 @@ export function loadGraphFromText(json: string): Graph {
     throw new Error('loadGraphFile: "pack" must be a string');
   }
 
+  if ('info' in file && typeof file.info !== 'string') {
+    throw new Error('loadGraphFile: "info" must be a string');
+  }
+
   if (!Array.isArray(file.nodes)) {
     throw new Error('loadGraphFile: "nodes" must be an array');
   }
@@ -79,7 +83,7 @@ export function loadGraphFromText(json: string): Graph {
     }
   }
 
-  return buildGraph(nodes, edges, pack);
+  return buildGraph(nodes, edges, pack, typeof file.info === 'string' ? file.info : undefined);
 }
 
 export async function loadGraphFile(url: string): Promise<Graph> {

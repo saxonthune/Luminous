@@ -74,6 +74,19 @@
         "additionalProperties": false
       },
       "directed": true
+    },
+    {
+      "id": "prim.relates",
+      "label": "Relates",
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "color": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "directed": false
     }
   ],
   "views": [
@@ -93,6 +106,63 @@
       "edgeRoles": {
         "prim.arrow": "arrow",
         "prim.contains": "contain"
+      },
+      "layers": {},
+      "layout": { "algorithm": "elk" }
+    },
+    {
+      "id": "dependency-flow",
+      "name": "Dependency Flow",
+      "description": "Same modules, flattened into a left-to-right dependency pipeline. Containment is hidden so only the arrow graph remains.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.arrow": "arrow"
+      },
+      "layers": {},
+      "layout": { "algorithm": "elk", "direction": "RIGHT" }
+    },
+    {
+      "id": "hierarchy",
+      "name": "Hierarchy",
+      "description": "The containment structure drawn as a tree (contains edges become arrows). Dependency arrows are hidden.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.contains": "arrow"
+      },
+      "layers": {},
+      "layout": { "algorithm": "mrtree", "direction": "DOWN" }
+    },
+    {
+      "id": "relationships",
+      "name": "Relationships",
+      "description": "Cross-cutting associations (dotted) that the other views hide. Same nodes, a different web of relationships.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.relates": "summary"
       },
       "layers": {},
       "layout": { "algorithm": "elk" }

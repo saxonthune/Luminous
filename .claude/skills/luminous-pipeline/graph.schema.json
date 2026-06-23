@@ -11,6 +11,10 @@
       "const": 3,
       "description": "Always 3."
     },
+    "info": {
+      "type": "string",
+      "description": "Optional markdown describing this canvas, surfaced as an (i) info modal in the viewer."
+    },
     "pack": {
       "type": "string",
       "description": "Basename of the sibling `.pack.json` (resolved in the same directory). Use \"primitives\" to skip pack authoring."

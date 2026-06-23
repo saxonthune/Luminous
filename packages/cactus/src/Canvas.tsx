@@ -13,6 +13,7 @@ import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
 import { ChromeSlots } from './chrome/ChromeSlots.js';
 import { MenuRoot } from './chrome/ChromePrimitives.js';
 import { useHotkeys } from './chrome/useHotkeys.js';
+import { createLayoutOverrides } from './interactions/createLayoutOverrides.js';
 
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
@@ -147,6 +148,8 @@ export function Canvas(props: CanvasProps) {
   const selection = useSelection({});
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
 
+  const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
+
   const boxSelectResult = useBoxSelect(
     props.boxSelect
       ? {
@@ -221,6 +224,9 @@ export function Canvas(props: CanvasProps) {
     unregisterHeaderHeight,
     getHeaderHeights,
     fitView,
+    layoutOverride,
+    setLayoutOverride,
+    layoutApply,
   };
   /* eslint-enable solid/reactivity */
 

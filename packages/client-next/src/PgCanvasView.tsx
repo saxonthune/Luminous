@@ -1,4 +1,4 @@
-import { For, createResource, Show, createMemo, createSignal, createEffect, onCleanup } from 'solid-js';
+import { For, createResource, Show, createMemo, createSignal, createEffect, onCleanup, untrack } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { JSX } from 'solid-js';
 import type { Graph, View, DisclosureLevel, RenderContext, Node, Edge } from '@luminous/core';
@@ -12,8 +12,7 @@ import {
   Canvas,
   NodeContainer,
   resolveAbsolutePositionByParentOf,
-  gridLayout,
-  elkLayout,
+  composeLayout,
   useCanvasContext,
   useNodeDrag,
 } from '@luminous/cactus';
@@ -36,6 +35,7 @@ export interface PgCanvasViewProps {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk' | 'mrtree';
+  direction?: 'RIGHT' | 'DOWN';
   spacing?: number;
   ref?: (handle: ViewerHandle) => void;
   chrome?: ChromeSchema;
@@ -137,6 +137,7 @@ function renderNodes(
   layout: () => LayoutResult,
   parentOf: () => ReadonlyMap<string, string>,
   renderCtx: RenderContext,
+  resolveChildLayout: (id: string) => 'pack' | 'grid' | 'stack-v' | 'stack-h',
   onPointerDown?: (nodeId: string, e: PointerEvent) => void,
 ): JSX.Element {
   return (
@@ -163,6 +164,8 @@ function renderNodes(
             w={() => sz().w}
             h={() => sz().h}
             softContainer={() => renderCtx.hasChildren(nodeId)}
+            isContainer={() => renderCtx.hasChildren(nodeId)}
+            layoutPolicy={() => resolveChildLayout(nodeId)}
             onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
           >
             {resolveNodeRender(node, nodeCtx)}
@@ -181,6 +184,7 @@ function CanvasInner(props: {
   graph: Graph;
   view: View;
   algorithm?: 'grid' | 'elk' | 'mrtree';
+  direction?: 'RIGHT' | 'DOWN';
   spacing?: number;
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
@@ -315,107 +319,85 @@ function CanvasInner(props: {
     });
   });
 
-  // All containers default to 'pack'. This map is the extension point for future per-node overrides.
-  const layoutPolicy = createMemo((): ReadonlyMap<string, 'pack' | 'grid'> => {
-    const map = new Map<string, 'pack' | 'grid'>();
+  // Resolve the effective childLayout policy for a container node.
+  // Checks the transient session override first, then falls back to the graph prop.
+  function resolveChildLayout(id: string): 'pack' | 'grid' | 'stack-v' | 'stack-h' {
+    const o = canvasCtx.layoutOverride(id);
+    if (o) return o;
+    const raw = (props.graph.nodes.get(id)?.props as Record<string, unknown> | undefined)?.childLayout;
+    if (raw === 'pack' || raw === 'grid' || raw === 'stack-v' || raw === 'stack-h') return raw;
+    return 'pack';
+  }
+
+  const layoutPolicy = createMemo((): ReadonlyMap<string, 'pack' | 'grid' | 'stack-v' | 'stack-h'> => {
+    const map = new Map<string, 'pack' | 'grid' | 'stack-v' | 'stack-h'>();
     for (const [id, kids] of containment().childrenOf) {
-      if (kids.length > 0) map.set(id, 'pack');
+      if (kids.length > 0) map.set(id, resolveChildLayout(id));
     }
     return map;
   });
 
-  // gridResult: both the grid-mode output and the pack pre-pass for elk mode.
-  const gridResult = createMemo(() => gridLayout({
-    rootIds: containment().rootIds,
-    childrenOf: containment().childrenOf,
-    nodeSizes: deepLodGeometry().sizes,
-    headerHeight: HEADER_HEIGHT,
-    headerHeights: deepLodGeometry().headerHeights,
-    headerWidths: deepLodGeometry().headerWidths,
-    edges: layoutEdges(),
-    layoutPolicy: layoutPolicy(),
-  }));
-
-  // Both layouts are created unconditionally so the chosen one can swap reactively
-  // with props.algorithm. The elk source returns null when not selected, suppressing fetches.
-  const [elkResult] = createResource(
-    () => {
-      if (props.algorithm !== 'elk' && props.algorithm !== 'mrtree') return null;
-      const ct = containment();
-      const gr = gridResult();
-      const policy = layoutPolicy();
-
-      // All 'pack' containers are opaque leaves to ELK — their sizes come from gridResult.
-      const opaqueContainers = new Set<string>();
-      for (const [id, p] of policy) {
-        if (p === 'pack') opaqueContainers.add(id);
+  // Drag pins are ephemeral. Applying a layout to a container (every layout-picker
+  // click, INCLUDING re-clicking the already-active layout) re-places that
+  // container's direct children, so their manual drags are discarded — applying a
+  // layout always wins over a stale pin. Driven by layoutApply (an explicit
+  // per-click tick) rather than the policy value, so re-applying the current
+  // layout still resets. containment is read untracked so only the click fires it.
+  let lastApplySeq = -1;
+  createEffect(() => {
+    const apply = canvasCtx.layoutApply();
+    if (!apply || apply.seq === lastApplySeq) return;
+    lastApplySeq = apply.seq;
+    const children = untrack(() => containment().childrenOf.get(apply.id) ?? []);
+    if (children.length === 0) return;
+    setNodeOverrides((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Map(prev);
+      let changed = false;
+      for (const child of children) {
+        if (next.delete(child)) changed = true;
       }
-
-      // Merge packed container sizes into nodeSizes so ELK can use them as fixed boxes.
-      // Start from deep-LOD sizes (all nodes), then override pack containers with
-      // their grid-computed sizes (which account for children).
-      const mergedSizes = new Map(deepLodGeometry().sizes);
-      for (const id of opaqueContainers) {
-        const sz = gr.sizes.get(id);
-        if (sz) mergedSizes.set(id, sz);
-      }
-
-      const layerHints = new Map<string, number>();
-      for (const [id, node] of props.graph.nodes) {
-        const t = (node.props as Record<string, unknown> | undefined)?.tier;
-        if (typeof t === 'number' && Number.isFinite(t)) layerHints.set(id, t);
-      }
-
-      return {
-        req: {
-          rootIds: ct.rootIds,
-          childrenOf: ct.childrenOf,
-          edges: layoutEdges(),
-          nodeSizes: mergedSizes as ReadonlyMap<string, { w: number; h: number }>,
-          headerHeight: HEADER_HEIGHT,
-          headerHeights: deepLodGeometry().headerHeights,
-          headerWidths: deepLodGeometry().headerWidths,
-          layerHints,
-        },
-        opaqueContainers,
-        spacing: props.spacing ?? 1,
-        algorithm: props.algorithm === 'mrtree' ? ('mrtree' as const) : ('layered' as const),
-      };
-    },
-    (input): Promise<LayoutResult> =>
-      elkLayout(input.req, {
-        direction: 'DOWN',
-        opaqueContainers: input.opaqueContainers,
-        spacing: input.spacing,
-        algorithm: input.algorithm,
-      }),
-  );
-
-  const baseLayout = createMemo<LayoutResult | null>(() => {
-    if (props.algorithm !== 'elk' && props.algorithm !== 'mrtree') return gridResult();
-
-    const elkRes = elkResult();
-    if (!elkRes) return null;
-
-    const gr = gridResult();
-    const ct = containment();
-
-    // Positions: start with gridResult (parent-relative for non-roots), override roots with elk absolute positions.
-    const positions = new Map(gr.positions);
-    for (const rootId of ct.rootIds) {
-      const elkPos = elkRes.positions.get(rootId);
-      if (elkPos) positions.set(rootId, elkPos);
-    }
-
-    // Sizes: gridResult covers all nodes. Override with elk sizes where elk has them
-    // (for roots elk returns what we gave it, so values agree).
-    const sizes = new Map(gr.sizes);
-    for (const [id, sz] of elkRes.sizes) {
-      sizes.set(id, sz);
-    }
-
-    return { positions, sizes };
+      return changed ? next : prev;
+    });
   });
+
+  // Per-node soft layering hints for the top-level pass, read from the `tier` prop.
+  const layerHints = createMemo(() => {
+    const hints = new Map<string, number>();
+    for (const [id, node] of props.graph.nodes) {
+      const t = (node.props as Record<string, unknown> | undefined)?.tier;
+      if (typeof t === 'number' && Number.isFinite(t)) hints.set(id, t);
+    }
+    return hints;
+  });
+
+  // Single layout solve. cactus owns the full composition (interior pass +
+  // top-level pass + merge); the domain just declares intent and renders the
+  // result. Because both phases derive from one snapshot, the container box size
+  // and its children's positions can never come from desynced passes — the whole
+  // layout swaps atomically when policy/algorithm changes.
+  const [baseLayout] = createResource(
+    () => ({
+      rootIds: containment().rootIds,
+      childrenOf: containment().childrenOf,
+      nodeSizes: deepLodGeometry().sizes,
+      headerHeight: HEADER_HEIGHT,
+      headerHeights: deepLodGeometry().headerHeights,
+      headerWidths: deepLodGeometry().headerWidths,
+      edges: layoutEdges(),
+      policies: layoutPolicy(),
+      layerHints: layerHints(),
+      top: {
+        algorithm:
+          props.algorithm === 'elk' ? ('elk' as const)
+          : props.algorithm === 'mrtree' ? ('mrtree' as const)
+          : ('grid' as const),
+        direction: props.direction,
+        spacing: props.spacing ?? 1,
+      },
+    }),
+    composeLayout,
+  );
 
   createEffect(() => {
     const base = baseLayout();
@@ -465,7 +447,7 @@ function CanvasInner(props: {
         fallback={<div style={{ padding: '8px', color: 'var(--fg-muted)' }}>Computing layout…</div>}
       >
         {/* eslint-disable-next-line solid/reactivity -- renderNodes returns JSX evaluated inside the Show's tracked scope */}
-        {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, dragPointerDown)}
+        {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, resolveChildLayout, dragPointerDown)}
       </Show>
       <Portal mount={document.body}>
         <InspectorPanel graph={props.graph} view={props.view} />
@@ -513,6 +495,7 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
         graph={props.graph}
         view={props.view}
         algorithm={props.algorithm}
+        direction={props.direction}
         spacing={props.spacing}
         exposeRects={(g) => { getRects = g; emit(); }}
         onEdges={setEdges}

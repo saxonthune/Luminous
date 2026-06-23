@@ -1,3 +1,5 @@
+export type ChildLayoutPolicy = 'pack' | 'grid' | 'stack-v' | 'stack-h';
+
 export interface LayoutRequest {
   rootIds: ReadonlyArray<string>;
   childrenOf: ReadonlyMap<string, ReadonlyArray<string>>;
@@ -16,8 +18,9 @@ export interface LayoutRequest {
     to: string;
     label?: { w: number; h: number };
   }>;
-  /** Per-parent layout choice. Key is a parent node id. Unset parents default to 'pack'. */
-  layoutPolicy?: ReadonlyMap<string, 'pack' | 'grid'>;
+  /** Per-parent layout choice. Key is a parent node id. Unset parents default to 'pack'.
+   * 'stack-v' and 'stack-h' place children in childrenOf order as a single column or row. */
+  layoutPolicy?: ReadonlyMap<string, ChildLayoutPolicy>;
   /** Per-node soft layering hints. Lower = closer to layout start. */
   layerHints?: ReadonlyMap<string, number>;
 }
