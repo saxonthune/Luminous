@@ -218,8 +218,8 @@ function CanvasInner(props: {
       while (ct.parentOf.has(ancestor)) {
         ancestor = ct.parentOf.get(ancestor)!;
       }
-      const idx = ct.rootIds.indexOf(ancestor);
-      return idx === -1 ? undefined : PALETTE[idx % PALETTE.length];
+      const idx = ct.rootIndex.get(ancestor);
+      return idx === undefined ? undefined : PALETTE[idx % PALETTE.length];
     },
   };
 

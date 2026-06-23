@@ -85,6 +85,7 @@ export function evaluateContainment(graph: Graph, view: View): ContainmentTree {
   if (containKinds.length === 0) {
     return {
       rootIds: spatialNodeIds,
+      rootIndex: new Map(spatialNodeIds.map((id, i) => [id, i] as const)),
       childrenOf: new Map(),
       parentOf: new Map(),
       warnings: [],
@@ -143,6 +144,7 @@ export function evaluateContainment(graph: Graph, view: View): ContainmentTree {
   }
 
   const rootIds = spatialNodeIds.filter((id) => !parentOf.has(id));
+  const rootIndex = new Map(rootIds.map((id, i) => [id, i] as const));
 
-  return { rootIds, childrenOf, parentOf, warnings };
+  return { rootIds, rootIndex, childrenOf, parentOf, warnings };
 }

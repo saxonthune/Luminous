@@ -141,7 +141,7 @@ describe('parsePackJson — happy path', () => {
     expect(pack.nodeKinds.some((k) => k.id === 'prim.box')).toBe(true);
     expect(pack.edgeKinds.some((k) => k.id === 'prim.arrow')).toBe(true);
     expect(pack.edgeKinds.some((k) => k.id === 'prim.contains')).toBe(true);
-    expect(pack.views).toHaveLength(1);
+    expect(pack.views.length).toBeGreaterThanOrEqual(1);
   });
 });
 

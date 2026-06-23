@@ -23,9 +23,19 @@ interface EdgeLayerProps {
   getNodeRects: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
   zoom: () => number;
+  viewport?: () => { x: number; y: number; w: number; h: number } | null;
 }
 
 const LABEL_CAP = 28;
+
+// Reference font size for label-overlap box estimation. Fixed so anchor
+// placement does not recompute on every zoom tick (positions are zoom-stable;
+// only the rendered label box scales with zoom, handled separately below).
+const LABEL_ANCHOR_REF_FS = 13;
+
+// Above this node count, skip node-vs-label overlap testing — the per-edge
+// O(nodes) scan dominates on large graphs. Label-vs-label dodging still runs.
+const NODE_DODGE_MAX_NODES = 400;
 
 function truncate(s: string): string {
   return s.length > LABEL_CAP ? s.slice(0, LABEL_CAP) + '…' : s;
@@ -74,9 +84,11 @@ function chooseLabelAnchor(
     const lx = cx - box.w / 2;
     const ly = cy - box.h / 2;
     let n = 0;
-    for (const [id, r] of rects) {
-      if (id === sourceId || id === targetId) continue;
-      if (lx < r.x + r.w && lx + box.w > r.x && ly < r.y + r.h && ly + box.h > r.y) n++;
+    if (rects.size <= NODE_DODGE_MAX_NODES) {
+      for (const [id, r] of rects) {
+        if (id === sourceId || id === targetId) continue;
+        if (lx < r.x + r.w && lx + box.w > r.x && ly < r.y + r.h && ly + box.h > r.y) n++;
+      }
     }
     for (const p of placedLabels) {
       if (lx < p.x + p.w && lx + box.w > p.x && ly < p.y + p.h && ly + box.h > p.y) n++;
@@ -104,13 +116,29 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
 
   const routed = createMemo(() => routeEdges(props.edges, props.getNodeRects()));
 
+  const visibleEdges = createMemo(() => {
+    const vp = props.viewport?.();
+    if (!vp) return props.edges;
+    const r = routed();
+    const padX = vp.w, padY = vp.h;
+    const minX = vp.x - padX, maxX = vp.x + vp.w + padX;
+    const minY = vp.y - padY, maxY = vp.y + vp.h + padY;
+    return props.edges.filter((edge) => {
+      const pts = r.get(edge.id);
+      if (!pts) return false;
+      const eMinX = Math.min(pts.x1, pts.x2), eMaxX = Math.max(pts.x1, pts.x2);
+      const eMinY = Math.min(pts.y1, pts.y2), eMaxY = Math.max(pts.y1, pts.y2);
+      return eMaxX >= minX && eMinX <= maxX && eMaxY >= minY && eMinY <= maxY;
+    });
+  });
+
   // Label anchors: for edges with text, slide along the line to dodge unrelated
   // nodes. Outer memo so per-edge rendering and the revealed-popover see the
   // same chosen position.
   const labelAnchors = createMemo(() => {
     const rects = props.getNodeRects();
     const r = routed();
-    const fs = labelFontSize();
+    const fs = LABEL_ANCHOR_REF_FS;
     const map = new Map<string, { x: number; y: number }>();
     const placed: LabelRect[] = [];
     for (const edge of props.edges) {
@@ -141,7 +169,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
 
   return (
     <>
-      <For each={props.edges}>
+      <For each={visibleEdges()}>
         {(edge) => {
           const endpoints = createMemo(() => routed().get(edge.id) ?? null);
 

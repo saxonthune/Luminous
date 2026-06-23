@@ -187,6 +187,8 @@ export type GraphQuery = unknown;
 export interface ContainmentTree {
   /** Nodes with no contain-edge parent in this view. */
   rootIds: NodeId[];
+  /** Root id → its index in `rootIds`, for O(1) palette lookup. */
+  rootIndex: ReadonlyMap<NodeId, number>;
   /** Parent → ordered children. */
   childrenOf: ReadonlyMap<NodeId, NodeId[]>;
   /** Child → its single containment parent in this view. */
