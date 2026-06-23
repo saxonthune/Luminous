@@ -11,11 +11,11 @@
 WORKTREE_PREFIX="agent"
 
 # Command to install dependencies in a fresh worktree
-INSTALL_CMD="npm install"
+INSTALL_CMD="pnpm install"
 
 # Command to verify the implementation (must exit 0 on success)
-BUILD_CMD="npm run build"
-TEST_CMD="npm test"
+BUILD_CMD="pnpm -r build"
+TEST_CMD="pnpm -r test"
 
 # Budget caps for headless Claude sessions (USD)
 MAX_BUDGET="5.00"
