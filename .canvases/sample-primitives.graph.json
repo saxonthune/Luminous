@@ -46,7 +46,10 @@
     { "id": "contains.beta.evaluator", "kind": "prim.contains", "from": "box.beta.evaluator", "to": "box.beta", "props": {}, "tags": [] },
     { "id": "contains.beta.cache",     "kind": "prim.contains", "from": "box.beta.cache",     "to": "box.beta", "props": {}, "tags": [] },
     { "id": "arrow.parser-evaluator", "kind": "prim.arrow", "from": "box.beta.parser", "to": "box.beta.evaluator", "props": { "label": "feeds" }, "tags": [] },
-    { "id": "arrow.evaluator-cache",  "kind": "prim.arrow", "from": "box.beta.evaluator", "to": "box.beta.cache", "props": { "label": "writes" }, "tags": [] }
+    { "id": "arrow.evaluator-cache",  "kind": "prim.arrow", "from": "box.beta.evaluator", "to": "box.beta.cache", "props": { "label": "writes" }, "tags": [] },
+    { "id": "relates.alpha-gamma",     "kind": "prim.relates", "from": "box.alpha",          "to": "box.gamma", "props": { "label": "kindred concept" }, "tags": [] },
+    { "id": "relates.parser-cache",    "kind": "prim.relates", "from": "box.beta.parser",    "to": "box.beta.cache", "props": { "label": "warms" }, "tags": [] },
+    { "id": "relates.evaluator-alpha", "kind": "prim.relates", "from": "box.beta.evaluator", "to": "box.alpha", "props": { "label": "configured by" }, "tags": [] }
   ],
   "defaultView": "architecture"
 }
