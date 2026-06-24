@@ -136,6 +136,11 @@ describe('project — flat view', () => {
     const scene = await project(SERVER, PATH, 'view-flat')
     expect(scene.viewId).toBe('view-flat')
   })
+
+  it('peekNodes is empty (MCP calls evaluateView without gating)', async () => {
+    const scene = await project(SERVER, PATH, 'view-flat')
+    expect(scene.peekNodes).toHaveLength(0)
+  })
 })
 
 describe('project — nested view', () => {

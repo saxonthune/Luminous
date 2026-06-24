@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { buildGraph, evaluateView, registerPack, resetRegistry, getNodeKind, getPrimitivesBuiltin } from '@luminous/core';
 import type { Node, Edge, View, Pack } from '@luminous/core';
 import { gridLayout, resolveAbsolutePositionByParentOf } from '@luminous/cactus';
+import { computeMatchGating, MATCH_GATING_CFG } from '../src/matchGating';
 
 // ── Fixture ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,58 @@ describe('PgCanvasView data pipeline', () => {
 
     expect(order.indexOf('region')).toBeLessThan(order.indexOf('composite'));
     expect(order.indexOf('composite')).toBeLessThan(order.indexOf('state'));
+  });
+});
+
+// ── Peek-set wiring via match-gating ─────────────────────────────────────────
+
+describe('evaluateView peek-set wiring (match-gating)', () => {
+  const MATCH: Node = {
+    id: 'match_node',
+    kind: 'rust.match',
+    props: { label: 'x', arms: ['A', 'B'], selectedArm: 'A' },
+    tags: [],
+  };
+  const NODE_A: Node = { id: 'node_a', kind: 'prim.box', props: { label: 'a' }, tags: [] };
+  const NODE_B: Node = { id: 'node_b', kind: 'prim.box', props: { label: 'b' }, tags: [] };
+
+  const EDGES: Edge[] = [
+    { id: 'e_a', kind: 'rust.dataflow', from: 'match_node', to: 'node_a', props: { arm: 'A' }, tags: [] },
+    { id: 'e_b', kind: 'rust.dataflow', from: 'match_node', to: 'node_b', props: { arm: 'B' }, tags: [] },
+  ];
+
+  const gatingGraph = buildGraph([MATCH, NODE_A, NODE_B], EDGES);
+
+  it('scene receives peek set — node_b is peeked when selectedArm=A, layer=peek', () => {
+    const view: View = {
+      id: 'v',
+      name: 'V',
+      nodeRoles: { 'rust.match': 'spatial', 'prim.box': 'spatial' },
+      edgeRoles: { 'rust.dataflow': 'arrow' },
+      layers: { 'match-gating': 'peek' },
+      layout: { algorithm: 'manual' },
+    };
+    const peek = computeMatchGating(gatingGraph, view, MATCH_GATING_CFG);
+    const scene = evaluateView(gatingGraph, view, { peek });
+
+    const peekIds = scene.peekNodes.map((n) => n.id);
+    expect(peekIds).toContain('node_b');
+    expect(peekIds).not.toContain('node_a');
+    expect(peekIds).not.toContain('match_node');
+  });
+
+  it('scene has no peek nodes when match-gating layer is off', () => {
+    const view: View = {
+      id: 'v',
+      name: 'V',
+      nodeRoles: { 'rust.match': 'spatial', 'prim.box': 'spatial' },
+      edgeRoles: { 'rust.dataflow': 'arrow' },
+      layers: {},
+      layout: { algorithm: 'manual' },
+    };
+    const peek = computeMatchGating(gatingGraph, view, MATCH_GATING_CFG);
+    const scene = evaluateView(gatingGraph, view, { peek });
+    expect(scene.peekNodes).toHaveLength(0);
   });
 });
 

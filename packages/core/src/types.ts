@@ -398,14 +398,30 @@ export interface NamedQuery {
 // ============================================================================
 
 /**
- * Produced by `evaluateView(graph, view)`. Partitions the in-scope graph
- * according to the view's role assignments. Consumed by the renderer.
+ * One authoritative resolved state per node, produced by `evaluateView`.
+ *
+ * - `spatial` — has a position; rendered at full emphasis.
+ * - `latent`  — present in the graph, not directly rendered.
+ * - `peek`    — de-emphasized (dimmed); present and occupies space, but not
+ *               the current focus. Used by gating to dim non-selected arms.
+ * - `hidden`  — excluded from this view entirely.
+ */
+export type ResolvedNodeState = 'spatial' | 'latent' | 'peek' | 'hidden';
+
+/**
+ * Produced by `evaluateView(graph, view, gating?)`. Resolves one authoritative
+ * state per node in a single pass, then exposes derived convenience arrays.
+ * Consumed by the renderer.
  */
 export interface SceneGraph {
-  /** Spatial nodes — have a position; rendered. Deterministic order. */
+  /** One authoritative resolved state per node. The canonical single-solver output. */
+  nodeStates: ReadonlyMap<NodeId, ResolvedNodeState>;
+  /** Spatial nodes — state === 'spatial'. Deterministic order. */
   spatialNodes: Node[];
-  /** Latent nodes — present, not rendered; may appear via summary chips. */
+  /** Latent nodes — state === 'latent'; may appear via summary chips. */
   latentNodes: Node[];
+  /** Peek nodes — state === 'peek'; rendered dimmed, still occupy space. */
+  peekNodes: Node[];
   /** Edges with role `arrow` — drawn as visible lines. */
   arrows: Edge[];
   /** Edges with role `summary` — collapsed into chips on the source node. */

@@ -16,6 +16,7 @@ export interface ProjectedScene {
   viewId: string
   spatialNodes: NodeSummary[]
   latentNodes: NodeSummary[]
+  peekNodes: NodeSummary[]
   arrows: EdgeSummary[]
   summaryEdges: EdgeSummary[]
   containment: {
@@ -114,6 +115,7 @@ export async function project(
     viewId: view.id,
     spatialNodes: scene.spatialNodes.map(toNodeSummary),
     latentNodes: scene.latentNodes.map(toNodeSummary),
+    peekNodes: scene.peekNodes.map(toNodeSummary),
     arrows: scene.arrows.map(toEdgeSummary),
     summaryEdges: scene.summaryEdges.map(toEdgeSummary),
     containment: {

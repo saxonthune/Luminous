@@ -50,6 +50,40 @@
           ]
         }
       }
+    },
+    {
+      "id": "rust.match",
+      "label": "Match",
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "arms": { "type": "array", "items": { "type": "string" } },
+          "selectedArm": { "type": "string" }
+        },
+        "required": ["label"],
+        "additionalProperties": false
+      },
+      "idTemplate": "rust.match.{label|slug}",
+      "render": {
+        "card": {
+          "type": "card",
+          "children": [
+            {
+              "type": "vstack",
+              "gap": "4",
+              "children": [
+                { "type": "text", "value": "{content.label}", "style": "heading" },
+                {
+                  "type": "if",
+                  "when": "content.selectedArm",
+                  "then": { "type": "chip", "value": "{content.selectedArm}" }
+                }
+              ]
+            }
+          ]
+        }
+      }
     }
   ],
   "edgeKinds": [
@@ -87,6 +121,19 @@
         "additionalProperties": false
       },
       "directed": false
+    },
+    {
+      "id": "rust.dataflow",
+      "label": "Data Flow",
+      "props": {
+        "type": "object",
+        "properties": {
+          "arm": { "type": "string" },
+          "label": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "directed": true
     }
   ],
   "views": [
@@ -166,9 +213,38 @@
       },
       "layers": {},
       "layout": { "algorithm": "elk" }
+    },
+    {
+      "id": "rust-dataflow",
+      "name": "Rust Data Flow",
+      "description": "Rust match-arm gating view. Enable the match-gating layer to dim non-selected arm nodes.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial",
+        "rust.match": "spatial"
+      },
+      "edgeRoles": {
+        "rust.dataflow": "arrow"
+      },
+      "layers": {
+        "match-gating": "off"
+      },
+      "layout": { "algorithm": "elk", "direction": "RIGHT" }
     }
   ],
-  "layers": [],
+  "layers": [
+    {
+      "id": "match-gating",
+      "name": "Match Gating",
+      "edgeKinds": ["rust.dataflow"],
+      "defaultState": "off"
+    }
+  ],
   "disclosure": [
     {
       "kind": "prim.box",
@@ -176,6 +252,13 @@
       "card": ["label", "tag"],
       "open": ["label", "tag", "description"],
       "deep": ["label", "tag", "description"]
+    },
+    {
+      "kind": "rust.match",
+      "peek": ["label"],
+      "card": ["label", "selectedArm"],
+      "open": ["label", "selectedArm", "arms"],
+      "deep": ["label", "selectedArm", "arms"]
     }
   ]
 }

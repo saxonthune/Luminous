@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildGraph } from '../src/graph.ts';
-import { matchNode, matchEdge, queryNodes, queryEdges, neighborhood } from '../src/query.ts';
+import { matchNode, matchEdge, queryNodes, queryEdges, neighborhood, reachable } from '../src/query.ts';
 import type { Node, Edge } from '../src/types.ts';
 
 // ---------------------------------------------------------------------------
@@ -266,6 +266,81 @@ describe('queryEdges', () => {
   it('insertion order preserved', () => {
     const result = queryEdges(graph, {});
     expect(result.map((e) => e.id)).toEqual(['e1', 'e2', 'e3']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reachable
+// ---------------------------------------------------------------------------
+
+describe('reachable', () => {
+  it('single seed, direction out, linear chain → full downstream set', () => {
+    // a→b (e1), b→c (e2) — default 'out' direction from a
+    const result = reachable(graph, ['a']);
+    expect([...result].sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('edgeAllowed gate — node only reachable via suppressed edge is excluded', () => {
+    // suppress e2 (b→c): c is only reachable via a→c (e3) from a or via b→c which is cut
+    // from b with e2 suppressed, c is NOT reachable
+    const result = reachable(graph, ['b'], { edgeAllowed: (e) => e.id !== 'e2' });
+    expect([...result]).toEqual(['b']);
+  });
+
+  it('edgeAllowed gate — node reachable by second path still included (transitive correctness)', () => {
+    // suppress e3 (a→c direct); c is still reachable via a→b→c
+    const result = reachable(graph, ['a'], { edgeAllowed: (e) => e.id !== 'e3' });
+    expect([...result].sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('direction in — follows incoming edges', () => {
+    // from c, incoming: e2 (b→c), e3 (a→c) → b and a; from b incoming: e1 (a→b), a already seen
+    const result = reachable(graph, ['c'], { direction: 'in' });
+    expect([...result].sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('direction in — does not follow outgoing', () => {
+    // from b with 'in': only a is reachable (via e1 a→b); c is outgoing from b, not reached
+    const result = reachable(graph, ['b'], { direction: 'in' });
+    expect([...result].sort()).toEqual(['a', 'b']);
+  });
+
+  it('direction both — follows outgoing and incoming', () => {
+    const result = reachable(graph, ['b'], { direction: 'both' });
+    expect([...result].sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('maxHops=0 — returns only the seed', () => {
+    const result = reachable(graph, ['a'], { maxHops: 0 });
+    expect([...result]).toEqual(['a']);
+  });
+
+  it('maxHops=1 — limits expansion to one hop', () => {
+    // from b with maxHops=1: outgoing e2 → c (1 hop). b→c in 1 hop; c's outgoing not traversed
+    const result = reachable(graph, ['b'], { maxHops: 1 });
+    expect([...result].sort()).toEqual(['b', 'c']);
+  });
+
+  it('unknown seed id is skipped', () => {
+    const result = reachable(graph, ['nonexistent']);
+    expect(result.size).toBe(0);
+  });
+
+  it('empty seeds → empty set', () => {
+    const result = reachable(graph, []);
+    expect(result.size).toBe(0);
+  });
+
+  it('multiple seeds', () => {
+    // seeds=[b, c], direction out: b reaches c; c has no outgoing
+    const result = reachable(graph, ['b', 'c']);
+    expect([...result].sort()).toEqual(['b', 'c']);
+  });
+
+  it('determinism — same inputs produce identical ordered output', () => {
+    const r1 = [...reachable(graph, ['a'])];
+    const r2 = [...reachable(graph, ['a'])];
+    expect(r1).toEqual(r2);
   });
 });
 

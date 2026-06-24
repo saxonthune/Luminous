@@ -271,6 +271,93 @@ describe('evaluateView — determinism', () => {
 
 // ---------------------------------------------------------------------------
 
+describe('evaluateView — gating seam', () => {
+  it('without gating, scene matches pre-gating behavior (spatial/latent only)', () => {
+    const scene = evaluateView(graph, statechartView);
+    expect(scene.peekNodes).toHaveLength(0);
+    expect(scene.spatialNodes).toHaveLength(6);
+    expect(scene.latentNodes).toHaveLength(1);
+    // nodeStates map has entries for all spatial + latent
+    expect(scene.nodeStates.get('region.nav')).toBe('spatial');
+    expect(scene.nodeStates.get('action.Collection.create')).toBe('latent');
+    expect(scene.nodeStates.get('concept.Collection')).toBe('hidden');
+  });
+
+  it('spatial node in peek set demotes to peek, absent from spatialNodes', () => {
+    const scene = evaluateView(graph, statechartView, { peek: new Set(['region.nav']) });
+    expect(scene.nodeStates.get('region.nav')).toBe('peek');
+    expect(scene.peekNodes.map((n) => n.id)).toContain('region.nav');
+    expect(scene.spatialNodes.map((n) => n.id)).not.toContain('region.nav');
+    // other spatial nodes unaffected
+    expect(scene.spatialNodes.map((n) => n.id)).toContain('region.overlay');
+    expect(scene.spatialNodes).toHaveLength(5);
+    expect(scene.peekNodes).toHaveLength(1);
+  });
+
+  it('latent node in peek set demotes to peek', () => {
+    const scene = evaluateView(graph, statechartView, {
+      peek: new Set(['action.Collection.create']),
+    });
+    expect(scene.nodeStates.get('action.Collection.create')).toBe('peek');
+    expect(scene.peekNodes.map((n) => n.id)).toContain('action.Collection.create');
+    expect(scene.latentNodes.map((n) => n.id)).not.toContain('action.Collection.create');
+    expect(scene.latentNodes).toHaveLength(0);
+    expect(scene.peekNodes).toHaveLength(1);
+  });
+
+  it('hidden node in peek set stays hidden (gating never resurrects hidden)', () => {
+    const scene = evaluateView(graph, statechartView, {
+      peek: new Set(['concept.Collection']),
+    });
+    expect(scene.nodeStates.get('concept.Collection')).toBe('hidden');
+    expect(scene.peekNodes.map((n) => n.id)).not.toContain('concept.Collection');
+    expect(scene.spatialNodes.map((n) => n.id)).not.toContain('concept.Collection');
+  });
+
+  it('peek node appears in containment tree (still occupies space)', () => {
+    // region.nav is a root in statechart view — peek-demoting it should keep
+    // it in containment so its children are still layoutable.
+    const scene = evaluateView(graph, statechartView, { peek: new Set(['region.nav']) });
+    expect(scene.containment.rootIds).toContain('region.nav');
+    expect(scene.containment.childrenOf.get('region.nav')).toBeDefined();
+  });
+
+  it('omitting gating produces identical scene structure to passing empty gating', () => {
+    const s1 = evaluateView(graph, statechartView);
+    const s2 = evaluateView(graph, statechartView, {});
+    expect(s1.spatialNodes.map((n) => n.id)).toEqual(s2.spatialNodes.map((n) => n.id));
+    expect(s1.latentNodes.map((n) => n.id)).toEqual(s2.latentNodes.map((n) => n.id));
+    expect(s1.peekNodes).toHaveLength(0);
+    expect(s2.peekNodes).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('evaluateView — nodeStates map', () => {
+  it('all nodes have an entry in nodeStates', () => {
+    const scene = evaluateView(graph, statechartView);
+    for (const node of graph.nodes.values()) {
+      expect(scene.nodeStates.has(node.id)).toBe(true);
+    }
+  });
+
+  it('nodeStates is consistent with derived arrays', () => {
+    const scene = evaluateView(graph, statechartView);
+    for (const n of scene.spatialNodes) {
+      expect(scene.nodeStates.get(n.id)).toBe('spatial');
+    }
+    for (const n of scene.latentNodes) {
+      expect(scene.nodeStates.get(n.id)).toBe('latent');
+    }
+    for (const n of scene.peekNodes) {
+      expect(scene.nodeStates.get(n.id)).toBe('peek');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+
 describe('evaluateView — unknown kind', () => {
   it('treats nodes with kinds not in nodeRoles as hidden, no warning', () => {
     // transition.MapOverview.TAP_PIN is not in statechartView.nodeRoles... wait,

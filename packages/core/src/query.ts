@@ -114,6 +114,61 @@ export function queryEdges(graph: Graph, query: GraphQuery): Edge[] {
   return result;
 }
 
+/** BFS reachability from a set of seeds. Returns all node ids reachable (including
+ *  the seeds themselves) under the given direction, edge gate, and hop bound. */
+export function reachable(
+  graph: Graph,
+  seeds: Iterable<NodeId>,
+  opts?: {
+    direction?: 'out' | 'in' | 'both';
+    edgeAllowed?: (edge: Edge) => boolean;
+    maxHops?: number;
+  }
+): Set<NodeId> {
+  const direction = opts?.direction ?? 'out';
+  const edgeAllowed = opts?.edgeAllowed ?? (() => true);
+  const maxHops = opts?.maxHops ?? Infinity;
+
+  const visited = new Set<NodeId>();
+  let frontier = new Set<NodeId>();
+
+  for (const id of seeds) {
+    if (graph.nodes.has(id)) {
+      visited.add(id);
+      frontier.add(id);
+    }
+  }
+
+  for (let hop = 0; hop < maxHops && frontier.size > 0; hop++) {
+    const next = new Set<NodeId>();
+    for (const nodeId of frontier) {
+      if (direction === 'out' || direction === 'both') {
+        for (const edgeId of graph.outgoing.get(nodeId) ?? []) {
+          const edge = graph.edges.get(edgeId)!;
+          if (!edgeAllowed(edge)) continue;
+          if (!visited.has(edge.to)) {
+            visited.add(edge.to);
+            next.add(edge.to);
+          }
+        }
+      }
+      if (direction === 'in' || direction === 'both') {
+        for (const edgeId of graph.incoming.get(nodeId) ?? []) {
+          const edge = graph.edges.get(edgeId)!;
+          if (!edgeAllowed(edge)) continue;
+          if (!visited.has(edge.from)) {
+            visited.add(edge.from);
+            next.add(edge.from);
+          }
+        }
+      }
+    }
+    frontier = next;
+  }
+
+  return visited;
+}
+
 export function neighborhood(
   graph: Graph,
   id: NodeId,
@@ -121,8 +176,13 @@ export function neighborhood(
 ): { nodes: Node[]; edges: Edge[] } {
   if (!graph.nodes.has(id)) return { nodes: [], edges: [] };
 
-  const visitedNodes = new Set<NodeId>([id]);
+  const visitedNodes = reachable(graph, [id], { direction: 'both', maxHops: hops });
+
+  // Edge collection uses the same frontier BFS so only edges traversed within
+  // the hop bound are included — edges between visited nodes discovered in later
+  // hops are intentionally excluded, matching the original semantics.
   const visitedEdges = new Set<string>();
+  const seen = new Set<NodeId>([id]);
   let frontier = new Set<NodeId>([id]);
 
   for (let hop = 0; hop < hops; hop++) {
@@ -132,8 +192,8 @@ export function neighborhood(
         if (visitedEdges.has(edgeId)) continue;
         visitedEdges.add(edgeId);
         const edge = graph.edges.get(edgeId)!;
-        if (!visitedNodes.has(edge.to)) {
-          visitedNodes.add(edge.to);
+        if (!seen.has(edge.to)) {
+          seen.add(edge.to);
           nextFrontier.add(edge.to);
         }
       }
@@ -141,8 +201,8 @@ export function neighborhood(
         if (visitedEdges.has(edgeId)) continue;
         visitedEdges.add(edgeId);
         const edge = graph.edges.get(edgeId)!;
-        if (!visitedNodes.has(edge.from)) {
-          visitedNodes.add(edge.from);
+        if (!seen.has(edge.from)) {
+          seen.add(edge.from);
           nextFrontier.add(edge.from);
         }
       }
