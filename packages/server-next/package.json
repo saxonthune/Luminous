@@ -2,12 +2,6 @@
   "name": "@luminous/server",
   "version": "0.3.0",
   "type": "module",
-  "scripts": {
-    "build": "rimraf dist && tsc",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
-    "test": "vitest run"
-  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "rimraf": "^6.1.3",

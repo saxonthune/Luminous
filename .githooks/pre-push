@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Block pushes that don't typecheck. Uses tsgo (TS 7.0 native preview) via the
-# per-package `typecheck` scripts. Bypass in an emergency with `git push --no-verify`.
+# `just typecheck` recipe. Bypass in an emergency with `git push --no-verify`.
 set -euo pipefail
 
 echo "pre-push: running typecheck (tsgo)…"
-if ! pnpm -r typecheck; then
+if ! just typecheck; then
   echo
   echo "pre-push: typecheck failed — push aborted. Fix the errors above, or use --no-verify to bypass."
   exit 1

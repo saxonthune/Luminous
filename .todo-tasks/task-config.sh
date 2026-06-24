@@ -14,8 +14,8 @@ WORKTREE_PREFIX="agent"
 INSTALL_CMD="pnpm install"
 
 # Command to verify the implementation (must exit 0 on success)
-BUILD_CMD="pnpm -r build"
-TEST_CMD="pnpm -r test"
+BUILD_CMD="just build"
+TEST_CMD="just test"
 
 # Budget caps for headless Claude sessions (USD)
 MAX_BUDGET="5.00"

@@ -127,7 +127,7 @@ try {
   serverCommit = health.commit ?? 'unknown'
 } catch {
   process.stderr.write(
-    `Error: Cannot reach Luminous server at ${serverUrl}. Start it with: pnpm dev:next\n`
+    `Error: Cannot reach Luminous server at ${serverUrl}. Start it with: just dev\n`
   )
   process.exit(1)
 }

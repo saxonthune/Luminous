@@ -81,7 +81,7 @@ Questions:
 - Can the Luminous client be built as a static bundle that takes `?canvas=path/to/file.canvas.json` and renders read-only?
 - If so, how does a downstream project (RTP) consume it? Copy bundle into its repo? Reference a CDN URL? An npm-installed `dist/`?
 
-If today the viewer requires `pnpm dev:next` and a Yjs server, that's the gating constraint for RTP adoption. A static read-only export mode is worth more to RTP than every other item on this list combined.
+If today the viewer requires `just dev` and a Yjs server, that's the gating constraint for RTP adoption. A static read-only export mode is worth more to RTP than every other item on this list combined.
 
 ### 6. Canvas-side schemas RTP would declare
 

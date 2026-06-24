@@ -5,12 +5,6 @@
   "bin": {
     "luminous-mcp": "./dist/server.js"
   },
-  "scripts": {
-    "build": "tsup",
-    "dev": "tsx src/server.ts",
-    "test": "vitest run",
-    "typecheck": "tsgo --noEmit -p tsconfig.json"
-  },
   "dependencies": {
     "@luminous/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.25.3"

@@ -21,9 +21,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: extractions/setup-just@v2
       - run: pnpm install --frozen-lockfile
       - name: Generate project canvas
-        run: pnpm generate:canvas
+        run: just generate-canvas
       - name: Stage generated canvas for bundling
         # TODO: wire in solidjs-analysis pack once it exists alongside the graph
         run: |
@@ -40,7 +41,7 @@ jobs:
             "
           fi
       - name: Build web client
-        run: pnpm build
+        run: just build
         env:
           GITHUB_PAGES: 'true'
       - uses: actions/upload-pages-artifact@v3

@@ -103,12 +103,21 @@ When a change adds or modifies a field in the pack or graph schema — including
 
 Solid.js, TypeScript 5.9, Vite, Tailwind, d3-zoom, Playwright (E2E), Vitest
 
+## Task Runner
+
+Task commands live in the root `justfile`, not in package.json. package.json holds
+only dependencies, metadata, exports, and bin entries. Run `just` (or `just --list`)
+to see all recipes. Common ones: `just build`, `just test`, `just typecheck`,
+`just lint`, `just dev`, `just mcp` (regenerate the MCP server bundle).
+
+Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
+
 ## Type Checking
 
 Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).
 
-- `pnpm -r typecheck` or `make typecheck` — runs `tsgo --noEmit` across all packages
-- `npx tsgo --noEmit -p <tsconfig>` — check a single package
+- `just typecheck` — runs `tsgo --noEmit` across all packages
+- `pnpm -C packages/<pkg> exec tsgo --noEmit -p <tsconfig>` — check a single package
 - Build scripts (`tsc -b`, `tsc -p`) stay as-is — tsgo does not emit in the beta
 
 ## Searching and reading files

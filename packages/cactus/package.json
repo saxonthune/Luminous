@@ -15,11 +15,6 @@
     "./cactus.css": "./src/cactus.css",
     "./cactus-themes.css": "./src/cactus-themes.css"
   },
-  "scripts": {
-    "test": "vitest run",
-    "build:types": "tsc -p tsconfig.build.json",
-    "typecheck": "tsgo --noEmit"
-  },
   "dependencies": {
     "@kobalte/core": "^0.13.0",
     "d3-force": "^3.0.0",

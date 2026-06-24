@@ -1,0 +1,181 @@
+{
+  "id": "primitives",
+  "version": "0.1.0",
+  "description": "Generic boxes and arrows for architectural and conceptual diagrams.",
+  "nodeKinds": [
+    {
+      "id": "prim.box",
+      "label": "Box",
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "color": { "type": "string" },
+          "tag": { "type": "string" }
+        },
+        "required": ["label"],
+        "additionalProperties": false
+      },
+      "idTemplate": "box.{label|slug}",
+      "render": {
+        "card": {
+          "type": "card",
+          "color": "{content.color}",
+          "children": [
+            {
+              "type": "vstack",
+              "gap": "4",
+              "children": [
+                {
+                  "type": "hstack",
+                  "gap": "8",
+                  "align": "center",
+                  "children": [
+                    { "type": "text", "value": "{content.label}", "style": "heading" },
+                    {
+                      "type": "if",
+                      "when": "content.tag",
+                      "then": { "type": "chip", "value": "{content.tag}" }
+                    }
+                  ]
+                },
+                {
+                  "type": "if",
+                  "when": "content.description",
+                  "then": { "type": "text", "value": "{content.description}", "style": "caption" }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "edgeKinds": [
+    {
+      "id": "prim.arrow",
+      "label": "Arrow",
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "color": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "directed": true
+    },
+    {
+      "id": "prim.contains",
+      "label": "Contains",
+      "props": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "directed": true
+    },
+    {
+      "id": "prim.relates",
+      "label": "Relates",
+      "props": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "color": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "directed": false
+    }
+  ],
+  "views": [
+    {
+      "id": "architecture",
+      "name": "Architecture",
+      "description": "Boxes and arrows. ELK auto-layout.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.arrow": "arrow",
+        "prim.contains": "contain"
+      },
+      "layers": {},
+      "layout": { "algorithm": "elk" }
+    },
+    {
+      "id": "dependency-flow",
+      "name": "Dependency Flow",
+      "description": "Same modules, flattened into a left-to-right dependency pipeline. Containment is hidden so only the arrow graph remains.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.arrow": "arrow"
+      },
+      "layers": {},
+      "layout": { "algorithm": "elk", "direction": "RIGHT" }
+    },
+    {
+      "id": "hierarchy",
+      "name": "Hierarchy",
+      "description": "The containment structure drawn as a tree (contains edges become arrows). Dependency arrows are hidden.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.contains": "arrow"
+      },
+      "layers": {},
+      "layout": { "algorithm": "mrtree", "direction": "DOWN" }
+    },
+    {
+      "id": "relationships",
+      "name": "Relationships",
+      "description": "Cross-cutting associations (dotted) that the other views hide. Same nodes, a different web of relationships.",
+      "zoomToLevel": [
+        { "minZoom": 0,   "level": "peek" },
+        { "minZoom": 0.4, "level": "card" },
+        { "minZoom": 1.2, "level": "open" },
+        { "minZoom": 3.0, "level": "deep" }
+      ],
+      "nodeRoles": {
+        "prim.box": "spatial"
+      },
+      "edgeRoles": {
+        "prim.relates": "summary"
+      },
+      "layers": {},
+      "layout": { "algorithm": "elk" }
+    }
+  ],
+  "layers": [],
+  "disclosure": [
+    {
+      "kind": "prim.box",
+      "peek": ["label"],
+      "card": ["label", "tag"],
+      "open": ["label", "tag", "description"],
+      "deep": ["label", "tag", "description"]
+    }
+  ]
+}

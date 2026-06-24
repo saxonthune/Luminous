@@ -141,7 +141,7 @@ Create the two new packages as seeds. No domain logic yet — just the wiring.
 - Connects to server-next via WebSocket, falls back to local IndexedDB
 - Empty canvas — no node types yet
 
-**Done when:** `pnpm dev:next` starts both packages, client connects to server, opening a `.canvas.json` file loads an empty Yjs doc that syncs and persists.
+**Done when:** `just dev` starts both packages, client connects to server, opening a `.canvas.json` file loads an empty Yjs doc that syncs and persists.
 
 ### Milestone 1: The Seed
 

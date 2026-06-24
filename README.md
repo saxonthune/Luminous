@@ -17,8 +17,8 @@ Luminous connects human visual thinking with AI structured context. You design o
 ## Running locally
 
 ```
-pnpm install
-pnpm dev:next
+just install
+just dev
 ```
 
 The dev server starts at `localhost:5200` with the canvas client, proxying to the storage server on `localhost:4080`.
@@ -26,7 +26,7 @@ The dev server starts at `localhost:5200` with the canvas client, proxying to th
 ## Generating the project canvas
 
 ```
-pnpm generate:canvas
+just generate-canvas
 ```
 
 Runs `scripts/analyze-solidjs.ts`, which reads the Solid.js source and emits `.canvases/solidjs-analysis.canvas.json`.

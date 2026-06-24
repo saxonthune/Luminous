@@ -2,15 +2,6 @@
   "name": "@luminous/canvas",
   "version": "0.3.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:unit": "vitest run",
-    "test:e2e": "playwright test",
-    "typecheck": "tsgo --noEmit"
-  },
   "dependencies": {
     "@codemirror/commands": "^6.7.1",
     "@codemirror/lang-markdown": "^6.3.1",

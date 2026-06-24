@@ -10,10 +10,6 @@
     "./view": "./src/view.ts",
     "./query": "./src/query.ts"
   },
-  "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsgo --noEmit"
-  },
   "dependencies": {
     "@luminous/cactus": "workspace:*",
     "ajv": "^8.20.0",
