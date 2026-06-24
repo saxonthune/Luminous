@@ -99,16 +99,34 @@ All paths are relative to the workspace root, **without** the `.carta/` prefix (
 
 When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.
 
+### Primitive vocabulary reference
+
+`primitives-reference.md` is a **generated file** — do not edit it by hand. To add or modify a primitive:
+1. Edit `packages/core/src/render/primitive-descriptors.ts` (and `primitive-names.ts` if adding a new name).
+2. Run `just gen-skill-reference` to regenerate the reference.
+3. Commit both the descriptor change and the regenerated reference together.
+
+CI enforces freshness via `just check-skill-reference` (regenerates and `git diff --exit-code`).
+
 ## Tech Stack
 
 Solid.js, TypeScript 5.9, Vite, Tailwind, d3-zoom, Playwright (E2E), Vitest
+
+## Task Runner
+
+Task commands live in the root `justfile`, not in package.json. package.json holds
+only dependencies, metadata, exports, and bin entries. Run `just` (or `just --list`)
+to see all recipes. Common ones: `just build`, `just test`, `just typecheck`,
+`just lint`, `just dev`, `just mcp` (regenerate the MCP server bundle).
+
+Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
 
 ## Type Checking
 
 Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).
 
-- `pnpm -r typecheck` or `make typecheck` — runs `tsgo --noEmit` across all packages
-- `npx tsgo --noEmit -p <tsconfig>` — check a single package
+- `just typecheck` — runs `tsgo --noEmit` across all packages
+- `pnpm -C packages/<pkg> exec tsgo --noEmit -p <tsconfig>` — check a single package
 - Build scripts (`tsc -b`, `tsc -p`) stay as-is — tsgo does not emit in the beta
 
 ## Searching and reading files

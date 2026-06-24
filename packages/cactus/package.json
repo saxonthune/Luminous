@@ -1,6 +1,6 @@
 {
   "name": "@luminous/cactus",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "main": "src/index.ts",
   "types": "dist/index.d.ts",
@@ -14,11 +14,6 @@
     },
     "./cactus.css": "./src/cactus.css",
     "./cactus-themes.css": "./src/cactus-themes.css"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "build:types": "tsc -p tsconfig.build.json",
-    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.0",

@@ -22,6 +22,7 @@ import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
 import { levelFromZoom } from './disclosure/levelFromZoom';
 import { measureDeepLod } from './deepLodMeasure';
+import { computeMatchGating, MATCH_GATING_CFG } from './matchGating';
 
 export interface ViewerHandle {
   fitView: () => void;
@@ -138,6 +139,7 @@ function renderNodes(
   parentOf: () => ReadonlyMap<string, string>,
   renderCtx: RenderContext,
   resolveChildLayout: (id: string) => 'pack' | 'grid' | 'stack-v' | 'stack-h',
+  peekIds: () => ReadonlySet<string>,
   onPointerDown?: (nodeId: string, e: PointerEvent) => void,
 ): JSX.Element {
   return (
@@ -156,20 +158,26 @@ function renderNodes(
           { equals: (a, b) => a.w === b.w && a.h === b.h },
         );
         const nodeCtx = { ...renderCtx, currentNodeId: () => nodeId };
+        // Peek nodes are rendered dimmed — scene state drives the visual, not a
+        // separate cactus lever. The wrapper div applies opacity without adding a
+        // new NodeContainer prop; position is still owned by NodeContainer itself.
+        const isPeek = () => peekIds().has(nodeId);
         return (
-          <NodeContainer
-            nodeId={nodeId}
-            x={() => abs().x}
-            y={() => abs().y}
-            w={() => sz().w}
-            h={() => sz().h}
-            softContainer={() => renderCtx.hasChildren(nodeId)}
-            isContainer={() => renderCtx.hasChildren(nodeId)}
-            layoutPolicy={() => resolveChildLayout(nodeId)}
-            onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
-          >
-            {resolveNodeRender(node, nodeCtx)}
-          </NodeContainer>
+          <div style={{ opacity: isPeek() ? '0.35' : '1', 'pointer-events': isPeek() ? 'none' : undefined }}>
+            <NodeContainer
+              nodeId={nodeId}
+              x={() => abs().x}
+              y={() => abs().y}
+              w={() => sz().w}
+              h={() => sz().h}
+              softContainer={() => renderCtx.hasChildren(nodeId)}
+              isContainer={() => renderCtx.hasChildren(nodeId)}
+              layoutPolicy={() => resolveChildLayout(nodeId)}
+              onPointerDown={onPointerDown ? (e) => onPointerDown(nodeId, e) : undefined}
+            >
+              {resolveNodeRender(node, nodeCtx)}
+            </NodeContainer>
+          </div>
         );
       }}
     </For>
@@ -196,9 +204,19 @@ function CanvasInner(props: {
   // eslint-disable-next-line solid/reactivity -- exposeInspect is a one-shot registration callback
   props.exposeInspect?.((id, opts) => inspector.open(id, opts));
 
-  const scene = createMemo(() => evaluateView(props.graph, props.view));
+  const matchGatingPeek = createMemo(() => computeMatchGating(props.graph, props.view, MATCH_GATING_CFG));
+  const scene = createMemo(() => evaluateView(props.graph, props.view, { peek: matchGatingPeek() }));
   const containment = createMemo(() => scene().containment);
-  const renderOrder = createMemo(() => bfsOrder(containment().rootIds, containment().childrenOf));
+  // Layer 'on' = hard hide (exclude from render); 'peek' = dim (opacity 0.35).
+  const matchLayerIsOn = createMemo(() => props.view.layers['match-gating'] === 'on');
+  const peekNodeIds = createMemo(() => new Set(scene().peekNodes.map((n) => n.id)));
+  const peekIds = createMemo(() => matchLayerIsOn() ? new Set<string>() : peekNodeIds());
+  const renderOrder = createMemo(() => {
+    const order = bfsOrder(containment().rootIds, containment().childrenOf);
+    if (!matchLayerIsOn()) return order;
+    const hardHidden = peekNodeIds();
+    return hardHidden.size > 0 ? order.filter((id) => !hardHidden.has(id)) : order;
+  });
 
   const level = createMemo<DisclosureLevel>(() =>
     levelFromZoom(canvasCtx.transform().k, props.view.zoomToLevel)
@@ -218,8 +236,8 @@ function CanvasInner(props: {
       while (ct.parentOf.has(ancestor)) {
         ancestor = ct.parentOf.get(ancestor)!;
       }
-      const idx = ct.rootIds.indexOf(ancestor);
-      return idx === -1 ? undefined : PALETTE[idx % PALETTE.length];
+      const idx = ct.rootIndex.get(ancestor);
+      return idx === undefined ? undefined : PALETTE[idx % PALETTE.length];
     },
   };
 
@@ -447,7 +465,7 @@ function CanvasInner(props: {
         fallback={<div style={{ padding: '8px', color: 'var(--fg-muted)' }}>Computing layout…</div>}
       >
         {/* eslint-disable-next-line solid/reactivity -- renderNodes returns JSX evaluated inside the Show's tracked scope */}
-        {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, resolveChildLayout, dragPointerDown)}
+        {(layout) => renderNodes(props.graph, renderOrder, layout, () => containment().parentOf, renderCtx, resolveChildLayout, peekIds, dragPointerDown)}
       </Show>
       <Portal mount={document.body}>
         <InspectorPanel graph={props.graph} view={props.view} />

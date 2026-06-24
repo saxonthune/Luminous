@@ -15,6 +15,8 @@ export interface ActionConfig {
 
 export interface ToolGroupConfig {
   description: string
+  /** When true, the tool is handled locally (not proxied to the storage server). */
+  local?: true
   actions: Record<string, ActionConfig>
 }
 
@@ -247,6 +249,104 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         method: 'POST',
         path: '/api/edge/remove',
         params: { path: pathParam, id: 'string' },
+      },
+    },
+  },
+
+  view: {
+    description:
+      "Inspect the views defined by a canvas's pack and project the canvas through a view. `list` shows all views with their role maps (what each view shows, hides, or nests). `project` evaluates the view and returns the visible structure — which nodes are spatial vs latent, which edges are arrows vs summary chips, and the containment tree — the same partition the browser canvas renders. Returns structure only (no pixel positions or live viewport state).",
+    local: true,
+    actions: {
+      list: {
+        description: "List all views defined in the canvas's pack, including their nodeRoles and edgeRoles so you can interpret what each view shows.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+        },
+      },
+      project: {
+        description:
+          "Project the canvas through a view. Returns spatialNodes, latentNodes, arrows, summaryEdges, containment (rootIds/childrenOf/parentOf), and warnings. Omit viewId to use the canvas's defaultView.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          'viewId?': {
+            type: 'described',
+            innerType: 'string',
+            description:
+              "ID of the view to project through. Omit to use the canvas's defaultView. Use view/list to see available view IDs.",
+          },
+        },
+      },
+    },
+  },
+
+  query: {
+    description:
+      "Query a canvas graph without loading it entirely into context. Fetch a single node by ID, filter nodes or edges with the GraphQuery grammar, or pull a node's neighborhood. Runs locally — does not write to the canvas.",
+    local: true,
+    actions: {
+      getNode: {
+        description: "Fetch a single node by its ID. Throws if the node does not exist.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "ID of the node to fetch.",
+          },
+        },
+      },
+      listNodes: {
+        description: "List nodes in the canvas, optionally filtered by a GraphQuery. Returns all nodes when filter is omitted.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          'filter?': {
+            type: 'described',
+            innerType: { type: 'object', properties: {} },
+            description:
+              "GraphQuery filter object. Fields: kind (string or string[]), tags ({any?, all?, none?}: string[]), props ({path: value | {op, value}}), from (string | string[]), to (string | string[]), and/or/not (nested GraphQuery). A bare scalar in props is shorthand for {op:'eq',value}. Omit to return all nodes.\nExamples: {kind:'prim.box'} — by kind; {props:{status:'active'}} — by prop eq; {tags:{any:['deprecated']}} — by tag; {and:[{kind:'prim.box'},{props:{count:{op:'gte',value:5}}}]} — compound.",
+          },
+        },
+      },
+      listEdges: {
+        description: "List edges in the canvas, optionally filtered by a GraphQuery. Returns all edges when filter is omitted.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          'filter?': {
+            type: 'described',
+            innerType: { type: 'object', properties: {} },
+            description:
+              "GraphQuery filter object. Same grammar as listNodes filter plus from/to (source/target node ID or array of IDs). Omit to return all edges.\nExamples: {kind:'prim.arrow'} — by kind; {from:'n1'} — edges leaving n1; {to:['n2','n3']} — edges arriving at n2 or n3.",
+          },
+        },
+      },
+      neighborhood: {
+        description: "Return the nodes and edges within N hops of the given node (both incoming and outgoing). Useful for local context without loading the full graph.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "ID of the center node.",
+          },
+          'hops?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Number of hops to expand (default 1).",
+          },
+        },
       },
     },
   },

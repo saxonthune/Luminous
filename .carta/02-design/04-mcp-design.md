@@ -81,7 +81,7 @@ A typical interaction:
 4. `note({ action: "create", path: "app.canvas.json", title: "Authentication", body: "Login flow needed..." })` — add a note
 5. `edge({ action: "connect", path: "app.canvas.json", fromId: "...", toId: "...", label: "requires" })` — connect it
 
-The server must be running — same as for a human using the browser. `pnpm dev:next` starts both server and client.
+The server must be running — same as for a human using the browser. `just dev` starts both server and client.
 
 ## Rationale
 

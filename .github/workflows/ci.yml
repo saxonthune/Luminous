@@ -15,7 +15,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: extractions/setup-just@v2
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm --filter @luminous/cactus test
-      - run: pnpm --filter @luminous/server test
+      - run: just build
+      - run: just test-cactus
+      - run: just test-server
+      - run: just check-skill-reference

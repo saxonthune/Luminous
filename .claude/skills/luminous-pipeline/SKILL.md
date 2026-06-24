@@ -19,7 +19,7 @@ This skill equips an agent to write a `graph.json` + `pack.json` pair for any re
 
 | File | Topic | When to use |
 |------|-------|-------------|
-| [primitives-reference.md](primitives-reference.md) | Full built-in primitive vocabulary (atoms, layout, control-flow) | Authoring the `render` field of a nodeKind or edgeKind |
+| [primitives-reference.md](primitives-reference.md) | Full built-in primitive vocabulary (atoms, layout, control-flow) — **generated** from `packages/core/src/render/primitive-descriptors.ts` via `just gen-skill-reference` | Authoring the `render` field of a nodeKind or edgeKind |
 | [template-pipeline.ts](template-pipeline.ts) | Annotated TypeScript example reading source → emitting graph.json | Starting a new pipeline script or reviewing an existing one |
 
 ---
@@ -298,6 +298,77 @@ A role tells a view how to present a kind. Node kinds go in `nodeRoles`, edge ki
 ```jsonc
 { "id": "transitions", "name": "Transitions", "edgeKinds": ["domain.renders"], "defaultState": "on" }
 ```
+
+Layer states: `"on"` = visible, `"peek"` = dimmed (present but de-emphasized), `"off"` = hidden.
+
+---
+
+## Rust Match-Arm Gating Vocabulary
+
+The built-in `primitives` pack includes Rust-specific kinds and a gating layer for visualizing match-arm data flow:
+
+### `rust.match` node kind
+
+A Rust `match` expression. Props:
+
+| Prop | Type | Required | Notes |
+|------|------|----------|-------|
+| `label` | string | yes | Display name for the match expression |
+| `arms` | string[] | no | List of arm names/patterns (e.g. `["Ok(v)", "Err(e)"]`) |
+| `selectedArm` | string | no | **Graph-side selection.** Which arm is currently active. Absent = no gating (all arms full). This is churny canvas state — it lives on the node, not on the view. |
+
+```json
+{
+  "id": "rust.match.parse_result",
+  "kind": "rust.match",
+  "props": { "label": "parse_result", "arms": ["Ok(v)", "Err(e)"], "selectedArm": "Ok(v)" },
+  "tags": []
+}
+```
+
+### `rust.dataflow` edge kind
+
+A directed data-flow edge between Rust nodes. Props:
+
+| Prop | Type | Required | Notes |
+|------|------|----------|-------|
+| `arm` | string | no | Which match arm this flow belongs to. Edges without `arm` are never suppressed. |
+| `label` | string | no | Optional display label |
+
+```json
+{
+  "id": "edge.rust.dataflow.rust.match.parse_result.node.process_ok",
+  "kind": "rust.dataflow",
+  "from": "rust.match.parse_result",
+  "to": "node.process_ok",
+  "props": { "arm": "Ok(v)" },
+  "tags": []
+}
+```
+
+### `match-gating` layer
+
+Controls whether non-selected match-arm nodes are gated (dimmed or hidden).
+
+| State | Effect |
+|-------|--------|
+| `"off"` (default) | No gating — all arms render at full opacity |
+| `"peek"` | Non-selected arm's exclusive downstream nodes are dimmed (opacity 0.35) |
+| `"on"` | Non-selected arm's exclusive downstream nodes are hidden from the canvas |
+
+Set in a view's `layers` map:
+
+```json
+"layers": { "match-gating": "peek" }
+```
+
+**How gating works (transitive correctness):**
+1. For each `rust.match` node with `selectedArm` set, outgoing `rust.dataflow` edges whose `arm` ≠ `selectedArm` are suppressed.
+2. `reachable()` traverses from data-flow source nodes (no incoming `rust.dataflow` edge) skipping suppressed edges.
+3. Nodes that participate in data flow but are NOT reachable from any source become the peek set.
+4. Nodes fed by *both* a selected and non-selected arm remain reachable → they stay full opacity.
+
+Selection (`selectedArm`) is graph-side node data — it travels with the canvas file and persists across sessions. It is NOT stored on the view or in a runtime signal.
 
 ---
 

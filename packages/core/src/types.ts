@@ -167,9 +167,55 @@ export type LayoutChoice =
   | { algorithm: 'hierarchy'; options?: Record<string, unknown> }
   | { algorithm: 'force'; options?: Record<string, unknown> };
 
-// OPEN: GraphQuery shape — textual DSL, JSON pattern, or both. PDR §15.3.
-// For now, leave as unknown so the contract doesn't pre-commit.
-export type GraphQuery = unknown;
+/** A predicate over a single prop value, addressed by dot-path into node/edge props. */
+export type PropPredicate =
+  | { op: 'eq'; value: unknown }
+  | { op: 'ne'; value: unknown }
+  | { op: 'exists' }
+  | { op: 'absent' }
+  | { op: 'in'; values: unknown[] }
+  | { op: 'gt'; value: number }
+  | { op: 'gte'; value: number }
+  | { op: 'lt'; value: number }
+  | { op: 'lte'; value: number }
+  | { op: 'contains'; value: string }
+  | { op: 'regex'; value: string };
+
+/** Tag constraints. `any` = at least one; `all` = every; `none` = excludes all. */
+export interface TagMatch {
+  any?: string[];
+  all?: string[];
+  none?: string[];
+}
+
+/**
+ * Structured query over a graph's nodes or edges. A node/edge matches when ALL
+ * present top-level constraints match. `from`/`to` apply only to edges (ignored
+ * for node queries). Boolean composition nests via and/or/not.
+ *
+ * Resolves PDR §15.3 (the GraphQuery open question).
+ */
+export interface GraphQuery {
+  /** Match kind exactly, or against a set (any-of). */
+  kind?: KindId | KindId[];
+  /** Tag constraints. */
+  tags?: TagMatch;
+  /**
+   * Prop predicates by dot-path (e.g. "name", "meta.owner"). A bare scalar
+   * value is shorthand for { op: 'eq', value }. All entries AND-combined.
+   */
+  props?: Record<string, PropPredicate | string | number | boolean | null>;
+  /** Edge-only: source node id, exact or any-of. */
+  from?: NodeId | NodeId[];
+  /** Edge-only: target node id, exact or any-of. */
+  to?: NodeId | NodeId[];
+  /** All subqueries must match. */
+  and?: GraphQuery[];
+  /** At least one subquery must match. */
+  or?: GraphQuery[];
+  /** Subquery must NOT match. */
+  not?: GraphQuery;
+}
 
 // ============================================================================
 // Containment — computed, not stored
@@ -187,6 +233,8 @@ export type GraphQuery = unknown;
 export interface ContainmentTree {
   /** Nodes with no contain-edge parent in this view. */
   rootIds: NodeId[];
+  /** Root id → its index in `rootIds`, for O(1) palette lookup. */
+  rootIndex: ReadonlyMap<NodeId, number>;
   /** Parent → ordered children. */
   childrenOf: ReadonlyMap<NodeId, NodeId[]>;
   /** Child → its single containment parent in this view. */
@@ -350,14 +398,30 @@ export interface NamedQuery {
 // ============================================================================
 
 /**
- * Produced by `evaluateView(graph, view)`. Partitions the in-scope graph
- * according to the view's role assignments. Consumed by the renderer.
+ * One authoritative resolved state per node, produced by `evaluateView`.
+ *
+ * - `spatial` — has a position; rendered at full emphasis.
+ * - `latent`  — present in the graph, not directly rendered.
+ * - `peek`    — de-emphasized (dimmed); present and occupies space, but not
+ *               the current focus. Used by gating to dim non-selected arms.
+ * - `hidden`  — excluded from this view entirely.
+ */
+export type ResolvedNodeState = 'spatial' | 'latent' | 'peek' | 'hidden';
+
+/**
+ * Produced by `evaluateView(graph, view, gating?)`. Resolves one authoritative
+ * state per node in a single pass, then exposes derived convenience arrays.
+ * Consumed by the renderer.
  */
 export interface SceneGraph {
-  /** Spatial nodes — have a position; rendered. Deterministic order. */
+  /** One authoritative resolved state per node. The canonical single-solver output. */
+  nodeStates: ReadonlyMap<NodeId, ResolvedNodeState>;
+  /** Spatial nodes — state === 'spatial'. Deterministic order. */
   spatialNodes: Node[];
-  /** Latent nodes — present, not rendered; may appear via summary chips. */
+  /** Latent nodes — state === 'latent'; may appear via summary chips. */
   latentNodes: Node[];
+  /** Peek nodes — state === 'peek'; rendered dimmed, still occupy space. */
+  peekNodes: Node[];
   /** Edges with role `arrow` — drawn as visible lines. */
   arrows: Edge[];
   /** Edges with role `summary` — collapsed into chips on the source node. */

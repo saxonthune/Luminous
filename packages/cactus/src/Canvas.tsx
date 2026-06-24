@@ -121,6 +121,14 @@ export function Canvas(props: CanvasProps) {
     return nodeRectsData;
   };
 
+  // Visible viewport in canvas coords — used by EdgeLayer to cull offscreen edges.
+  const edgeViewport = (): { x: number; y: number; w: number; h: number } | null => {
+    const el = containerEl();
+    const t = transform();
+    if (!el || el.clientWidth === 0 || el.clientHeight === 0) return null;
+    return { x: -t.x / t.k, y: -t.y / t.k, w: el.clientWidth / t.k, h: el.clientHeight / t.k };
+  };
+
   // Header-height registry — populated by <NodeHeader> via context; consumed by layout.
   const headerHeightsData = new Map<string, number>();
   const [headerHeightsVersion, setHeaderHeightsVersion] = createSignal(0);
@@ -284,7 +292,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-lines width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="lines" zoom={() => transform().k} />
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="lines" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>
@@ -303,7 +311,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} />
+              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>

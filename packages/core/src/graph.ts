@@ -64,17 +64,26 @@ export function buildGraph(nodes: readonly Node[], edges: readonly Edge[], pack:
   };
 }
 
-export function evaluateContainment(graph: Graph, view: View): ContainmentTree {
+/**
+ * @param visibleIds When provided, overrides the spatial-node filter with this
+ * explicit set (used by evaluateView to include peek nodes in the containment
+ * tree so they still occupy space after gating-demotion).
+ */
+export function evaluateContainment(
+  graph: Graph,
+  view: View,
+  visibleIds?: ReadonlySet<NodeId>,
+): ContainmentTree {
   const containKinds = Object.entries(view.edgeRoles)
     .filter(([, role]) => role === 'contain')
     .map(([kindId]) => kindId);
 
-  const spatialNodeIds = [...graph.nodes.keys()].filter(
-    (id) => {
-      const node = graph.nodes.get(id)!;
-      return view.nodeRoles[node.kind] === 'spatial';
-    }
-  );
+  const spatialNodeIds = visibleIds != null
+    ? [...graph.nodes.keys()].filter((id) => visibleIds.has(id))
+    : [...graph.nodes.keys()].filter((id) => {
+        const node = graph.nodes.get(id)!;
+        return view.nodeRoles[node.kind] === 'spatial';
+      });
 
   if (containKinds.length > 1) {
     throw new Error(
@@ -85,6 +94,7 @@ export function evaluateContainment(graph: Graph, view: View): ContainmentTree {
   if (containKinds.length === 0) {
     return {
       rootIds: spatialNodeIds,
+      rootIndex: new Map(spatialNodeIds.map((id, i) => [id, i] as const)),
       childrenOf: new Map(),
       parentOf: new Map(),
       warnings: [],
@@ -143,6 +153,7 @@ export function evaluateContainment(graph: Graph, view: View): ContainmentTree {
   }
 
   const rootIds = spatialNodeIds.filter((id) => !parentOf.has(id));
+  const rootIndex = new Map(rootIds.map((id, i) => [id, i] as const));
 
-  return { rootIds, childrenOf, parentOf, warnings };
+  return { rootIds, rootIndex, childrenOf, parentOf, warnings };
 }

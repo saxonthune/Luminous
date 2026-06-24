@@ -1,18 +1,45 @@
-import type { Graph, View, SceneGraph, SceneWarning, Node, Edge } from './types.ts';
+import type { Graph, View, SceneGraph, SceneWarning, Node, Edge, NodeId, ResolvedNodeState } from './types.ts';
 import { evaluateContainment } from './graph.ts';
 
-export function evaluateView(graph: Graph, view: View): SceneGraph {
+export function evaluateView(
+  graph: Graph,
+  view: View,
+  gating?: { peek?: ReadonlySet<NodeId> },
+): SceneGraph {
+  const peekSet = gating?.peek;
+
+  const nodeStates = new Map<NodeId, ResolvedNodeState>();
   const spatialNodes: Node[] = [];
   const latentNodes: Node[] = [];
+  const peekNodes: Node[] = [];
 
   for (const node of graph.nodes.values()) {
-    const role = view.nodeRoles[node.kind];
-    if (role === 'spatial') {
-      spatialNodes.push(node);
-    } else if (role === 'latent') {
-      latentNodes.push(node);
+    const baseRole = view.nodeRoles[node.kind];
+
+    let state: ResolvedNodeState;
+    if (baseRole === 'spatial' || baseRole === 'latent') {
+      if (peekSet?.has(node.id)) {
+        // Demote spatial or latent to peek (present but de-emphasized).
+        // Latent → peek: peek is "present but dim", which is more visible than
+        // latent (not directly rendered), so this is the least-surprising demotion.
+        state = 'peek';
+      } else {
+        state = baseRole;
+      }
+    } else {
+      // hidden or undefined (implicitly hidden) → skip
+      state = 'hidden';
     }
-    // hidden or undefined (implicitly hidden) → skip
+
+    nodeStates.set(node.id, state);
+
+    if (state === 'spatial') {
+      spatialNodes.push(node);
+    } else if (state === 'latent') {
+      latentNodes.push(node);
+    } else if (state === 'peek') {
+      peekNodes.push(node);
+    }
   }
 
   const arrows: Edge[] = [];
@@ -28,7 +55,10 @@ export function evaluateView(graph: Graph, view: View): SceneGraph {
     // contain handled by evaluateContainment; hidden/undefined → skip
   }
 
-  const containment = evaluateContainment(graph, view);
+  // Include peek nodes in the containment tree so they still occupy space.
+  const visibleIds = new Set<NodeId>(spatialNodes.map((n) => n.id));
+  for (const n of peekNodes) visibleIds.add(n.id);
+  const containment = evaluateContainment(graph, view, visibleIds);
 
   const warnings: SceneWarning[] = [];
 
@@ -59,8 +89,10 @@ export function evaluateView(graph: Graph, view: View): SceneGraph {
   }
 
   return {
+    nodeStates,
     spatialNodes,
     latentNodes,
+    peekNodes,
     arrows,
     summaryEdges,
     containment,
