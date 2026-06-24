@@ -125,6 +125,14 @@ generate-rtp-canvas:
 validate-pack:
     pnpm exec tsx scripts/validate-pack.ts
 
+# regenerate the pipeline skill's primitive reference from core descriptors
+gen-skill-reference:
+    pnpm exec tsx scripts/gen-primitives-reference.ts
+
+# fail if the committed primitive reference is stale (used in CI)
+check-skill-reference: gen-skill-reference
+    git diff --exit-code .claude/skills/luminous-pipeline/primitives-reference.md
+
 # ---- misc ----
 
 # kill dev servers on ports 4080 and 5200

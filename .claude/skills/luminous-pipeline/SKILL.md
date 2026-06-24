@@ -19,7 +19,7 @@ This skill equips an agent to write a `graph.json` + `pack.json` pair for any re
 
 | File | Topic | When to use |
 |------|-------|-------------|
-| [primitives-reference.md](primitives-reference.md) | Full built-in primitive vocabulary (atoms, layout, control-flow) | Authoring the `render` field of a nodeKind or edgeKind |
+| [primitives-reference.md](primitives-reference.md) | Full built-in primitive vocabulary (atoms, layout, control-flow) — **generated** from `packages/core/src/render/primitive-descriptors.ts` via `just gen-skill-reference` | Authoring the `render` field of a nodeKind or edgeKind |
 | [template-pipeline.ts](template-pipeline.ts) | Annotated TypeScript example reading source → emitting graph.json | Starting a new pipeline script or reviewing an existing one |
 
 ---

@@ -1,3 +1,5 @@
+<!-- GENERATED FILE — do not edit by hand. Source: packages/core/src/render/primitive-descriptors.ts. Regenerate with `just gen-skill-reference`. -->
+
 # Primitive Vocabulary Reference
 
 Source of truth: `.carta/02-design/16-renderer-engine.md` (doc02.16). This file is a condensed agent-facing catalog. If the two diverge, the source doc wins.
@@ -21,8 +23,8 @@ Plain text with optional interpolation.
 | Prop | Type | Values / Notes |
 |------|------|----------------|
 | `value` | string | Literal or `{content.fieldName}` interpolation |
-| `style` | enum | `heading` · `body` (default) · `caption` · `mono` |
-| `tone` | enum | `default` · `muted` · `subtle` |
+| `style` | enum | heading · body · caption · mono — `body` is default |
+| `tone` | enum | default · muted · subtle |
 
 ### `badge`
 
@@ -32,10 +34,10 @@ Small inline label, typically for type annotations or status.
 { "type": "badge", "value": "{content.surface}", "tone": "muted" }
 ```
 
-| Prop | Type | Values |
-|------|------|--------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `value` | string | Interpolated string |
-| `tone` | enum | `default` · `muted` · `accent` · `danger` |
+| `tone` | enum | default · muted · accent · danger |
 
 ### `chip`
 
@@ -45,7 +47,10 @@ Pill-shaped reference label. Used for summary-edge endpoints — the compact rep
 { "type": "chip", "value": "{content.name}", "tone": "default" }
 ```
 
-Props: `value`, `tone` (same enum as badge).
+| Prop | Type | Values / Notes |
+|------|------|----------------|
+| `value` | string | Interpolated string |
+| `tone` | enum | default · muted · accent · danger |
 
 ### `icon`
 
@@ -55,8 +60,8 @@ Named icon from the built-in icon set.
 { "type": "icon", "name": "arrow-right", "size": 16 }
 ```
 
-| Prop | Type | Notes |
-|------|------|-------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `name` | string | Icon identifier from the built-in set |
 | `size` | number | Pixel size |
 
@@ -77,11 +82,11 @@ Clickable text. `target` opens an external URL; `onClick: "INSPECT"` opens the n
 { "type": "link", "value": "{content.name}", "onClick": "INSPECT" }
 ```
 
-| Prop | Type | Notes |
-|------|------|-------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `value` | string | Display text |
 | `target` | string | URL opened in a new tab when clicked |
-| `onClick` | string | Set to `"INSPECT"` to inspect this node instead of opening a URL |
+| `onClick` | string | INSPECT — Set to `"INSPECT"` to inspect this node instead of opening a URL |
 
 ### `markdown`
 
@@ -91,6 +96,10 @@ Renders markdown-formatted content from a field.
 { "type": "markdown", "value": "{content.description}" }
 ```
 
+| Prop | Type | Values / Notes |
+|------|------|----------------|
+| `value` | string | Interpolated markdown string |
+
 ### `code-block`
 
 Syntax-highlighted code.
@@ -99,16 +108,23 @@ Syntax-highlighted code.
 { "type": "code-block", "value": "{content.signature}", "language": "typescript" }
 ```
 
-| Prop | Type | Notes |
-|------|------|-------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `value` | string | Interpolated code string |
 | `language` | string | `typescript` · `rust` · `javascript` · etc. |
 
 ### `image`
 
+Image from a URL field.
+
 ```json
 { "type": "image", "src": "{content.imageUrl}", "alt": "{content.name}" }
 ```
+
+| Prop | Type | Values / Notes |
+|------|------|----------------|
+| `src` | string | Image URL |
+| `alt` | string | Alt text |
 
 ### `kv-list`
 
@@ -123,6 +139,10 @@ Key/value rows. Each item is a fixed-key, interpolated-value pair.
   ]
 }
 ```
+
+| Prop | Type | Values / Notes |
+|------|------|----------------|
+| `items` | array | Array of `{ key, value }` objects; values support interpolation |
 
 ---
 
@@ -146,8 +166,8 @@ Wraps any content region and limits it to a fixed number of visible lines. When 
 }
 ```
 
-| Prop | Type | Notes |
-|------|------|-------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `lines` | number | Max visible lines before ellipsis. Default: 3 |
 | `children` | array | Any primitives whose combined text content may overflow |
 
@@ -167,12 +187,12 @@ Vertical stack of children.
 }
 ```
 
-| Prop | Type | Values |
-|------|------|--------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `gap` | number | Spacing between children (px) |
 | `padding` | number | Inner padding (px) |
-| `align` | enum | `start` · `center` · `end` · `stretch` |
-| `justify` | enum | `start` · `center` · `end` · `space-between` |
+| `align` | enum | start · center · end · stretch |
+| `justify` | enum | start · center · end · space-between |
 | `children` | array | Nested primitives |
 
 ### `hstack`
@@ -187,6 +207,14 @@ Horizontal stack. Same props as `vstack`.
   "children": [ ... ]
 }
 ```
+
+| Prop | Type | Values / Notes |
+|------|------|----------------|
+| `gap` | number | Spacing between children (px) |
+| `padding` | number | Inner padding (px) |
+| `align` | enum | start · center · end · stretch |
+| `justify` | enum | start · center · end · space-between |
+| `children` | array | Nested primitives |
 
 ### `card`
 
@@ -203,12 +231,12 @@ Bordered container with optional shape. The outer frame of most node renderers.
 }
 ```
 
-| Prop | Type | Values |
-|------|------|--------|
-| `shape` | enum | `rectangle` (default) · `pill` · `diamond` · `ellipse` · `hexagon` |
+| Prop | Type | Values / Notes |
+|------|------|----------------|
+| `shape` | enum | rectangle · pill · diamond · ellipse · hexagon — `rectangle` is default |
 | `padding` | number | Inner padding (px) |
 | `tone` | enum | Theme-token tone name |
-| `onClick` | string | Set to `"INSPECT"` to open this node in the inspector |
+| `onClick` | string | INSPECT — Set to `"INSPECT"` to open this node in the inspector |
 | `children` | array | Nested primitives |
 
 `shape` covers flowchart-style packs: `diamond` for decisions, `pill` for start/end, `rectangle` for process steps. Shape is an attribute of the container, not a separate primitive.
@@ -230,8 +258,8 @@ Conditional branch based on a content expression.
 }
 ```
 
-| Prop | Type | Notes |
-|------|------|-------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `when` | string | Expression over `content`; truthy = render `then` |
 | `then` | primitive | Rendered when `when` is truthy |
 | `else` | primitive | Optional; rendered when `when` is falsy |
@@ -249,8 +277,8 @@ Repeat a template over an array field.
 }
 ```
 
-| Prop | Type | Notes |
-|------|------|-------|
+| Prop | Type | Values / Notes |
+|------|------|----------------|
 | `items` | string | Path into content resolving to an array |
 | `as` | string | Binding name available in `template` via `{as}` |
 | `template` | primitive | Rendered once per item |

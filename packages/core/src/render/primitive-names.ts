@@ -2,4 +2,5 @@
 export const BUILTIN_PRIMITIVE_NAMES = [
   'text', 'vstack', 'hstack', 'card', 'badge', 'chip', 'icon',
   'divider', 'link', 'markdown', 'code-block', 'image', 'kv-list', 'clamp',
+  'if', 'for-each',
 ] as const;

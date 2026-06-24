@@ -8,7 +8,8 @@
     "./types": "./src/types.ts",
     "./graph": "./src/graph.ts",
     "./view": "./src/view.ts",
-    "./query": "./src/query.ts"
+    "./query": "./src/query.ts",
+    "./primitive-descriptors": "./src/render/primitive-descriptors.ts"
   },
   "dependencies": {
     "@luminous/cactus": "workspace:*",
