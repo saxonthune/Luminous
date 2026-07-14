@@ -22,7 +22,7 @@ Claude   →  POST /api/note/create  →  @luminous/server  →  .canvas.json
          same contract            same enforcement
 ```
 
-The old `@carta/server` bundled MCP alongside HTTP handlers with shared in-memory state and internal types. That coupling made both hard to evolve. MCP must be a separate package and separate process — an HTTP client, nothing more.
+The old `@rhidoc/server` bundled MCP alongside HTTP handlers with shared in-memory state and internal types. That coupling made both hard to evolve. MCP must be a separate package and separate process — an HTTP client, nothing more.
 
 ## Architecture: Config-Driven Concept Tools
 

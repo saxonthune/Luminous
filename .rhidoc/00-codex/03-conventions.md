@@ -11,16 +11,22 @@ deps: []
 
 Use `docXX.YY` to reference another document. Every segment is two digits:
 
-- `doc02.02` — group 01, item 02
+- `doc01.02` — group 01, item 02
 - `doc02.08.01` — group 02, subdir 08, item 01
 
 Two digits per segment, unlimited depth. Nesting can go as deep as the directory structure requires. Each segment maps to a numbered directory or file. If a directory exceeds 99 items, split it into subdirectories rather than widening the numbering.
 
-The regex pattern `doc\d{2}(\.\d{2})*` matches all references and is grep-friendly:
+In prose and stored references, always write the canonical `docXX.YY` form. The CLI also accepts the shorthand `dXX.YY` and bare `XX.YY` on input, normalizing them to canonical form on entry. The slug after a file's `NN-` prefix is human-readable title text and is never part of a reference — renaming a slug never changes a reference.
+
+The canonical pattern `doc\d{2}(\.\d{2})*` matches all references and is grep-friendly:
 
 ```bash
-grep -rn "doc00\.02" .carta/
+grep -rn "doc01\.02" .rhidoc/
 ```
+
+## Writing Style: Declarative Intent
+
+Docs describe the artifact's intent in literary present tense. They are not timelines, design briefs, or sequencing plans. No future modals, phases, deferrals, dated postscripts, or volatile snapshots (counts, totals, line numbers derived from current source state). See doc00.02 for the full banned-pattern list and examples.
 
 ## Frontmatter
 
@@ -31,7 +37,7 @@ Every document starts with YAML frontmatter:
 title: Human-readable title
 summary: One-line description for MANIFEST
 tags: [keyword1, keyword2]
-deps: [doc02.02]
+deps: [doc01.02]
 ---
 ```
 
@@ -41,8 +47,6 @@ deps: [doc02.02]
 | `summary` | yes | One-line description for MANIFEST retrieval |
 | `tags` | yes | Lowercase keywords for search and file-path-to-doc mapping |
 | `deps` | no | Doc refs to check when this doc changes |
-
-**epoch** (optional): Used for staleness auditing. See doc00.02.
 
 ## File Naming
 
@@ -75,7 +79,10 @@ MANIFEST.md is the **machine-readable retrieval index** — a flat table with re
 
 ## Writing Style
 
+- **Prefer facts to prose.** Write relations as directional facts ("A ⟨verb⟩s B"), name each split with the criterion that divides it ("X vs Y — split by ⟨criterion⟩"), and give each glossary term a one-line purpose. Reserve prose for the irreducible *why*. See doc00.02.
 - **One concept per file.** If a file covers two distinct things, split it.
 - **Reference, don't repeat.** If a concept has a canonical doc, link to it with `docXX.YY` instead of re-explaining.
 - **Describe behavior, not implementation.** Docs should be clear enough to write a test from.
 - **Use the glossary.** Domain terms should be used consistently. Don't invent synonyms.
+- **Write plainly.** Common words over jargon; one word, one meaning; plain verbs; precise prepositions. See doc00.04 for the standard and its contrastive examples.
+- **Write in literary present tense** about what the artifact intends to be. No future modals, phases, dated postscripts, or volatile snapshots. See doc00.02 for the banned-pattern list.

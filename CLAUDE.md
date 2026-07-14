@@ -4,7 +4,7 @@
 
 Luminous bridges human visual thinking and AI structured context. Humans reason well with spatial canvas tools; AI performs well with high-quality structured context. Luminous is the interface between both — a canvas where humans see and arrange software artifacts, backed by structured data that AI agents can read, query, and act on. Work flows in both directions.
 
-This is a *design* tool, not a diagramming tool. It was extracted from the Carta monorepo as the TypeScript/React visual layer. Carta remains the spec/docs system and Python CLI; Luminous is the visual companion.
+This is a *design* tool, not a diagramming tool. It was extracted from the Rhidoc monorepo as the TypeScript/React visual layer. Rhidoc remains the spec/docs system and Python CLI; Luminous is the visual companion.
 
 ## Project Structure
 
@@ -32,19 +32,19 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Current Milestone
 
-**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.carta/01-luminous/01-vision/03-milestones.md` for the full roadmap.
+**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.rhidoc/01-vision/03-milestones/` for the full roadmap.
 
 ## Development Philosophy
 
 - **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Living software starts small and develops centers and ornamentation as feature complexity evolves.
 - **Happy path first**: implement the minimal end-to-end path. Complex algorithms, guards, and elaborate systems come only when sufficient forces cross the threshold — change in quantity begets change in quality.
-- **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in carta bridge the gap between them — they don't replace either side.
+- **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in rhidoc bridge the gap between them — they don't replace either side.
 - **Refactorability**: every part (specs, artifacts, code) must be refactorable. Avoid structures that resist change — they become degenerative over time and require massive investment to evolve.
 - **Willing to delete**: no backward compatibility with features nobody uses. If something isn't earning its place, remove it.
 
 ## Architecture Direction
 
-See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full details. Key decisions:
+See `.rhidoc/02-design/01-pdr-unfolding-architecture.md` for full details. Key decisions:
 
 - **Polymorphic nodes.** Notes are the primary node type, but the data model is a discriminated union — portals, pipeline-generated nodes (components, signals), and future types share base properties (position, size, nesting) and differ by `type` field.
 - **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
@@ -71,29 +71,29 @@ This boundary is a first-class design principle under active test — see PDR D8
 
 ## Docs / Specs
 
-The `.carta/` directory contains structured specifications managed by the `carta` CLI.
+The `.rhidoc/` directory contains structured specifications managed by the `rhidoc` CLI.
 
-- **Content edits** to existing docs: direct file editing is fine, then `carta regenerate`
-- **Structural changes**: use `carta` commands (see below)
-- If confused about usage, run `carta ai-skill` for the full CLI reference with examples
+- **Content edits** to existing docs: direct file editing is fine, then `rhidoc regenerate`
+- **Structural changes**: use `rhidoc` commands (see below)
+- If confused about usage, run `rhidoc ai-skill` for the full CLI reference with examples
 
-### Carta Commands Quick Reference
+### Rhidoc Commands Quick Reference
 
-All paths are relative to the workspace root, **without** the `.carta/` prefix (e.g., `01-luminous/02-design`, not `.carta/01-luminous/02-design`).
+All paths are relative to the workspace root, **without** the `.rhidoc/` prefix (e.g., `02-design`, not `.rhidoc/02-design`).
 
-**After any structural change**, run `carta regenerate` to rebuild MANIFEST.md. Most commands do this automatically; use `--no-regen` to skip (useful during batch operations).
+**After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md. Most commands do this automatically; use `--no-regen` to skip (useful during batch operations).
 
 | Command | Use case | Flags |
 |---|---|---|
-| `carta regenerate` | After editing frontmatter, or to fix a stale MANIFEST | (none) |
-| `carta create <dest> <slug>` | Add a new doc to an existing section | `--title`, `--summary`, `--tags` (comma-sep), `--deps` (comma-sep), `--order`, `--dry-run` |
-| `carta group <target>` | Create a new section (directory + 00-index.md) | `--title`, `--no-regen` |
-| `carta delete <path> [paths...]` | Remove docs; siblings renumber to close gaps | `--dry-run`, `--output-mapping` |
-| `carta move <src> <dest>` | Reorder docs or move between sections | `--order`, `--mkdir`, `--rename`, `--no-gap-close` (for batch moves), `--dry-run` |
-| `carta punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
-| `carta flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
-| `carta rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
-| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
+| `rhidoc regenerate` | After editing frontmatter, or to fix a stale MANIFEST | (none) |
+| `rhidoc create <dest> <slug>` | Add a new doc to an existing section | `--title`, `--summary`, `--tags` (comma-sep), `--deps` (comma-sep), `--order`, `--dry-run` |
+| `rhidoc group <target>` | Create a new section (directory + 00-index.md) | `--title`, `--no-regen` |
+| `rhidoc delete <path> [paths...]` | Remove docs; siblings renumber to close gaps | `--dry-run`, `--output-mapping` |
+| `rhidoc move <src> <dest>` | Reorder docs or move between sections | `--order`, `--mkdir`, `--rename`, `--no-gap-close` (for batch moves), `--dry-run` |
+| `rhidoc punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
+| `rhidoc flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
+| `rhidoc rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
+| `rhidoc cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
 
 ### Pack/graph schema changes
 

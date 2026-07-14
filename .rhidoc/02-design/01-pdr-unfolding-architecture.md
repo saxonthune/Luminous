@@ -11,7 +11,7 @@ deps: [doc02.01]
 
 Luminous is a visual canvas for software design. Its core thesis: humans reason well with spatial tools, AI performs well with structured context, and Luminous bridges this gap. The canvas is simultaneously a visual workspace for humans and a source of structured context for AI agents.
 
-The tool was extracted from the Carta monorepo as the TypeScript visual layer. It currently has a functional canvas editor with typed nodes (constructs), typed edges (via port schemas with polarity), organizer containers, multi-page documents, Yjs CRDT sync, and MCP tools for AI agents.
+The tool was extracted from the Rhidoc monorepo as the TypeScript visual layer. It currently has a functional canvas editor with typed nodes (constructs), typed edges (via port schemas with polarity), organizer containers, multi-page documents, Yjs CRDT sync, and MCP tools for AI agents.
 
 ## Problem
 
@@ -74,12 +74,12 @@ Specific deletion candidates:
 
 ### D5: Fresh packages as seeds
 
-Rather than surgically removing schema-first assumptions from the existing packages (`@carta/document` is 146KB of operations that all require `constructType`), we create two new packages that embody the unfolding architecture from day one:
+Rather than surgically removing schema-first assumptions from the existing packages (`@rhidoc/document` is 146KB of operations that all require `constructType`), we create two new packages that embody the unfolding architecture from day one:
 
 - `packages/server` (`@luminous/server`)
 - `packages/client` (`@luminous/client`)
 
-These have **zero dependency** on `@carta/schema` or `@carta/document`. The existing packages continue to work — old and new coexist until the new packages mature enough to replace them.
+These have **zero dependency** on `@rhidoc/schema` or `@rhidoc/document`. The existing packages continue to work — old and new coexist until the new packages mature enough to replace them.
 
 This also practices the methodology: start with a seed, not a blueprint.
 

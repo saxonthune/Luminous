@@ -13,7 +13,7 @@ deps: [doc01.03]
 
 tinyForum gets a `.canvases/` directory containing project canvases. These canvases are built two ways:
 
-- **Human-authored via MCP and UI.** An agent or developer builds canvases from product documentation, architecture decisions, and design reasoning — the kind of context that lives in `.carta/` specs but benefits from spatial arrangement and visual relationships.
+- **Human-authored via MCP and UI.** An agent or developer builds canvases from product documentation, architecture decisions, and design reasoning — the kind of context that lives in `.rhidoc/` specs but benefits from spatial arrangement and visual relationships.
 - **Generated from code via pipeline scripts.** Scripts perform static analysis of tinyForum's codebase and emit `.canvas.json` files: its Solid.js component tree, API endpoints, backend module tree, database schema, etc. Each pipeline is a reusable artifact, just as in milestone 1.
 
 The canvases become working context — something a developer or agent opens alongside the code to understand relationships, trace data flow, or plan changes.
@@ -64,7 +64,7 @@ A consumer can always check what version they're running from any surface — UI
 
 Usage in tinyForum will surface friction: missing features, awkward workflows, things that break outside the Luminous repo. This feedback needs a path back into Luminous development:
 
-1. **Friction noted in tinyForum's `.carta/`** as observations — what didn't work, what was confusing, what was missing.
+1. **Friction noted in tinyForum's `.rhidoc/`** as observations — what didn't work, what was confusing, what was missing.
 2. **Issues filed in Luminous** for anything that requires code changes.
 3. **Pipeline scripts refined** based on what the generated canvases actually look like for a real project (not just Luminous's own codebase).
 4. **This milestone doc updated** as open questions get answered through usage.

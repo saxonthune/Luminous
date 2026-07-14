@@ -76,7 +76,7 @@ The application layer (~2000 lines). Key translations:
 
 ### Phase 4: Verify and clean
 
-Update Playwright E2E tests. Delete React dependencies. Update carta docs.
+Update Playwright E2E tests. Delete React dependencies. Update rhidoc docs.
 
 ## Consequences
 

@@ -11,7 +11,7 @@ deps: []
 | Ref | Item | Kind | Summary | Tags |
 |-----|------|------|---------|------|
 
-| doc03.01 | Declarative Paradigms and Carta+Luminous | doc | Research session on how declarative/structured software paradigms (Solid.js, ECS, Rust, SQL, etc.) align with the mission of making software artifacts legible to both humans and AI | research, solid, architecture, reactive, ecs |
+| doc03.01 | Declarative Paradigms and Rhidoc+Luminous | doc | Research session on how declarative/structured software paradigms (Solid.js, ECS, Rust, SQL, etc.) align with the mission of making software artifacts legible to both humans and AI | research, solid, architecture, reactive, ecs |
 | doc03.02 | From Concept Design to Modeling Workbench | doc | Research session exploring how Luminous evolves from concept-driven design to a general modeling workbench — vocabulary building, progressive formalization, and verification across multiple modeling formalisms | research, modeling, concepts, formalization, verification, vocabulary |
 | doc03.03 | Node Data Architecture Research | doc | Research session deriving Luminous's node data model from prior art (tldraw, Notion, Excalidraw, React Flow, Bevy ECS) — separation of structure/content/schema, flat storage with parent pointers, and graceful schema degradation | research, architecture, data-model, ecs, bevy, tldraw, notion, schema, nodes |
 | doc03.04 | Visual Perception Research for Canvas Design | doc | Research synthesis on cognitive load theory, Gestalt principles, node-link diagram effectiveness, and information visualization best practices — applied to Luminous canvas pipelines | research, visualization, perception, cognitive-load, gestalt, pipelines |

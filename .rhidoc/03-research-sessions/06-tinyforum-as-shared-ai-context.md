@@ -49,7 +49,7 @@ This changes what belongs in the artifact:
 - **Edges that mean something** — "this calls that," "this renders that," "this depends on that decision." An agent can query the edge graph; a human can trace it with their eyes.
 - **Willingness to be stale.** Canvases drift; some are rebuilt by pipelines; some are discarded. They don't need to be canonical — they need to be useful *now*.
 
-This is different from the spec-driven discipline in `.carta/`, which aims at authoritative bridges between product expectations and source. Canvases are working context. Both roles matter; neither replaces the other.
+This is different from the spec-driven discipline in `.rhidoc/`, which aims at authoritative bridges between product expectations and source. Canvases are working context. Both roles matter; neither replaces the other.
 
 ## The two-consumer test
 
@@ -79,7 +79,7 @@ The per-commit versioning scheme in M2 (commit hash visible in `/api/health`, UI
 
 ## Feedback loop
 
-Every observation that surfaces in tinyForum — "the agent couldn't figure out what a portal node means," "the human never opens the generated canvas because it's too dense" — lands in tinyForum's own `.carta/` as an observation, then becomes either a Luminous issue or a pipeline refinement. The feedback path is codified so dogfooding isn't decorative; it's a source of direction.
+Every observation that surfaces in tinyForum — "the agent couldn't figure out what a portal node means," "the human never opens the generated canvas because it's too dense" — lands in tinyForum's own `.rhidoc/` as an observation, then becomes either a Luminous issue or a pipeline refinement. The feedback path is codified so dogfooding isn't decorative; it's a source of direction.
 
 ## What this milestone is not
 
@@ -92,5 +92,5 @@ Every observation that surfaces in tinyForum — "the agent couldn't figure out 
 - **Canvas granularity.** When does a project have "too many" canvases and lose the whole-project view? Is there a meta-canvas (index, overview) and when does it emerge?
 - **Canvas freshness.** How often are pipeline canvases rebuilt, and by whom? Manually, on save, on CI, on demand by the agent? Different answers imply different pipeline ergonomics.
 - **Screen + state modeling.** The pending tinyForum need — modeling screens and their required state — is a specific pipeline we haven't built. What should its node types be (screen, component, state source, interaction)? How does it interact with the existing component-tree pipeline from Milestone 1?
-- **Friction captured where?** Observations live in tinyForum's `.carta/`. Should they also surface back into Luminous's `.carta/` as a durable record of what real usage revealed, or is the issue tracker enough?
+- **Friction captured where?** Observations live in tinyForum's `.rhidoc/`. Should they also surface back into Luminous's `.rhidoc/` as a durable record of what real usage revealed, or is the issue tracker enough?
 - **The symmetry hypothesis.** Does the two-consumer test actually hold up? It's plausible that humans and agents want *related but different* artifacts, and Luminous's job is really to make the shared-enough artifact plus the per-consumer view. tinyForum is where this gets tested.

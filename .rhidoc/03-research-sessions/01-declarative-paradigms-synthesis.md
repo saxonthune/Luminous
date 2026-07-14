@@ -1,14 +1,14 @@
 ---
-title: Declarative Paradigms and Carta+Luminous
+title: Declarative Paradigms and Rhidoc+Luminous
 summary: Research session on how declarative/structured software paradigms (Solid.js, ECS, Rust, SQL, etc.) align with the mission of making software artifacts legible to both humans and AI
 tags: [research, solid, architecture, reactive, ecs]
 deps: [doc01.01, doc02.01]
 date: 2026-04-06
 ---
 
-# Declarative Paradigms and Carta+Luminous
+# Declarative Paradigms and Rhidoc+Luminous
 
-Research session exploring the connection between declarative software paradigms and the Carta+Luminous mission of bridging human spatial reasoning and AI structured context.
+Research session exploring the connection between declarative software paradigms and the Rhidoc+Luminous mission of bridging human spatial reasoning and AI structured context.
 
 ## The Core Observation
 
@@ -84,7 +84,7 @@ React entangles the component tree (UI concern) with the data model (hooks live 
 
 Solid separates them. Signals and memos exist independently of components. The component tree is a rendering concern. The data graph is the semantic concern. Two consumers (human renderer, AI reader) can access the data graph without navigating UI structure.
 
-### Alignment with the Carta+Luminous mission
+### Alignment with the Rhidoc+Luminous mission
 
 Luminous wants to be the interface where:
 - Humans see a spatial canvas
@@ -102,4 +102,4 @@ See `doc02.06.01` (Solid Migration ADR) for the concrete migration plan. This re
 - How to instrument Solid's reactive graph for AI consumption without coupling to Solid internals
 - Whether the Yjs CRDT layer should also be refactored to expose reactive primitives (Yjs observeDeep → Solid signals)
 - How Bevy/ECS thinking might inform the canvas engine (entities = canvas objects, components = visual/semantic data, systems = layout/rendering/AI-reading)
-- Whether carta's spec structure could itself be modeled as a reactive graph rather than static files
+- Whether rhidoc's spec structure could itself be modeled as a reactive graph rather than static files
