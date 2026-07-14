@@ -12,8 +12,8 @@ fills out a knockout bracket in a Builder and gets a URL-safe share code; a
 maintainer curates the submitted codes and pushes real tournament results as
 matches resolve; the app renders each bracket against reality and ranks
 entrants by points. It was built human-with-agent in one evening under a
-differentiation-first process ("DA"): the human prices the few load-bearing
-decisions, ranked by fan-out × irreversibility, and the agent executes
+differentiation-first process ("DA"): the human decides the few load-bearing
+questions, ranked by fan-out × irreversibility, and the agent executes
 everything downstream.
 
 ## The dataflow
@@ -53,7 +53,7 @@ Views:
 ## Where the build paid its tax
 
 The project's painpoint log records one recurring disease: the agent authored
-the upstream layer that was the human's to price. It named domain types
+the upstream layer that was the human's to decide. It named domain types
 silently and weakly (`Structure`, `Results`, a vague `Provider`, one `Bracket`
 doing duty for both an entrant's picks and the live tournament state); it
 invented scope (a leaderboard nobody asked for) and abstractions (a resolver
@@ -77,7 +77,7 @@ never restates them.
 
 The corrective — a human-controlled vocabulary plus a data-flow pass, before
 fan-out — is exactly the artifact this app edits. The diagram makes the data
-flow visible and the vocabulary priceable while both are still cheap to change:
+flow and the vocabulary visible while both are still cheap to change:
 a box name is a domain term stated once, on a surface the human can see and
 rename, instead of a word an agent coins in passing and every downstream
 artifact inherits. Before code exists, a box's contract is the design's only

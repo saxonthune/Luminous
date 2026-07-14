@@ -23,9 +23,10 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 
 | doc00.00 | `00-index.md` |  |  | — | — | — |
 | doc00.01 | `01-about.md` | Why this workspace exists, how to read it, two-sources-of-truth theory | docs, meta, theory | — | — | — |
-| doc00.02 | `02-maintenance.md` | Doc philosophy — docs convert volatile source signals into stable intent; declarative intent, banned patterns, prefer facts to prose (purposed terms, splits with criteria, directional facts), author freely then structure separately, when to grow detail | docs, maintenance, philosophy, relational-facts | — | — | — |
+| doc00.02 | `02-maintenance.md` | Doc philosophy — docs convert volatile source signals into stable intent; declarative intent, banned patterns, prefer facts to prose, author freely then structure separately, when to grow detail | docs, maintenance, philosophy | — | — | — |
 | doc00.03 | `03-conventions.md` | Cross-reference syntax, frontmatter schema, file naming, writing style | docs, conventions | — | — | — |
 | doc00.04 | `04-plain-language.md` | The plain-language standard for workspace prose — named standards, contrastive rules for jargon, word senses, parts of speech, prepositions, and sentence shape; the glossary as controlled vocabulary | docs, plain-language, style, vocabulary, glossary | — | — | — |
+| doc00.05 | `05-controlled-vocabulary.md` | The workspace glossary as a controlled vocabulary — entry kinds and sentence patterns from fact-based modeling (ORM), a worked example, and the naming rule | glossary, vocabulary, facts, subtypes, naming, docs | — | — | — |
 
 ## 01-vision — Vision
 
@@ -52,8 +53,9 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.05.00 | `05-dataflow-designer/00-index.md` |  |  | — | — | — |
-| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02 | — |
+| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03 | — |
 | doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` | The motivating case — a bracket-game app built human-with-agent in one evening; the build succeeded, but its largest tax fell exactly where vocabulary and data flow were not visible early | dataflow, case-study, fifa-bracketing, vocabulary, glossary | doc01.05.01 | doc01.05.01 | — |
+| doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | — | — |
 
 ## 02-design — Design
 
@@ -164,24 +166,25 @@ Quick lookup for file-path→doc mapping:
 | `css` | doc02.05.05 |
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
-| `dataflow` | doc01.05.01, doc01.05.02 |
+| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
 | `disclosure` | doc02.11 |
 | `discriminant` | doc02.06.02 |
-| `docs` | doc00.01, doc00.02, doc00.03, doc00.04 |
+| `docs` | doc00.01, doc00.02, doc00.03, doc00.04, doc00.05 |
 | `dogfooding` | doc01.03.02, doc03.06, doc03.08 |
 | `dsl` | doc03.05 |
 | `ecs` | doc03.01, doc03.03 |
 | `edges` | doc02.08 |
 | `engine` | doc02.05.01 |
 | `examples` | doc02.10.01, doc02.10.02, doc02.10.03, doc02.18 |
+| `facts` | doc00.05 |
 | `fifa-bracketing` | doc01.05.02 |
 | `formalization` | doc02.02, doc03.02 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc01.05.02 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03 |
 | `graph` | doc02.15 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
@@ -201,6 +204,7 @@ Quick lookup for file-path→doc mapping:
 | `milestone-2` | doc03.06 |
 | `milestones` | doc01.03.01, doc01.03.02 |
 | `modeling` | doc03.02 |
+| `naming` | doc00.05 |
 | `node` | doc02.09 |
 | `nodes` | doc03.03 |
 | `notion` | doc03.03 |
@@ -225,7 +229,6 @@ Quick lookup for file-path→doc mapping:
 | `reactivity` | doc02.06.01, doc03.05 |
 | `reference` | doc02.09, doc02.18 |
 | `reference-graph` | doc03.05 |
-| `relational-facts` | doc00.02 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc03.05 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
@@ -244,6 +247,7 @@ Quick lookup for file-path→doc mapping:
 | `statechart` | doc02.10.03, doc02.12 |
 | `static-analysis` | doc01.03.01, doc02.07, doc02.10.01 |
 | `style` | doc00.04 |
+| `subtypes` | doc00.05 |
 | `theming` | doc02.05.05 |
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
@@ -258,7 +262,7 @@ Quick lookup for file-path→doc mapping:
 | `views` | doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc03.04 |
-| `vocabulary` | doc00.04, doc01.05.02, doc03.02 |
+| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc03.02 |
 | `workbench` | doc03.08 |
 | `xstate` | doc02.10.03 |
 | `zoom` | doc03.07 |

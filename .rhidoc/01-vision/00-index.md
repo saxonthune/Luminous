@@ -15,6 +15,6 @@ deps: []
 | doc01.02 | Background | doc | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split |
 | doc01.03 | Milestones | group (2) | — | — |
 | doc01.04 | A platform of apps | doc | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture |
-| doc01.05 | Dataflow Designer | group (2) | — | — |
+| doc01.05 | Dataflow Designer | group (3) | — | — |
 
 Topics: ai-context, apps, architecture, background, canvas, history, platform, rhidoc, software-design, split, vision, visualization
