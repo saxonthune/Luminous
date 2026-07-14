@@ -167,7 +167,7 @@ These functions emit `Action` records with canonical ids (`VIEW.SET`, `LAYER.TOG
 
 The producers do not own dispatch — they emit data. The host owns dispatch. This keeps the producers easy to test (input data → output schema, no side effects) and keeps action routing in one place.
 
-## Composition in `client-next`
+## Composition in `client`
 
 `CanvasHost` becomes a thin composer:
 
@@ -230,7 +230,7 @@ The full primitive set:
 | `Submenu` | nested menu | Kobalte `Menu.Sub` |
 | `Divider` | horizontal rule in a menu | plain `<hr>` |
 
-Theme tokens (CSS variables defined in `client-next/index.css`) drive all styling. Cactus does not hardcode colors. Theme switching ([doc02.12](12-app-shell-statechart.md)) cascades through chrome the same way it cascades through the viewport.
+Theme tokens (CSS variables defined in `client/index.css`) drive all styling. Cactus does not hardcode colors. Theme switching ([doc02.12](12-app-shell-statechart.md)) cascades through chrome the same way it cascades through the viewport.
 
 ## Hotkeys
 

@@ -1,7 +1,7 @@
 ---
 title: "ADR: React to Solid.js Migration"
 status: accepted
-summary: Architecture decision record for migrating Luminous client-next and cactus from React to Solid.js
+summary: Architecture decision record for migrating Luminous client and cactus from React to Solid.js
 tags: [adr, architecture, solid, react, performance, reactivity]
 deps: [doc02.01, doc02.05]
 ---
@@ -26,7 +26,7 @@ React's re-render model creates systemic friction in this codebase:
 
 ## Decision
 
-Migrate `@luminous/cactus` and `@luminous/canvas` (client-next) from React to Solid.js.
+Migrate `@luminous/cactus` and `@luminous/client` from React to Solid.js.
 
 ### Why Solid
 
@@ -64,7 +64,7 @@ The canvas engine (~800 lines). Key translations:
 - React context → Solid context (near-identical API)
 - d3-zoom integration unchanged (DOM-direct)
 
-### Phase 3: Port client-next
+### Phase 3: Port client
 
 The application layer (~2000 lines). Key translations:
 - Live position state → signals (delete ref duplication)
@@ -89,7 +89,7 @@ Update Playwright E2E tests. Delete React dependencies. Update carta docs.
 
 ### Negative
 
-- One-time rewrite cost across cactus and client-next.
+- One-time rewrite cost across cactus and client.
 - Smaller ecosystem than React (fewer component libraries, less community support).
 - Team must learn Solid's mental model (signals, tracking contexts, no prop destructuring).
 - Some React-specific debugging tools and patterns no longer apply.

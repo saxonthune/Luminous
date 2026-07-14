@@ -13,12 +13,12 @@ Monorepo (pnpm workspaces). Two tracks:
 ### Active development (new unfolding architecture)
 
 ```
-server-next  (dumb storage + file-change notifications)
-client-next  (Solid.js canvas, all domain logic)
+server  (dumb storage + file-change notifications)
+client  (Solid.js canvas, all domain logic)
 ```
 
-- `@luminous/server` (`packages/server-next`) — filesystem serving, WebSocket file-change notifications, no domain logic
-- `@luminous/canvas` (`packages/client-next`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting
+- `@luminous/server` (`packages/server`) — filesystem serving, WebSocket file-change notifications, no domain logic
+- `@luminous/client` (`packages/client`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting. It is a platform wrapper (`AppShell`, `AppHeader`) hosting apps under `src/apps/`; Luminous Canvas (`src/apps/canvas/CanvasApp.tsx`) is the first app.
 
 ### Legacy (schema-first, being superseded)
 
@@ -63,7 +63,7 @@ The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-
 **Engine/domain boundary.** Luminous translates the intention of graph + pack declarations into a visual canvas; cactus *is* that visual API. So the split is not "engine supports everything, domain restricts" — it's by *kind of concern*:
 
 - **Visual and interaction concerns belong in cactus** — how the canvas looks and behaves: layout, drag, snapping, collision-free placement, hit-testing. These are not domain logic and should not leak into the domain layer.
-- **Meaning belongs in the domain layer** (`client-next`) — what nodes and edges *are*, the graph + pack declaration, what is semantically allowed.
+- **Meaning belongs in the domain layer** (`client`) — what nodes and edges *are*, the graph + pack declaration, what is semantically allowed.
 
 cactus operates on the rendered projection (the DOM — `data-container-id` nesting, measured rects), not the abstract graph. The domain layer declares intent and persists results; it does not compute visual geometry.
 

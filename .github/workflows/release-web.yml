@@ -29,10 +29,10 @@ jobs:
         # TODO: wire in solidjs-analysis pack once it exists alongside the graph
         run: |
           if [ -f .canvases/solidjs-analysis.canvas.json ]; then
-            cp .canvases/solidjs-analysis.canvas.json packages/client-next/public/canvases/solidjs-analysis.graph.json
+            cp .canvases/solidjs-analysis.canvas.json packages/client/public/canvases/solidjs-analysis.graph.json
             node -e "
               const fs = require('fs');
-              const p = 'packages/client-next/public/canvases/index.json';
+              const p = 'packages/client/public/canvases/index.json';
               const m = JSON.parse(fs.readFileSync(p, 'utf8'));
               if (!m.canvases.find(c => c.path === 'solidjs-analysis.graph.json')) {
                 m.canvases.push({ path: 'solidjs-analysis.graph.json', name: 'Luminous – Solid.js Analysis', root: 'Luminous' });
@@ -46,6 +46,6 @@ jobs:
           GITHUB_PAGES: 'true'
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/client-next/dist
+          path: packages/client/dist
       - id: deployment
         uses: actions/deploy-pages@v4

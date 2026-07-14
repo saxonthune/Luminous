@@ -1,29 +1,30 @@
-import { createSignal, createEffect, Match, Switch, onCleanup, onMount } from 'solid-js';
+import { createSignal, createEffect, Match, Switch, onMount, Show } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { loadGraphFromText, resetRegistry, type Graph } from '@luminous/core';
-import { loadAndRegisterSiblingPack } from './pack/siblingLoader';
-import { DocumentPicker } from './DocumentPicker';
-import { AppHeader } from './AppHeader';
-import { CanvasHost } from './CanvasHost';
-import { ToastTray, type Toast } from './ToastTray';
-import { fetchServerSources, fetchStaticSources, type CanvasSource } from './sources';
-import { theme, cycleTheme, persistTheme } from './theme';
+import { loadAndRegisterSiblingPack } from '../../pack/siblingLoader';
+import { DocumentPicker } from '../../DocumentPicker';
+import { CanvasHost } from '../../CanvasHost';
+import { ToastTray, type Toast } from '../../ToastTray';
+import { fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
+import { InfoModal } from '../../InfoModal';
+import { readParam, writeParam } from '../../urlState';
 
-type ShellState =
+type CanvasAppState =
   | { kind: 'booting' }
   | { kind: 'picker' }
   | { kind: 'loadingDoc' }
   | { kind: 'canvasMounted' }
   | { kind: 'fatalError'; reason: string };
 
-export function AppShell() {
-  const params = new URLSearchParams(window.location.search);
-  const initialSrc = params.get('src');
+export function CanvasApp() {
+  const initialSrc = readParam('src');
 
-  const [shell, setShell] = createSignal<ShellState>({ kind: 'booting' });
+  const [shell, setShell] = createSignal<CanvasAppState>({ kind: 'booting' });
   const [sources, setSources] = createSignal<CanvasSource[] | null>(null);
   const [sourceId, setSourceId] = createSignal<string | null>(null);
   const [graph, setGraph] = createSignal<Graph | null>(null);
   const [toasts, setToasts] = createSignal<Toast[]>([]);
+  const [showInfo, setShowInfo] = createSignal(false);
 
   function enqueueToast(message: string) {
     const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -35,18 +36,13 @@ export function AppShell() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function writeUrlSrc(id: string | null) {
-    if (id) history.replaceState(null, '', '?src=' + id);
-    else history.replaceState(null, '', window.location.pathname);
-  }
-
   function loadGraph(id: string) {
     const source = sources()?.find((s) => s.id === id);
     if (!source) {
       enqueueToast(`Canvas "${id}" not found`);
       setShell({ kind: 'picker' });
       setSourceId(null);
-      writeUrlSrc(null);
+      writeParam('src', null);
       return;
     }
     source
@@ -71,14 +67,14 @@ export function AppShell() {
     enqueueToast(`Failed to load "${label}": ${msg}`);
     setSourceId(null);
     setGraph(null);
-    writeUrlSrc(null);
+    writeParam('src', null);
     setShell({ kind: 'picker' });
   }
 
   function onSelect(source: CanvasSource) {
     setSourceId(source.id);
     setGraph(null);
-    writeUrlSrc(source.id);
+    writeParam('src', source.id);
     setShell({ kind: 'loadingDoc' });
     loadGraph(source.id);
   }
@@ -86,7 +82,7 @@ export function AppShell() {
   function onBack() {
     setGraph(null);
     setSourceId(null);
-    writeUrlSrc(null);
+    writeParam('src', null);
     setShell({ kind: 'picker' });
   }
 
@@ -114,8 +110,6 @@ export function AppShell() {
       });
   }
 
-  createEffect(() => persistTheme(theme()));
-
   createEffect(() => {
     const label = sourceLabel();
     document.title = label ? `${label} — Luminous` : 'Luminous';
@@ -123,14 +117,6 @@ export function AppShell() {
 
   onMount(() => {
     boot();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'F2') {
-        e.preventDefault();
-        cycleTheme();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    onCleanup(() => window.removeEventListener('keydown', onKey));
   });
 
   const sourceLabel = () => {
@@ -140,14 +126,36 @@ export function AppShell() {
   };
 
   return (
-    <div style={{ display: 'flex', 'flex-direction': 'column', width: '100vw', height: '100vh' }}>
-      <AppHeader
-        sourceLabel={sourceLabel()}
-        showBack={shell().kind === 'canvasMounted'}
-        onBack={onBack}
-        onCycleTheme={cycleTheme}
-        info={graph()?.info}
-      />
+    <>
+      <Portal mount={document.getElementById('app-header-left')!}>
+        <Show when={shell().kind === 'canvasMounted'}>
+          <button
+            onClick={onBack}
+            class="rounded px-2 py-1 text-sm text-fg-muted hover:bg-surface-alt hover:text-fg"
+            title="Back to canvases"
+          >
+            ← Back
+          </button>
+        </Show>
+        <Show when={sourceLabel()}>
+          <span class="text-sm text-fg-muted">·</span>
+          <span class="text-sm text-fg-muted">{sourceLabel()}</span>
+        </Show>
+      </Portal>
+      <Portal mount={document.getElementById('app-header-right')!}>
+        <Show when={graph()?.info && graph()!.info!.trim()}>
+          <button
+            onClick={() => setShowInfo(true)}
+            class="rounded px-2 py-1 text-base text-accent hover:bg-surface-alt"
+            title="About this canvas"
+          >
+            ⓘ
+          </button>
+        </Show>
+      </Portal>
+      <Show when={showInfo() && graph()?.info}>
+        <InfoModal info={graph()!.info!} onClose={() => setShowInfo(false)} />
+      </Show>
       <div style={{ flex: '1 1 auto', 'min-height': 0, display: 'flex', 'flex-direction': 'column' }}>
         <Switch>
           <Match when={shell().kind === 'booting'}>
@@ -186,6 +194,6 @@ export function AppShell() {
         </Switch>
       </div>
       <ToastTray toasts={toasts()} onDismiss={dismissToast} />
-    </div>
+    </>
   );
 }

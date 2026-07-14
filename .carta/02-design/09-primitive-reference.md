@@ -8,7 +8,7 @@ deps: []
 
 # Node primitive reference
 
-A node's visual appearance is defined by its schema's `primitives` array — an ordered list of small, composable renderers stacked top-to-bottom inside the node. Primitives are registered in `packages/client-next/src/primitives/index.ts`; there is currently no plugin mechanism for third-party primitives. Adding a new primitive means writing a renderer component and adding one registry entry.
+A node's visual appearance is defined by its schema's `primitives` array — an ordered list of small, composable renderers stacked top-to-bottom inside the node. Primitives are registered in `packages/client/src/primitives/index.ts`; there is currently no plugin mechanism for third-party primitives. Adding a new primitive means writing a renderer component and adding one registry entry.
 
 ## The PrimitiveDef shape
 

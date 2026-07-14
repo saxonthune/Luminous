@@ -11,7 +11,7 @@ Edges in Luminous are freeform by default — any node to any node, optional lab
 
 ## The `EdgeSchema` Shape
 
-From `packages/server-next/src/types.ts`:
+From `packages/server/src/types.ts`:
 
 ```ts
 export interface EdgeSchema {
@@ -45,10 +45,10 @@ export interface EdgeSchema {
 
 ## The Runtime Filter Pattern
 
-Cactus does not interpret edge schemas. When the runtime wants to lay out a subset of edges (e.g., only tree edges), it pre-filters the edge list before passing it to `compositeLayout` or `treeLayout`. The filter lives in the runtime (client-next), not in cactus:
+Cactus does not interpret edge schemas. When the runtime wants to lay out a subset of edges (e.g., only tree edges), it pre-filters the edge list before passing it to `compositeLayout` or `treeLayout`. The filter lives in the runtime (client), not in cactus:
 
 ```ts
-// In the runtime (client-next), not in cactus
+// In the runtime (client), not in cactus
 const treeEdges = doc.edges.filter(e => {
   const schema = doc.schemas[e.schemaName ?? '']
   return schema?.kind === 'edge' && schema.layoutRole === 'tree'

@@ -6,7 +6,7 @@
 //
 //   node scripts/gen-stress-graph.mjs
 //
-// Writes stress-773.graph.json into the client-next public canvases dir and a
+// Writes stress-773.graph.json into the client public canvases dir and a
 // copy under .canvases.
 
 import { writeFileSync } from 'node:fs';
@@ -152,7 +152,7 @@ const graph = {
 const json = JSON.stringify(graph, null, 0).replace(/},{/g, '},\n    {');
 
 const targets = [
-  join(repoRoot, 'packages/client-next/public/canvases/stress-773.graph.json'),
+  join(repoRoot, 'packages/client/public/canvases/stress-773.graph.json'),
   join(repoRoot, '.canvases/stress-773.graph.json'),
 ];
 for (const t of targets) {

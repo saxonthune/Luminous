@@ -15,7 +15,7 @@ produces constraints, who suggests positions, and where the boundary sits.
 
 Layout is a conversation between two parties.
 
-- **The constraint producer** is the domain layer (`client-next`). It knows
+- **The constraint producer** is the domain layer (`client`). It knows
   what a node *is*, measures how big its rendered content turned out, derives
   the containment tree from declared edges, and knows which edges carry labels
   and how wide those labels are. It owns *meaning*.
@@ -144,7 +144,7 @@ Two engine families exist today with **incompatible signatures**:
 | A (flat) | `treeLayout`, `forceDirectedLayout`, `dagLayout`, `compositeLayout`, `tidyLayout` | `LayoutNode[]` / `TidyNode[]` + `LayoutEdge[]` | `Map<id,{x,y}>` |
 | B (tree) | `gridLayout`, `elkLayout` | `{ rootIds, childrenOf, sizeOf, edges, headerHeights }` | `{ positions, sizes }` |
 
-`client-next` (`PgCanvasView`) uses only family B. Family A is documented in
+`client` (`PgCanvasView`) uses only family B. Family A is documented in
 `03-layout-primitives.md` but is not on the active path. `LayoutRequest` /
 `LayoutResult` above is family B, generalized — converging the two is the
 intended direction:
@@ -176,7 +176,7 @@ truncation first makes the `label.w` fed here predictable.
 
 | Concern | Owner |
 |---|---|
-| What a node means (`kind`, `props`) | producer (client-next) |
+| What a node means (`kind`, `props`) | producer (client) |
 | Measuring rendered content size | producer |
 | Deriving `childrenOf` from edges | producer |
 | Filtering which edges participate | producer |

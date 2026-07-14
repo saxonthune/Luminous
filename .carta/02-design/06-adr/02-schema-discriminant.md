@@ -10,7 +10,7 @@ deps: [doc03.03, doc02.05.01]
 
 ## Status
 
-Accepted — implemented in `packages/server-next/src/types.ts`.
+Accepted — implemented in `packages/server/src/types.ts`.
 
 ## Context
 
@@ -28,7 +28,7 @@ Add a `kind` field to distinguish them:
 
 The store loader (`store.ts`) injects `kind: 'node'` onto any schema lacking the field on load. Existing canvas files with un-discriminated node schemas load cleanly and round-trip without modification.
 
-Two exported type guards (`packages/server-next/src/types.ts`):
+Two exported type guards (`packages/server/src/types.ts`):
 
 ```ts
 export function isEdgeSchema(s: Schema): s is EdgeSchema {
@@ -67,4 +67,4 @@ The discriminant pattern matches the existing `PrimitiveDef.type` precedent in t
 
 - Data architecture rationale: doc03.03
 - Cactus data contract (opaque `schemaName`): doc02.05.01
-- Implementation: `packages/server-next/src/types.ts`
+- Implementation: `packages/server/src/types.ts`

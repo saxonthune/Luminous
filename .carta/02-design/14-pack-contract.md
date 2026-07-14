@@ -132,6 +132,6 @@ A graph from an unknown source still produces a legible picture; authoring a pac
 
 The following from earlier docs no longer hold:
 
-- Packs as npm packages under `packages/pack-*`, imported at compile time into `client-next` and registered via `registerPack` (the current `pack-primitives` / `pack-rtp-statechart` packages are legacy; they migrate to data packs or remain as Luminous-shipped built-ins).
+- Packs as npm packages under `packages/pack-*`, imported at compile time into `client` and registered via `registerPack` (the current `pack-primitives` / `pack-rtp-statechart` packages are legacy; they migrate to data packs or remain as Luminous-shipped built-ins).
 - The `packs` map with semver ranges on the graph file.
 - The "trusted components / explicit install" trust model (PDR [doc02.11](11-pdr-property-graph-architecture.md) D8, §5.6) — a data pack executes nothing, so there is nothing to trust beyond the JSON parser and the fixed primitive set Luminous ships.

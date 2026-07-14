@@ -140,10 +140,10 @@ The composition pattern `compositeLayout` automates is:
 1. Run `tidyLayout` to size each parent based on its children.
 2. Use those measured parent sizes as node extents in `treeLayout` to position the parents.
 
-The caller pre-filters edges before passing them to `compositeLayout` (or directly to `treeLayout`). Cactus does not filter by `schemaName` or any other field — the runtime (client-next) decides which edges participate in which layout pass:
+The caller pre-filters edges before passing them to `compositeLayout` (or directly to `treeLayout`). Cactus does not filter by `schemaName` or any other field — the runtime (client) decides which edges participate in which layout pass:
 
 ```ts
-// In the runtime (client-next), not in cactus
+// In the runtime (client), not in cactus
 const treeEdges = doc.edges.filter(e => {
   const schema = doc.schemas[e.schemaName ?? '']
   return schema?.kind === 'edge' && schema.layoutRole === 'tree'

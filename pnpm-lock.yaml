@@ -91,7 +91,7 @@ importers:
         specifier: ^3.2.3
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.9)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.3)
 
-  packages/client-next:
+  packages/client:
     dependencies:
       '@codemirror/commands':
         specifier: ^6.7.1
@@ -202,7 +202,7 @@ importers:
         specifier: ^3.2.3
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.17)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.3)
 
-  packages/server-next:
+  packages/server:
     devDependencies:
       '@types/node':
         specifier: ^22.0.0

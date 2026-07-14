@@ -7,7 +7,7 @@ deps: [doc02.02]
 
 # API Contract
 
-HTTP + WebSocket API for `@luminous/server` (`packages/server-next`). The server is a native Node.js HTTP server (no framework). It serves a directory of `.canvas.json` files, applies mutation actions, and broadcasts changes via WebSocket.
+HTTP + WebSocket API for `@luminous/server` (`packages/server`). The server is a native Node.js HTTP server (no framework). It serves a directory of `.canvas.json` files, applies mutation actions, and broadcasts changes via WebSocket.
 
 ## Server Configuration
 

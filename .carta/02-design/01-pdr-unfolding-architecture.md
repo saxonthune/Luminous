@@ -76,8 +76,8 @@ Specific deletion candidates:
 
 Rather than surgically removing schema-first assumptions from the existing packages (`@carta/document` is 146KB of operations that all require `constructType`), we create two new packages that embody the unfolding architecture from day one:
 
-- `packages/server-next` (`@luminous/server`)
-- `packages/client-next` (`@luminous/canvas`)
+- `packages/server` (`@luminous/server`)
+- `packages/client` (`@luminous/client`)
 
 These have **zero dependency** on `@carta/schema` or `@carta/document`. The existing packages continue to work — old and new coexist until the new packages mature enough to replace them.
 
@@ -104,7 +104,7 @@ Earlier framing in this PDR — "the engine supports everything; the restriction
 The sharper rule: the boundary runs by **kind of concern**, not by permission.
 
 - **Visual and interaction concerns belong in cactus** — how the canvas looks and behaves: layout, drag, snapping, collision avoidance, hit-testing. cactus *is* Luminous's visual API. These concerns should not leak into the domain layer even when they are "restrictive."
-- **Meaning belongs in the domain layer** (`client-next`) — what nodes and edges *are*, the graph + pack declaration, what is semantically permitted.
+- **Meaning belongs in the domain layer** (`client`) — what nodes and edges *are*, the graph + pack declaration, what is semantically permitted.
 
 cactus operates on the **rendered projection** — the DOM, with `data-container-id` nesting and measured rects — not on the abstract graph. The domain layer declares intent and persists results; it does not compute visual geometry. A consumer opts into engine behaviors (e.g. collision-free placement) through engine options.
 
@@ -128,17 +128,17 @@ This means the canvas work is small relative to the data model and document oper
 
 Create the two new packages as seeds. No domain logic yet — just the wiring.
 
-**`packages/server-next`** — Minimal Node.js server:
+**`packages/server`** — Minimal Node.js server:
 - HTTP: serve a directory of `.canvas.json` files, directory listing endpoint, health endpoint
 - WebSocket: Yjs sync (one room per file, using y-websocket)
 - Filesystem: debounced write-back on Yjs updates, file watching for external changes
 - Dependencies: `yjs`, `y-websocket`, `y-protocols`, `ws`, `lib0` (nothing else)
 
-**`packages/client-next`** — Minimal Solid.js canvas app:
+**`packages/client`** — Minimal Solid.js canvas app:
 - Vite + Solid.js + Tailwind
 - Cactus engine (copied/inlined from web-client)
 - Yjs document as source of truth
-- Connects to server-next via WebSocket, falls back to local IndexedDB
+- Connects to server via WebSocket, falls back to local IndexedDB
 - Empty canvas — no node types yet
 
 **Done when:** `just dev` starts both packages, client connects to server, opening a `.canvas.json` file loads an empty Yjs doc that syncs and persists.

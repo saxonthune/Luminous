@@ -7,10 +7,10 @@ deps: [doc02.01]
 
 # Cactus Overview
 
-Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses d3-zoom for viewport control, DOM data-attributes for hit-testing, and composable Solid primitives for interaction. The engine provides primitives; the domain layer above it (in `client-next`) decides what nodes mean, how edges behave, and what gestures do.
+Cactus is a custom, domain-agnostic canvas engine. It is not React Flow. It uses d3-zoom for viewport control, DOM data-attributes for hit-testing, and composable Solid primitives for interaction. The engine provides primitives; the domain layer above it (in `client`) decides what nodes mean, how edges behave, and what gestures do.
 
 **Location:** `packages/cactus/src/`
-**Consumer:** `packages/client-next/` (the active Luminous client)
+**Consumer:** `packages/client/` (the active Luminous client)
 
 ## Data Contract
 
@@ -116,7 +116,7 @@ The key invariant: **edges read what `NodeContainer`s register**. Anything that 
 
 ## Integration Pattern
 
-A typical domain integration (like `client-next`'s `PgCanvasView`) looks like:
+A typical domain integration (like `client`'s `PgCanvasView`) looks like:
 
 1. **Wrap content in `<Canvas>`** — provides viewport, context, and structural layers. Pass `edges`, optional `chrome`/`onAction`, and `connectionDrag.onConnect`.
 2. **Compute layout above cactus** — the host runs a layout algorithm (`gridLayout`, `elkLayout`, etc.) that produces `positions` and `sizes` maps, then resolves absolute canvas coordinates by walking the containment tree.

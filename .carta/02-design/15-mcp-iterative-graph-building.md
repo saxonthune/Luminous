@@ -101,7 +101,7 @@ Infrastructure that makes multi-step agent dialogue coherent.
 
 ### History and checkpoints
 
-The Yjs CRDT in `server-next` provides a free undo/redo log over the document. Checkpoints are named snapshots: `checkpoint_create { path, name }` and `checkpoint_restore { path, name }`. An agent that is about to make a large structural change can checkpoint first; the human can restore if the change doesn't land well.
+The Yjs CRDT in `server` provides a free undo/redo log over the document. Checkpoints are named snapshots: `checkpoint_create { path, name }` and `checkpoint_restore { path, name }`. An agent that is about to make a large structural change can checkpoint first; the human can restore if the change doesn't land well.
 
 ### Diff preview
 
@@ -119,7 +119,7 @@ This is the resolved choice. The alternative (agent sets position) couples the a
 
 ## Tier 6: Sync
 
-Largely free from `server-next`'s Yjs CRDT.
+Largely free from `server`'s Yjs CRDT.
 
 When an agent mutates the graph, the server writes the change to the Yjs document and broadcasts a `changed` event over the WebSocket. Connected browser clients receive the event and reload the affected document. From the agent's perspective, the sync is invisible — it mutates, the viewer updates.
 

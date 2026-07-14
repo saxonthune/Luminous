@@ -24,7 +24,7 @@ For a project outside the Luminous repo to use Luminous, it needs:
 
 1. **A `.canvases/` directory** with `.canvas.json` files. These can be hand-authored, MCP-built, or pipeline-generated.
 
-2. **Luminous server + client running.** The consumer project has a gitignored launch script that runs Luminous from a local checkout via `npx /path/to/Luminous/packages/server-next`. This simulates the eventual `npx @luminous/server` experience without publishing. The script also starts the client. No Luminous dependency appears in the consumer's `package.json`.
+2. **Luminous server + client running.** The consumer project has a gitignored launch script that runs Luminous from a local checkout via `npx /path/to/Luminous/packages/server`. This simulates the eventual `npx @luminous/server` experience without publishing. The script also starts the client. No Luminous dependency appears in the consumer's `package.json`.
 
 3. **MCP configured in Claude Code settings.** The `@luminous/mcp` package translates MCP tool calls into HTTP requests against the running server. The consumer project's `.claude/settings.json` (or the user's global settings) needs an MCP server entry pointing at the luminous-mcp binary, with `LUMINOUS_SERVER_URL` set to the running server.
 

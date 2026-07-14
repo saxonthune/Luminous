@@ -40,4 +40,4 @@ The pipeline script is the artifact. It's reusable — run it against any Solid.
 - It establishes the pipeline *pattern* — future pipelines for other frameworks or domains follow the same shape but define their own types. We don't pre-build a universal schema; each pipeline grows its own vocabulary from the forces of its domain.
 - It forces the polymorphic node model — components, signals, and data sources are different node types with different rendering.
 
-**Done when:** Running the pipeline script against `packages/client-next` and `packages/cactus` produces a canvas that a developer can open in Luminous and use to understand the codebase's component architecture, reactive data flow, and external dependencies.
+**Done when:** Running the pipeline script against `packages/client` and `packages/cactus` produces a canvas that a developer can open in Luminous and use to understand the codebase's component architecture, reactive data flow, and external dependencies.

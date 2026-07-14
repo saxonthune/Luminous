@@ -20,7 +20,7 @@ either use a shipped theme or fill the slots themselves.
 
 Before this contract, `cactus.css` read `--fg`, `--overlay`, `--accent`,
 `--danger`, and friends directly. Those names are **Luminous's** domain
-vocabulary, defined in `client-next/src/index.css`. cactus reached *up* into its
+vocabulary, defined in `client/src/index.css`. cactus reached *up* into its
 consumer's namespace — it only rendered correctly by the coincidence that
 Luminous happened to define those exact names.
 
@@ -133,7 +133,7 @@ A host with its own theme system (Luminous has light/dusk/ground, switched via
 the contract once:
 
 ```css
-/* client-next/src/index.css — Luminous fills the cactus contract */
+/* client/src/index.css — Luminous fills the cactus contract */
 :root {
   --cactus-canvas-bg:     var(--canvas);
   --cactus-fg:            var(--fg);

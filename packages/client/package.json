@@ -1,7 +1,10 @@
 {
-  "name": "@luminous/canvas",
+  "name": "@luminous/client",
   "version": "0.4.0",
   "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
   "dependencies": {
     "@codemirror/commands": "^6.7.1",
     "@codemirror/lang-markdown": "^6.3.1",

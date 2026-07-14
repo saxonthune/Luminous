@@ -20,7 +20,7 @@ Three layers, three responsibilities. Stated once here, applied everywhere below
 | Layer | Owns | Does not own |
 |---|---|---|
 | **Pack** | Data: kinds, edges, views, layers, renderers, optional named queries | Anything visual outside a node body |
-| **Luminous** (`@luminous/core` + `client-next`) | Translating pack data + current state into chrome schemas; dispatching action events into app state | Painting chrome pixels |
+| **Luminous** (`@luminous/core` + `client`) | Translating pack data + current state into chrome schemas; dispatching action events into app state | Painting chrome pixels |
 | **Cactus** | Painting the viewport, painting chrome from schemas, hit-testing, screen-space anchoring | Knowing what kinds, views, or layers mean |
 
 The same asymmetry that makes nodes work (pack declares JSON, Luminous interprets, cactus paints geometry) makes chrome work (Luminous declares schemas, cactus paints chrome). Cactus stays domain-agnostic; the host stays free of pixel concerns.
@@ -155,7 +155,7 @@ Three contracts, locked:
 - `nodeContextMenuSchema(node, selection, dispatch)` → `MenuSchema`
 - `backgroundContextMenuSchema(dispatch)` → `MenuSchema`
 
-`client-next` composes these into one `ChromeSchema` per render and hands it to `<Canvas chrome=schema onAction=dispatch>`. The dispatch function routes action ids back into Solid signals.
+`client` composes these into one `ChromeSchema` per render and hands it to `<Canvas chrome=schema onAction=dispatch>`. The dispatch function routes action ids back into Solid signals.
 
 **Cactus → world.** Cactus exports:
 

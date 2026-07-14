@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    command: 'pnpm -C ../server exec tsx src/index.ts -- --dir ../../.canvases & pnpm dev',
     url: 'http://localhost:5200',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

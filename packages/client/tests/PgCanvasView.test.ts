@@ -1,7 +1,7 @@
 /**
  * Pure unit test for PgCanvasView logic (evaluateView + gridLayout).
  *
- * No DOM rendering: @solidjs/testing-library is not in client-next's deps.
+ * No DOM rendering: @solidjs/testing-library is not in client's deps.
  * This test validates the data pipeline that PgCanvasView drives.
  * DOM nesting assertion skipped per plan fallback.
  */

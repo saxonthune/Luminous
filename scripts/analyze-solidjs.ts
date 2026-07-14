@@ -7,7 +7,7 @@
  *
  * Usage: npx tsx scripts/analyze-solidjs.ts [target-dirs...] [--output path]
  *
- * Default targets: packages/client-next/src packages/cactus/src
+ * Default targets: packages/client/src packages/cactus/src
  * Default output:  .canvases/solidjs-analysis.graph.json
  */
 
@@ -30,7 +30,7 @@ import type {
   NodeContent,
   DocumentV2,
   Edge,
-} from '../packages/server-next/src/types.js';
+} from '../packages/server/src/types.js';
 
 // ---------------------------------------------------------------------------
 // v2 schemas — embedded in the emitted canvas file
@@ -1300,7 +1300,7 @@ function main() {
 
   if (targetDirs.length === 0) {
     targetDirs.push(
-      resolve(ROOT, 'packages/client-next/src'),
+      resolve(ROOT, 'packages/client/src'),
       resolve(ROOT, 'packages/cactus/src')
     );
   }
