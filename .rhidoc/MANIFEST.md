@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc02.12, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc02.23 | — |
 
 ### Milestones
 
@@ -53,9 +53,9 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.05.00 | `05-dataflow-designer/00-index.md` |  |  | — | — | — |
-| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03 | — |
+| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03, doc02.21, doc02.23 | — |
 | doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` | The motivating case — a bracket-game app built human-with-agent in one evening; the build succeeded, but its largest tax fell exactly where vocabulary and data flow were not visible early | dataflow, case-study, fifa-bracketing, vocabulary, glossary | doc01.05.01 | doc01.05.01 | — |
-| doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | — | — |
+| doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | doc02.21 | — |
 
 ## 02-design — Design
 
@@ -66,7 +66,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.01 | `01-pdr-unfolding-architecture.md` | Product decision record for transforming Luminous from schema-first to unfolding-first | pdr, architecture, unfolding, crystallization | doc02.01 | doc01.02, doc01.03.01, doc02.01, doc02.02, doc02.05.01, doc02.06.01, doc02.11, doc02.12, doc03.01, doc03.02, doc03.03, doc03.06 | — |
 | doc02.02 | `02-concept-inventory.md` | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding | doc02.01, doc01.01 | doc02.03, doc02.04, doc03.02 | — |
 | doc02.03 | `03-api-contract.md` | HTTP + WebSocket API for @luminous/server — document listing, reading, mutation actions, diagnostics, and change notifications | api, http, server, contract | doc02.02 | doc02.04 | — |
-| doc02.04 | `04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc02.02, doc02.03 | doc02.15 | — |
+| doc02.04 | `04-mcp-design.md` | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture | doc02.02, doc02.03 | doc02.15, doc02.22 | — |
 | doc02.07 | `07-solidjs-pipeline-spec.md` | Node types, nesting rules, and edge semantics for the Solid.js static analysis pipeline | pipeline, solid, static-analysis, milestone-1 | doc01.03 | doc02.08, doc02.10.01 | — |
 | doc02.08 | `08-edge-schemas.md` | Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern | edges, schemas, design, cactus-boundary | doc03.03, doc02.05.01, doc02.06.02, doc02.07 | doc02.10.02 | — |
 | doc02.09 | `09-primitive-reference.md` | Enumerated reference for node primitives (drag-bar, title, markdown, container) with bind semantics and examples | primitives, schemas, reference, node | — | doc02.10.02 | — |
@@ -80,6 +80,9 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.18 | `18-pack-examples.md` | RTP, flowchart, Solid app, React app, Rust app — what each pack declares, what views each wants, and what falls out as Luminous's universal contract. | pack, examples, reference, contract | doc02.14, doc02.16, doc02.17 | — | — |
 | doc02.19 | `19-canvas-component-tree.md` | What lives inside the canvas — toolbars, view switcher, layer toolbar, context menus — derived from inventories of state, mutation rate, and ownership boundary. | canvas, chrome, component-tree, boundaries | doc02.13, doc02.14, doc02.17 | doc02.20 | — |
 | doc02.20 | `20-chrome-schema.md` | Action records, menu and toolbar schemas, chrome slots; cactus owns chrome rendering, Luminous owns the schema producers, packs stay unchanged. | chrome, api, actions, menus, cactus, boundary | doc02.14, doc02.19 | — | — |
+| doc02.21 | `21-dataflow-document-format.md` | The *.dataflow.json document — Boxes and Flows carrying design intention; TypeScript types own the shape, a sidecar JSON Schema describes it | dataflow, format, contract, schema | doc01.05.01, doc01.05.03 | doc02.22, doc02.23 | dataflow-document.schema.json |
+| doc02.22 | `22-dataflow-operations.md` | The operation set over a dataflow Document — the dataflow MCP tool group's verbs, their validation rules, and the check warnings | dataflow, mcp, operations, tools | doc02.21, doc02.04 | doc02.23 | — |
+| doc02.23 | `23-dataflow-designer-app.md` | The client app — read-only projection of dataflow Documents onto cactus, live-reloading as the agent writes; document plumbing shared with Luminous Canvas | dataflow, apps, client, rendering | doc01.05.01, doc02.21, doc02.22, doc01.04 | — | — |
 
 ### Cactus Canvas Engine
 
@@ -141,7 +144,7 @@ Quick lookup for file-path→doc mapping:
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `app-shell` | doc02.12, doc02.13 |
-| `apps` | doc01.04, doc01.05.01 |
+| `apps` | doc01.04, doc01.05.01, doc02.23 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
@@ -154,19 +157,20 @@ Quick lookup for file-path→doc mapping:
 | `case-study` | doc01.05.02 |
 | `chrome` | doc02.19, doc02.20 |
 | `cli-grammar` | doc03.08 |
+| `client` | doc02.23 |
 | `co-location` | doc02.14 |
 | `cognitive-load` | doc03.04 |
 | `component-tree` | doc02.19 |
 | `components` | doc02.05.02, doc02.13 |
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
-| `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18 |
+| `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
 | `crystallization` | doc02.01 |
 | `css` | doc02.05.05 |
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
-| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03 |
+| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc02.21, doc02.22, doc02.23 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
@@ -182,6 +186,7 @@ Quick lookup for file-path→doc mapping:
 | `facts` | doc00.05 |
 | `fifa-bracketing` | doc01.05.02 |
 | `formalization` | doc02.02, doc03.02 |
+| `format` | doc02.21 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
 | `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03 |
@@ -197,7 +202,7 @@ Quick lookup for file-path→doc mapping:
 | `layout` | doc02.05.03, doc02.05.04 |
 | `legibility` | doc03.07 |
 | `maintenance` | doc00.02 |
-| `mcp` | doc02.04, doc02.15, doc03.06 |
+| `mcp` | doc02.04, doc02.15, doc02.22, doc03.06 |
 | `menus` | doc02.20 |
 | `meta` | doc00.01 |
 | `milestone-1` | doc02.07, doc02.10.01 |
@@ -209,6 +214,7 @@ Quick lookup for file-path→doc mapping:
 | `nodes` | doc03.03 |
 | `notion` | doc03.03 |
 | `openapi` | doc02.10.02 |
+| `operations` | doc02.22 |
 | `overview` | doc02.05.01 |
 | `pack` | doc02.14, doc02.16, doc02.18 |
 | `packs` | doc02.11, doc03.08 |
@@ -230,12 +236,12 @@ Quick lookup for file-path→doc mapping:
 | `reference` | doc02.09, doc02.18 |
 | `reference-graph` | doc03.05 |
 | `renderer` | doc02.16 |
-| `rendering` | doc02.16, doc03.05 |
+| `rendering` | doc02.16, doc02.23, doc03.05 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
 | `rtp` | doc02.10.03 |
-| `schema` | doc02.06.02, doc02.14, doc03.03 |
+| `schema` | doc02.06.02, doc02.14, doc02.21, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
 | `semantic-zoom` | doc03.07 |
 | `server` | doc02.03 |
@@ -252,7 +258,7 @@ Quick lookup for file-path→doc mapping:
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc03.03 |
-| `tools` | doc02.04, doc02.15 |
+| `tools` | doc02.04, doc02.15, doc02.22 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
 | `ui` | doc02.12 |
