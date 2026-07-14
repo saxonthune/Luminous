@@ -1,4 +1,5 @@
 import { For, Show, createSignal, onMount, onCleanup } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import type { CanvasSource } from './sources';
 
 interface DocumentPickerProps {
@@ -34,18 +35,26 @@ export function DocumentPicker(props: DocumentPickerProps) {
   const groups = () => groupByRoot(props.sources);
   const hasRowActions = () => !!(props.onRename || props.onDuplicate || props.onDelete);
   const [openMenuId, setOpenMenuId] = createSignal<string | null>(null);
+  // Screen-space anchor (button's bottom-right corner) for the portaled menu.
+  const [anchor, setAnchor] = createSignal<{ x: number; y: number } | null>(null);
 
   function closeMenu() {
     setOpenMenuId(null);
   }
 
+  // stopImmediatePropagation, not stopPropagation: Solid delegates `click` to a
+  // native document listener, and closeMenu (onMount) is a second native document
+  // listener. Only stopImmediate keeps that sibling listener from firing in the
+  // same click and closing the menu we just opened.
   function toggleMenu(e: MouseEvent, id: string) {
-    e.stopPropagation();
+    e.stopImmediatePropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setAnchor({ x: rect.right, y: rect.bottom });
     setOpenMenuId((prev) => (prev === id ? null : id));
   }
 
   function runAction(e: MouseEvent, action: (source: CanvasSource) => void, source: CanvasSource) {
-    e.stopPropagation();
+    e.stopImmediatePropagation();
     closeMenu();
     action(source);
   }
@@ -122,11 +131,17 @@ export function DocumentPicker(props: DocumentPickerProps) {
                               >
                                 ⋯
                               </button>
-                              <Show when={openMenuId() === source.id}>
+                              <Show when={openMenuId() === source.id && anchor()}>
+                                {(pos) => (
+                                <Portal>
                                 <div
-                                  class="absolute right-0 top-full z-10 min-w-[8rem] rounded-lg border border-border-subtle bg-surface py-1"
-                                  style={{ 'box-shadow': 'var(--shadow-sm)' }}
-                                  onClick={(e) => e.stopPropagation()}
+                                  class="fixed z-50 min-w-[8rem] -translate-x-full rounded-lg border border-border-subtle bg-surface py-1"
+                                  style={{
+                                    'box-shadow': 'var(--shadow-sm)',
+                                    left: `${pos().x}px`,
+                                    top: `${pos().y}px`,
+                                  }}
+                                  onClick={(e) => e.stopImmediatePropagation()}
                                 >
                                   <Show when={props.onRename}>
                                     <button
@@ -153,6 +168,8 @@ export function DocumentPicker(props: DocumentPickerProps) {
                                     </button>
                                   </Show>
                                 </div>
+                                </Portal>
+                                )}
                               </Show>
                             </Show>
                           </li>

@@ -1,0 +1,95 @@
+{
+  "v": 1,
+  "boxes": [
+    {
+      "id": "agent-mcp",
+      "name": "Agent (MCP tools)",
+      "description": "An AI agent authoring documents through the MCP tool groups; mutations go through the same API the browser uses."
+    },
+    {
+      "id": "graph-doc",
+      "name": "Graph documents",
+      "group": "Documents",
+      "description": "*.graph.json — nodes and edges speaking one pack's vocabulary; churns with every pipeline run and authored edit.",
+      "contract": {
+        "format": "prose",
+        "text": "v3: nodes (kind, props, tags), edges (kind, from, to), pack reference. No positions stored; layout is computed at view time. Containment is not a node field — it is derived per view from contain-role edges."
+      }
+    },
+    {
+      "id": "pack-doc",
+      "name": "Pack documents",
+      "group": "Documents",
+      "description": "*.pack.json — the stable vocabulary a graph speaks; changes at library cadence, not edit cadence.",
+      "contract": {
+        "format": "prose",
+        "text": "Node and edge kinds with props schemas, render templates, and views: node roles (spatial/latent/hidden), edge roles (contain/arrow/summary/hidden, cluster pending), layout choice."
+      }
+    },
+    {
+      "id": "dataflow-doc",
+      "name": "Dataflow documents",
+      "group": "Documents",
+      "description": "*.dataflow.json — the Dataflow Designer's own format; no pack, the app is its own vocabulary.",
+      "contract": {
+        "format": "prose",
+        "text": "v1: boxes (id, name, description?, contract {format, text}?, group?), flows (from, to). Boxes sharing a group name form a Group."
+      }
+    },
+    {
+      "id": "server",
+      "name": "Server",
+      "description": "Dumb storage: serves workspace files over HTTP, writes whole documents, and broadcasts file-change notifications over WebSocket. No domain logic."
+    },
+    {
+      "id": "canvas-app",
+      "name": "Luminous Canvas projection",
+      "group": "Apps",
+      "description": "Evaluates the active pack view over the graph — containment tree from contain-role edges, arrows, summaries — and emits node, edge, and (soon) cluster declarations for the engine."
+    },
+    {
+      "id": "dataflow-app",
+      "name": "Dataflow Designer projection",
+      "group": "Apps",
+      "description": "Maps a Document onto the engine: Boxes to nodes, Flows to directed edges, Groups to cluster declarations and layout cluster ids."
+    },
+    {
+      "id": "layout",
+      "name": "Layout functions",
+      "group": "Cactus",
+      "description": "Pure geometry over projected inputs — dagLayout for the Dataflow Designer, composeLayout (grid interior, ELK top level) for Luminous Canvas. Nodes and edges in, positions out, no side effects."
+    },
+    {
+      "id": "canvas-engine",
+      "name": "Canvas components",
+      "group": "Cactus",
+      "description": "The reactive layer that owns the screen: viewport transform, node rect registry, edge and cluster underlay layers, selection and drag gestures. Not pure functions — this is where state lives."
+    },
+    {
+      "id": "pointer",
+      "name": "User input",
+      "description": "Pointer and keyboard gestures: pan, zoom, select, drag. Drags become ephemeral position overrides; the next layout run wins."
+    },
+    {
+      "id": "dom",
+      "name": "Browser DOM",
+      "description": "The rendered canvas the user reads. DOM data attributes double as the engine's hit-testing index — the DOM is the source of truth for what is clickable."
+    }
+  ],
+  "flows": [
+    { "from": "agent-mcp", "to": "graph-doc" },
+    { "from": "agent-mcp", "to": "dataflow-doc" },
+    { "from": "graph-doc", "to": "server" },
+    { "from": "pack-doc", "to": "server" },
+    { "from": "dataflow-doc", "to": "server" },
+    { "from": "server", "to": "canvas-app" },
+    { "from": "server", "to": "dataflow-app" },
+    { "from": "canvas-app", "to": "layout" },
+    { "from": "dataflow-app", "to": "layout" },
+    { "from": "canvas-app", "to": "canvas-engine" },
+    { "from": "dataflow-app", "to": "canvas-engine" },
+    { "from": "layout", "to": "canvas-engine" },
+    { "from": "canvas-engine", "to": "dom" },
+    { "from": "pointer", "to": "canvas-engine" }
+  ]
+}
