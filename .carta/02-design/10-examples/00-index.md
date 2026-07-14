@@ -1,31 +1,18 @@
 ---
 title: Examples
-status: draft
-summary: Use cases that act as gauges for Luminous capabilities — each example defines features the product must enable
-tags: [examples, gauges, use-cases]
+summary: 
+tags: []
 deps: []
 ---
 
 # Examples
 
-Examples in this section are **gauges**, not tutorials. Each one is a concrete use case that, when Luminous can support it end-to-end, validates a category of features. If a user cannot build example N inside Luminous, a capability is missing — and the specific missing capabilities are listed in that example's "features demanded" section.
 
-## Why gauges rather than tutorials
+| Ref | Item | Kind | Summary | Tags |
+|-----|------|------|---------|------|
 
-Tutorials assume the product exists and show how to use it. Gauges run the other direction: they describe what a user wants to accomplish, in enough detail to infer what the tool must provide. Rolled up across all examples, the union of demanded features becomes direct evidence for the product backlog — built from user value, not speculation.
+| doc02.10.01 | Solid.js reference graph | doc | Static analysis of a Solid.js codebase rendered as a canvas — components, signals, and their consumer edges (milestone 1) | examples, milestone-1, static-analysis, solid, pipeline |
+| doc02.10.02 | API coverage workbench | doc | Tri-layer canvas — OpenAPI controllers, JSON Schema aggregate, SQL tables — coverage edges reveal data-flow gaps | examples, openapi, json-schema, sql, coverage, gap-analysis |
+| doc02.10.03 | RTP statechart canvas | doc | Worked example. RankThePlanet (RTP) hands Luminous a navigation statechart and a concept inventory; Luminous renders both as one property graph with two views (statechart shape, concept-coverage shape). | examples, statechart, xstate, concepts, rtp, property-graph |
 
-## Template
-
-Each example follows this shape:
-
-1. **User story** — who is using this, what they are trying to understand or communicate
-2. **Artifacts on the canvas** — the node types, edge types, and nesting shape that appear
-3. **The value** — the question this canvas answers that was hard to answer before
-4. **Features demanded** — bulleted list of Luminous capabilities this example requires
-
-A feature appearing in multiple examples is a signal of importance; a feature that appears in only one is a candidate for scope questions.
-
-## Current examples
-
-- `doc02.10.01` — Solid.js reference graph (milestone 1)
-- `doc02.10.02` — API coverage workbench (OpenAPI ↔ JSON Schema ↔ SQL)
+Topics: concepts, coverage, examples, gap-analysis, json-schema, milestone-1, openapi, pipeline, property-graph, rtp, solid, sql, statechart, static-analysis, xstate

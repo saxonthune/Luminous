@@ -7,23 +7,14 @@ deps: []
 
 # Cactus Canvas Engine
 
-Documentation for the cactus canvas engine — the domain-agnostic primitive system that powers Luminous's visual layer.
 
-**Purpose:** Reference material for anyone building on or modifying the canvas. Covers architecture, public API, coordinate systems, and integration patterns.
+| Ref | Item | Kind | Summary | Tags |
+|-----|------|------|---------|------|
 
-**Audience:** Developers extending the canvas (adding node types, custom interactions, new tools) and AI agents that need to understand the rendering pipeline.
+| doc02.05.01 | Cactus Overview | doc | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview |
+| doc02.05.02 | Cactus API Contract | doc | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types |
+| doc02.05.03 | Layout Primitives | doc | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms |
+| doc02.05.04 | Layout Engine Contract | doc | The LayoutEngine interface and mental model — how the domain layer produces constraints and cactus suggests positions | cactus, layout, architecture |
+| doc02.05.05 | Theme Token Contract | doc | The --cactus-* CSS custom property contract — the named slots cactus declares, its two shipped themes, and how consumers bring their own | cactus, theming, css, contract |
 
-**What belongs here:**
-- Engine architecture and design rationale
-- Public API contracts (components, hooks, types)
-- Coordinate system and hit-testing documentation
-- Integration patterns and DOM attribute conventions
-
-**What doesn't belong here:**
-- Domain-layer documentation (notes, edges, nesting semantics) — that's in 02-design
-- Server or API documentation — see doc02.03
-- Implementation details that change frequently — read the source
-
-**Contents:**
-- `01-overview.md` — Architecture, layers, coordinate systems, design principles
-- `02-api-contract.md` — Complete public API reference (components, hooks, types, utilities)
+Topics: algorithms, api, architecture, cactus, canvas, components, contract, css, engine, hooks, layout, overview, theming, types

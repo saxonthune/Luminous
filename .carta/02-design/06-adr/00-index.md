@@ -1,12 +1,17 @@
 ---
 title: Architecture Decision Records
-summary: Significant architecture decisions with context, rationale, and consequences
-tags: [adr, architecture]
+summary: 
+tags: []
 deps: []
 ---
 
 # Architecture Decision Records
 
-Architecture decisions that shape Luminous. Each ADR captures the context, decision, and consequences of a significant technical choice.
 
-**Format:** Each ADR follows the structure: Status, Context, Decision, Migration Plan, Consequences, References.
+| Ref | Item | Kind | Summary | Tags |
+|-----|------|------|---------|------|
+
+| doc02.06.01 | ADR: React to Solid.js Migration | doc | Architecture decision record for migrating Luminous client-next and cactus from React to Solid.js | adr, architecture, solid, react, performance, reactivity |
+| doc02.06.02 | ADR: Schema discriminant for node vs edge schemas | doc | ADR: Schema becomes a discriminated union NodeSchema | EdgeSchema with an optional kind field on the node variant for backwards compatibility | adr, schema, types, discriminant |
+
+Topics: adr, architecture, discriminant, performance, react, reactivity, schema, solid, types
