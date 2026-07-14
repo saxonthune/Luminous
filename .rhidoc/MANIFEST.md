@@ -35,7 +35,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc02.12, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | — | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01 | — |
 
 ### Milestones
 
@@ -52,8 +52,8 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.05.00 | `05-dataflow-designer/00-index.md` |  |  | — | — | — |
-| doc01.05.01 | `05-dataflow-designer/01-idea.md` |  |  | — | — | — |
-| doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` |  |  | — | — | — |
+| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02 | — |
+| doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` | The motivating case — a bracket-game app built human-with-agent in one evening; the build succeeded, but its largest tax fell exactly where vocabulary and data flow were not visible early | dataflow, case-study, fifa-bracketing, vocabulary, glossary | doc01.05.01 | doc01.05.01 | — |
 
 ## 02-design — Design
 
@@ -139,7 +139,7 @@ Quick lookup for file-path→doc mapping:
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `app-shell` | doc02.12, doc02.13 |
-| `apps` | doc01.04 |
+| `apps` | doc01.04, doc01.05.01 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
@@ -149,6 +149,7 @@ Quick lookup for file-path→doc mapping:
 | `cactus-boundary` | doc02.08 |
 | `canvas` | doc01.01, doc02.05.01, doc02.05.02, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
+| `case-study` | doc01.05.02 |
 | `chrome` | doc02.19, doc02.20 |
 | `cli-grammar` | doc03.08 |
 | `co-location` | doc02.14 |
@@ -163,9 +164,10 @@ Quick lookup for file-path→doc mapping:
 | `css` | doc02.05.05 |
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
+| `dataflow` | doc01.05.01, doc01.05.02 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
-| `design` | doc02.02, doc02.08 |
+| `design` | doc01.05.01, doc02.02, doc02.08 |
 | `disclosure` | doc02.11 |
 | `discriminant` | doc02.06.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04 |
@@ -175,10 +177,11 @@ Quick lookup for file-path→doc mapping:
 | `edges` | doc02.08 |
 | `engine` | doc02.05.01 |
 | `examples` | doc02.10.01, doc02.10.02, doc02.10.03, doc02.18 |
+| `fifa-bracketing` | doc01.05.02 |
 | `formalization` | doc02.02, doc03.02 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04 |
+| `glossary` | doc00.04, doc01.05.02 |
 | `graph` | doc02.15 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
@@ -249,13 +252,13 @@ Quick lookup for file-path→doc mapping:
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
 | `ui` | doc02.12 |
-| `unfolding` | doc02.01, doc02.02 |
+| `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
 | `views` | doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc03.04 |
-| `vocabulary` | doc00.04, doc03.02 |
+| `vocabulary` | doc00.04, doc01.05.02, doc03.02 |
 | `workbench` | doc03.08 |
 | `xstate` | doc02.10.03 |
 | `zoom` | doc03.07 |
