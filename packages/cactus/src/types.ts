@@ -36,4 +36,7 @@ export interface ClusterDeclaration {
   memberIds: string[];
   label?: string;
   tint?: string;
+  /** When provided, the label becomes editable: double-click swaps it for a
+      text input; commit (Enter or blur) calls back with the new value. */
+  onLabelEdit?: (newLabel: string) => void;
 }

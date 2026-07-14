@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('viewer loads a canvas via picker', async ({ page }) => {
-  await page.goto('http://localhost:5200/')
+  await page.goto('/')
   // Picker should appear with the "Canvases" heading
   await expect(page.locator('h1', { hasText: 'Canvases' })).toBeVisible()
   // Click the sample-primitives entry

@@ -9,6 +9,7 @@ import {
   copyDocument,
   moveDocument,
   deleteDocument,
+  writeDocument,
   type CanvasSource,
 } from '../../sources';
 import { readParam, writeParam } from '../../urlState';
@@ -33,6 +34,7 @@ export function DataflowApp() {
   const [toasts, setToasts] = createSignal<Toast[]>([]);
   const [renaming, setRenaming] = createSignal<CanvasSource | null>(null);
   const [deleting, setDeleting] = createSignal<CanvasSource | null>(null);
+  let ownWritesInFlight = 0;
 
   function enqueueToast(message: string) {
     const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -82,6 +84,19 @@ export function DataflowApp() {
     writeParam('src', source.id);
     setShell({ kind: 'loadingDoc' });
     loadDoc(source.id);
+  }
+
+  async function dispatchDoc(next: DataflowDocument) {
+    const id = sourceId();
+    if (!id) return;
+    setDoc(next);
+    ownWritesInFlight += 1;
+    const result = await writeDocument(id, next);
+    if (!result.ok) {
+      ownWritesInFlight -= 1;
+      enqueueToast(`Failed to save changes: ${result.error}`);
+      loadDoc(id);
+    }
   }
 
   function onBack() {
@@ -183,7 +198,12 @@ export function DataflowApp() {
     boot();
     // eslint-disable-next-line solid/reactivity -- WS callback, not a render path; sourceId() read is intentionally untracked
     const dispose = watchDocuments((path) => {
-      if (path === sourceId()) loadDoc(path);
+      if (path !== sourceId()) return;
+      if (ownWritesInFlight > 0) {
+        ownWritesInFlight -= 1;
+        return;
+      }
+      loadDoc(path);
     });
     onCleanup(dispose);
   });
@@ -238,7 +258,7 @@ export function DataflowApp() {
             </div>
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>
-            <DataflowCanvas doc={doc()!} />
+            <DataflowCanvas doc={doc()!} onDocChange={(next) => void dispatchDoc(next)} />
           </Match>
           <Match when={shell().kind === 'error'}>
             {(() => {

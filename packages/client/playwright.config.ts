@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// Dedicated e2e ports, distinct from the dev stack (5200/4080), so the suite
+// always tests THIS checkout. Reusing a running dev server silently tests
+// whatever code that server happens to serve — e.g. the main repo while the
+// suite runs in a worktree.
+const CLIENT_PORT = 5300
+const API_PORT = 4380
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -8,7 +15,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5200',
+    baseURL: `http://localhost:${CLIENT_PORT}`,
     trace: 'on-first-retry',
   },
   projects: [
@@ -18,9 +25,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm -C ../server exec tsx src/index.ts -- --dir ../../.canvases & pnpm dev',
-    url: 'http://localhost:5200',
-    reuseExistingServer: !process.env.CI,
+    command: `PORT=${API_PORT} pnpm -C ../server exec tsx src/index.ts -- --dir ../../.canvases & CLIENT_PORT=${CLIENT_PORT} API_PORT=${API_PORT} pnpm dev`,
+    url: `http://localhost:${CLIENT_PORT}`,
+    reuseExistingServer: false,
     timeout: 30000,
   },
 })

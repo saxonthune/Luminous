@@ -66,6 +66,8 @@ export interface CanvasProps {
   nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
   /** Returns a MenuSchema for a background right-click, or undefined for no menu. */
   backgroundContextMenu?: () => MenuSchema | undefined;
+  /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
+  edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
 }
 
 export interface CanvasRef {
@@ -75,6 +77,79 @@ export interface CanvasRef {
   zoomIn: () => void;
   zoomOut: () => void;
   clearSelection: () => void;
+  getSelectedIds: () => ReadonlyArray<string>;
+}
+
+/**
+ * Cluster label — passive text by default; double-click-editable when
+ * `onLabelEdit` is provided. Editing state is local to this component so a
+ * per-cluster signal isn't threaded through the parent.
+ */
+function ClusterLabel(props: { label: string; onLabelEdit?: (newLabel: string) => void }) {
+  const [editing, setEditing] = createSignal(false);
+  let inputRef: HTMLInputElement | undefined;
+
+  const startEdit = () => {
+    if (!props.onLabelEdit) return;
+    setEditing(true);
+    queueMicrotask(() => {
+      inputRef?.focus();
+      inputRef?.select();
+    });
+  };
+
+  const commit = () => {
+    const value = inputRef?.value ?? '';
+    setEditing(false);
+    if (value !== '' && value !== props.label) {
+      props.onLabelEdit?.(value);
+    }
+  };
+
+  const cancel = () => setEditing(false);
+
+  return (
+    <Show
+      when={editing()}
+      fallback={
+        <div
+          style={{
+            position: 'absolute',
+            right: '8px',
+            bottom: '4px',
+            'font-size': '11px',
+            color: 'var(--cactus-fg-muted, #6b7280)',
+            'pointer-events': props.onLabelEdit ? 'auto' : 'none',
+            cursor: props.onLabelEdit ? 'text' : undefined,
+          }}
+          data-no-pan={props.onLabelEdit ? 'true' : undefined}
+          onDblClick={props.onLabelEdit ? (e) => { e.stopPropagation(); startEdit(); } : undefined}
+        >
+          {props.label}
+        </div>
+      }
+    >
+      <input
+        ref={inputRef}
+        value={props.label}
+        style={{
+          position: 'absolute',
+          right: '8px',
+          bottom: '4px',
+          'font-size': '11px',
+          'pointer-events': 'auto',
+        }}
+        data-no-pan="true"
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') commit();
+          else if (e.key === 'Escape') cancel();
+        }}
+        onBlur={commit}
+      />
+    </Show>
+  );
 }
 
 /**
@@ -116,17 +191,7 @@ export function ClusterUnderlay(props: {
                 }}
               >
                 <Show when={cluster.label}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '8px',
-                      bottom: '4px',
-                      'font-size': '11px',
-                      color: 'var(--cactus-fg-muted, #6b7280)',
-                    }}
-                  >
-                    {cluster.label}
-                  </div>
+                  <ClusterLabel label={cluster.label!} onLabelEdit={cluster.onLabelEdit} />
                 </Show>
               </div>
             )}
@@ -275,6 +340,7 @@ export function Canvas(props: CanvasProps) {
     zoomIn,
     zoomOut,
     clearSelection,
+    getSelectedIds: () => selectedIds(),
   });
 
   const contextValue: CanvasContextValue = {
@@ -316,6 +382,16 @@ export function Canvas(props: CanvasProps) {
     }
 
     if (!container) {
+      const edgeEl = target.closest?.('[data-edge-id]');
+      if (edgeEl && props.edgeContextMenu) {
+        const edgeId = edgeEl.getAttribute('data-edge-id')!;
+        const schema = props.edgeContextMenu(edgeId);
+        if (schema && schema.items.length > 0) {
+          e.preventDefault();
+          setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+          return;
+        }
+      }
       if (props.backgroundContextMenu) {
         const schema = props.backgroundContextMenu();
         if (schema && schema.items.length > 0) {

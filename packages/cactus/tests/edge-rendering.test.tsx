@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from 'solid-js/web';
 import { Canvas } from '../src/Canvas';
+import type { CanvasRef } from '../src/Canvas';
 import { NodeContainer } from '../src/NodeContainer';
 import type { EdgeDeclaration } from '../src/types';
 
@@ -204,6 +205,70 @@ describe('Canvas edge rendering', () => {
     // Click the same label text again to toggle (collapse)
     text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(labels!.querySelector('foreignObject')).toBeNull();
+
+    cleanup();
+  });
+
+  it('renders an invisible hit line with data-edge-id alongside the visible line', () => {
+    const edges: EdgeDeclaration[] = [
+      { id: 'e1', sourceId: 'node-a', targetId: 'node-b', styling: { width: 2 } },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const { lines } = getEdgeLayers(container);
+    const hitLine = lines!.querySelector('line[data-edge-id="e1"]');
+    expect(hitLine).not.toBeNull();
+    expect(hitLine!.getAttribute('stroke')).toBe('transparent');
+    expect(Number(hitLine!.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(12);
+
+    cleanup();
+  });
+
+  it('opens edgeContextMenu on right-click over an edge hit line', () => {
+    const edges: EdgeDeclaration[] = [
+      { id: 'e1', sourceId: 'node-a', targetId: 'node-b' },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas
+        edges={edges}
+        edgeContextMenu={(edgeId) =>
+          edgeId === 'e1'
+            ? { id: 'edge-menu', items: [{ type: 'action', action: { id: 'delete', label: 'Delete' } }] }
+            : undefined
+        }
+      >
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const { lines } = getEdgeLayers(container);
+    const hitLine = lines!.querySelector('line[data-edge-id="e1"]')!;
+    hitLine.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+
+    expect(document.body.textContent).toContain('Delete');
+
+    cleanup();
+  });
+
+  it('exposes getSelectedIds on CanvasRef, empty when nothing is selected', () => {
+    let ref: CanvasRef | undefined;
+
+    const { cleanup } = renderIntoContainer(() => (
+      <Canvas ref={(r) => { ref = r; }}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    expect(ref).toBeDefined();
+    expect(ref!.getSelectedIds()).toEqual([]);
 
     cleanup();
   });

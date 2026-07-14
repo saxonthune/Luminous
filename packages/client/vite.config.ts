@@ -23,10 +23,10 @@ export default defineConfig({
     __GITHUB_PAGES__: JSON.stringify(!!process.env.GITHUB_PAGES),
   },
   server: {
-    port: 5200,
+    port: Number(process.env.CLIENT_PORT ?? 5200),
     proxy: {
-      '/api': 'http://localhost:4080',
-      '/ws': { target: 'http://localhost:4080', ws: true },
+      '/api': `http://localhost:${process.env.API_PORT ?? 4080}`,
+      '/ws': { target: `http://localhost:${process.env.API_PORT ?? 4080}`, ws: true },
     },
   },
 })

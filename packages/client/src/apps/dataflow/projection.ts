@@ -5,6 +5,16 @@ function edgeId(flow: DataflowFlow, i: number): string {
   return `${flow.from}->${flow.to}-${i}`;
 }
 
+/** Inverse of `edgeId`: recovers the `from`/`to` box ids from a flow's edge id. */
+export function parseEdgeId(id: string): { from: string; to: string } | undefined {
+  const arrow = id.indexOf('->');
+  if (arrow === -1) return undefined;
+  const from = id.slice(0, arrow);
+  const match = /^(.*)-\d+$/.exec(id.slice(arrow + 2));
+  if (!match) return undefined;
+  return { from, to: match[1] };
+}
+
 export const BOX_WIDTH = 220;
 const BASE_HEIGHT = 72;
 const DESCRIPTION_CHARS_PER_LINE = 34;

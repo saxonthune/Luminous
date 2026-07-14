@@ -50,4 +50,90 @@ describe('ClusterUnderlay', () => {
     expect(container.textContent).toContain('My Cluster');
     cleanup();
   });
+
+  it('does not make the label interactive when onLabelEdit is absent', () => {
+    const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
+    const clusters: ClusterDeclaration[] = [{ id: 'c1', memberIds: ['a'], label: 'My Cluster' }];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+    ));
+    const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
+    expect(label.style.pointerEvents).toBe('none');
+    cleanup();
+  });
+
+  it('swaps the label for an input on double-click and commits on Enter', () => {
+    const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
+    let committed: string | null = null;
+    const clusters: ClusterDeclaration[] = [
+      { id: 'c1', memberIds: ['a'], label: 'My Cluster', onLabelEdit: (v) => { committed = v; } },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+    ));
+
+    const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
+    expect(label.style.pointerEvents).toBe('auto');
+    label.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    const input = container.querySelector('input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    input.value = 'Renamed';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(committed).toBe('Renamed');
+    expect(container.querySelector('input')).toBeNull();
+
+    cleanup();
+  });
+
+  it('cancels edit on Escape without calling onLabelEdit', () => {
+    const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
+    let called = false;
+    const clusters: ClusterDeclaration[] = [
+      { id: 'c1', memberIds: ['a'], label: 'My Cluster', onLabelEdit: () => { called = true; } },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+    ));
+
+    const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
+    label.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    const input = container.querySelector('input') as HTMLInputElement;
+    input.value = 'Changed';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(called).toBe(false);
+    expect(container.querySelector('input')).toBeNull();
+    expect(container.textContent).toContain('My Cluster');
+
+    cleanup();
+  });
+
+  it('does not call onLabelEdit when the committed value is unchanged or empty', () => {
+    const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
+    let calls = 0;
+    const clusters: ClusterDeclaration[] = [
+      { id: 'c1', memberIds: ['a'], label: 'My Cluster', onLabelEdit: () => { calls++; } },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+    ));
+
+    const findLabel = () =>
+      Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
+
+    findLabel().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    let input = container.querySelector('input') as HTMLInputElement;
+    input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    expect(calls).toBe(0);
+
+    findLabel().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    input = container.querySelector('input') as HTMLInputElement;
+    input.value = '';
+    input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
+    expect(calls).toBe(0);
+
+    cleanup();
+  });
 });

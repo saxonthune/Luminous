@@ -1,6 +1,6 @@
 export type DocumentOpResult = { ok: true; path: string } | { ok: false; error: string };
 
-async function postJson(url: string, body: Record<string, string>): Promise<DocumentOpResult> {
+async function postJson(url: string, body: Record<string, unknown>): Promise<DocumentOpResult> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -19,4 +19,8 @@ export function moveDocument(from: string, to: string): Promise<DocumentOpResult
 
 export function deleteDocument(path: string): Promise<DocumentOpResult> {
   return postJson('/api/document/delete', { path });
+}
+
+export function writeDocument(path: string, content: unknown): Promise<DocumentOpResult> {
+  return postJson('/api/document/write', { path, content });
 }

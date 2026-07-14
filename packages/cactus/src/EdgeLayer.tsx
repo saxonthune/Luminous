@@ -218,6 +218,16 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                     <Show when={arrowHead}>
                       <path d={arrowHeadPath(pts().x1, pts().y1, pts().x2, pts().y2)} fill={color} opacity={opacity()} />
                     </Show>
+                    <line
+                      x1={pts().x1}
+                      y1={pts().y1}
+                      x2={pts().x2}
+                      y2={pts().y2}
+                      stroke="transparent"
+                      stroke-width={Math.max(12, width)}
+                      data-edge-id={edge.id}
+                      style={{ 'pointer-events': 'stroke' }}
+                    />
                   </Show>
                   <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
                     <Show when={labelBox()}>
