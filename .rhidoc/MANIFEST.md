@@ -53,9 +53,10 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.05.00 | `05-dataflow-designer/00-index.md` |  |  | — | — | — |
-| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03, doc02.21, doc02.23 | — |
+| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03, doc01.05.04, doc02.21, doc02.23 | — |
 | doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` | The motivating case — a bracket-game app built human-with-agent in one evening; the build succeeded, but its largest tax fell exactly where vocabulary and data flow were not visible early | dataflow, case-study, fifa-bracketing, vocabulary, glossary | doc01.05.01 | doc01.05.01 | — |
 | doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | doc02.21 | — |
+| doc01.05.04 | `05-dataflow-designer/04-ui-requirements.md` | The app's UI capabilities as a controlled, EARS-like list — placeholder, to be filled after the group/underlay design settles | dataflow, ui, requirements | doc01.05.01, doc02.23 | — | — |
 
 ## 02-design — Design
 
@@ -82,7 +83,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.20 | `20-chrome-schema.md` | Action records, menu and toolbar schemas, chrome slots; cactus owns chrome rendering, Luminous owns the schema producers, packs stay unchanged. | chrome, api, actions, menus, cactus, boundary | doc02.14, doc02.19 | — | — |
 | doc02.21 | `21-dataflow-document-format.md` | The *.dataflow.json document — Boxes and Flows carrying design intention; TypeScript types own the shape, a sidecar JSON Schema describes it | dataflow, format, contract, schema | doc01.05.01, doc01.05.03 | doc02.22, doc02.23 | dataflow-document.schema.json |
 | doc02.22 | `22-dataflow-operations.md` | The operation set over a dataflow Document — the dataflow MCP tool group's verbs, their validation rules, and the check warnings | dataflow, mcp, operations, tools | doc02.21, doc02.04 | doc02.23 | — |
-| doc02.23 | `23-dataflow-designer-app.md` | The client app — read-only projection of dataflow Documents onto cactus, live-reloading as the agent writes; document plumbing shared with Luminous Canvas | dataflow, apps, client, rendering | doc01.05.01, doc02.21, doc02.22, doc01.04 | — | — |
+| doc02.23 | `23-dataflow-designer-app.md` | The client app — read-only projection of dataflow Documents onto cactus, live-reloading as the agent writes; document plumbing shared with Luminous Canvas | dataflow, apps, client, rendering | doc01.05.01, doc02.21, doc02.22, doc01.04 | doc01.05.04 | — |
 
 ### Cactus Canvas Engine
 
@@ -90,11 +91,12 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc02.05.00 | `05-cactus/00-index.md` |  |  | — | — | — |
-| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.06.02, doc02.08, doc03.03 | — |
+| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.06.02, doc02.08, doc03.03 | — |
 | doc02.05.02 | `05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc02.05.01 | — | — |
-| doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | doc02.05.04 | — |
+| doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | doc02.05.04, doc02.05.06 | — |
 | doc02.05.04 | `05-cactus/04-layout-engine-contract.md` | The LayoutEngine interface and mental model — how the domain layer produces constraints and cactus suggests positions | cactus, layout, architecture | doc02.05.01, doc02.05.03 | — | — |
 | doc02.05.05 | `05-cactus/05-theme-token-contract.md` | The --cactus-* CSS custom property contract — the named slots cactus declares, its two shipped themes, and how consumers bring their own | cactus, theming, css, contract | doc02.05.01 | — | — |
+| doc02.05.06 | `05-cactus/06-prior-art.md` | Canvas and graph-layout libraries placed on a spectrum of user control, and the frame-versus-group distinction cactus adopts for containers and underlay groups | cactus, prior-art, groups, layout, canvas | doc02.05.01, doc02.05.03 | — | — |
 
 ### Architecture Decision Records
 
@@ -150,9 +152,9 @@ Quick lookup for file-path→doc mapping:
 | `bevy` | doc03.03 |
 | `boundaries` | doc02.19 |
 | `boundary` | doc02.20 |
-| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.20, doc03.07 |
+| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.20, doc03.07 |
 | `cactus-boundary` | doc02.08 |
-| `canvas` | doc01.01, doc02.05.01, doc02.05.02, doc02.19, doc03.06 |
+| `canvas` | doc01.01, doc02.05.01, doc02.05.02, doc02.05.06, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
 | `case-study` | doc01.05.02 |
 | `chrome` | doc02.19, doc02.20 |
@@ -170,7 +172,7 @@ Quick lookup for file-path→doc mapping:
 | `css` | doc02.05.05 |
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
-| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc02.21, doc02.22, doc02.23 |
+| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc02.21, doc02.22, doc02.23 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
@@ -191,6 +193,7 @@ Quick lookup for file-path→doc mapping:
 | `gestalt` | doc03.04 |
 | `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03 |
 | `graph` | doc02.15 |
+| `groups` | doc02.05.06 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
 | `http` | doc02.03 |
@@ -199,7 +202,7 @@ Quick lookup for file-path→doc mapping:
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |
 | `labor` | doc03.08 |
-| `layout` | doc02.05.03, doc02.05.04 |
+| `layout` | doc02.05.03, doc02.05.04, doc02.05.06 |
 | `legibility` | doc03.07 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc02.04, doc02.15, doc02.22, doc03.06 |
@@ -227,6 +230,7 @@ Quick lookup for file-path→doc mapping:
 | `plain-language` | doc00.04 |
 | `platform` | doc01.04 |
 | `primitives` | doc02.09, doc02.16 |
+| `prior-art` | doc02.05.06 |
 | `projection` | doc02.17 |
 | `property-graph` | doc02.10.03, doc02.11 |
 | `qwik` | doc03.05 |
@@ -237,6 +241,7 @@ Quick lookup for file-path→doc mapping:
 | `reference-graph` | doc03.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.23, doc03.05 |
+| `requirements` | doc01.05.04 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
@@ -261,7 +266,7 @@ Quick lookup for file-path→doc mapping:
 | `tools` | doc02.04, doc02.15, doc02.22 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
-| `ui` | doc02.12 |
+| `ui` | doc01.05.04, doc02.12 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |

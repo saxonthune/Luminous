@@ -15,7 +15,7 @@ deps: []
 | doc02.02 | Concept Inventory | doc | Luminous concepts (Jackson framework) — Workspace, Document, Note, Edge, Nesting, Canvas, Selection, Schema, Formalization, Schema-Pair, Verification | concepts, design, jackson, formalization, unfolding |
 | doc02.03 | API Contract | doc | HTTP + WebSocket API for @luminous/server — document listing, reading, mutation actions, diagnostics, and change notifications | api, http, server, contract |
 | doc02.04 | MCP Design | doc | MCP architecture — config-driven, concept-grouped tools over HTTP. AI uses same action contract as browser client. | mcp, ai, api, tools, architecture |
-| doc02.05 | Cactus Canvas Engine | group (5) | — | — |
+| doc02.05 | Cactus Canvas Engine | group (6) | — | — |
 | doc02.06 | Architecture Decision Records | group (2) | — | — |
 | doc02.07 | Solid.js Pipeline Specification | doc | Node types, nesting rules, and edge semantics for the Solid.js static analysis pipeline | pipeline, solid, static-analysis, milestone-1 |
 | doc02.08 | Edge Schemas | doc | Edge schema system — discriminated union, layoutRole, connection constraints, declarative routing (exitSide/enterSide), ancestor edge suppression, and the runtime filter pattern | edges, schemas, design, cactus-boundary |
