@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js';
+import { For, Show, createSignal, onMount, onCleanup } from 'solid-js';
 import type { CanvasSource } from './sources';
 
 interface DocumentPickerProps {
@@ -6,6 +6,9 @@ interface DocumentPickerProps {
   onSelect: (source: CanvasSource) => void;
   loadingId?: string | null;
   heading?: string;
+  onRename?: (source: CanvasSource) => void;
+  onDuplicate?: (source: CanvasSource) => void;
+  onDelete?: (source: CanvasSource) => void;
 }
 
 interface RootGroup {
@@ -29,6 +32,37 @@ function groupByRoot(sources: CanvasSource[]): RootGroup[] {
 
 export function DocumentPicker(props: DocumentPickerProps) {
   const groups = () => groupByRoot(props.sources);
+  const hasRowActions = () => !!(props.onRename || props.onDuplicate || props.onDelete);
+  const [openMenuId, setOpenMenuId] = createSignal<string | null>(null);
+
+  function closeMenu() {
+    setOpenMenuId(null);
+  }
+
+  function toggleMenu(e: MouseEvent, id: string) {
+    e.stopPropagation();
+    setOpenMenuId((prev) => (prev === id ? null : id));
+  }
+
+  function runAction(e: MouseEvent, action: (source: CanvasSource) => void, source: CanvasSource) {
+    e.stopPropagation();
+    closeMenu();
+    action(source);
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') closeMenu();
+  }
+
+  onMount(() => {
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', onKeyDown);
+  });
+
+  onCleanup(() => {
+    document.removeEventListener('click', closeMenu);
+    document.removeEventListener('keydown', onKeyDown);
+  });
 
   return (
     <div class="flex flex-1 items-center justify-center bg-canvas">
@@ -67,11 +101,11 @@ export function DocumentPicker(props: DocumentPickerProps) {
                       {(source) => {
                         const isLoading = () => props.loadingId === source.id;
                         return (
-                          <li>
+                          <li class="relative flex items-center">
                             <button
                               onClick={() => props.onSelect(source)}
                               disabled={!!props.loadingId}
-                              class="flex w-full items-center justify-between py-3 text-left hover:text-accent disabled:opacity-60"
+                              class="flex flex-1 items-center justify-between py-3 text-left hover:text-accent disabled:opacity-60"
                             >
                               <span class="text-sm font-medium text-fg hover:text-accent">
                                 {source.label}
@@ -80,6 +114,47 @@ export function DocumentPicker(props: DocumentPickerProps) {
                                 <span class="text-xs text-fg-muted">loading…</span>
                               </Show>
                             </button>
+                            <Show when={hasRowActions()}>
+                              <button
+                                onClick={(e) => toggleMenu(e, source.id)}
+                                class="ml-2 rounded px-2 py-1 text-fg-muted hover:bg-surface-alt hover:text-fg"
+                                title="More actions"
+                              >
+                                ⋯
+                              </button>
+                              <Show when={openMenuId() === source.id}>
+                                <div
+                                  class="absolute right-0 top-full z-10 min-w-[8rem] rounded-lg border border-border-subtle bg-surface py-1"
+                                  style={{ 'box-shadow': 'var(--shadow-sm)' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Show when={props.onRename}>
+                                    <button
+                                      onClick={(e) => runAction(e, props.onRename!, source)}
+                                      class="block w-full px-3 py-1.5 text-left text-sm text-fg hover:bg-surface-alt"
+                                    >
+                                      Rename
+                                    </button>
+                                  </Show>
+                                  <Show when={props.onDuplicate}>
+                                    <button
+                                      onClick={(e) => runAction(e, props.onDuplicate!, source)}
+                                      class="block w-full px-3 py-1.5 text-left text-sm text-fg hover:bg-surface-alt"
+                                    >
+                                      Duplicate
+                                    </button>
+                                  </Show>
+                                  <Show when={props.onDelete}>
+                                    <button
+                                      onClick={(e) => runAction(e, props.onDelete!, source)}
+                                      class="block w-full px-3 py-1.5 text-left text-sm text-red-500 hover:bg-surface-alt"
+                                    >
+                                      Delete
+                                    </button>
+                                  </Show>
+                                </div>
+                              </Show>
+                            </Show>
                           </li>
                         );
                       }}

@@ -1,5 +1,5 @@
 import { watch } from "node:fs"
-import { readFile, writeFile, access, stat } from "node:fs/promises"
+import { readFile, writeFile, access, stat, copyFile, rename, rm } from "node:fs/promises"
 import { resolve } from "node:path"
 import type { Document } from "./types.js"
 import { applyActionToDoc } from "./actions.js"
@@ -126,6 +126,75 @@ export async function createDocument(
   await saveDocument(absPath, doc)
   cache.set(relativePath, doc)
   return { ok: true, path: relativePath }
+}
+
+function invalidate(relativePath: string): void {
+  cache.delete(relativePath)
+  rawCache.delete(relativePath)
+  dirty.delete(relativePath)
+  const timer = timers.get(relativePath)
+  if (timer) {
+    clearTimeout(timer)
+    timers.delete(relativePath)
+  }
+}
+
+export async function copyDocument(
+  from: string,
+  to: string
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const fromAbs = resolveDocPath(from)
+  const toAbs = resolveDocPath(to)
+  try {
+    await access(toAbs)
+    return { ok: false, error: "target exists" }
+  } catch {
+    // target does not exist — proceed
+  }
+  try {
+    await copyFile(fromAbs, toAbs)
+  } catch {
+    return { ok: false, error: "source not found" }
+  }
+  recentWrites.set(toAbs, Date.now())
+  return { ok: true, path: to }
+}
+
+export async function moveDocument(
+  from: string,
+  to: string
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const fromAbs = resolveDocPath(from)
+  const toAbs = resolveDocPath(to)
+  try {
+    await access(toAbs)
+    return { ok: false, error: "target exists" }
+  } catch {
+    // target does not exist — proceed
+  }
+  try {
+    await rename(fromAbs, toAbs)
+  } catch {
+    return { ok: false, error: "source not found" }
+  }
+  invalidate(from)
+  recentWrites.set(fromAbs, Date.now())
+  recentWrites.set(toAbs, Date.now())
+  return { ok: true, path: to }
+}
+
+export async function deleteDocument(
+  path: string
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  const abs = resolveDocPath(path)
+  try {
+    await rm(abs)
+  } catch {
+    return { ok: false, error: "not found" }
+  }
+  invalidate(path)
+  recentWrites.set(abs, Date.now())
+  return { ok: true, path }
 }
 
 export async function applyAction(

@@ -16,6 +16,9 @@ import {
   getRawDocument,
   writeRawDocument,
   isDataflowPath,
+  copyDocument,
+  moveDocument,
+  deleteDocument,
 } from "./store.js"
 
 const port = Number(process.env.PORT ?? 4080)
@@ -200,6 +203,81 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     await writeRawDocument(docPath, body.content)
     broadcast(docPath)
     sendJson(res, 200, { ok: true, path: docPath })
+    return
+  }
+
+  // POST /api/document/copy — { from, to } — duplicate a .dataflow.json file.
+  if (url === "/api/document/copy" && req.method === "POST") {
+    let body: { from?: string; to?: string }
+    try {
+      body = (await parseBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: "invalid JSON" })
+      return
+    }
+    const { from, to } = body
+    if (!from || hasTraversal(from) || !to || hasTraversal(to)) {
+      sendJson(res, 400, { ok: false, error: "invalid path" })
+      return
+    }
+    if (!isDataflowPath(from) || !isDataflowPath(to)) {
+      sendJson(res, 400, { ok: false, error: "only .dataflow.json paths may be copied here" })
+      return
+    }
+    const result = await copyDocument(from, to)
+    if (result.ok) broadcast(to)
+    sendJson(res, result.ok ? 200 : 400, result)
+    return
+  }
+
+  // POST /api/document/move — { from, to } — move or rename a .dataflow.json file.
+  if (url === "/api/document/move" && req.method === "POST") {
+    let body: { from?: string; to?: string }
+    try {
+      body = (await parseBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: "invalid JSON" })
+      return
+    }
+    const { from, to } = body
+    if (!from || hasTraversal(from) || !to || hasTraversal(to)) {
+      sendJson(res, 400, { ok: false, error: "invalid path" })
+      return
+    }
+    if (!isDataflowPath(from) || !isDataflowPath(to)) {
+      sendJson(res, 400, { ok: false, error: "only .dataflow.json paths may be moved here" })
+      return
+    }
+    const result = await moveDocument(from, to)
+    if (result.ok) {
+      broadcast(from)
+      broadcast(to)
+    }
+    sendJson(res, result.ok ? 200 : 400, result)
+    return
+  }
+
+  // POST /api/document/delete — { path } — delete a .dataflow.json file.
+  if (url === "/api/document/delete" && req.method === "POST") {
+    let body: { path?: string }
+    try {
+      body = (await parseBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: "invalid JSON" })
+      return
+    }
+    const docPath = body.path
+    if (!docPath || hasTraversal(docPath)) {
+      sendJson(res, 400, { ok: false, error: "invalid path" })
+      return
+    }
+    if (!isDataflowPath(docPath)) {
+      sendJson(res, 400, { ok: false, error: "only .dataflow.json paths may be deleted here" })
+      return
+    }
+    const result = await deleteDocument(docPath)
+    if (result.ok) broadcast(docPath)
+    sendJson(res, result.ok ? 200 : 400, result)
     return
   }
 
