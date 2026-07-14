@@ -28,7 +28,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc00.04 | `04-plain-language.md` | The plain-language standard for workspace prose — named standards, contrastive rules for jargon, word senses, parts of speech, prepositions, and sentence shape; the glossary as controlled vocabulary | docs, plain-language, style, vocabulary, glossary | — | — | — |
 | doc00.05 | `05-controlled-vocabulary.md` | The workspace glossary as a controlled vocabulary — entry kinds and sentence patterns from fact-based modeling (ORM), a worked example, and the naming rule | glossary, vocabulary, facts, subtypes, naming, docs | — | — | — |
 
-## 01-vision — Vision
+## 01-product — Vision
 
 | Ref | File | Summary | Tags | Deps | Refs | Attachments |
 |-----|------|---------|------|------|------|-------------|
@@ -55,8 +55,27 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.05.00 | `05-dataflow-designer/00-index.md` |  |  | — | — | — |
 | doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03, doc01.05.04, doc02.21, doc02.23 | — |
 | doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` | The motivating case — a bracket-game app built human-with-agent in one evening; the build succeeded, but its largest tax fell exactly where vocabulary and data flow were not visible early | dataflow, case-study, fifa-bracketing, vocabulary, glossary | doc01.05.01 | doc01.05.01 | — |
-| doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | doc02.21 | — |
-| doc01.05.04 | `05-dataflow-designer/04-ui-requirements.md` | The app's UI capabilities as a controlled, EARS-like list — placeholder, to be filled after the group/underlay design settles | dataflow, ui, requirements | doc01.05.01, doc02.23 | — | — |
+| doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, Group, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | doc02.21 | — |
+| doc01.05.04 | `05-dataflow-designer/04-ui-requirements.md` | The Dataflow Designer's UI capabilities as a controlled, EARS-like list of shall-statements, grouped by area | dataflow, ui, requirements | doc01.05.01, doc02.23 | — | — |
+
+### Cactus
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.06.00 | `06-cactus/00-index.md` |  |  | — | — | — |
+| doc01.06.01.00 | `06-cactus/01-prior-art/00-index.md` |  |  | — | — | — |
+| doc01.06.01.01 | `06-cactus/01-prior-art/01-overview.md` | The prior-art set for cactus as a canvas library — ten documented peers, the level rule that selects them, and the fixed shape every product doc follows | cactus, prior-art, overview, canvas, libraries | doc02.05.01 | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11, doc02.05.06 | — |
+| doc01.06.01.02 | `06-cactus/01-prior-art/02-react-flow.md` | React Flow's mental model — nodes and edges as host-owned state, change objects, handles, subflows — and the library/host responsibility split | cactus, prior-art, react-flow, node-and-edge, web-library | doc01.06.01.01 | — | — |
+| doc01.06.01.03 | `06-cactus/01-prior-art/03-tldraw.md` | The tldraw SDK's mental model — an Editor over a reactive record Store, shapes backed by ShapeUtil, tools as a state chart, bindings, the camera, and the two grouping forms (derived-bounds groups and owning frames) | cactus, prior-art, tldraw, whiteboard, web-library | doc01.06.01.01 | — | — |
+| doc01.06.01.04 | `06-cactus/01-prior-art/04-konva.md` | Konva's mental model — a Stage/Layer/Group/Shape scene graph with no node/edge semantics — and the split between what the library ships (transform, hit detection, tween) and what the host must build | cactus, prior-art, konva, scene-graph, web-library | doc01.06.01.01 | — | — |
+| doc01.06.01.05 | `06-cactus/01-prior-art/05-cytoscape.md` | Cytoscape.js's mental model — the cy instance, elements as JSON in one collection, the selector/stylesheet model, built-in layouts and graph algorithms, and compound nodes whose bounds derive from their children | cactus, prior-art, cytoscape, graph-visualization, web-library | doc01.06.01.01 | — | — |
+| doc01.06.01.06 | `06-cactus/01-prior-art/06-gojs.md` | GoJS's mental model — Diagram-as-view over a plain-object Model, templates with data binding, transactions and a built-in UndoManager, built-in tools and layouts, and Groups with a bounds-deriving Placeholder | cactus, prior-art, gojs, diagram-engine, web-library, commercial | doc01.06.01.01 | — | — |
+| doc01.06.01.07 | `06-cactus/01-prior-art/07-litegraph.md` | LiteGraph's mental model — an executable graph of typed-slot nodes drawn on one 2D canvas, with LGraphGroup as an annotative capture rectangle — and the upstream/ComfyUI-fork maintenance split | cactus, prior-art, litegraph, comfyui, dataflow, web-library | doc01.06.01.01 | — | — |
+| doc01.06.01.08 | `06-cactus/01-prior-art/08-qt-graphics-view.md` | Qt's Graphics View Framework — the scene/view/item split, item hierarchy, three coordinate systems, the BSP spatial index, and the interaction the framework ships versus what the host adds | cactus, prior-art, qt, scene-graph, desktop-library | doc01.06.01.01 | — | — |
+| doc01.06.01.09 | `06-cactus/01-prior-art/09-unreal-blueprints.md` | The Blueprint Visual Scripting mental model — Blueprint classes and the Event Graph, nodes and the exec-versus-data pin system, the three subgraph forms, and the annotative comment box | cactus, prior-art, unreal, blueprints, node-editor, product | doc01.06.01.01 | — | — |
+| doc01.06.01.10 | `06-cactus/01-prior-art/10-blender-nodes.md` | Blender's node editor mental model — node trees, typed color-coded sockets, links, and the two organization constructs side by side, frames (derived envelope) and node groups (owning subgraph) | cactus, prior-art, blender, node-editor, product | doc01.06.01.01 | — | — |
+| doc01.06.01.11 | `06-cactus/01-prior-art/11-houdini-networks.md` | Houdini's network editor mental model — contexts and nested networks, nodes with inputs, outputs, and flags, wires, and the organization ladder of network boxes, sticky notes, subnets, and digital assets | cactus, prior-art, houdini, node-editor, product | doc01.06.01.01 | — | — |
 
 ## 02-design — Design
 
@@ -81,7 +100,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.18 | `18-pack-examples.md` | RTP, flowchart, Solid app, React app, Rust app — what each pack declares, what views each wants, and what falls out as Luminous's universal contract. | pack, examples, reference, contract | doc02.14, doc02.16, doc02.17 | — | — |
 | doc02.19 | `19-canvas-component-tree.md` | What lives inside the canvas — toolbars, view switcher, layer toolbar, context menus — derived from inventories of state, mutation rate, and ownership boundary. | canvas, chrome, component-tree, boundaries | doc02.13, doc02.14, doc02.17 | doc02.20 | — |
 | doc02.20 | `20-chrome-schema.md` | Action records, menu and toolbar schemas, chrome slots; cactus owns chrome rendering, Luminous owns the schema producers, packs stay unchanged. | chrome, api, actions, menus, cactus, boundary | doc02.14, doc02.19 | — | — |
-| doc02.21 | `21-dataflow-document-format.md` | The *.dataflow.json document — Boxes and Flows carrying design intention; TypeScript types own the shape, a sidecar JSON Schema describes it | dataflow, format, contract, schema | doc01.05.01, doc01.05.03 | doc02.22, doc02.23 | dataflow-document.schema.json |
+| doc02.21 | `21-dataflow-document-format.md` | The *.dataflow.json document — Boxes and Flows carrying design intention; TypeScript types own the shape, a sidecar JSON Schema describes it | dataflow, format, contract, schema | doc01.05.01, doc01.05.03 | doc02.05.06, doc02.22, doc02.23 | dataflow-document.schema.json |
 | doc02.22 | `22-dataflow-operations.md` | The operation set over a dataflow Document — the dataflow MCP tool group's verbs, their validation rules, and the check warnings | dataflow, mcp, operations, tools | doc02.21, doc02.04 | doc02.23 | — |
 | doc02.23 | `23-dataflow-designer-app.md` | The client app — read-only projection of dataflow Documents onto cactus, live-reloading as the agent writes; document plumbing shared with Luminous Canvas | dataflow, apps, client, rendering | doc01.05.01, doc02.21, doc02.22, doc01.04 | doc01.05.04 | — |
 
@@ -91,12 +110,12 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc02.05.00 | `05-cactus/00-index.md` |  |  | — | — | — |
-| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.06.02, doc02.08, doc03.03 | — |
+| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc01.06.01.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.06.02, doc02.08, doc03.03 | — |
 | doc02.05.02 | `05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc02.05.01 | — | — |
 | doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | doc02.05.04, doc02.05.06 | — |
 | doc02.05.04 | `05-cactus/04-layout-engine-contract.md` | The LayoutEngine interface and mental model — how the domain layer produces constraints and cactus suggests positions | cactus, layout, architecture | doc02.05.01, doc02.05.03 | — | — |
 | doc02.05.05 | `05-cactus/05-theme-token-contract.md` | The --cactus-* CSS custom property contract — the named slots cactus declares, its two shipped themes, and how consumers bring their own | cactus, theming, css, contract | doc02.05.01 | — | — |
-| doc02.05.06 | `05-cactus/06-prior-art.md` | Canvas and graph-layout libraries placed on a spectrum of user control, and the frame-versus-group distinction cactus adopts for containers and underlay groups | cactus, prior-art, groups, layout, canvas | doc02.05.01, doc02.05.03 | — | — |
+| doc02.05.06 | `05-cactus/06-clusters.md` | The cluster — cactus's envelope over a member set — its declaration API, the laminar and annotation tiers, and how nesting decomposes into cluster plus coordinate ownership | cactus, clusters, groups, layout, underlay | doc02.05.01, doc02.05.03, doc01.06.01.01, doc02.21 | — | — |
 
 ### Architecture Decision Records
 
@@ -150,18 +169,23 @@ Quick lookup for file-path→doc mapping:
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
+| `blender` | doc01.06.01.10 |
+| `blueprints` | doc01.06.01.09 |
 | `boundaries` | doc02.19 |
 | `boundary` | doc02.20 |
-| `cactus` | doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.20, doc03.07 |
+| `cactus` | doc01.06.01.01, doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11, doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.20, doc03.07 |
 | `cactus-boundary` | doc02.08 |
-| `canvas` | doc01.01, doc02.05.01, doc02.05.02, doc02.05.06, doc02.19, doc03.06 |
+| `canvas` | doc01.01, doc01.06.01.01, doc02.05.01, doc02.05.02, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
 | `case-study` | doc01.05.02 |
 | `chrome` | doc02.19, doc02.20 |
 | `cli-grammar` | doc03.08 |
 | `client` | doc02.23 |
+| `clusters` | doc02.05.06 |
 | `co-location` | doc02.14 |
 | `cognitive-load` | doc03.04 |
+| `comfyui` | doc01.06.01.07 |
+| `commercial` | doc01.06.01.06 |
 | `component-tree` | doc02.19 |
 | `components` | doc02.05.02, doc02.13 |
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
@@ -170,12 +194,15 @@ Quick lookup for file-path→doc mapping:
 | `coverage` | doc02.10.02 |
 | `crystallization` | doc02.01 |
 | `css` | doc02.05.05 |
+| `cytoscape` | doc01.06.01.05 |
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
-| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc02.21, doc02.22, doc02.23 |
+| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc02.21, doc02.22, doc02.23 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
+| `desktop-library` | doc01.06.01.08 |
+| `diagram-engine` | doc01.06.01.06 |
 | `disclosure` | doc02.11 |
 | `discriminant` | doc02.06.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04, doc00.05 |
@@ -192,18 +219,24 @@ Quick lookup for file-path→doc mapping:
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
 | `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03 |
+| `gojs` | doc01.06.01.06 |
 | `graph` | doc02.15 |
+| `graph-visualization` | doc01.06.01.05 |
 | `groups` | doc02.05.06 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
+| `houdini` | doc01.06.01.11 |
 | `http` | doc02.03 |
 | `identity` | doc02.17 |
 | `iteration` | doc02.15 |
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |
+| `konva` | doc01.06.01.04 |
 | `labor` | doc03.08 |
 | `layout` | doc02.05.03, doc02.05.04, doc02.05.06 |
 | `legibility` | doc03.07 |
+| `libraries` | doc01.06.01.01 |
+| `litegraph` | doc01.06.01.07 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc02.04, doc02.15, doc02.22, doc03.06 |
 | `menus` | doc02.20 |
@@ -214,11 +247,13 @@ Quick lookup for file-path→doc mapping:
 | `modeling` | doc03.02 |
 | `naming` | doc00.05 |
 | `node` | doc02.09 |
+| `node-and-edge` | doc01.06.01.02 |
+| `node-editor` | doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
 | `nodes` | doc03.03 |
 | `notion` | doc03.03 |
 | `openapi` | doc02.10.02 |
 | `operations` | doc02.22 |
-| `overview` | doc02.05.01 |
+| `overview` | doc01.06.01.01, doc02.05.01 |
 | `pack` | doc02.14, doc02.16, doc02.18 |
 | `packs` | doc02.11, doc03.08 |
 | `pdr` | doc02.01, doc02.11 |
@@ -230,11 +265,14 @@ Quick lookup for file-path→doc mapping:
 | `plain-language` | doc00.04 |
 | `platform` | doc01.04 |
 | `primitives` | doc02.09, doc02.16 |
-| `prior-art` | doc02.05.06 |
+| `prior-art` | doc01.06.01.01, doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
+| `product` | doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
 | `projection` | doc02.17 |
 | `property-graph` | doc02.10.03, doc02.11 |
+| `qt` | doc01.06.01.08 |
 | `qwik` | doc03.05 |
 | `react` | doc02.06.01 |
+| `react-flow` | doc01.06.01.02 |
 | `reactive` | doc03.01 |
 | `reactivity` | doc02.06.01, doc03.05 |
 | `reference` | doc02.09, doc02.18 |
@@ -246,6 +284,7 @@ Quick lookup for file-path→doc mapping:
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
 | `rtp` | doc02.10.03 |
+| `scene-graph` | doc01.06.01.04, doc01.06.01.08 |
 | `schema` | doc02.06.02, doc02.14, doc02.21, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
 | `semantic-zoom` | doc03.07 |
@@ -262,18 +301,22 @@ Quick lookup for file-path→doc mapping:
 | `theming` | doc02.05.05 |
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
-| `tldraw` | doc03.03 |
+| `tldraw` | doc01.06.01.03, doc03.03 |
 | `tools` | doc02.04, doc02.15, doc02.22 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
 | `ui` | doc01.05.04, doc02.12 |
+| `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
+| `unreal` | doc01.06.01.09 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
 | `views` | doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc03.04 |
 | `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc03.02 |
+| `web-library` | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07 |
+| `whiteboard` | doc01.06.01.03 |
 | `workbench` | doc03.08 |
 | `xstate` | doc02.10.03 |
 | `zoom` | doc03.07 |

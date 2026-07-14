@@ -1,6 +1,6 @@
 ---
 title: Glossary
-summary: The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, and the loose Source/Transform/View subtypes
+summary: The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, Group, and the loose Source/Transform/View subtypes
 tags: [glossary, vocabulary, dataflow]
 deps: [doc01.05.01]
 ---
@@ -33,6 +33,8 @@ Docs in this section use these terms exactly.
 - **Contract** — the declared shape of a Box's data, in the notation the
   described system uses (prose, JSON Schema, YAML, a class, trait, or
   interface definition); the surface drift detection reads against code.
+
+- **Group** — a simple visual grouping of Boxes.
 
 - *(unnamed)* — the split between a Box that describes the state of data and
   a Box that describes a change to data. Recurs in prior art (DFD's stores

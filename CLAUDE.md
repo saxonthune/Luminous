@@ -32,7 +32,7 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Current Milestone
 
-**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.rhidoc/01-vision/03-milestones/` for the full roadmap.
+**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.rhidoc/01-product/03-milestones/` for the full roadmap.
 
 ## Development Philosophy
 
