@@ -132,6 +132,18 @@ describe('addBoxTool', () => {
     expect(body.content.boxes).toHaveLength(1)
     expect(body.content.boxes[0].name).toBe('Payment Processor')
   })
+
+  it('carries the group through', async () => {
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => emptyDoc() }),
+      [`POST ${SERVER}/api/document/write`]: () => ({ ok: true, json: async () => ({ ok: true }) }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await addBoxTool(SERVER, PATH, { name: 'Payment Processor', group: 'checkout' })
+    const writeCall = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/api/document/write'))
+    const body = JSON.parse((writeCall![1] as RequestInit).body as string)
+    expect(body.content.boxes[0].group).toBe('checkout')
+  })
 })
 
 describe('setBoxTool / connectTool / disconnectTool / removeBoxTool', () => {
@@ -143,6 +155,24 @@ describe('setBoxTool / connectTool / disconnectTool / removeBoxTool', () => {
     vi.stubGlobal('fetch', fetchMock)
     const doc = await setBoxTool(SERVER, PATH, 'client', { name: 'Browser' })
     expect(doc.boxes.find((b) => b.id === 'client')!.name).toBe('Browser')
+  })
+
+  it('setBoxTool sets and clears a group', async () => {
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => docWithTwoBoxes() }),
+      [`POST ${SERVER}/api/document/write`]: () => ({ ok: true, json: async () => ({ ok: true }) }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const doc = await setBoxTool(SERVER, PATH, 'client', { group: 'checkout' })
+    expect(doc.boxes.find((b) => b.id === 'client')!.group).toBe('checkout')
+
+    const fetchMock2 = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => doc }),
+      [`POST ${SERVER}/api/document/write`]: () => ({ ok: true, json: async () => ({ ok: true }) }),
+    })
+    vi.stubGlobal('fetch', fetchMock2)
+    const cleared = await setBoxTool(SERVER, PATH, 'client', { group: null })
+    expect(cleared.boxes.find((b) => b.id === 'client')!.group).toBeUndefined()
   })
 
   it('connectTool adds a flow', async () => {

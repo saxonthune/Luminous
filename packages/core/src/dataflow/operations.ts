@@ -21,7 +21,7 @@ function uniqueId(base: string, existingIds: Set<string>): string {
 
 export function addBox(
   doc: DataflowDocument,
-  fields: { name: string; description?: string; contract?: ContractBlock },
+  fields: { name: string; description?: string; contract?: ContractBlock; group?: string },
 ): DataflowResult {
   const existingIds = new Set(doc.boxes.map(b => b.id));
   const base = kebabCase(fields.name);
@@ -29,13 +29,14 @@ export function addBox(
   const box: DataflowDocument['boxes'][number] = { id, name: fields.name };
   if (fields.description !== undefined) box.description = fields.description;
   if (fields.contract !== undefined) box.contract = fields.contract;
+  if (fields.group !== undefined) box.group = fields.group;
   return { ok: true, doc: { ...doc, boxes: [...doc.boxes, box] } };
 }
 
 export function setBox(
   doc: DataflowDocument,
   id: string,
-  fields: { name?: string; description?: string; contract?: ContractBlock },
+  fields: { name?: string; description?: string; contract?: ContractBlock; group?: string | null },
 ): DataflowResult {
   const index = doc.boxes.findIndex(b => b.id === id);
   if (index === -1) {
@@ -45,6 +46,11 @@ export function setBox(
   if (fields.name !== undefined) box.name = fields.name;
   if (fields.description !== undefined) box.description = fields.description;
   if (fields.contract !== undefined) box.contract = fields.contract;
+  if (fields.group === null) {
+    delete box.group;
+  } else if (fields.group !== undefined) {
+    box.group = fields.group;
+  }
   const boxes = [...doc.boxes];
   boxes[index] = box;
   return { ok: true, doc: { ...doc, boxes } };
@@ -106,6 +112,7 @@ export function applyDataflowBatch(doc: DataflowDocument, actions: DataflowActio
           name: action.name,
           description: action.description,
           contract: action.contract,
+          group: action.group,
         });
         break;
       case 'set':
@@ -113,6 +120,7 @@ export function applyDataflowBatch(doc: DataflowDocument, actions: DataflowActio
           name: action.name,
           description: action.description,
           contract: action.contract,
+          group: action.group,
         });
         break;
       case 'connect':

@@ -1,5 +1,5 @@
 import type { DataflowDocument, DataflowFlow } from '@luminous/core/dataflow';
-import type { TidyNode, EdgeDeclaration } from '@luminous/cactus';
+import type { TidyNode, EdgeDeclaration, ClusterDeclaration } from '@luminous/cactus';
 
 function edgeId(flow: DataflowFlow, i: number): string {
   return `${flow.from}->${flow.to}-${i}`;
@@ -30,7 +30,23 @@ export function toTidyNodes(doc: DataflowDocument): TidyNode[] {
     w: BOX_WIDTH,
     h: estimateBoxHeight(box),
     parentId: null,
+    clusterId: box.group,
   }));
+}
+
+/** One ClusterDeclaration per distinct group name, in first-appearance order. */
+export function toClusterDeclarations(doc: DataflowDocument): ClusterDeclaration[] {
+  const clusters = new Map<string, ClusterDeclaration>();
+  for (const box of doc.boxes) {
+    if (!box.group) continue;
+    let cluster = clusters.get(box.group);
+    if (!cluster) {
+      cluster = { id: box.group, label: box.group, memberIds: [] };
+      clusters.set(box.group, cluster);
+    }
+    cluster.memberIds.push(box.id);
+  }
+  return [...clusters.values()];
 }
 
 export function toLayoutEdges(doc: DataflowDocument): { source: string; target: string }[] {

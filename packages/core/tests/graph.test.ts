@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGraph, evaluateContainment } from '../src/graph.ts';
+import { buildGraph, evaluateContainment, evaluateClusters } from '../src/graph.ts';
 import type { Node, Edge, View } from '../src/types.ts';
 
 // ---------------------------------------------------------------------------
@@ -220,5 +220,79 @@ describe('evaluateContainment', () => {
     expect(tree.rootIds).not.toContain('CollectionDetail'); // latent
     expect(tree.rootIds).not.toContain('mapProjection');    // hidden
     expect(tree.rootIds).not.toContain('none');             // hidden
+  });
+});
+
+// ---------------------------------------------------------------------------
+// evaluateClusters
+// ---------------------------------------------------------------------------
+
+describe('evaluateClusters', () => {
+  it('groups member edges by hub, keyed by edge.to', () => {
+    const clusterNodes: Node[] = [
+      { id: 'hub1',    kind: 'statechart.region', props: {}, tags: [] },
+      { id: 'member1', kind: 'statechart.state',  props: {}, tags: [] },
+      { id: 'member2', kind: 'statechart.state',  props: {}, tags: [] },
+    ];
+    const clusterEdges: Edge[] = [
+      { id: 'c1', kind: 'statechart.grouped-with', from: 'member1', to: 'hub1', props: {}, tags: [] },
+      { id: 'c2', kind: 'statechart.grouped-with', from: 'member2', to: 'hub1', props: {}, tags: [] },
+    ];
+    const clusterView: View = {
+      ...spatialView,
+      id: 'cluster-view',
+      edgeRoles: { 'statechart.grouped-with': 'cluster' },
+    };
+    const g = buildGraph(clusterNodes, clusterEdges);
+    const clusters = evaluateClusters(g, clusterView);
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].hubId).toBe('hub1');
+    expect(clusters[0].memberIds).toEqual(['member1', 'member2']);
+  });
+
+  it('a node may appear as a member in more than one cluster kind', () => {
+    const clusterNodes: Node[] = [
+      { id: 'hubA',   kind: 'statechart.region', props: {}, tags: [] },
+      { id: 'hubB',   kind: 'statechart.region', props: {}, tags: [] },
+      { id: 'shared', kind: 'statechart.state',  props: {}, tags: [] },
+    ];
+    const clusterEdges: Edge[] = [
+      { id: 'c1', kind: 'statechart.kind-a', from: 'shared', to: 'hubA', props: {}, tags: [] },
+      { id: 'c2', kind: 'statechart.kind-b', from: 'shared', to: 'hubB', props: {}, tags: [] },
+    ];
+    const clusterView: View = {
+      ...spatialView,
+      id: 'overlap-view',
+      edgeRoles: { 'statechart.kind-a': 'cluster', 'statechart.kind-b': 'cluster' },
+    };
+    const g = buildGraph(clusterNodes, clusterEdges);
+    const clusters = evaluateClusters(g, clusterView);
+
+    expect(clusters).toHaveLength(2);
+    const byHub = new Map(clusters.map((c) => [c.hubId, c.memberIds]));
+    expect(byHub.get('hubA')).toEqual(['shared']);
+    expect(byHub.get('hubB')).toEqual(['shared']);
+  });
+
+  it('hubs with no members produce no cluster', () => {
+    const clusterNodes: Node[] = [
+      { id: 'lonelyHub', kind: 'statechart.region', props: {}, tags: [] },
+    ];
+    const clusterView: View = {
+      ...spatialView,
+      id: 'empty-cluster-view',
+      edgeRoles: { 'statechart.grouped-with': 'cluster' },
+    };
+    const g = buildGraph(clusterNodes, []);
+    const clusters = evaluateClusters(g, clusterView);
+
+    expect(clusters).toHaveLength(0);
+  });
+
+  it('view with no cluster-role edge kinds returns empty array', () => {
+    const g = buildGraph(nodes, edges);
+    const clusters = evaluateClusters(g, spatialView);
+    expect(clusters).toHaveLength(0);
   });
 });

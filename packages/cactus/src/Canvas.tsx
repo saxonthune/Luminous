@@ -1,4 +1,4 @@
-import { createSignal, createMemo, onCleanup, Show, type JSX } from 'solid-js';
+import { createSignal, createMemo, onCleanup, Show, For, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { useViewport, type UseViewportOptions, type Transform } from './interactions/useViewport.js';
 import { observeLongTasks } from './perf.js';
@@ -8,7 +8,8 @@ import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import { EdgeLayer } from './EdgeLayer.js';
-import type { EdgeDeclaration } from './types.js';
+import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
+import { computeBounds } from './geometry/geometry.js';
 import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
 import { ChromeSlots } from './chrome/ChromeSlots.js';
 import { MenuRoot } from './chrome/ChromePrimitives.js';
@@ -43,6 +44,8 @@ export interface CanvasProps {
   };
   /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
   edges?: EdgeDeclaration[];
+  /** Clusters to draw as a tinted underlay behind their member nodes. */
+  clusters?: ClusterDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
   class?: string;
   children: JSX.Element;
@@ -72,6 +75,66 @@ export interface CanvasRef {
   zoomIn: () => void;
   zoomOut: () => void;
   clearSelection: () => void;
+}
+
+/**
+ * Underlay rendering for cluster rects — a passive, pointer-events-none tint
+ * derived from the live node-rect registry. A cluster with no registered
+ * members (empty set, or no rects yet) renders nothing.
+ */
+export function ClusterUnderlay(props: {
+  clusters: ClusterDeclaration[];
+  getNodeRects: () => ReadonlyMap<string, NodeRect>;
+}) {
+  return (
+    <For each={props.clusters}>
+      {(cluster) => {
+        const bounds = createMemo(() => {
+          const rects = props.getNodeRects();
+          const memberRects = cluster.memberIds
+            .map((id) => rects.get(id))
+            .filter((r): r is NodeRect => r != null)
+            .map((r) => ({ x: r.x, y: r.y, width: r.w, height: r.h }));
+          if (memberRects.length === 0) return null;
+          return computeBounds(memberRects, { padding: 16, minWidth: 0, minHeight: 0 });
+        });
+        return (
+          <Show when={bounds()}>
+            {(b) => (
+              <div
+                data-cluster-id={cluster.id}
+                style={{
+                  position: 'absolute',
+                  left: `${b().x}px`,
+                  top: `${b().y}px`,
+                  width: `${b().width}px`,
+                  height: `${b().height}px`,
+                  background: cluster.tint ?? 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
+                  border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+                  'border-radius': '8px',
+                  'pointer-events': 'none',
+                }}
+              >
+                <Show when={cluster.label}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      bottom: '4px',
+                      'font-size': '11px',
+                      color: 'var(--cactus-fg-muted, #6b7280)',
+                    }}
+                  >
+                    {cluster.label}
+                  </div>
+                </Show>
+              </div>
+            )}
+          </Show>
+        );
+      }}
+    </For>
+  );
 }
 
 /** Flatten all Action records from a ChromeSchema for hotkey registration. */
@@ -288,6 +351,21 @@ export function Canvas(props: CanvasProps) {
           ? props.renderBackground(transform(), props.patternId)
           : <DotGrid transform={transform()} patternId={props.patternId} />
         }
+
+        <Show when={(props.clusters?.length ?? 0) > 0}>
+          <div
+            data-cactus-cluster-underlay
+            style={{
+              transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
+              "transform-origin": '0 0',
+              position: 'absolute',
+              inset: '0',
+              "pointer-events": 'none',
+            }}
+          >
+            <ClusterUnderlay clusters={props.clusters!} getNodeRects={getNodeRects} />
+          </div>
+        </Show>
 
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-lines width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>

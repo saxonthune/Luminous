@@ -3,7 +3,7 @@ import type { JSX } from 'solid-js';
 import type { DataflowDocument } from '@luminous/core/dataflow';
 import { Canvas, NodeContainer, dagLayout } from '@luminous/cactus';
 import type { CanvasRef } from '@luminous/cactus';
-import { BOX_WIDTH, toTidyNodes, toLayoutEdges, toEdgeDeclarations } from './projection';
+import { BOX_WIDTH, toTidyNodes, toLayoutEdges, toEdgeDeclarations, toClusterDeclarations } from './projection';
 
 export interface DataflowCanvasProps {
   doc: DataflowDocument;
@@ -16,6 +16,7 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   const sizes = createMemo(() => new Map(nodes().map((n) => [n.id, { w: n.w, h: n.h }])));
   const positions = createMemo(() => dagLayout(nodes(), toLayoutEdges(props.doc)));
   const edges = createMemo(() => toEdgeDeclarations(props.doc));
+  const clusters = createMemo(() => toClusterDeclarations(props.doc));
   const boxesById = createMemo(() => new Map(props.doc.boxes.map((b) => [b.id, b])));
 
   createEffect(() => {
@@ -30,7 +31,7 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   });
 
   return (
-    <Canvas ref={(r) => { canvasRef = r; }} edges={edges()}>
+    <Canvas ref={(r) => { canvasRef = r; }} edges={edges()} clusters={clusters()}>
       <For each={nodes()}>
         {(node) => {
           const box = () => boxesById().get(node.id);

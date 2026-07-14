@@ -1,5 +1,5 @@
 import type { Graph, View, SceneGraph, SceneWarning, Node, Edge, NodeId, ResolvedNodeState } from './types.ts';
-import { evaluateContainment } from './graph.ts';
+import { evaluateContainment, evaluateClusters } from './graph.ts';
 
 export function evaluateView(
   graph: Graph,
@@ -52,13 +52,15 @@ export function evaluateView(
     } else if (role === 'summary') {
       summaryEdges.push(edge);
     }
-    // contain handled by evaluateContainment; hidden/undefined → skip
+    // contain handled by evaluateContainment; cluster by evaluateClusters;
+    // hidden/undefined → skip
   }
 
   // Include peek nodes in the containment tree so they still occupy space.
   const visibleIds = new Set<NodeId>(spatialNodes.map((n) => n.id));
   for (const n of peekNodes) visibleIds.add(n.id);
   const containment = evaluateContainment(graph, view, visibleIds);
+  const clusters = evaluateClusters(graph, view);
 
   const warnings: SceneWarning[] = [];
 
@@ -96,6 +98,7 @@ export function evaluateView(
     arrows,
     summaryEdges,
     containment,
+    clusters,
     warnings,
   };
 }

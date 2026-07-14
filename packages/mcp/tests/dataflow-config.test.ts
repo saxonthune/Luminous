@@ -32,12 +32,12 @@ describe('dataflow tool group config', () => {
     }
   })
 
-  it('addBox and set both accept name, description, and contract', () => {
+  it('addBox and set both accept name, description, contract, and group', () => {
     expect(Object.keys(group.actions.addBox.params)).toEqual(
-      expect.arrayContaining(['path', 'name', 'description?', 'contract?']),
+      expect.arrayContaining(['path', 'name', 'description?', 'contract?', 'group?']),
     )
     expect(Object.keys(group.actions.set.params)).toEqual(
-      expect.arrayContaining(['path', 'box', 'name?', 'description?', 'contract?']),
+      expect.arrayContaining(['path', 'box', 'name?', 'description?', 'contract?', 'group?']),
     )
   })
 

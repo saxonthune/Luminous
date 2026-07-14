@@ -290,6 +290,31 @@ A role tells a view how to present a kind. Node kinds go in `nodeRoles`, edge ki
 | `contain` | edges | Drives nesting (parent/child containment) |
 | `arrow` | edges | Renders as a directed arrow between nodes |
 | `summary` | edges | Rendered as a chip/label, not a standalone connector |
+| `cluster` | edges | Groups a member under a hub as an annotation-only underlay |
+
+#### `cluster` role
+
+`cluster`-role edges point member (`edge.from`) → hub (`edge.to`) — the same
+direction convention as `contain`. The view groups every member pointing at a
+given hub into one underlay rendered behind the members; the hub node itself
+labels the underlay (falling back to the hub's id if it has no string prop).
+Membership may overlap — a node can be a member of several clusters, and
+several cluster-kind edges may coexist in one view (unlike `contain`, which
+allows at most one edge kind). It is purely an annotation: no coordinate
+ownership, no layout influence, no single-parent or acyclicity constraint.
+The hub node renders (or not) only by its own `nodeRoles` entry — there is no
+special-casing for hubs.
+
+```jsonc
+// edgeKind
+{ "id": "domain.grouped-with", "label": "Grouped With", "directed": true, "props": { "type": "object", "properties": {}, "additionalProperties": false } }
+
+// edge instance: memberNode is grouped under hubNode
+{ "id": "edge.grouped.member1.hub1", "kind": "domain.grouped-with", "from": "memberNode", "to": "hubNode", "props": {}, "tags": [] }
+
+// view
+"edgeRoles": { "domain.grouped-with": "cluster" }
+```
 
 ### Layers
 

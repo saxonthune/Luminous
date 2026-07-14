@@ -108,6 +108,22 @@ describe('parseDataflowDocument', () => {
     const result = parseDataflowDocument(serializeDataflowDocument(doc));
     expect(result).toEqual({ ok: true, doc });
   });
+
+  it('round-trips a group through serialize/parse', () => {
+    const doc: DataflowDocument = {
+      v: 1,
+      boxes: [{ id: 'a', name: 'A', group: 'checkout' }],
+      flows: [],
+    };
+    const result = parseDataflowDocument(serializeDataflowDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('rejects a non-string group', () => {
+    const result = parseDataflowDocument(JSON.stringify({ v: 1, boxes: [{ id: 'a', name: 'A', group: 1 }], flows: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('boxes[0].group: must be a string');
+  });
 });
 
 describe('serializeDataflowDocument', () => {

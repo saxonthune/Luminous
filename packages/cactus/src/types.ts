@@ -24,3 +24,16 @@ export interface EdgeStyling {
   /** Show an arrowhead triangle on the target end. Default false. */
   arrowHead?: boolean;
 }
+
+/**
+ * A declared cluster for cactus to render as a tinted underlay behind a set
+ * of member nodes. Cactus derives the bounds from the members' registered
+ * rects; the host declares membership and optional styling — see
+ * doc02.05.06.
+ */
+export interface ClusterDeclaration {
+  id: string;
+  memberIds: string[];
+  label?: string;
+  tint?: string;
+}

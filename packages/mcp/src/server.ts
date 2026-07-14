@@ -271,6 +271,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       name?: string
       description?: string
       contract?: ContractBlock
+      group?: string | null
       box?: string
       from?: string
       to?: string
@@ -294,6 +295,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           name: a.name,
           description: a.description,
           contract: a.contract,
+          group: a.group ?? undefined,
         })
       } else if (a.action === 'set') {
         if (!a.path) throw new Error("'path' is required for dataflow/set")
@@ -302,6 +304,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           name: a.name,
           description: a.description,
           contract: a.contract,
+          group: a.group,
         })
       } else if (a.action === 'connect') {
         if (!a.path) throw new Error("'path' is required for dataflow/connect")

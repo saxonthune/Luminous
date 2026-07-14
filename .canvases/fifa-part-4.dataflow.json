@@ -8,17 +8,20 @@
       "contract": {
         "format": "prose",
         "text": "Standings file fields: v, resolved as ref/team pairs."
-      }
+      },
+      "group": "Static Files"
     },
     {
       "id": "team-list",
       "name": "Team list",
-      "description": "The team registry; registry order is load-bearing because the share-code encoding indexes teams by it."
+      "description": "The team registry; registry order is load-bearing because the share-code encoding indexes teams by it.",
+      "group": "Static Files"
     },
     {
       "id": "user-brackets",
       "name": "User brackets",
-      "description": "Entrant bracket picks, submitted through the Builder as a URL-safe share code."
+      "description": "Entrant bracket picks, submitted through the Builder as a URL-safe share code.",
+      "group": "Static Files"
     },
     {
       "id": "enriched-data",
@@ -33,17 +36,20 @@
     {
       "id": "standings-view",
       "name": "Standings view",
-      "description": "Renders reality as it stands, with no picks and no scoring."
+      "description": "Renders reality as it stands, with no picks and no scoring.",
+      "group": "Views"
     },
     {
       "id": "bracket-view",
       "name": "Bracket view",
-      "description": "Renders an entrant's bracket against reality and shows its score."
+      "description": "Renders an entrant's bracket against reality and shows its score.",
+      "group": "Views"
     },
     {
       "id": "leaderboard",
       "name": "Leaderboard",
-      "description": "Scores every entrant's bracket and ranks them."
+      "description": "Scores every entrant's bracket and ranks them.",
+      "group": "Views"
     }
   ],
   "flows": [

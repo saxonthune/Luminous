@@ -358,6 +358,90 @@ describe('evaluateView — nodeStates map', () => {
 
 // ---------------------------------------------------------------------------
 
+describe('evaluateView — cluster role', () => {
+  it('cluster-role edges produce member sets keyed by hub, set on scene.clusters', () => {
+    const clusterNodes: Node[] = [
+      { id: 'hub1',    kind: 'rtp.concept', props: {}, tags: [] },
+      { id: 'member1', kind: 'rtp.action',  props: {}, tags: [] },
+      { id: 'member2', kind: 'rtp.action',  props: {}, tags: [] },
+    ];
+    const clusterEdges: Edge[] = [
+      { id: 'c1', kind: 'rtp.grouped-with', from: 'member1', to: 'hub1', props: {}, tags: [] },
+      { id: 'c2', kind: 'rtp.grouped-with', from: 'member2', to: 'hub1', props: {}, tags: [] },
+    ];
+    const view: View = {
+      id: 'cluster-test',
+      name: 'Cluster Test',
+      nodeRoles: { 'rtp.concept': 'spatial', 'rtp.action': 'spatial' },
+      edgeRoles: { 'rtp.grouped-with': 'cluster' },
+      layers: {},
+      layout: { algorithm: 'manual' },
+    };
+    const g = buildGraph(clusterNodes, clusterEdges);
+    const scene = evaluateView(g, view);
+
+    expect(scene.clusters).toHaveLength(1);
+    expect(scene.clusters[0].hubId).toBe('hub1');
+    expect(scene.clusters[0].memberIds).toEqual(['member1', 'member2']);
+    // cluster-role edges must not fall through to arrows/hidden handling
+    expect(scene.arrows).toHaveLength(0);
+    expect(scene.summaryEdges).toHaveLength(0);
+  });
+
+  it('overlapping membership across two cluster kinds works', () => {
+    const clusterNodes: Node[] = [
+      { id: 'hubA',   kind: 'rtp.concept', props: {}, tags: [] },
+      { id: 'hubB',   kind: 'rtp.concept', props: {}, tags: [] },
+      { id: 'shared', kind: 'rtp.action',  props: {}, tags: [] },
+    ];
+    const clusterEdges: Edge[] = [
+      { id: 'c1', kind: 'rtp.kind-a', from: 'shared', to: 'hubA', props: {}, tags: [] },
+      { id: 'c2', kind: 'rtp.kind-b', from: 'shared', to: 'hubB', props: {}, tags: [] },
+    ];
+    const view: View = {
+      id: 'cluster-overlap-test',
+      name: 'Cluster Overlap Test',
+      nodeRoles: { 'rtp.concept': 'spatial', 'rtp.action': 'spatial' },
+      edgeRoles: { 'rtp.kind-a': 'cluster', 'rtp.kind-b': 'cluster' },
+      layers: {},
+      layout: { algorithm: 'manual' },
+    };
+    const g = buildGraph(clusterNodes, clusterEdges);
+    const scene = evaluateView(g, view);
+
+    expect(scene.clusters).toHaveLength(2);
+    const byHub = new Map(scene.clusters.map((c) => [c.hubId, c.memberIds]));
+    expect(byHub.get('hubA')).toEqual(['shared']);
+    expect(byHub.get('hubB')).toEqual(['shared']);
+  });
+
+  it('a view mapping the same kind to arrow still draws edges (role choice is per view)', () => {
+    const clusterNodes: Node[] = [
+      { id: 'hub1',    kind: 'rtp.concept', props: {}, tags: [] },
+      { id: 'member1', kind: 'rtp.action',  props: {}, tags: [] },
+    ];
+    const sharedKindEdges: Edge[] = [
+      { id: 'c1', kind: 'rtp.grouped-with', from: 'member1', to: 'hub1', props: {}, tags: [] },
+    ];
+    const arrowView: View = {
+      id: 'arrow-view',
+      name: 'Arrow View',
+      nodeRoles: { 'rtp.concept': 'spatial', 'rtp.action': 'spatial' },
+      edgeRoles: { 'rtp.grouped-with': 'arrow' },
+      layers: {},
+      layout: { algorithm: 'manual' },
+    };
+    const g = buildGraph(clusterNodes, sharedKindEdges);
+    const scene = evaluateView(g, arrowView);
+
+    expect(scene.arrows).toHaveLength(1);
+    expect(scene.arrows[0].id).toBe('c1');
+    expect(scene.clusters).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
 describe('evaluateView — unknown kind', () => {
   it('treats nodes with kinds not in nodeRoles as hidden, no warning', () => {
     // transition.MapOverview.TAP_PIN is not in statechartView.nodeRoles... wait,

@@ -17,6 +17,7 @@
           "id": { "type": "string" },
           "name": { "type": "string" },
           "description": { "type": "string" },
+          "group": { "type": "string", "minLength": 1 },
           "contract": {
             "type": "object",
             "required": ["format", "text"],

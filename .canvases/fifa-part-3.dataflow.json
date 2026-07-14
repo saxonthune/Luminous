@@ -8,12 +8,14 @@
       "contract": {
         "format": "prose",
         "text": "Standings file fields: v, resolved as ref/team pairs."
-      }
+      },
+      "group": "Static Files"
     },
     {
       "id": "team-list",
       "name": "Team list",
-      "description": "The team registry; registry order is load-bearing because the share-code encoding indexes teams by it."
+      "description": "The team registry; registry order is load-bearing because the share-code encoding indexes teams by it.",
+      "group": "Static Files"
     },
     {
       "id": "enriched-data",
@@ -23,7 +25,8 @@
     {
       "id": "user-brackets",
       "name": "User brackets",
-      "description": "Entrant bracket picks, submitted through the Builder as a URL-safe share code."
+      "description": "Entrant bracket picks, submitted through the Builder as a URL-safe share code.",
+      "group": "Static Files"
     },
     {
       "id": "scorer",
@@ -33,7 +36,8 @@
     {
       "id": "bracket-w-teams",
       "name": "Bracket w/ teams",
-      "description": "What the end user sees: a knockout bracket with each match's teams and results."
+      "description": "What the end user sees: a knockout bracket with each match's teams and results.",
+      "group": "Views"
     }
   ],
   "flows": [

@@ -16,6 +16,12 @@ export interface TidyNode {
    * this field and arranged in stacked rows.
    */
   category?: string
+  /**
+   * Optional cluster key. Same-parent siblings sharing a `clusterId` are
+   * placed contiguously and rank as one unit by `dagLayout` — see
+   * doc02.05.06. Ignored by `tidyLayout` itself.
+   */
+  clusterId?: string
 }
 
 export interface TidyLayoutOptions {

@@ -16,7 +16,7 @@ import {
   useCanvasContext,
   useNodeDrag,
 } from '@luminous/cactus';
-import type { LayoutResult, CanvasRef, EdgeDeclaration } from '@luminous/cactus';
+import type { LayoutResult, CanvasRef, EdgeDeclaration, ClusterDeclaration } from '@luminous/cactus';
 import { InspectorContext } from './inspector/InspectorContext';
 import { createInspector } from './inspector/createInspector';
 import { InspectorPanel } from './inspector/InspectorPanel';
@@ -109,6 +109,14 @@ function resolveNodeRender(node: Node, ctx: RenderContext): JSX.Element {
   return interpretRender(generateFallbackRender(kind, content), ctx, content);
 }
 
+/** First string prop value, mirroring generateFallbackRender's heading pick; falls back to the node id. */
+function resolveNodeLabel(node: Node): string {
+  for (const v of Object.values(node.props as Record<string, unknown>)) {
+    if (typeof v === 'string') return v;
+  }
+  return node.id;
+}
+
 function resolveEdgeParts(
   edge: Edge,
   level: DisclosureLevel,
@@ -196,6 +204,7 @@ function CanvasInner(props: {
   spacing?: number;
   exposeRects?: (getter: () => NodeRect[]) => void;
   onEdges?: (edges: EdgeDeclaration[]) => void;
+  onClusters?: (clusters: ClusterDeclaration[]) => void;
   exposeInspect?: (fn: (id: string, opts?: { debug?: boolean }) => void) => void;
 }): JSX.Element {
   const inspector = createInspector();
@@ -275,6 +284,23 @@ function CanvasInner(props: {
 
   createEffect(() => {
     props.onEdges?.(edgeDeclarations());
+  });
+
+  // Cluster underlays are annotation-only — hub nodes render (or not) purely
+  // by their own nodeRoles entry, no special-casing here.
+  const clusterDeclarations = createMemo<ClusterDeclaration[]>(() => {
+    const renderedIds = new Set(renderOrder());
+    return scene().clusters.flatMap((cluster) => {
+      const memberIds = cluster.memberIds.filter((id) => renderedIds.has(id));
+      if (memberIds.length === 0) return [];
+      const hubNode = props.graph.nodes.get(cluster.hubId);
+      const label = hubNode ? resolveNodeLabel(hubNode) : cluster.hubId;
+      return [{ id: cluster.hubId, memberIds, label }];
+    });
+  });
+
+  createEffect(() => {
+    props.onClusters?.(clusterDeclarations());
   });
 
   // --- Node drag ---
@@ -480,6 +506,7 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
   let inspectFn: ((id: string, opts?: { debug?: boolean }) => void) | undefined;
 
   const [edges, setEdges] = createSignal<EdgeDeclaration[]>([]);
+  const [clusters, setClusters] = createSignal<ClusterDeclaration[]>([]);
 
   const emit = () => {
     if (!canvasHandle || !getRects || !props.ref) return;
@@ -504,6 +531,7 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
     <Canvas
       ref={(r) => { canvasHandle = r; emit(); }}
       edges={edges()}
+      clusters={clusters()}
       chrome={props.chrome}
       onAction={handleAction}
       nodeContextMenu={props.nodeContextMenu}
@@ -517,6 +545,7 @@ export function PgCanvasView(props: PgCanvasViewProps): JSX.Element {
         spacing={props.spacing}
         exposeRects={(g) => { getRects = g; emit(); }}
         onEdges={setEdges}
+        onClusters={setClusters}
         exposeInspect={(fn) => { inspectFn = fn; }}
       />
     </Canvas>

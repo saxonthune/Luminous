@@ -70,7 +70,7 @@ export async function readDataflow(serverUrl: string, path: string): Promise<Dat
 export async function addBoxTool(
   serverUrl: string,
   path: string,
-  fields: { name: string; description?: string; contract?: ContractBlock },
+  fields: { name: string; description?: string; contract?: ContractBlock; group?: string },
 ): Promise<{ id: string }> {
   const doc = await loadDataflow(serverUrl, path)
   const result = addBox(doc, fields)
@@ -86,7 +86,7 @@ export async function setBoxTool(
   serverUrl: string,
   path: string,
   box: string,
-  fields: { name?: string; description?: string; contract?: ContractBlock },
+  fields: { name?: string; description?: string; contract?: ContractBlock; group?: string | null },
 ): Promise<DataflowDocument> {
   const doc = await loadDataflow(serverUrl, path)
   const result = setBox(doc, box, fields)

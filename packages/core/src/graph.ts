@@ -8,6 +8,7 @@ import type {
   View,
   ContainmentTree,
   ContainmentWarning,
+  ClusterProjection,
 } from './types.ts';
 
 export function buildGraph(nodes: readonly Node[], edges: readonly Edge[], pack: string = '', info?: string): Graph {
@@ -156,4 +157,37 @@ export function evaluateContainment(
   const rootIndex = new Map(rootIds.map((id, i) => [id, i] as const));
 
   return { rootIds, rootIndex, childrenOf, parentOf, warnings };
+}
+
+/**
+ * Cluster projection — the weaker rung on the containment ladder (doc02.05.06).
+ * `cluster`-role edges point member (`from`) → hub (`to`); each hub with at
+ * least one member produces one ClusterProjection. Deliberately unconstrained:
+ * multiple cluster kinds, overlapping membership, no acyclicity or
+ * single-parent rule — none of `evaluateContainment`'s tree invariants apply.
+ */
+export function evaluateClusters(graph: Graph, view: View): ClusterProjection[] {
+  const clusterKinds = Object.entries(view.edgeRoles)
+    .filter(([, role]) => role === 'cluster')
+    .map(([kindId]) => kindId);
+
+  const membersByHub = new Map<NodeId, NodeId[]>();
+
+  for (const kindId of clusterKinds) {
+    const edgeIds = graph.edgesByKind.get(kindId) ?? new Set<EdgeId>();
+    for (const edgeId of edgeIds) {
+      const edge = graph.edges.get(edgeId)!;
+      const hub = edge.to;
+      const member = edge.from;
+
+      let members = membersByHub.get(hub);
+      if (!members) {
+        members = [];
+        membersByHub.set(hub, members);
+      }
+      members.push(member);
+    }
+  }
+
+  return [...membersByHub.entries()].map(([hubId, memberIds]) => ({ hubId, memberIds }));
 }

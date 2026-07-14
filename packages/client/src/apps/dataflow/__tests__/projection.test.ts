@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import type { DataflowDocument } from '@luminous/core/dataflow';
-import { BOX_WIDTH, estimateBoxHeight, toTidyNodes, toLayoutEdges, toEdgeDeclarations } from '../projection';
+import {
+  BOX_WIDTH,
+  estimateBoxHeight,
+  toTidyNodes,
+  toLayoutEdges,
+  toEdgeDeclarations,
+  toClusterDeclarations,
+} from '../projection';
 
 const doc: DataflowDocument = {
   v: 1,
@@ -62,5 +69,38 @@ describe('toEdgeDeclarations', () => {
     expect(decls).toHaveLength(1);
     expect(decls[0]).toMatchObject({ sourceId: 'a', targetId: 'b' });
     expect(decls[0].id).toBeTruthy();
+  });
+});
+
+const groupedDoc: DataflowDocument = {
+  v: 1,
+  boxes: [
+    { id: 'a', name: 'a', group: 'Static Files' },
+    { id: 'b', name: 'b', group: 'Views' },
+    { id: 'c', name: 'c', group: 'Static Files' },
+    { id: 'd', name: 'd' },
+  ],
+  flows: [],
+};
+
+describe('toClusterDeclarations', () => {
+  it('derives one cluster per distinct group name with its members', () => {
+    const clusters = toClusterDeclarations(groupedDoc);
+    expect(clusters).toHaveLength(2);
+    expect(clusters[0]).toMatchObject({ id: 'Static Files', label: 'Static Files', memberIds: ['a', 'c'] });
+    expect(clusters[1]).toMatchObject({ id: 'Views', label: 'Views', memberIds: ['b'] });
+  });
+
+  it('excludes ungrouped boxes from every cluster', () => {
+    const clusters = toClusterDeclarations(groupedDoc);
+    expect(clusters.some((c) => c.memberIds.includes('d'))).toBe(false);
+  });
+});
+
+describe('toTidyNodes clusterId', () => {
+  it('carries clusterId from the box group', () => {
+    const nodes = toTidyNodes(groupedDoc);
+    expect(nodes.find((n) => n.id === 'a')?.clusterId).toBe('Static Files');
+    expect(nodes.find((n) => n.id === 'd')?.clusterId).toBeUndefined();
   });
 });

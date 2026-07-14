@@ -9,6 +9,7 @@ export interface DataflowBox {
   name: string;
   description?: string;
   contract?: ContractBlock;
+  group?: string;
 }
 
 export interface ContractBlock {
@@ -26,6 +27,7 @@ export interface AddBoxAction {
   name: string;
   description?: string;
   contract?: ContractBlock;
+  group?: string;
 }
 
 export interface SetBoxAction {
@@ -34,6 +36,7 @@ export interface SetBoxAction {
   name?: string;
   description?: string;
   contract?: ContractBlock;
+  group?: string | null;
 }
 
 export interface ConnectAction {

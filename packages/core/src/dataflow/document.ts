@@ -9,7 +9,7 @@ export function emptyDataflowDocument(): DataflowDocument {
 }
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'boxes', 'flows']);
-const BOX_FIELDS = new Set(['id', 'name', 'description', 'contract']);
+const BOX_FIELDS = new Set(['id', 'name', 'description', 'contract', 'group']);
 const CONTRACT_FIELDS = new Set(['format', 'text']);
 const FLOW_FIELDS = new Set(['from', 'to']);
 
@@ -59,6 +59,10 @@ function parseBox(value: unknown, path: string, issues: string[]): DataflowBox |
     issues.push(`${path}.description: must be a string`);
     ok = false;
   }
+  if (b['group'] !== undefined && typeof b['group'] !== 'string') {
+    issues.push(`${path}.group: must be a string`);
+    ok = false;
+  }
   let contract: ContractBlock | undefined;
   if (b['contract'] !== undefined) {
     contract = parseContract(b['contract'], `${path}.contract`, issues);
@@ -68,6 +72,7 @@ function parseBox(value: unknown, path: string, issues: string[]): DataflowBox |
   const box: DataflowBox = { id: b['id'] as string, name: b['name'] as string };
   if (b['description'] !== undefined) box.description = b['description'] as string;
   if (contract !== undefined) box.contract = contract;
+  if (b['group'] !== undefined) box.group = b['group'] as string;
   return box;
 }
 
@@ -159,6 +164,7 @@ function serializeBox(box: DataflowBox): Record<string, unknown> {
   const out: Record<string, unknown> = { id: box.id, name: box.name };
   if (box.description !== undefined) out['description'] = box.description;
   if (box.contract !== undefined) out['contract'] = serializeContract(box.contract);
+  if (box.group !== undefined) out['group'] = box.group;
   return out;
 }
 

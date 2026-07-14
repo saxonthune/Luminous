@@ -45,6 +45,12 @@ describe('addBox', () => {
       expect(result.doc.boxes[0].contract).toEqual({ format: 'json', text: '{}' });
     }
   });
+
+  it('carries group through', () => {
+    const result = addBox(emptyDataflowDocument(), { name: 'Box', group: 'checkout' });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.boxes[0].group).toBe('checkout');
+  });
 });
 
 describe('setBox', () => {
@@ -72,6 +78,19 @@ describe('setBox', () => {
   it('does not mutate the input document', () => {
     setBox(base, 'box', { name: 'Changed' });
     expect(base.boxes[0].name).toBe('Box');
+  });
+
+  it('sets a group on an existing box', () => {
+    const result = setBox(base, 'box', { group: 'checkout' });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.boxes[0].group).toBe('checkout');
+  });
+
+  it('clears a group when given null', () => {
+    const grouped: DataflowDocument = { v: 1, boxes: [{ id: 'box', name: 'Box', group: 'checkout' }], flows: [] };
+    const result = setBox(grouped, 'box', { group: null });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.boxes[0].group).toBeUndefined();
   });
 });
 

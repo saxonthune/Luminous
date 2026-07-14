@@ -27,6 +27,8 @@ schema; the types win when the two disagree.
   format-tagged block (`{format, text}`), so rendering and drift detection
   dispatch on the format (prose, JSON Schema, YAML, a class or interface
   definition).
+- A Box optionally carries a Group name; Boxes sharing a name form a Group
+  (doc01.05.03).
 - A Flow references Boxes by id, and both endpoints exist.
 - The schema enforces no role. Source, Transform, and View are ways of
   speaking about Boxes, not fields.

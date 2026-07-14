@@ -133,6 +133,8 @@ Pass 1 runs `tidyLayout` internally for sizing. Inner children keep their tidy-c
 
 **What it doesn't do:** Doesn't minimize edge crossings within ranks (a known Sugiyama optimization). Doesn't handle cycles gracefully beyond appending unranked nodes in original order.
 
+**Clustering:** `TidyNode.clusterId?: string` groups same-parent siblings sharing the value into one rank unit — internally synthesized as a temporary container before layout, then resolved back to the real node IDs after. See doc02.05.06 for the design and `Canvas`'s `ClusterDeclaration` rendering.
+
 ## Composing Layouts
 
 The composition pattern `compositeLayout` automates is:

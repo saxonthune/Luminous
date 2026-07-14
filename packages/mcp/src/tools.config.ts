@@ -404,6 +404,11 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             },
             description: "Structured contract for the Box's data shape: { format, text }, e.g. { format: 'json-schema', text: '...' }.",
           },
+          'group?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Group name for the Box. Boxes sharing a group name form a Group.",
+          },
         },
       },
       set: {
@@ -435,6 +440,11 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
               required: ['format', 'text'],
             },
             description: "New contract for the Box: { format, text }.",
+          },
+          'group?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New group name for the Box. Pass null to clear the Box's group.",
           },
         },
       },
