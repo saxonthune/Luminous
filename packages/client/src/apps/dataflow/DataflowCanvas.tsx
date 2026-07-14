@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createEffect, createSignal, onMount, onCleanup, on } from 'solid-js';
 import type { JSX } from 'solid-js';
 import type { DataflowDocument, DataflowAction } from '@luminous/core/dataflow';
-import { applyDataflowBatch, type DataflowResult } from '@luminous/core/dataflow';
+import { applyDataflowBatch, setBox, type DataflowResult } from '@luminous/core/dataflow';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useNodeDrag } from '@luminous/cactus';
 import type { CanvasRef, MenuSchema, MenuItem } from '@luminous/cactus';
 import {
@@ -12,8 +12,34 @@ import {
   toClusterDeclarations,
   parseEdgeId,
 } from './projection';
-import { uniqueId, appendBox, duplicateBoxes, insertBoxOnFlow, groupRenameBatch, setGroupBatch, deleteBatch } from './mutations';
+import {
+  uniqueId,
+  appendBox,
+  duplicateBoxes,
+  insertBoxOnFlow,
+  groupRenameBatch,
+  setGroupBatch,
+  deleteBatch,
+  buildBoxPatch,
+  type BoxEditForm,
+} from './mutations';
 import { NamePromptDialog } from './NamePromptDialog';
+import { BoxContent } from './BoxContent';
+
+// Fixed edit-mode height for a Box being edited — wide enough for name,
+// description, and contract fields without content-driven auto-grow (v1).
+const EDIT_HEIGHT = 280;
+
+// Scoped styling for the rendered Description markdown — mirrors InfoModal's
+// MD_STYLES but sized for the box's small read-mode text.
+const BOX_MD_STYLES = `
+.dataflow-box-md p { margin: 0 0 .35rem; }
+.dataflow-box-md ul { margin: 0 0 .35rem; padding-left: 1rem; list-style: disc; }
+.dataflow-box-md li { margin: .1rem 0; }
+.dataflow-box-md code { font-family: ui-monospace, monospace; background: var(--cactus-surface-alt, #f3f4f6); padding: .05rem .25rem; border-radius: 3px; font-size: .9em; }
+.dataflow-box-md strong { font-weight: 600; }
+.dataflow-box-md > :last-child { margin-bottom: 0; }
+`;
 
 export interface DataflowCanvasProps {
   doc: DataflowDocument;
@@ -38,6 +64,10 @@ function DataflowNodeLayer(props: {
   nodes: () => ReturnType<typeof toTidyNodes>;
   basePositions: () => Map<string, { x: number; y: number }>;
   exposePositions: (getter: () => ReadonlyMap<string, { x: number; y: number }>) => void;
+  editingId: () => string | null;
+  onEnterEdit: (id: string, rect: { x: number; y: number; width: number; height: number }) => void;
+  onCommit: (id: string, form: BoxEditForm) => void;
+  onCancel: () => void;
 }): JSX.Element {
   const ctx = useCanvasContext();
   const boxesById = createMemo(() => new Map(props.doc.boxes.map((b) => [b.id, b])));
@@ -86,34 +116,28 @@ function DataflowNodeLayer(props: {
       {(node) => {
         const box = () => boxesById().get(node.id);
         const pos = () => positions().get(node.id) ?? { x: 0, y: 0 };
+        const editing = () => props.editingId() === node.id;
         return (
           <NodeContainer
             nodeId={node.id}
             x={() => pos().x}
             y={() => pos().y}
             w={() => node.w}
-            h={() => node.h}
+            h={() => (editing() ? EDIT_HEIGHT : node.h)}
             onPointerDown={(e) => {
               ctx.onNodePointerDown(node.id, e);
               dragPointerDown(node.id, e);
             }}
           >
-            <div class="flex h-full w-full flex-col gap-1 overflow-hidden rounded border border-border-subtle bg-surface p-2">
-              <div class="text-sm font-semibold text-fg">{box()?.name}</div>
-              <Show when={box()?.description}>
-                <p class="text-xs text-fg-muted">{box()?.description}</p>
-              </Show>
-              <Show when={box()?.contract}>
-                <div class="mt-auto">
-                  <div class="text-[10px] uppercase tracking-wide text-fg-subtle">
-                    {box()?.contract?.format}
-                  </div>
-                  <pre class="max-h-16 overflow-auto whitespace-pre-wrap break-words rounded bg-surface-alt p-1 text-[10px] text-fg-muted">
-                    {box()?.contract?.text}
-                  </pre>
-                </div>
-              </Show>
-            </div>
+            <BoxContent
+              box={box}
+              editing={editing}
+              onEnterEdit={() => {
+                props.onEnterEdit(node.id, { x: pos().x, y: pos().y, width: node.w, height: EDIT_HEIGHT });
+              }}
+              onCommit={(form) => props.onCommit(node.id, form)}
+              onCancel={props.onCancel}
+            />
           </NodeContainer>
         );
       }}
@@ -125,6 +149,7 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
   let getNodePositions: () => ReadonlyMap<string, { x: number; y: number }> = () => new Map();
   const [groupPromptTargets, setGroupPromptTargets] = createSignal<string[] | null>(null);
+  const [editingId, setEditingId] = createSignal<string | null>(null);
 
   const nodes = createMemo(() => toTidyNodes(props.doc));
   const sizes = createMemo(() => new Map(nodes().map((n) => [n.id, { w: n.w, h: n.h }])));
@@ -155,6 +180,29 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   function renameGroup(oldName: string, newName: string) {
     applyBatch(groupRenameBatch(props.doc, oldName, newName));
   }
+
+  function enterBoxEdit(id: string, rect: { x: number; y: number; width: number; height: number }) {
+    setEditingId(id);
+    canvasRef?.fitView([rect], 64);
+  }
+
+  function commitBoxEdit(id: string, form: BoxEditForm) {
+    const box = boxesById().get(id);
+    setEditingId(null);
+    if (!box) return;
+    apply(setBox(props.doc, id, buildBoxPatch(form, box.name)));
+  }
+
+  function cancelBoxEdit() {
+    setEditingId(null);
+  }
+
+  // Drop out of edit mode if the document reloads out from under the editing
+  // box (e.g. a remote, non-echo change) — see plan doc01.05.04.
+  createEffect(on(() => props.doc, (doc) => {
+    const id = editingId();
+    if (id && !doc.boxes.some((b) => b.id === id)) setEditingId(null);
+  }));
 
   createEffect(() => {
     const pos = basePositions();
@@ -268,6 +316,7 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
 
   return (
     <>
+      <style>{BOX_MD_STYLES}</style>
       <Canvas
         ref={(r) => { canvasRef = r; }}
         edges={edges()}
@@ -293,6 +342,10 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
           nodes={nodes}
           basePositions={basePositions}
           exposePositions={(getter) => { getNodePositions = getter; }}
+          editingId={editingId}
+          onEnterEdit={enterBoxEdit}
+          onCommit={commitBoxEdit}
+          onCancel={cancelBoxEdit}
         />
       </Canvas>
       <Show when={groupPromptTargets()}>

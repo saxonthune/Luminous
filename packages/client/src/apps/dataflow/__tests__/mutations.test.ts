@@ -8,6 +8,7 @@ import {
   groupRenameBatch,
   setGroupBatch,
   deleteBatch,
+  buildBoxPatch,
 } from '../mutations';
 
 const doc: DataflowDocument = {
@@ -121,5 +122,39 @@ describe('deleteBatch', () => {
       { type: 'removeBox', id: 'a', cascade: true },
       { type: 'removeBox', id: 'b', cascade: true },
     ]);
+  });
+});
+
+describe('buildBoxPatch', () => {
+  it('carries the form name and description through', () => {
+    const patch = buildBoxPatch(
+      { name: 'New Name', description: 'New desc', contractFormat: '', contractText: '' },
+      'Old Name',
+    );
+    expect(patch).toEqual({ name: 'New Name', description: 'New desc' });
+  });
+
+  it('falls back to the previous name when the form name is blank', () => {
+    const patch = buildBoxPatch(
+      { name: '   ', description: '', contractFormat: '', contractText: '' },
+      'Old Name',
+    );
+    expect(patch.name).toBe('Old Name');
+  });
+
+  it('omits contract when both format and text are blank', () => {
+    const patch = buildBoxPatch(
+      { name: 'A', description: '', contractFormat: '  ', contractText: '' },
+      'A',
+    );
+    expect(patch.contract).toBeUndefined();
+  });
+
+  it('includes contract when either field is non-blank', () => {
+    const patch = buildBoxPatch(
+      { name: 'A', description: '', contractFormat: 'json-schema', contractText: '' },
+      'A',
+    );
+    expect(patch.contract).toEqual({ format: 'json-schema', text: '' });
   });
 });

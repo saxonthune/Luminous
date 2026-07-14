@@ -1,4 +1,4 @@
-import type { DataflowDocument, DataflowBox, DataflowAction } from '@luminous/core/dataflow';
+import type { DataflowDocument, DataflowBox, DataflowAction, ContractBlock } from '@luminous/core/dataflow';
 import { connect, disconnect } from '@luminous/core/dataflow';
 
 /** Appends `-2`, `-3`, … to `base` until it is absent from `taken`. */
@@ -78,4 +78,32 @@ export function setGroupBatch(ids: string[], group: string | null): DataflowActi
 /** `removeBox` actions (cascading their flows) over `ids`. */
 export function deleteBatch(ids: string[]): DataflowAction[] {
   return ids.map((id): DataflowAction => ({ type: 'removeBox', id, cascade: true }));
+}
+
+/** Raw values collected from the Box edit form. */
+export interface BoxEditForm {
+  name: string;
+  description: string;
+  contractFormat: string;
+  contractText: string;
+}
+
+/**
+ * Builds the `setBox` patch from a submitted edit form. An empty name falls
+ * back to `previousName` (a Box always has a Name, glossary doc01.05.03); a
+ * contract with both fields empty is omitted so `setBox` leaves any existing
+ * contract untouched.
+ */
+export function buildBoxPatch(
+  form: BoxEditForm,
+  previousName: string,
+): { name: string; description: string; contract?: ContractBlock } {
+  const patch: { name: string; description: string; contract?: ContractBlock } = {
+    name: form.name.trim() === '' ? previousName : form.name,
+    description: form.description,
+  };
+  if (form.contractFormat.trim() !== '' || form.contractText.trim() !== '') {
+    patch.contract = { format: form.contractFormat, text: form.contractText };
+  }
+  return patch;
 }

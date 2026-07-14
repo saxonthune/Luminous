@@ -13,6 +13,9 @@
     }
   ],
   "flows": [
-    { "from": "standings-json", "to": "bracket-teams" }
+    {
+      "from": "standings-json",
+      "to": "bracket-teams"
+    }
   ]
 }
