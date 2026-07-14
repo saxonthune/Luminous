@@ -7,9 +7,16 @@ import { applyActionToDoc } from "./actions.js"
 type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
 
 const cache = new Map<string, Document>()
+const rawCache = new Map<string, unknown>()
 const dirty = new Set<string>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const recentWrites = new Map<string, number>()
+
+const DATAFLOW_SUFFIX = ".dataflow.json"
+
+export function isDataflowPath(relativePath: string): boolean {
+  return relativePath.endsWith(DATAFLOW_SUFFIX)
+}
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
 let roots = new Map<string, string>()
@@ -57,7 +64,7 @@ async function loadDocument(filePath: string): Promise<Document> {
   }
 }
 
-async function saveDocument(filePath: string, doc: Document): Promise<void> {
+async function saveDocument(filePath: string, doc: unknown): Promise<void> {
   await writeFile(filePath, JSON.stringify(doc, null, 2), "utf-8")
   recentWrites.set(filePath, Date.now())
 }
@@ -126,6 +133,9 @@ export async function applyAction(
   action: string,
   params: Record<string, unknown>
 ): Promise<ActionResult> {
+  if (isDataflowPath(relativePath)) {
+    return { ok: false, error: "graph actions are not supported on .dataflow.json documents" }
+  }
   const doc = await getDocument(relativePath)
   const result = applyActionToDoc(doc, action, params)
   if (result.ok) {
@@ -139,6 +149,9 @@ export async function applyBatch(
   relativePath: string,
   actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
 ): Promise<Array<ActionResult & { ref?: string }>> {
+  if (isDataflowPath(relativePath)) {
+    return [{ ok: false, error: "graph actions are not supported on .dataflow.json documents" }]
+  }
   const doc = await getDocument(relativePath)
   const refs = new Map<string, string>()
   const results: Array<ActionResult & { ref?: string }> = []
@@ -186,6 +199,32 @@ export async function applyBatch(
 }
 
 /**
+ * Read a document as raw, unvalidated JSON — no v3 gate. Used for
+ * .dataflow.json paths, which the server does not understand the shape of.
+ */
+export async function getRawDocument(relativePath: string): Promise<unknown> {
+  if (rawCache.has(relativePath)) {
+    return rawCache.get(relativePath)
+  }
+  const absPath = resolveDocPath(relativePath)
+  const raw = await readFile(absPath, "utf-8")
+  const parsed = JSON.parse(raw)
+  rawCache.set(relativePath, parsed)
+  return parsed
+}
+
+/**
+ * Write a whole raw document to disk, bypassing the v3 action pipeline.
+ * Marks the write as recent so the file watcher doesn't echo it back.
+ */
+export async function writeRawDocument(relativePath: string, content: unknown): Promise<void> {
+  const absPath = resolveDocPath(relativePath)
+  await writeFile(absPath, JSON.stringify(content, null, 2) + "\n", "utf-8")
+  recentWrites.set(absPath, Date.now())
+  rawCache.set(relativePath, content)
+}
+
+/**
  * Read a pack file (*.pack.json) as raw text. Throws if the file does not exist.
  * Path is resolved through the same root-namespace logic as documents.
  */
@@ -204,7 +243,7 @@ export function watchDocuments(
       const watcher = watch(root.dir, { recursive: true }, (_event, filename) => {
         if (!filename) return
         const normalized = filename.toString().replace(/\\/g, "/")
-        if (!normalized.endsWith(".graph.json")) return
+        if (!normalized.endsWith(".graph.json") && !normalized.endsWith(DATAFLOW_SUFFIX)) return
         const docPath = root.name ? `${root.name}/${normalized}` : normalized
         const absPath = resolve(root.dir, normalized)
         const lastWrite = recentWrites.get(absPath)
@@ -213,6 +252,7 @@ export function watchDocuments(
         }
         recentWrites.delete(absPath)
         cache.delete(docPath)
+        rawCache.delete(docPath)
         onChange(docPath)
       })
       // Recursive watch on a large repo can exhaust inotify watches; degrade

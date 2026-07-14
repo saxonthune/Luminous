@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchStaticSources } from '../src/sources/staticSources';
 import { siblingPackUrl } from '../src/pack/siblingLoader';
 

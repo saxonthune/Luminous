@@ -21,13 +21,32 @@ describe('fetchServerSources', () => {
       return Promise.reject(new Error('unexpected fetch: ' + url));
     }));
 
-    const sources = await fetchServerSources();
+    const sources = await fetchServerSources('.graph.json');
     expect(sources).toHaveLength(2);
     expect(sources.map((s) => s.id)).toEqual([
       'Luminous/sample-primitives.graph.json',
       'RankThePlanet/poc.graph.json',
     ]);
     expect(sources.map((s) => s.root)).toEqual(['Luminous', 'RankThePlanet']);
+  });
+
+  it('filters documents by suffix', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/api/documents') {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            documents: [
+              { path: 'Luminous/sample-primitives.graph.json', name: 'sample-primitives', root: 'Luminous', lastModified: 1000 },
+              { path: 'Luminous/sample.dataflow.json', name: 'sample', root: 'Luminous', lastModified: 2000 },
+            ],
+          }),
+        });
+      }
+      return Promise.reject(new Error('unexpected fetch: ' + url));
+    }));
+
+    const sources = await fetchServerSources('.dataflow.json');
+    expect(sources.map((s) => s.id)).toEqual(['Luminous/sample.dataflow.json']);
   });
 
   it('derives root from the path when the server omits it', async () => {
@@ -44,7 +63,7 @@ describe('fetchServerSources', () => {
       return Promise.reject(new Error('unexpected fetch: ' + url));
     }));
 
-    const sources = await fetchServerSources();
+    const sources = await fetchServerSources('.graph.json');
     expect(sources[0].root).toBe('workspace');
   });
 
@@ -66,7 +85,7 @@ describe('fetchServerSources', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    const sources = await fetchServerSources();
+    const sources = await fetchServerSources('.graph.json');
     const text = await sources[0].load();
 
     expect(mockFetch).toHaveBeenCalledWith(

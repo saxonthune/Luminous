@@ -350,6 +350,169 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
       },
     },
   },
+  dataflow: {
+    description:
+      "Author dataflow diagrams — .dataflow.json documents made of Boxes (processes, stores, external entities) connected by Flows (directed data movement). Unlike the v3 canvas/node/edge tools, a dataflow Document has no pack: Box and Flow are the whole vocabulary. Use `list` to discover documents, `create` to start one, `addBox`/`connect` to build it up, and `check` to catch structural issues (orphan boxes, black holes) before sharing it.",
+    local: true,
+    actions: {
+      list: {
+        description: "Return the paths of all dataflow documents (files ending '.dataflow.json') in the workspace.",
+        method: 'GET',
+        path: '',
+        params: {},
+      },
+      create: {
+        description: "Create a new empty dataflow document at path. Fails if path does not end '.dataflow.json'.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: {
+            type: 'described',
+            innerType: 'string',
+            description: "Filename to create, must end '.dataflow.json', e.g. 'checkout.dataflow.json'.",
+          },
+        },
+      },
+      read: {
+        description: "Load the complete dataflow document: all Boxes (id, name, description, contract) and all Flows (from, to).",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      addBox: {
+        description: "Add a new Box (a process, data store, or external entity) to the document. The Box id derives from name and never changes afterward. Returns the new Box's id.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          name: {
+            type: 'described',
+            innerType: 'string',
+            description: "Human-readable name for the Box, e.g. 'Payment Processor'.",
+          },
+          'description?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Free-text description of what the Box does.",
+          },
+          'contract?': {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: { format: 'string', text: 'string' },
+              required: ['format', 'text'],
+            },
+            description: "Structured contract for the Box's data shape: { format, text }, e.g. { format: 'json-schema', text: '...' }.",
+          },
+        },
+      },
+      set: {
+        description: "Update an existing Box's name, description, or contract. Renaming changes only the name — the Box's id is unaffected.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          box: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Box to update.",
+          },
+          'name?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New name for the Box.",
+          },
+          'description?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New description for the Box.",
+          },
+          'contract?': {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: { format: 'string', text: 'string' },
+              required: ['format', 'text'],
+            },
+            description: "New contract for the Box: { format, text }.",
+          },
+        },
+      },
+      connect: {
+        description: "Add a Flow (directed data movement) from one Box to another. Both Boxes must already exist; a duplicate Flow between the same pair is rejected.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the source Box.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the destination Box.",
+          },
+        },
+      },
+      disconnect: {
+        description: "Remove the Flow from one Box to another.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Flow's source Box.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Flow's destination Box.",
+          },
+        },
+      },
+      removeBox: {
+        description: "Remove a Box from the document. Fails if any Flow still attaches to it unless `cascade` is set, which removes those Flows too.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          box: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Box to remove.",
+          },
+          'cascade?': {
+            type: 'described',
+            innerType: 'boolean',
+            description: "If true, also remove any Flows attached to this Box. Defaults to false — removal fails if Flows are attached.",
+          },
+        },
+      },
+      check: {
+        description: "Validate the document and return issues: errors (a Flow endpoint that names no Box, duplicate ids or names) and warnings (a Box with no Flows at all, or with inbound Flows but no outbound Flow — a DFD black hole). Warnings never block a write.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      batch: {
+        description: "Apply a sequence of dataflow actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addBox' | 'set' | 'connect' | 'disconnect' | 'removeBox') and that action's own fields (see addBox/set/connect/disconnect/removeBox above, using `id` in place of `box` for set/removeBox).",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          actions: {
+            type: 'described',
+            innerType: { type: 'array', items: { type: 'object', properties: {} } },
+            description: "Ordered array of dataflow actions to apply atomically.",
+          },
+        },
+      },
+    },
+  },
 }
 
 export const batchToolConfig: BatchToolConfig = {

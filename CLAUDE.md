@@ -18,7 +18,7 @@ client  (Solid.js canvas, all domain logic)
 ```
 
 - `@luminous/server` (`packages/server`) — filesystem serving, WebSocket file-change notifications, no domain logic
-- `@luminous/client` (`packages/client`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting. It is a platform wrapper (`AppShell`, `AppHeader`) hosting apps under `src/apps/`; Luminous Canvas (`src/apps/canvas/CanvasApp.tsx`) is the first app.
+- `@luminous/client` (`packages/client`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting. It is a platform wrapper (`AppShell`, `AppHeader`) hosting apps under `src/apps/`; Luminous Canvas (`src/apps/canvas/CanvasApp.tsx`) is the first app, and the Dataflow Designer (`src/apps/dataflow/`) is the second — a read-only viewer of `*.dataflow.json` documents (doc02.23).
 
 ### Legacy (schema-first, being superseded)
 

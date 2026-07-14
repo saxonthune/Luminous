@@ -1,30 +1,29 @@
-import { createSignal, createEffect, Match, Switch, onMount, Show } from 'solid-js';
+import { createSignal, createEffect, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { loadGraphFromText, resetRegistry, type Graph } from '@luminous/core';
-import { loadAndRegisterSiblingPack } from '../../pack/siblingLoader';
+import type { DataflowDocument } from '@luminous/core/dataflow';
+import { parseDataflowDocument } from '@luminous/core/dataflow';
 import { DocumentPicker } from '../../DocumentPicker';
-import { CanvasHost } from '../../CanvasHost';
 import { ToastTray, type Toast } from '../../ToastTray';
-import { fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
-import { InfoModal } from '../../InfoModal';
+import { fetchServerSources, type CanvasSource } from '../../sources';
 import { readParam, writeParam } from '../../urlState';
+import { watchDocuments } from '../../ws/watchClient';
+import { DataflowCanvas } from './DataflowCanvas';
 
-type CanvasAppState =
+type DataflowAppState =
   | { kind: 'booting' }
   | { kind: 'picker' }
   | { kind: 'loadingDoc' }
-  | { kind: 'canvasMounted' }
-  | { kind: 'fatalError'; reason: string };
+  | { kind: 'mounted' }
+  | { kind: 'error'; reason: string };
 
-export function CanvasApp() {
+export function DataflowApp() {
   const initialSrc = readParam('src');
 
-  const [shell, setShell] = createSignal<CanvasAppState>({ kind: 'booting' });
+  const [shell, setShell] = createSignal<DataflowAppState>({ kind: 'booting' });
   const [sources, setSources] = createSignal<CanvasSource[] | null>(null);
   const [sourceId, setSourceId] = createSignal<string | null>(null);
-  const [graph, setGraph] = createSignal<Graph | null>(null);
+  const [doc, setDoc] = createSignal<DataflowDocument | null>(null);
   const [toasts, setToasts] = createSignal<Toast[]>([]);
-  const [showInfo, setShowInfo] = createSignal(false);
 
   function enqueueToast(message: string) {
     const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -36,10 +35,10 @@ export function CanvasApp() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function loadGraph(id: string) {
+  function loadDoc(id: string) {
     const source = sources()?.find((s) => s.id === id);
     if (!source) {
-      enqueueToast(`Canvas "${id}" not found`);
+      enqueueToast(`Dataflow "${id}" not found`);
       setShell({ kind: 'picker' });
       setSourceId(null);
       writeParam('src', null);
@@ -47,40 +46,37 @@ export function CanvasApp() {
     }
     source
       .load()
-      .then(async (text) => {
-        try {
-          resetRegistry();
-          await loadAndRegisterSiblingPack(source.id, text);
-          const g = loadGraphFromText(text);
-          setGraph(g);
-          setShell({ kind: 'canvasMounted' });
-        } catch (e) {
-          handleGraphFailed(source.label, e);
+      .then((text) => {
+        const result = parseDataflowDocument(text);
+        if (!result.ok) {
+          handleDocFailed(source.label, result.issues.join('; '));
+          return;
         }
+        setDoc(result.doc);
+        setShell({ kind: 'mounted' });
       })
-      .catch((e: unknown) => handleGraphFailed(source.label, e));
+      .catch((e: unknown) => handleDocFailed(source.label, e instanceof Error ? e.message : String(e)));
   }
 
-  function handleGraphFailed(label: string, e: unknown) {
-    console.error(`[loadGraph] "${label}" failed:`, e);
-    const msg = e instanceof Error ? e.message : String(e);
-    enqueueToast(`Failed to load "${label}": ${msg}`);
+  function handleDocFailed(label: string, message: string) {
+    console.error(`[loadDoc] "${label}" failed:`, message);
+    enqueueToast(`Failed to load "${label}": ${message}`);
     setSourceId(null);
-    setGraph(null);
+    setDoc(null);
     writeParam('src', null);
     setShell({ kind: 'picker' });
   }
 
   function onSelect(source: CanvasSource) {
     setSourceId(source.id);
-    setGraph(null);
+    setDoc(null);
     writeParam('src', source.id);
     setShell({ kind: 'loadingDoc' });
-    loadGraph(source.id);
+    loadDoc(source.id);
   }
 
   function onBack() {
-    setGraph(null);
+    setDoc(null);
     setSourceId(null);
     writeParam('src', null);
     setShell({ kind: 'picker' });
@@ -92,10 +88,12 @@ export function CanvasApp() {
   }
 
   function boot() {
-    const fetchSources = __GITHUB_PAGES__
-      ? fetchStaticSources
-      : () => fetchServerSources('.graph.json');
-    fetchSources()
+    if (__GITHUB_PAGES__) {
+      setSources([]);
+      setShell({ kind: 'picker' });
+      return;
+    }
+    fetchServerSources('.dataflow.json')
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);
@@ -103,12 +101,12 @@ export function CanvasApp() {
         if (initialSrc && list.some((s) => s.id === initialSrc)) {
           setSourceId(initialSrc);
           setShell({ kind: 'loadingDoc' });
-          loadGraph(initialSrc);
+          loadDoc(initialSrc);
         }
       })
       .catch((e: unknown) => {
         const reason = e instanceof Error ? e.message : String(e);
-        setShell({ kind: 'fatalError', reason });
+        setShell({ kind: 'error', reason });
       });
   }
 
@@ -119,6 +117,11 @@ export function CanvasApp() {
 
   onMount(() => {
     boot();
+    // eslint-disable-next-line solid/reactivity -- WS callback, not a render path; sourceId() read is intentionally untracked
+    const dispose = watchDocuments((path) => {
+      if (path === sourceId()) loadDoc(path);
+    });
+    onCleanup(dispose);
   });
 
   const sourceLabel = () => {
@@ -130,11 +133,11 @@ export function CanvasApp() {
   return (
     <>
       <Portal mount={document.getElementById('app-header-left')!}>
-        <Show when={shell().kind === 'canvasMounted'}>
+        <Show when={shell().kind === 'mounted'}>
           <button
             onClick={onBack}
             class="rounded px-2 py-1 text-sm text-fg-muted hover:bg-surface-alt hover:text-fg"
-            title="Back to canvases"
+            title="Back to dataflows"
           >
             ← Back
           </button>
@@ -144,20 +147,6 @@ export function CanvasApp() {
           <span class="text-sm text-fg-muted">{sourceLabel()}</span>
         </Show>
       </Portal>
-      <Portal mount={document.getElementById('app-header-right')!}>
-        <Show when={graph()?.info && graph()!.info!.trim()}>
-          <button
-            onClick={() => setShowInfo(true)}
-            class="rounded px-2 py-1 text-base text-accent hover:bg-surface-alt"
-            title="About this canvas"
-          >
-            ⓘ
-          </button>
-        </Show>
-      </Portal>
-      <Show when={showInfo() && graph()?.info}>
-        <InfoModal info={graph()!.info!} onClose={() => setShowInfo(false)} />
-      </Show>
       <div style={{ flex: '1 1 auto', 'min-height': 0, display: 'flex', 'flex-direction': 'column' }}>
         <Switch>
           <Match when={shell().kind === 'booting'}>
@@ -166,22 +155,31 @@ export function CanvasApp() {
             </div>
           </Match>
           <Match when={shell().kind === 'picker' || shell().kind === 'loadingDoc'}>
-            <DocumentPicker
-              sources={sources() ?? []}
-              onSelect={onSelect}
-              loadingId={shell().kind === 'loadingDoc' ? sourceId() : null}
-            />
+            <div class="flex flex-1 flex-col">
+              <DocumentPicker
+                heading="Dataflows"
+                sources={sources() ?? []}
+                onSelect={onSelect}
+                loadingId={shell().kind === 'loadingDoc' ? sourceId() : null}
+              />
+              <Show when={__GITHUB_PAGES__}>
+                <p class="pb-4 text-center text-xs text-fg-subtle">
+                  Dataflow documents are served by the local Luminous server — not available on
+                  this static site.
+                </p>
+              </Show>
+            </div>
           </Match>
-          <Match when={shell().kind === 'canvasMounted' && graph() && sourceId()}>
-            <CanvasHost graph={graph()!} sourceId={sourceId()!} />
+          <Match when={shell().kind === 'mounted' && doc()}>
+            <DataflowCanvas doc={doc()!} />
           </Match>
-          <Match when={shell().kind === 'fatalError'}>
+          <Match when={shell().kind === 'error'}>
             {(() => {
               const s = shell();
-              const reason = s.kind === 'fatalError' ? s.reason : '';
+              const reason = s.kind === 'error' ? s.reason : '';
               return (
                 <div class="flex flex-1 flex-col items-center justify-center gap-4">
-                  <div class="text-fg">Failed to list canvases</div>
+                  <div class="text-fg">Failed to list dataflows</div>
                   <div class="text-sm text-fg-muted">{reason}</div>
                   <button
                     onClick={onRetry}

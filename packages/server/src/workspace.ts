@@ -37,7 +37,10 @@ async function walk(dir: string): Promise<string[]> {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue
       results.push(...(await walk(join(dir, entry.name))))
-    } else if (entry.isFile() && entry.name.endsWith(".graph.json")) {
+    } else if (
+      entry.isFile() &&
+      (entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json"))
+    ) {
       results.push(join(dir, entry.name))
     }
   }
@@ -84,7 +87,14 @@ export async function resolveRoots(
   return [{ name: basename(fallbackDir), dir: fallbackDir }]
 }
 
-/** Scan every root for *.graph.json files, namespacing paths by root name. */
+/** Strip whichever recognized document suffix a filename has. */
+function stripDocSuffix(fileName: string): string {
+  if (fileName.endsWith(".graph.json")) return basename(fileName, ".graph.json")
+  if (fileName.endsWith(".dataflow.json")) return basename(fileName, ".dataflow.json")
+  return fileName
+}
+
+/** Scan every root for *.graph.json and *.dataflow.json files, namespacing paths by root name. */
 export async function scanDocuments(roots: WorkspaceRoot[]): Promise<DocumentMeta[]> {
   const metas: DocumentMeta[] = []
   for (const root of roots) {
@@ -94,7 +104,7 @@ export async function scanDocuments(roots: WorkspaceRoot[]): Promise<DocumentMet
       const rel = relative(root.dir, absPath).replace(/\\/g, "/")
       metas.push({
         path: `${root.name}/${rel}`,
-        name: basename(absPath, ".graph.json"),
+        name: stripDocSuffix(basename(absPath)),
         root: root.name,
         rootDir: root.dir,
         lastModified: s.mtimeMs,

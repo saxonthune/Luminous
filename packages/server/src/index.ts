@@ -4,7 +4,19 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments, resolveRoots } from "./workspace.js"
-import { getDocument, applyAction, applyBatch, flushAll, setRoots, watchDocuments, createDocument, readPackFile } from "./store.js"
+import {
+  getDocument,
+  applyAction,
+  applyBatch,
+  flushAll,
+  setRoots,
+  watchDocuments,
+  createDocument,
+  readPackFile,
+  getRawDocument,
+  writeRawDocument,
+  isDataflowPath,
+} from "./store.js"
 
 const port = Number(process.env.PORT ?? 4080)
 
@@ -147,8 +159,47 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return
     }
     console.log(`[api] GET document: ${docPath}`)
+    if (isDataflowPath(docPath)) {
+      try {
+        const doc = await getRawDocument(docPath)
+        sendJson(res, 200, doc)
+      } catch {
+        sendJson(res, 404, { error: "document not found" })
+      }
+      return
+    }
     const doc = await getDocument(docPath)
     sendJson(res, 200, doc)
+    return
+  }
+
+  // POST /api/document/write — { path, content } — whole-document write for
+  // .dataflow.json files. Graph mutations keep their single write path
+  // through /api/action/* and /api/action/batch.
+  if (url === "/api/document/write" && req.method === "POST") {
+    let body: { path?: string; content?: unknown }
+    try {
+      body = (await parseBody(req)) as typeof body
+    } catch {
+      sendJson(res, 400, { error: "invalid JSON" })
+      return
+    }
+    const docPath = body.path
+    if (!docPath || hasTraversal(docPath)) {
+      sendJson(res, 400, { ok: false, error: "invalid path" })
+      return
+    }
+    if (!isDataflowPath(docPath)) {
+      sendJson(res, 400, { ok: false, error: "only .dataflow.json paths may be written here" })
+      return
+    }
+    if (body.content === undefined) {
+      sendJson(res, 400, { ok: false, error: "missing content" })
+      return
+    }
+    await writeRawDocument(docPath, body.content)
+    broadcast(docPath)
+    sendJson(res, 200, { ok: true, path: docPath })
     return
   }
 

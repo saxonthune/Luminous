@@ -1,4 +1,4 @@
-/// <reference path="./env.d.ts" />
+import './env.d.ts';
 export { useViewport } from './interactions/useViewport.js';
 export { useConnectionDrag } from './interactions/useConnectionDrag.js';
 export { useNodeDrag } from './interactions/useNodeDrag.js';

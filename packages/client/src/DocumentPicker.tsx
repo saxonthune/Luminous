@@ -5,6 +5,7 @@ interface DocumentPickerProps {
   sources: CanvasSource[];
   onSelect: (source: CanvasSource) => void;
   loadingId?: string | null;
+  heading?: string;
 }
 
 interface RootGroup {
@@ -36,7 +37,7 @@ export function DocumentPicker(props: DocumentPickerProps) {
         style={{ 'box-shadow': 'var(--shadow-sm)' }}
       >
         <div class="mb-6">
-          <h1 class="text-xl font-semibold text-fg">Canvases</h1>
+          <h1 class="text-xl font-semibold text-fg">{props.heading ?? 'Canvases'}</h1>
           <p class="mt-1 text-sm text-fg-muted">Pick a document to open.</p>
         </div>
         <Show

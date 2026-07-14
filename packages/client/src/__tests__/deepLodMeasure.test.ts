@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { buildGraph, registerPack, resetRegistry, getPrimitivesBuiltin } from '@luminous/core';
-import type { Node, Edge, View, Pack } from '@luminous/core';
+import type { Node, View, Pack } from '@luminous/core';
 import { measureDeepLod } from '../deepLodMeasure';
 
 const dummySchema = {

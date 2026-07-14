@@ -1,0 +1,18 @@
+{
+  "v": 1,
+  "boxes": [
+    {
+      "id": "standings-json",
+      "name": "Json w/ standings",
+      "description": "Raw league standings pulled from the source feed each week."
+    },
+    {
+      "id": "bracket-teams",
+      "name": "Bracket w/ teams",
+      "description": "Tournament bracket seeded from the current standings."
+    }
+  ],
+  "flows": [
+    { "from": "standings-json", "to": "bracket-teams" }
+  ]
+}

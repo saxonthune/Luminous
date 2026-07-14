@@ -5,6 +5,19 @@ import { toolConfig, batchToolConfig, type ActionConfig, type ToolGroupConfig, t
 import { describePack, describePackForCanvas } from './pack-describe.js'
 import { getNode, listNodes, listEdges, neighborhoodOf } from './query-tools.js'
 import { listViews, project } from './view-tools.js'
+import {
+  listDataflows,
+  createDataflow,
+  readDataflow,
+  addBoxTool,
+  setBoxTool,
+  connectTool,
+  disconnectTool,
+  removeBoxTool,
+  checkTool,
+  batchTool,
+} from './dataflow-tools.js'
+import type { ContractBlock, DataflowAction } from '@luminous/core/dataflow'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -153,7 +166,7 @@ All mutations go through the same API that the browser canvas uses — there is 
 
 Prefer the batch tool for multi-step operations. Batch executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom).`
+Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
@@ -241,6 +254,77 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } else {
         return {
           content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'view'` }],
+          isError: true,
+        }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
+  if (name === 'dataflow') {
+    const a = args as {
+      action: string
+      path?: string
+      name?: string
+      description?: string
+      contract?: ContractBlock
+      box?: string
+      from?: string
+      to?: string
+      cascade?: boolean
+      actions?: DataflowAction[]
+    }
+    try {
+      let result: unknown
+      if (a.action === 'list') {
+        result = await listDataflows(serverUrl)
+      } else if (a.action === 'create') {
+        if (!a.path) throw new Error("'path' is required for dataflow/create")
+        result = await createDataflow(serverUrl, a.path)
+      } else if (a.action === 'read') {
+        if (!a.path) throw new Error("'path' is required for dataflow/read")
+        result = await readDataflow(serverUrl, a.path)
+      } else if (a.action === 'addBox') {
+        if (!a.path) throw new Error("'path' is required for dataflow/addBox")
+        if (!a.name) throw new Error("'name' is required for dataflow/addBox")
+        result = await addBoxTool(serverUrl, a.path, {
+          name: a.name,
+          description: a.description,
+          contract: a.contract,
+        })
+      } else if (a.action === 'set') {
+        if (!a.path) throw new Error("'path' is required for dataflow/set")
+        if (!a.box) throw new Error("'box' is required for dataflow/set")
+        result = await setBoxTool(serverUrl, a.path, a.box, {
+          name: a.name,
+          description: a.description,
+          contract: a.contract,
+        })
+      } else if (a.action === 'connect') {
+        if (!a.path) throw new Error("'path' is required for dataflow/connect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for dataflow/connect")
+        result = await connectTool(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'disconnect') {
+        if (!a.path) throw new Error("'path' is required for dataflow/disconnect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for dataflow/disconnect")
+        result = await disconnectTool(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'removeBox') {
+        if (!a.path) throw new Error("'path' is required for dataflow/removeBox")
+        if (!a.box) throw new Error("'box' is required for dataflow/removeBox")
+        result = await removeBoxTool(serverUrl, a.path, a.box, a.cascade)
+      } else if (a.action === 'check') {
+        if (!a.path) throw new Error("'path' is required for dataflow/check")
+        result = await checkTool(serverUrl, a.path)
+      } else if (a.action === 'batch') {
+        if (!a.path) throw new Error("'path' is required for dataflow/batch")
+        if (!a.actions) throw new Error("'actions' is required for dataflow/batch")
+        result = await batchTool(serverUrl, a.path, a.actions)
+      } else {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'dataflow'` }],
           isError: true,
         }
       }

@@ -1,4 +1,5 @@
 import type { JSX } from 'solid-js';
+import { For } from 'solid-js';
 import { useCanvasContext } from './CanvasContext.js';
 import type { ChildLayoutPolicy } from './layout-types.js';
 
@@ -31,15 +32,15 @@ export function LayoutPicker(props: LayoutPickerProps): JSX.Element {
         'pointer-events': 'auto',
       }}
     >
-      {POLICIES.map(({ policy, glyph, label }) => (
+      <For each={POLICIES}>{(item) => (
         <button
           type="button"
-          title={label}
-          aria-label={label}
-          aria-pressed={props.current() === policy}
+          title={item.label}
+          aria-label={item.label}
+          aria-pressed={props.current() === item.policy}
           onClick={(e) => {
             e.stopPropagation();
-            ctx.setLayoutOverride(props.nodeId, policy);
+            ctx.setLayoutOverride(props.nodeId, item.policy);
           }}
           style={{
             display: 'flex',
@@ -51,19 +52,19 @@ export function LayoutPicker(props: LayoutPickerProps): JSX.Element {
             border: 'none',
             'border-radius': '3px',
             cursor: 'pointer',
-            background: props.current() === policy
+            background: props.current() === item.policy
               ? 'var(--cactus-accent-subtle, #3b82f6)'
               : 'transparent',
-            color: props.current() === policy
+            color: props.current() === item.policy
               ? '#fff'
               : 'var(--cactus-fg-muted, #6b7280)',
             padding: '0',
             'line-height': '1',
           }}
         >
-          {glyph}
+          {item.glyph}
         </button>
-      ))}
+      )}</For>
     </div>
   );
 }

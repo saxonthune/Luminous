@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./graph": "./src/graph.ts",
+    "./dataflow": "./src/dataflow/index.ts",
     "./view": "./src/view.ts",
     "./query": "./src/query.ts",
     "./primitive-descriptors": "./src/render/primitive-descriptors.ts"

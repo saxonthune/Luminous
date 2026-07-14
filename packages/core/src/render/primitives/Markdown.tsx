@@ -1,4 +1,5 @@
 import type { JSX } from 'solid-js';
+import { For } from 'solid-js';
 import type { RenderContext } from '../../types.ts';
 
 // Minimal markdown renderer — no external dependency. Covers: headings (h1–h3),
@@ -66,5 +67,5 @@ export default function Markdown(
 ): JSX.Element {
   const value = String(props['value'] ?? '');
   const lines = value.split('\n');
-  return <div style={{ 'line-height': '1.5' }}>{lines.map((line) => renderLine(line))}</div>;
+  return <div style={{ 'line-height': '1.5' }}><For each={lines}>{(line) => renderLine(line)}</For></div>;
 }

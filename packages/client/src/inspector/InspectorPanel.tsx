@@ -150,8 +150,8 @@ export function InspectorPanel(props: InspectorPanelProps): JSX.Element {
     if (edgeItem) {
       const kind = getEdgeKind(edgeItem.kind);
       const content = edgeItem.props as Record<string, unknown>;
-      if (kind?.render?.['open'] ?? kind?.render?.['card']) {
-        const renderNode = kind?.render?.['open'] ?? kind?.render?.['card']!;
+      const renderNode = kind?.render?.['open'] ?? kind?.render?.['card'];
+      if (renderNode) {
         return interpretRender(renderNode, renderCtx, content);
       }
     }
