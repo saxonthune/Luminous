@@ -1,86 +1,36 @@
 import { test, expect } from '@playwright/test'
 
-test('viewer loads a dataflow document via picker', async ({ page }) => {
-  await page.goto('/?app=dataflow')
-  await expect(page.locator('h1', { hasText: 'Dataflows' })).toBeVisible()
-  await page.getByRole('button', { name: 'sample' }).click()
-  await expect(page.getByText('Bracket w/ teams')).toBeVisible()
-})
+// The e2e suite is deliberately small: boot smokes (existence proofs that the
+// composed app renders — the floor for headless-agent verify gates) plus
+// regression pins for defects no cheaper layer could have caught. Pins are
+// earned by incident, never written speculatively. Tests run against the
+// fixture workspace in e2e/fixtures/, never the live .canvases.
 
-test('viewer renders group clusters as tinted underlays', async ({ page }) => {
+test('dataflow app boots: fixture document renders boxes and group envelopes', async ({ page }) => {
   await page.goto('/?app=dataflow')
   await expect(page.locator('h1', { hasText: 'Dataflows' })).toBeVisible()
-  await page.getByRole('button', { name: 'fifa-part-4' }).click()
+  await page.getByRole('button', { name: 'grouped' }).click()
+  // Existence invariants over the fixture: its boxes render as nodes and each
+  // of its two groups projects to exactly one underlay envelope.
+  await expect(page.locator('[data-container-id]').first()).toBeVisible()
   await expect(page.locator('[data-cluster-id]')).toHaveCount(2)
-  await expect(page.getByText('Static Files')).toBeVisible()
 })
 
-test('right-clicking a box opens its context menu', async ({ page }) => {
-  await page.goto('/?app=dataflow')
-  await page.getByRole('button', { name: 'sample' }).click()
-  await page.locator('[data-container-id]').first().click({ button: 'right' })
-  await expect(page.getByRole('menuitem', { name: 'Duplicate', exact: true })).toBeVisible()
-})
-
+// Regression pin (2026-07-14): the submenu closed while the pointer crossed
+// from its trigger into the panel — the SubContent was unportalled and the
+// Sub had no overlap/gutter, leaving a dead gap. Only the composed
+// browser+portal+pointer system can exhibit this.
 test('submenu stays open while the pointer moves into it', async ({ page }) => {
   await page.goto('/?app=dataflow')
-  await page.getByRole('button', { name: 'sample' }).click()
+  await page.getByRole('button', { name: 'grouped' }).click()
   await page.locator('[data-container-id]').first().click({ button: 'right' })
   const trigger = page.getByRole('menuitem', { name: /Add to Group/ })
   await trigger.hover()
   const subItem = page.getByRole('menuitem', { name: 'New Group…' })
   await expect(subItem).toBeVisible()
-  // Walk the pointer from the trigger into the submenu in small steps —
-  // regression check for the panel closing while the pointer crosses over.
   const from = (await trigger.boundingBox())!
   const to = (await subItem.boundingBox())!
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 })
   await expect(subItem).toBeVisible()
-})
-
-test('right-clicking the background opens the Add Box menu', async ({ page }) => {
-  await page.goto('/?app=dataflow')
-  await page.getByRole('button', { name: 'sample' }).click()
-  await expect(page.getByText('Bracket w/ teams')).toBeVisible()
-  // Bottom-right corner of the viewport — far from any laid-out box.
-  await page.mouse.click(page.viewportSize()!.width - 20, page.viewportSize()!.height - 20, { button: 'right' })
-  await expect(page.getByRole('menuitem', { name: 'Add Box' })).toBeVisible()
-})
-
-test('escape cancels box editing without changes', async ({ page }) => {
-  await page.goto('/?app=dataflow')
-  await page.getByRole('button', { name: 'sample' }).click()
-  await expect(page.getByText('Bracket w/ teams')).toBeVisible()
-  const box = page.locator('[data-container-id]').first()
-  const originalName = await box.locator('.text-sm').first().innerText()
-  await box.dblclick()
-  const descField = box.locator('textarea').first()
-  await expect(descField).toBeVisible()
-  await descField.fill('discarded text')
-  await page.keyboard.press('Escape')
-  await expect(descField).not.toBeVisible()
-  await expect(box.getByText(originalName)).toBeVisible()
-})
-
-test('committing a box edit renders the description as markdown', async ({ page, request }) => {
-  // The e2e server serves the checkout's real .canvases workspace — snapshot
-  // the document and restore it so the suite never leaves the tree dirty.
-  const original = await (await request.get('/api/document/sample.dataflow.json')).json()
-  try {
-    await page.goto('/?app=dataflow')
-    await page.getByRole('button', { name: 'sample' }).click()
-    await expect(page.getByText('Bracket w/ teams')).toBeVisible()
-    const box = page.locator('[data-container-id]').first()
-    await box.dblclick()
-    const descField = box.locator('textarea').first()
-    await expect(descField).toBeVisible()
-    await descField.fill('now **bold** text')
-    await page.keyboard.press('Control+Enter')
-    await expect(box.locator('strong', { hasText: 'bold' })).toBeVisible()
-  } finally {
-    await request.post('/api/document/write', {
-      data: { path: 'sample.dataflow.json', content: original },
-    })
-  }
 })
