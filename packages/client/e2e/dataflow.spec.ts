@@ -22,6 +22,23 @@ test('right-clicking a box opens its context menu', async ({ page }) => {
   await expect(page.getByRole('menuitem', { name: 'Duplicate', exact: true })).toBeVisible()
 })
 
+test('submenu stays open while the pointer moves into it', async ({ page }) => {
+  await page.goto('/?app=dataflow')
+  await page.getByRole('button', { name: 'sample' }).click()
+  await page.locator('[data-container-id]').first().click({ button: 'right' })
+  const trigger = page.getByRole('menuitem', { name: /Add to Group/ })
+  await trigger.hover()
+  const subItem = page.getByRole('menuitem', { name: 'New Group…' })
+  await expect(subItem).toBeVisible()
+  // Walk the pointer from the trigger into the submenu in small steps —
+  // regression check for the panel closing while the pointer crosses over.
+  const from = (await trigger.boundingBox())!
+  const to = (await subItem.boundingBox())!
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 })
+  await expect(subItem).toBeVisible()
+})
+
 test('right-clicking the background opens the Add Box menu', async ({ page }) => {
   await page.goto('/?app=dataflow')
   await page.getByRole('button', { name: 'sample' }).click()
