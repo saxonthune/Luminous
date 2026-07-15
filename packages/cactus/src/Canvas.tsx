@@ -41,6 +41,9 @@ export interface CanvasProps {
   };
   boxSelect?: {
     getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
+    /** 'shift-drag' (default) or 'drag' — plain left-drag marquees and left-drag
+        panning is disabled (middle-drag still pans). */
+    trigger?: 'shift-drag' | 'drag';
   };
   /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
   edges?: EdgeDeclaration[];
@@ -80,12 +83,40 @@ export interface CanvasRef {
   getSelectedIds: () => ReadonlyArray<string>;
 }
 
+/** Pointer must travel this far (screen px) before a label drag starts, so a
+    double-click to edit doesn't jiggle the cluster. */
+const LABEL_DRAG_THRESHOLD = 3;
+
+// Tag hanging outside the cluster rect, under its bottom-right corner — member
+// boxes can't cover it there. border-top: none + squared top corners make it
+// read as attached to the cluster border.
+const LABEL_TAG_STYLE: JSX.CSSProperties = {
+  position: 'absolute',
+  right: '8px',
+  top: '100%',
+  padding: '1px 8px',
+  'font-size': '11px',
+  background: 'var(--cactus-surface, #ffffff)',
+  border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+  'border-top': 'none',
+  'border-radius': '0 0 6px 6px',
+  'white-space': 'nowrap',
+};
+
 /**
  * Cluster label — passive text by default; double-click-editable when
- * `onLabelEdit` is provided. Editing state is local to this component so a
+ * `onLabelEdit` is provided, draggable (moving the whole cluster) when
+ * `onDrag` is provided. Editing state is local to this component so a
  * per-cluster signal isn't threaded through the parent.
  */
-function ClusterLabel(props: { label: string; onLabelEdit?: (newLabel: string) => void }) {
+function ClusterLabel(props: {
+  label: string;
+  zoomScale: () => number;
+  onLabelEdit?: (newLabel: string) => void;
+  onDragStart?: () => void;
+  onDrag?: (deltaX: number, deltaY: number) => void;
+  onDragEnd?: () => void;
+}) {
   const [editing, setEditing] = createSignal(false);
   let inputRef: HTMLInputElement | undefined;
 
@@ -108,21 +139,50 @@ function ClusterLabel(props: { label: string; onLabelEdit?: (newLabel: string) =
 
   const cancel = () => setEditing(false);
 
+  const handleDragPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 || !props.onDrag) return;
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let started = false;
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (!started) {
+        if (Math.hypot(dx, dy) < LABEL_DRAG_THRESHOLD) return;
+        started = true;
+        props.onDragStart?.();
+      }
+      const k = props.zoomScale();
+      props.onDrag?.(dx / k, dy / k);
+    };
+
+    const handleUp = () => {
+      if (started) props.onDragEnd?.();
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  };
+
+  const interactive = () => Boolean(props.onLabelEdit || props.onDrag);
+
   return (
     <Show
       when={editing()}
       fallback={
         <div
           style={{
-            position: 'absolute',
-            right: '8px',
-            bottom: '4px',
-            'font-size': '11px',
+            ...LABEL_TAG_STYLE,
             color: 'var(--cactus-fg-muted, #6b7280)',
-            'pointer-events': props.onLabelEdit ? 'auto' : 'none',
-            cursor: props.onLabelEdit ? 'text' : undefined,
+            'pointer-events': interactive() ? 'auto' : 'none',
+            cursor: props.onDrag ? 'grab' : props.onLabelEdit ? 'text' : undefined,
           }}
-          data-no-pan={props.onLabelEdit ? 'true' : undefined}
+          data-no-pan={interactive() ? 'true' : undefined}
+          onPointerDown={handleDragPointerDown}
           onDblClick={props.onLabelEdit ? (e) => { e.stopPropagation(); startEdit(); } : undefined}
         >
           {props.label}
@@ -133,10 +193,7 @@ function ClusterLabel(props: { label: string; onLabelEdit?: (newLabel: string) =
         ref={inputRef}
         value={props.label}
         style={{
-          position: 'absolute',
-          right: '8px',
-          bottom: '4px',
-          'font-size': '11px',
+          ...LABEL_TAG_STYLE,
           'pointer-events': 'auto',
         }}
         data-no-pan="true"
@@ -160,6 +217,12 @@ function ClusterLabel(props: { label: string; onLabelEdit?: (newLabel: string) =
 export function ClusterUnderlay(props: {
   clusters: ClusterDeclaration[];
   getNodeRects: () => ReadonlyMap<string, NodeRect>;
+  zoomScale: () => number;
+  /** Like EdgeLayer's lines/labels split: 'rects' paints the tint below the
+      node layer; 'labels' repeats the bounds math in an overlay above it, so
+      labels stay visible and reachable by the pointer (the node layer's
+      full-canvas wrapper hit-tests over anything beneath it). */
+  layer: 'rects' | 'labels';
 }) {
   return (
     <For each={props.clusters}>
@@ -177,21 +240,32 @@ export function ClusterUnderlay(props: {
           <Show when={bounds()}>
             {(b) => (
               <div
-                data-cluster-id={cluster.id}
+                data-cluster-id={props.layer === 'rects' ? cluster.id : undefined}
                 style={{
                   position: 'absolute',
                   left: `${b().x}px`,
                   top: `${b().y}px`,
                   width: `${b().width}px`,
                   height: `${b().height}px`,
-                  background: cluster.tint ?? 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
-                  border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
-                  'border-radius': '8px',
+                  ...(props.layer === 'rects'
+                    ? {
+                        background: cluster.tint ?? 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
+                        border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+                        'border-radius': '8px',
+                      }
+                    : {}),
                   'pointer-events': 'none',
                 }}
               >
-                <Show when={cluster.label}>
-                  <ClusterLabel label={cluster.label!} onLabelEdit={cluster.onLabelEdit} />
+                <Show when={props.layer === 'labels' && cluster.label}>
+                  <ClusterLabel
+                    label={cluster.label!}
+                    zoomScale={props.zoomScale}
+                    onLabelEdit={cluster.onLabelEdit}
+                    onDragStart={cluster.onDragStart}
+                    onDrag={cluster.onDrag}
+                    onDragEnd={cluster.onDragEnd}
+                  />
                 </Show>
               </div>
             )}
@@ -225,7 +299,11 @@ export function Canvas(props: CanvasProps) {
   // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
   // parents are expected to remount Canvas if the configuration changes.
   /* eslint-disable solid/reactivity */
-  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(props.viewportOptions);
+  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(
+    props.boxSelect?.trigger === 'drag'
+      ? { ...props.viewportOptions, leftDragPan: false }
+      : props.viewportOptions
+  );
 
   // Node rect registry — populated by NodeContainer via context; consumed by EdgeLayer.
   const nodeRectsData = new Map<string, NodeRect>();
@@ -292,6 +370,7 @@ export function Canvas(props: CanvasProps) {
           transform,
           containerEl,
           getNodeRects: props.boxSelect.getNodeRects,
+          trigger: props.boxSelect.trigger,
           onBoxSelectHits: selection.mergeBoxSelection,
         }
       : {
@@ -439,7 +518,7 @@ export function Canvas(props: CanvasProps) {
               "pointer-events": 'none',
             }}
           >
-            <ClusterUnderlay clusters={props.clusters!} getNodeRects={getNodeRects} />
+            <ClusterUnderlay clusters={props.clusters!} getNodeRects={getNodeRects} zoomScale={() => transform().k} layer="rects" />
           </div>
         </Show>
 
@@ -461,6 +540,21 @@ export function Canvas(props: CanvasProps) {
         >
           {props.children}
         </div>
+
+        <Show when={(props.clusters?.length ?? 0) > 0}>
+          <div
+            data-cactus-cluster-labels
+            style={{
+              transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
+              "transform-origin": '0 0',
+              position: 'absolute',
+              inset: '0',
+              "pointer-events": 'none',
+            }}
+          >
+            <ClusterUnderlay clusters={props.clusters!} getNodeRects={getNodeRects} zoomScale={() => transform().k} layer="labels" />
+          </div>
+        </Show>
 
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render } from 'solid-js/web';
-import { ClusterUnderlay } from '../src/Canvas';
+import { Canvas, ClusterUnderlay } from '../src/Canvas';
 import type { ClusterDeclaration } from '../src/types';
 import type { NodeRect } from '../src/CanvasContext';
 
@@ -20,7 +20,7 @@ describe('ClusterUnderlay', () => {
     const clusters: ClusterDeclaration[] = [{ id: 'c1', memberIds: ['a', 'b'] }];
 
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 1} layer="rects" />
     ));
 
     const el = container.querySelector('[data-cluster-id="c1"]') as HTMLElement;
@@ -35,7 +35,7 @@ describe('ClusterUnderlay', () => {
   it('renders nothing for a cluster with no registered member rects', () => {
     const clusters: ClusterDeclaration[] = [{ id: 'empty', memberIds: ['ghost'] }];
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => new Map()} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => new Map()} zoomScale={() => 1} layer="rects" />
     ));
     expect(container.querySelector('[data-cluster-id="empty"]')).toBeNull();
     cleanup();
@@ -45,7 +45,7 @@ describe('ClusterUnderlay', () => {
     const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
     const clusters: ClusterDeclaration[] = [{ id: 'c1', memberIds: ['a'], label: 'My Cluster' }];
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 1} layer="labels" />
     ));
     expect(container.textContent).toContain('My Cluster');
     cleanup();
@@ -55,10 +55,47 @@ describe('ClusterUnderlay', () => {
     const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
     const clusters: ClusterDeclaration[] = [{ id: 'c1', memberIds: ['a'], label: 'My Cluster' }];
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 1} layer="labels" />
     ));
     const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
     expect(label.style.pointerEvents).toBe('none');
+    cleanup();
+  });
+
+  it('drags the cluster by its label: canvas-space deltas after the threshold, end on pointerup', () => {
+    const rects = new Map<string, NodeRect>([['a', { x: 0, y: 0, w: 100, h: 50 }]]);
+    const drags: Array<[number, number]> = [];
+    let started = 0;
+    let ended = 0;
+    const clusters: ClusterDeclaration[] = [
+      {
+        id: 'c1',
+        memberIds: ['a'],
+        label: 'My Cluster',
+        onDragStart: () => { started++; },
+        onDrag: (dx, dy) => { drags.push([dx, dy]); },
+        onDragEnd: () => { ended++; },
+      },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 2} layer="labels" />
+    ));
+
+    const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
+    expect(label.style.pointerEvents).toBe('auto');
+    expect(label.style.cursor).toBe('grab');
+
+    // jsdom has no PointerEvent; MouseEvent with the pointer event type works
+    // since the handlers only read button/clientX/clientY.
+    label.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 10, clientY: 10, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 11, clientY: 11 }));
+    expect(started).toBe(0);
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 30, clientY: 20 }));
+    expect(started).toBe(1);
+    expect(drags).toEqual([[10, 5]]);
+    window.dispatchEvent(new MouseEvent('pointerup', {}));
+    expect(ended).toBe(1);
+
     cleanup();
   });
 
@@ -69,7 +106,7 @@ describe('ClusterUnderlay', () => {
       { id: 'c1', memberIds: ['a'], label: 'My Cluster', onLabelEdit: (v) => { committed = v; } },
     ];
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 1} layer="labels" />
     ));
 
     const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
@@ -94,7 +131,7 @@ describe('ClusterUnderlay', () => {
       { id: 'c1', memberIds: ['a'], label: 'My Cluster', onLabelEdit: () => { called = true; } },
     ];
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 1} layer="labels" />
     ));
 
     const label = Array.from(container.querySelectorAll('div')).reverse().find((d) => d.textContent === 'My Cluster')!;
@@ -117,7 +154,7 @@ describe('ClusterUnderlay', () => {
       { id: 'c1', memberIds: ['a'], label: 'My Cluster', onLabelEdit: () => { calls++; } },
     ];
     const { container, cleanup } = renderIntoContainer(() => (
-      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} />
+      <ClusterUnderlay clusters={clusters} getNodeRects={() => rects} zoomScale={() => 1} layer="labels" />
     ));
 
     const findLabel = () =>
@@ -133,6 +170,25 @@ describe('ClusterUnderlay', () => {
     input.value = '';
     input.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
     expect(calls).toBe(0);
+
+    cleanup();
+  });
+
+  // The node layer's full-canvas wrapper hit-tests over everything painted
+  // before it, so labels must render in a layer AFTER it or the pointer can
+  // never reach them (drag/rename would silently dead-end).
+  it('Canvas renders the cluster-labels layer after the node-layer wrapper', () => {
+    const clusters: ClusterDeclaration[] = [{ id: 'c1', memberIds: ['a'], label: 'My Cluster' }];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas clusters={clusters}>
+        <div data-testid="node-child" />
+      </Canvas>
+    ));
+
+    const labelsLayer = container.querySelector('[data-cactus-cluster-labels]');
+    expect(labelsLayer).not.toBeNull();
+    const nodeLayer = container.querySelector('[data-testid="node-child"]')!.parentElement!;
+    expect(nodeLayer.compareDocumentPosition(labelsLayer!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     cleanup();
   });

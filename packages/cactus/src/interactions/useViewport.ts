@@ -12,6 +12,9 @@ export interface Transform {
 export interface UseViewportOptions {
   minZoom?: number; // default 0.15
   maxZoom?: number; // default 2
+  /** Pan on plain left-button drag. Default true; hosts that bind left-drag
+      to box selection disable it — middle-drag still pans. */
+  leftDragPan?: boolean;
 }
 
 export interface UseViewportResult {
@@ -33,7 +36,7 @@ export interface UseViewportResult {
 }
 
 export function useViewport(options: UseViewportOptions = {}): UseViewportResult {
-  const { minZoom = 0.15, maxZoom = 2 } = options;
+  const { minZoom = 0.15, maxZoom = 2, leftDragPan = true } = options;
 
   const [transform, setTransform] = createSignal<Transform>({ x: 0, y: 0, k: 1 });
   let container: HTMLDivElement | undefined;
@@ -50,7 +53,7 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
         if (event.type === 'mousedown' && event.button === 1) return true;
         const target = event.target as HTMLElement;
         if (target.closest?.('[data-no-pan]')) return false;
-        if (event.type === 'mousedown') return true;
+        if (event.type === 'mousedown') return leftDragPan || event.button !== 0;
         if (event.type === 'touchstart') return true;
         return false;
       })

@@ -39,4 +39,10 @@ export interface ClusterDeclaration {
   /** When provided, the label becomes editable: double-click swaps it for a
       text input; commit (Enter or blur) calls back with the new value. */
   onLabelEdit?: (newLabel: string) => void;
+  /** When provided, left-dragging the label moves the cluster. Cactus reports
+      cumulative canvas-space deltas from the drag start; the host applies
+      them to the member nodes' positions. */
+  onDragStart?: () => void;
+  onDrag?: (deltaX: number, deltaY: number) => void;
+  onDragEnd?: () => void;
 }

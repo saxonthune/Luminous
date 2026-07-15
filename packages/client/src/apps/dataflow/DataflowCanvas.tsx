@@ -62,8 +62,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
 function DataflowNodeLayer(props: {
   doc: DataflowDocument;
   nodes: () => ReturnType<typeof toTidyNodes>;
-  basePositions: () => Map<string, { x: number; y: number }>;
-  exposePositions: (getter: () => ReadonlyMap<string, { x: number; y: number }>) => void;
+  positions: () => ReadonlyMap<string, { x: number; y: number }>;
+  onDragStart: (ids: string[]) => void;
+  onDrag: (ids: string[], dx: number, dy: number) => void;
+  onDragEnd: (ids: string[]) => void;
   editingId: () => string | null;
   onEnterEdit: (id: string, rect: { x: number; y: number; width: number; height: number }) => void;
   onCommit: (id: string, form: BoxEditForm) => void;
@@ -72,42 +74,12 @@ function DataflowNodeLayer(props: {
   const ctx = useCanvasContext();
   const boxesById = createMemo(() => new Map(props.doc.boxes.map((b) => [b.id, b])));
 
-  const [nodeOverrides, setNodeOverrides] = createSignal<Map<string, { x: number; y: number }>>(new Map());
-  const dragStartPositions = new Map<string, { x: number; y: number }>();
-
-  const positions = createMemo(() => {
-    const overrides = nodeOverrides();
-    if (overrides.size === 0) return props.basePositions();
-    const merged = new Map(props.basePositions());
-    for (const [id, pos] of overrides) merged.set(id, pos);
-    return merged;
-  });
-
-  // eslint-disable-next-line solid/reactivity -- one-shot registration, mirrors PgCanvasView's exposeRects
-  props.exposePositions(() => positions());
-
-  // The next layout run wins over any in-progress drag override.
-  createEffect(on(() => props.doc, () => setNodeOverrides(new Map()), { defer: true }));
-
   const { onPointerDown: dragPointerDown } = useNodeDrag({
     zoomScale: () => ctx.transform().k,
     callbacks: {
-      onDragStart: (nodeId) => {
-        const pos = positions().get(nodeId);
-        if (pos) dragStartPositions.set(nodeId, { ...pos });
-      },
-      onDrag: (nodeId, dx, dy) => {
-        const start = dragStartPositions.get(nodeId);
-        if (!start) return;
-        setNodeOverrides((prev) => {
-          const next = new Map(prev);
-          next.set(nodeId, { x: start.x + dx, y: start.y + dy });
-          return next;
-        });
-      },
-      onDragEnd: (nodeId) => {
-        dragStartPositions.delete(nodeId);
-      },
+      onDragStart: (nodeId) => props.onDragStart([nodeId]),
+      onDrag: (nodeId, dx, dy) => props.onDrag([nodeId], dx, dy),
+      onDragEnd: (nodeId) => props.onDragEnd([nodeId]),
     },
   });
 
@@ -115,7 +87,7 @@ function DataflowNodeLayer(props: {
     <For each={props.nodes()}>
       {(node) => {
         const box = () => boxesById().get(node.id);
-        const pos = () => positions().get(node.id) ?? { x: 0, y: 0 };
+        const pos = () => props.positions().get(node.id) ?? { x: 0, y: 0 };
         const editing = () => props.editingId() === node.id;
         return (
           <NodeContainer
@@ -147,7 +119,6 @@ function DataflowNodeLayer(props: {
 
 export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
-  let getNodePositions: () => ReadonlyMap<string, { x: number; y: number }> = () => new Map();
   const [groupPromptTargets, setGroupPromptTargets] = createSignal<string[] | null>(null);
   const [editingId, setEditingId] = createSignal<string | null>(null);
 
@@ -156,10 +127,52 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   const basePositions = createMemo(() => dagLayout(nodes(), toLayoutEdges(props.doc)));
   const edges = createMemo(() => toEdgeDeclarations(props.doc));
   const boxesById = createMemo(() => new Map(props.doc.boxes.map((b) => [b.id, b])));
+
+  // Drag offsets over the computed layout — shared by single-node drag (via
+  // DataflowNodeLayer) and group drag (via cluster label callbacks).
+  const [nodeOverrides, setNodeOverrides] = createSignal<Map<string, { x: number; y: number }>>(new Map());
+  const dragStartPositions = new Map<string, { x: number; y: number }>();
+
+  const positions = createMemo(() => {
+    const overrides = nodeOverrides();
+    if (overrides.size === 0) return basePositions();
+    const merged = new Map(basePositions());
+    for (const [id, pos] of overrides) merged.set(id, pos);
+    return merged;
+  });
+
+  // The next layout run wins over any in-progress drag override.
+  createEffect(on(() => props.doc, () => setNodeOverrides(new Map()), { defer: true }));
+
+  function beginDrag(ids: string[]) {
+    for (const id of ids) {
+      const pos = positions().get(id);
+      if (pos) dragStartPositions.set(id, { ...pos });
+    }
+  }
+
+  function moveDrag(ids: string[], dx: number, dy: number) {
+    setNodeOverrides((prev) => {
+      const next = new Map(prev);
+      for (const id of ids) {
+        const start = dragStartPositions.get(id);
+        if (start) next.set(id, { x: start.x + dx, y: start.y + dy });
+      }
+      return next;
+    });
+  }
+
+  function endDrag(ids: string[]) {
+    for (const id of ids) dragStartPositions.delete(id);
+  }
+
   const clusters = createMemo(() =>
     toClusterDeclarations(props.doc).map((cluster) => ({
       ...cluster,
       onLabelEdit: (newLabel: string) => renameGroup(cluster.label ?? cluster.id, newLabel),
+      onDragStart: () => beginDrag(cluster.memberIds),
+      onDrag: (dx: number, dy: number) => moveDrag(cluster.memberIds, dx, dy),
+      onDragEnd: () => endDrag(cluster.memberIds),
     }))
   );
 
@@ -326,11 +339,12 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
         backgroundContextMenu={backgroundContextMenu}
         onAction={onAction}
         boxSelect={{
+          trigger: 'drag',
           getNodeRects: () => {
-            const positions = getNodePositions();
+            const pos = positions();
             const sz = sizes();
             return nodes().map((n) => {
-              const p = positions.get(n.id) ?? { x: 0, y: 0 };
+              const p = pos.get(n.id) ?? { x: 0, y: 0 };
               const s = sz.get(n.id) ?? { w: n.w, h: n.h };
               return { id: n.id, x: p.x, y: p.y, width: s.w, height: s.h };
             });
@@ -340,8 +354,10 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
         <DataflowNodeLayer
           doc={props.doc}
           nodes={nodes}
-          basePositions={basePositions}
-          exposePositions={(getter) => { getNodePositions = getter; }}
+          positions={positions}
+          onDragStart={beginDrag}
+          onDrag={moveDrag}
+          onDragEnd={endDrag}
           editingId={editingId}
           onEnterEdit={enterBoxEdit}
           onCommit={commitBoxEdit}

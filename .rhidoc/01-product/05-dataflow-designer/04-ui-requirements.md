@@ -84,8 +84,9 @@ navigation or gaps with no assigned requirement yet.
 | Flow | right click | Context menu: Insert Box | R9 |
 | Group label | double left click | Rename the Group | R12 |
 | Group label | drag | Move every member Box | — |
-| Background | drag | Pan | — |
-| Background | Shift + drag | Marquee-select Boxes | R13 |
+| Background | drag | Marquee-select Boxes (replaces the selection) | R13 |
+| Background | left click | Clear the selection | — |
+| Any target | middle click + drag | Pan | — |
 | Background | scroll wheel | Zoom | — |
 | Background | right click | Context menu: Add Box | R17 |
 | Selection | Delete key | Delete the selected Boxes and their connected Flows | R10 |
