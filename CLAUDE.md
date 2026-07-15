@@ -99,6 +99,8 @@ All paths are relative to the workspace root, **without** the `.rhidoc/` prefix 
 
 When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.
 
+The same rule covers the dataflow document shape: a change to `packages/core/src/dataflow/types.ts` (or the check/operation rules) updates `.claude/skills/luminous-dataflow/SKILL.md` and its `dataflow-document.schema.json` copy, plus the sidecar schema in doc02.21, in the same change.
+
 ### Primitive vocabulary reference
 
 `primitives-reference.md` is a **generated file** — do not edit it by hand. To add or modify a primitive:
