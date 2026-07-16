@@ -8,13 +8,21 @@ export type { Rect, ComputeBoundsOptions } from './geometry.js';
  *
  * @param screenX - Screen X coordinate
  * @param screenY - Screen Y coordinate
+ * @param exclude - Container IDs to skip, e.g. the node being dragged, which is
+ *   itself a drop target directly under the pointer.
  * @returns Container ID if found, null otherwise
  */
-export function findContainerAt(screenX: number, screenY: number): string | null {
+export function findContainerAt(
+  screenX: number,
+  screenY: number,
+  exclude?: ReadonlySet<string>
+): string | null {
   const elements = document.elementsFromPoint(screenX, screenY);
-  const targetElement = elements.find((el) =>
-    el.hasAttribute('data-drop-target') && el.getAttribute('data-drop-target') === 'true'
-  ) as HTMLElement | undefined;
+  const targetElement = elements.find((el) => {
+    if (!(el.hasAttribute('data-drop-target') && el.getAttribute('data-drop-target') === 'true')) return false;
+    const id = el.getAttribute('data-container-id');
+    return !(id !== null && exclude?.has(id));
+  }) as HTMLElement | undefined;
 
   if (targetElement) {
     const containerId = targetElement.getAttribute('data-container-id');

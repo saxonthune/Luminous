@@ -18,12 +18,27 @@ describe('parseAtlasDocument', () => {
           id: 'child',
           name: 'Child',
           parent: 'root',
-          description: 'a child node',
-          contract: { format: 'json', text: '{}' },
+          content: { text: 'a child node', mode: 'markdown' },
         },
       ],
       edges: [{ from: 'root', to: 'child', label: 'contains' }],
     };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('accepts a node with code-mode content', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: '{}', mode: 'code' } }],
+      edges: [],
+    };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('accepts a node with no content', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
     const result = parseAtlasDocument(JSON.stringify(doc));
     expect(result).toEqual({ ok: true, doc });
   });
@@ -69,12 +84,32 @@ describe('parseAtlasDocument', () => {
     if (!result.ok) expect(result.issues).toContain('nodes[0]: unknown field "bogus"');
   });
 
-  it('rejects a malformed contract', () => {
+  it('rejects content missing mode', () => {
     const result = parseAtlasDocument(
-      JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', contract: { format: 'json' } }], edges: [] }),
+      JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', content: { text: 'x' } }], edges: [] }),
     );
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.issues).toContain('nodes[0].contract.text: must be a string');
+    if (!result.ok) expect(result.issues).toContain('nodes[0].content.mode: must be "markdown" or "code"');
+  });
+
+  it('rejects an invalid mode value, naming both valid values', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', content: { text: 'x', mode: 'html' } }], edges: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0].content.mode: must be "markdown" or "code"');
+  });
+
+  it('rejects an unknown field inside content', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({
+        v: 1,
+        nodes: [{ id: 'a', name: 'A', content: { text: 'x', mode: 'markdown', bogus: 1 } }],
+        edges: [],
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0].content: unknown field "bogus"');
   });
 
   it('rejects duplicate node ids', () => {
@@ -153,10 +188,20 @@ describe('parseAtlasDocument', () => {
     }
   });
 
-  it('round-trips through serialize/parse', () => {
+  it('round-trips markdown content through serialize/parse', () => {
     const doc: AtlasDocument = {
       v: 1,
-      nodes: [{ id: 'a', name: 'A', description: 'desc', contract: { format: 'json', text: '{}' } }],
+      nodes: [{ id: 'a', name: 'A', content: { text: 'desc', mode: 'markdown' } }],
+      edges: [],
+    };
+    const result = parseAtlasDocument(serializeAtlasDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('round-trips code content through serialize/parse', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: '{}', mode: 'code' } }],
       edges: [],
     };
     const result = parseAtlasDocument(serializeAtlasDocument(doc));

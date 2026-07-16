@@ -60,4 +60,19 @@ describe('findContainerAt', () => {
 
     expect(findContainerAt(10, 10)).toBe('found');
   });
+
+  it('skips excluded container IDs, e.g. the node being dragged', () => {
+    const dragged = makeDropTarget('dragged');
+    const underneath = makeDropTarget('container');
+    mockElementsFromPoint([dragged, underneath]);
+
+    expect(findContainerAt(10, 10, new Set(['dragged']))).toBe('container');
+  });
+
+  it('returns null when every match is excluded', () => {
+    const dragged = makeDropTarget('dragged');
+    mockElementsFromPoint([dragged]);
+
+    expect(findContainerAt(10, 10, new Set(['dragged']))).toBeNull();
+  });
 });

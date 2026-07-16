@@ -1,4 +1,4 @@
-import type { AtlasContract, AtlasDocument, AtlasEdge, AtlasNode } from './types.ts';
+import type { AtlasContent, AtlasDocument, AtlasEdge, AtlasNode } from './types.ts';
 
 export type ParseAtlasDocumentResult =
   | { ok: true; doc: AtlasDocument }
@@ -9,8 +9,8 @@ export function emptyAtlasDocument(): AtlasDocument {
 }
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'nodes', 'edges']);
-const NODE_FIELDS = new Set(['id', 'name', 'parent', 'description', 'contract']);
-const CONTRACT_FIELDS = new Set(['format', 'text']);
+const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content']);
+const CONTENT_FIELDS = new Set(['text', 'mode']);
 const EDGE_FIELDS = new Set(['from', 'to', 'label']);
 
 function unknownFieldIssues(obj: Record<string, unknown>, allowed: Set<string>, path: string): string[] {
@@ -19,24 +19,24 @@ function unknownFieldIssues(obj: Record<string, unknown>, allowed: Set<string>, 
     .map(key => `${path}: unknown field "${key}"`);
 }
 
-function parseContract(value: unknown, path: string, issues: string[]): AtlasContract | undefined {
+function parseContent(value: unknown, path: string, issues: string[]): AtlasContent | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    issues.push(`${path}: "contract" must be an object`);
+    issues.push(`${path}: "content" must be an object`);
     return undefined;
   }
   const c = value as Record<string, unknown>;
-  issues.push(...unknownFieldIssues(c, CONTRACT_FIELDS, path));
+  issues.push(...unknownFieldIssues(c, CONTENT_FIELDS, path));
   let ok = true;
-  if (typeof c['format'] !== 'string') {
-    issues.push(`${path}.format: must be a string`);
-    ok = false;
-  }
   if (typeof c['text'] !== 'string') {
     issues.push(`${path}.text: must be a string`);
     ok = false;
   }
+  if (c['mode'] !== 'markdown' && c['mode'] !== 'code') {
+    issues.push(`${path}.mode: must be "markdown" or "code"`);
+    ok = false;
+  }
   if (!ok) return undefined;
-  return { format: c['format'] as string, text: c['text'] as string };
+  return { text: c['text'] as string, mode: c['mode'] as 'markdown' | 'code' };
 }
 
 function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | undefined {
@@ -59,20 +59,15 @@ function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | 
     issues.push(`${path}.parent: must be a string`);
     ok = false;
   }
-  if (n['description'] !== undefined && typeof n['description'] !== 'string') {
-    issues.push(`${path}.description: must be a string`);
-    ok = false;
-  }
-  let contract: AtlasContract | undefined;
-  if (n['contract'] !== undefined) {
-    contract = parseContract(n['contract'], `${path}.contract`, issues);
-    if (contract === undefined) ok = false;
+  let content: AtlasContent | undefined;
+  if (n['content'] !== undefined) {
+    content = parseContent(n['content'], `${path}.content`, issues);
+    if (content === undefined) ok = false;
   }
   if (!ok) return undefined;
   const node: AtlasNode = { id: n['id'] as string, name: n['name'] as string };
   if (n['parent'] !== undefined) node.parent = n['parent'] as string;
-  if (n['description'] !== undefined) node.description = n['description'] as string;
-  if (contract !== undefined) node.contract = contract;
+  if (content !== undefined) node.content = content;
   return node;
 }
 
@@ -198,15 +193,14 @@ export function parseAtlasDocument(text: string): ParseAtlasDocumentResult {
   return { ok: true, doc: { v: obj['v'] as number, nodes, edges } };
 }
 
-function serializeContract(contract: AtlasContract): Record<string, unknown> {
-  return { format: contract.format, text: contract.text };
+function serializeContent(content: AtlasContent): Record<string, unknown> {
+  return { text: content.text, mode: content.mode };
 }
 
 function serializeNode(node: AtlasNode): Record<string, unknown> {
   const out: Record<string, unknown> = { id: node.id, name: node.name };
   if (node.parent !== undefined) out['parent'] = node.parent;
-  if (node.description !== undefined) out['description'] = node.description;
-  if (node.contract !== undefined) out['contract'] = serializeContract(node.contract);
+  if (node.content !== undefined) out['content'] = serializeContent(node.content);
   return out;
 }
 

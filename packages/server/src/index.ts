@@ -193,8 +193,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       sendJson(res, 400, { ok: false, error: "invalid path" })
       return
     }
-    if (!isDataflowPath(docPath)) {
-      sendJson(res, 400, { ok: false, error: "only .dataflow.json paths may be written here" })
+    if (!isRawDocPath(docPath)) {
+      sendJson(res, 400, { ok: false, error: "only .dataflow.json or .atlas.json paths may be written here" })
       return
     }
     if (body.content === undefined) {

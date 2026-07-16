@@ -1,11 +1,22 @@
-import { For, Show, createMemo, createEffect, type JSX } from 'solid-js';
-import { marked } from 'marked';
-import type { AtlasDocument, AtlasNode } from '@luminous/core/atlas';
-import { Canvas, NodeContainer, useCanvasContext } from '@luminous/cactus';
-import type { CanvasRef } from '@luminous/cactus';
-import { NODE_HEIGHT, toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
+import { For, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
+import type { AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
+import { addNode, setNode } from '@luminous/core/atlas';
+import { Canvas, NodeContainer, useCanvasContext, useNodeDrag, findContainerAt } from '@luminous/cactus';
+import type { CanvasRef, MenuSchema, MenuItem } from '@luminous/cactus';
+import { toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
+import {
+  buildContentEditPatch,
+  buildModePatch,
+  uniqueId,
+  duplicateNode,
+  selfAndDescendantIds,
+  resolveDrop,
+  describePendingDrop,
+  type NodeEditForm,
+} from './mutations.ts';
+import { AtlasNodeContent } from './AtlasNodeContent.tsx';
 
-// Scoped styling for the rendered Description markdown — mirrors dataflow's
+// Scoped styling for the rendered markdown Content — mirrors dataflow's
 // BoxContent MD_STYLES but scoped under its own class.
 const ATLAS_NODE_MD_STYLES = `
 .atlas-node-md p { margin: 0 0 .35rem; }
@@ -16,41 +27,17 @@ const ATLAS_NODE_MD_STYLES = `
 .atlas-node-md > :last-child { margin-bottom: 0; }
 `;
 
+// Fixed edit-mode height for a Node being edited — mirrors DataflowCanvas's
+// EDIT_HEIGHT (v1, no content-driven auto-grow).
+const EDIT_HEIGHT = 220;
+
 export interface AtlasCanvasProps {
   doc: AtlasDocument;
-}
-
-/** The node's header — fixed to NODE_HEIGHT regardless of the container's
- * shrink-wrapped total size, so it never stretches over its children's area. */
-function AtlasNodeContent(props: { node: AtlasNode }): JSX.Element {
-  return (
-    <div
-      class="flex w-full flex-col gap-1 overflow-hidden rounded border border-border-subtle bg-surface p-2"
-      style={{ height: `${NODE_HEIGHT}px` }}
-    >
-      <div class="text-sm font-semibold text-fg">{props.node.name}</div>
-      <Show when={props.node.description}>
-        {/* SECURITY: marked does not sanitize HTML; atlas documents are
-            author-controlled workspace files, same trust class as graph data
-            (see InfoModal.tsx). */}
-        <div
-          class="atlas-node-md text-xs text-fg-muted"
-          // eslint-disable-next-line solid/no-innerhtml
-          innerHTML={marked.parse(props.node.description!, { async: false }) as string}
-        />
-      </Show>
-      <Show when={props.node.contract}>
-        <div class="mt-auto">
-          <div class="text-[10px] uppercase tracking-wide text-fg-subtle">
-            {props.node.contract?.format}
-          </div>
-          <pre class="max-h-16 overflow-auto whitespace-pre-wrap break-words rounded bg-surface-alt p-1 text-[10px] text-fg-muted">
-            {props.node.contract?.text}
-          </pre>
-        </div>
-      </Show>
-    </div>
-  );
+  dispatchDoc: (next: AtlasDocument) => void;
+  /** R6: fires with a preview message while a drag is about to change Container
+   * membership, and with `null` once it isn't (including at drag end). */
+  onPendingMembershipChange?: (message: string | null) => void;
+  onDropRefused?: (message: string) => void;
 }
 
 /**
@@ -58,32 +45,154 @@ function AtlasNodeContent(props: { node: AtlasNode }): JSX.Element {
  * hit-testing need useCanvasContext, which only resolves inside Canvas's
  * children (see the same constraint noted at DataflowCanvas.tsx:57-61).
  */
-function AtlasNodeLayer(props: { nodes: () => AtlasRenderNode[] }): JSX.Element {
+function AtlasNodeLayer(props: {
+  nodes: () => AtlasRenderNode[];
+  editingId: () => string | null;
+  onEnterEdit: (id: string, rect: { x: number; y: number; width: number; height: number }) => void;
+  onCommit: (id: string, form: NodeEditForm) => void;
+  onCancel: () => void;
+  onModeChange: (id: string, mode: AtlasContentMode) => void;
+  onDragStart: (nodeId: string) => void;
+  onDrag: (nodeId: string, dx: number, dy: number) => void;
+  onDragEnd: (nodeId: string) => void;
+}): JSX.Element {
   const ctx = useCanvasContext();
+
+  const { onPointerDown: dragPointerDown } = useNodeDrag({
+    zoomScale: () => ctx.transform().k,
+    callbacks: {
+      onDragStart: (nodeId) => props.onDragStart(nodeId),
+      onDrag: (nodeId, dx, dy) => props.onDrag(nodeId, dx, dy),
+      onDragEnd: (nodeId) => props.onDragEnd(nodeId),
+    },
+  });
+
   return (
     <For each={props.nodes()}>
-      {(rn) => (
-        <NodeContainer
-          nodeId={rn.node.id}
-          x={() => rn.x}
-          y={() => rn.y}
-          w={() => rn.w}
-          h={() => rn.h}
-          softContainer={() => rn.hasChildren}
-          onPointerDown={(e) => ctx.onNodePointerDown(rn.node.id, e)}
-        >
-          <AtlasNodeContent node={rn.node} />
-        </NodeContainer>
-      )}
+      {(rn) => {
+        const editing = () => props.editingId() === rn.node.id;
+        return (
+          <NodeContainer
+            nodeId={rn.node.id}
+            x={() => rn.x}
+            y={() => rn.y}
+            w={() => rn.w}
+            h={() => (editing() ? EDIT_HEIGHT : rn.h)}
+            softContainer={() => rn.hasChildren}
+            onPointerDown={(e) => {
+              ctx.onNodePointerDown(rn.node.id, e);
+              dragPointerDown(rn.node.id, e);
+            }}
+          >
+            <AtlasNodeContent
+              node={() => rn.node}
+              selected={() => ctx.isSelected(rn.node.id)}
+              editing={editing}
+              onEnterEdit={() => props.onEnterEdit(rn.node.id, { x: rn.x, y: rn.y, width: rn.w, height: EDIT_HEIGHT })}
+              onCommit={(form) => props.onCommit(rn.node.id, form)}
+              onCancel={props.onCancel}
+              onModeChange={(mode) => props.onModeChange(rn.node.id, mode)}
+            />
+          </NodeContainer>
+        );
+      }}
     </For>
   );
 }
 
 export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
+  const [editingId, setEditingId] = createSignal<string | null>(null);
 
   const nodes = createMemo(() => projectAtlasNodes(props.doc));
+  const nodesById = createMemo(() => new Map(props.doc.nodes.map((n) => [n.id, n])));
   const edges = createMemo(() => toEdgeDeclarations(props.doc));
+
+  // Drag position override for the node currently being dragged — ephemeral,
+  // merged over projectAtlasNodes's layout-computed positions and discarded
+  // whenever the drag ends or the document changes. See DataflowCanvas.tsx:135,138-144,147.
+  const [nodeOverride, setNodeOverride] = createSignal<{ id: string; x: number; y: number } | null>(null);
+  let dragStart: { id: string; x: number; y: number } | null = null;
+  let lastHit: string | null = null;
+  let dragPointerMove: ((e: PointerEvent) => void) | null = null;
+
+  const renderNodes = createMemo(() => {
+    const override = nodeOverride();
+    if (!override) return nodes();
+    return nodes().map((rn) => (rn.node.id === override.id ? { ...rn, x: override.x, y: override.y } : rn));
+  });
+
+  createEffect(on(() => props.doc, () => setNodeOverride(null), { defer: true }));
+
+  function beginDrag(nodeId: string) {
+    const rn = nodes().find((n) => n.node.id === nodeId);
+    if (!rn) return;
+    dragStart = { id: nodeId, x: rn.x, y: rn.y };
+    lastHit = null;
+    setNodeOverride({ id: nodeId, x: rn.x, y: rn.y });
+    const exclude = selfAndDescendantIds(props.doc, nodeId);
+    // eslint-disable-next-line solid/reactivity -- pointermove callback, not a render path; props.doc is read fresh on each invocation
+    dragPointerMove = (e: PointerEvent) => {
+      lastHit = findContainerAt(e.clientX, e.clientY, exclude);
+      props.onPendingMembershipChange?.(describePendingDrop(props.doc, nodeId, lastHit));
+    };
+    window.addEventListener('pointermove', dragPointerMove);
+  }
+
+  function moveDrag(nodeId: string, dx: number, dy: number) {
+    if (!dragStart || dragStart.id !== nodeId) return;
+    setNodeOverride({ id: nodeId, x: dragStart.x + dx, y: dragStart.y + dy });
+  }
+
+  function endDrag(nodeId: string) {
+    if (dragPointerMove) {
+      window.removeEventListener('pointermove', dragPointerMove);
+      dragPointerMove = null;
+    }
+    props.onPendingMembershipChange?.(null);
+    setNodeOverride(null);
+    dragStart = null;
+
+    const outcome = resolveDrop(props.doc, nodeId, lastHit);
+    lastHit = null;
+    if (!outcome.changed) return;
+    if (outcome.result.ok) {
+      props.dispatchDoc(outcome.result.doc);
+    } else {
+      props.onDropRefused?.(outcome.result.error);
+    }
+  }
+
+  function enterEdit(id: string, rect: { x: number; y: number; width: number; height: number }) {
+    setEditingId(id);
+    canvasRef?.fitView([rect], 64);
+  }
+
+  function commitEdit(id: string, form: NodeEditForm) {
+    const node = nodesById().get(id);
+    setEditingId(null);
+    if (!node) return;
+    const result = setNode(props.doc, id, buildContentEditPatch(form, node.name, node.content?.mode));
+    if (result.ok) props.dispatchDoc(result.doc);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  function changeMode(id: string, mode: AtlasContentMode) {
+    const node = nodesById().get(id);
+    if (!node) return;
+    const result = setNode(props.doc, id, buildModePatch(node.content, mode));
+    if (result.ok) props.dispatchDoc(result.doc);
+  }
+
+  // Drop out of edit mode if the document reloads out from under the editing
+  // node (e.g. a remote, non-echo change) — see DataflowCanvas.tsx:215-220.
+  createEffect(on(() => props.doc, (doc) => {
+    const id = editingId();
+    if (id && !doc.nodes.some((n) => n.id === id)) setEditingId(null);
+  }));
 
   createEffect(() => {
     const list = nodes();
@@ -92,12 +201,61 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     canvasRef.fitView(rects, 64);
   });
 
+  function nodeContextMenu(nodeId: string): MenuSchema | undefined {
+    const items: MenuItem[] = [
+      { type: 'action', action: { id: 'node.duplicate', label: 'Duplicate', payload: { id: nodeId } } },
+      { type: 'action', action: { id: 'node.add', label: 'Add Node', payload: { parent: nodeId } } },
+    ];
+    return { id: `node-menu-${nodeId}`, items };
+  }
+
+  function backgroundContextMenu(): MenuSchema | undefined {
+    return {
+      id: 'background-menu',
+      items: [{ type: 'action', action: { id: 'node.add', label: 'Add Node', payload: {} } }],
+    };
+  }
+
+  function onAction(id: string, payload?: unknown) {
+    switch (id) {
+      case 'node.duplicate': {
+        const { id: nodeId } = payload as { id: string };
+        props.dispatchDoc(duplicateNode(props.doc, nodeId));
+        break;
+      }
+      case 'node.add': {
+        const { parent } = payload as { parent?: string };
+        const existingIds = new Set(props.doc.nodes.map((n) => n.id));
+        const newId = uniqueId('new-node', existingIds);
+        const result = addNode(props.doc, { id: newId, name: 'New Node', parent });
+        if (result.ok) props.dispatchDoc(result.doc);
+        break;
+      }
+    }
+  }
+
   return (
     <>
       <style>{ATLAS_NODE_MD_STYLES}</style>
       <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
-        <Canvas ref={(r) => { canvasRef = r; }} edges={edges()}>
-          <AtlasNodeLayer nodes={nodes} />
+        <Canvas
+          ref={(r) => { canvasRef = r; }}
+          edges={edges()}
+          nodeContextMenu={nodeContextMenu}
+          backgroundContextMenu={backgroundContextMenu}
+          onAction={onAction}
+        >
+          <AtlasNodeLayer
+            nodes={renderNodes}
+            editingId={editingId}
+            onEnterEdit={enterEdit}
+            onCommit={commitEdit}
+            onCancel={cancelEdit}
+            onModeChange={changeMode}
+            onDragStart={beginDrag}
+            onDrag={moveDrag}
+            onDragEnd={endDrag}
+          />
         </Canvas>
       </div>
     </>

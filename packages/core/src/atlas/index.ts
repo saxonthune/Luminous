@@ -1,7 +1,28 @@
-export type { AtlasDocument, AtlasNode, AtlasContract, AtlasEdge } from './types.ts';
+export type {
+  AtlasDocument,
+  AtlasNode,
+  AtlasContent,
+  AtlasContentMode,
+  AtlasEdge,
+  AtlasAction,
+  AddNodeAction,
+  SetNodeAction,
+  RemoveNodeAction,
+  ReparentAction,
+} from './types.ts';
 export {
   emptyAtlasDocument,
   parseAtlasDocument,
   serializeAtlasDocument,
 } from './document.ts';
 export type { ParseAtlasDocumentResult } from './document.ts';
+export {
+  addNode,
+  setNode,
+  removeNode,
+  reparent,
+  applyAtlasBatch,
+} from './operations.ts';
+export type { AtlasResult } from './operations.ts';
+export { checkAtlasDocument } from './check.ts';
+export type { AtlasCheckIssue } from './check.ts';

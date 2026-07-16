@@ -1,10 +1,10 @@
 import { createSignal, createEffect, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { AtlasDocument } from '@luminous/core/atlas';
-import { parseAtlasDocument } from '@luminous/core/atlas';
+import { parseAtlasDocument, serializeAtlasDocument } from '@luminous/core/atlas';
 import { DocumentPicker } from '../../DocumentPicker';
 import { ToastTray, type Toast } from '../../ToastTray';
-import { fetchServerSources, type CanvasSource } from '../../sources';
+import { fetchServerSources, writeDocument, type CanvasSource } from '../../sources';
 import { readParam, writeParam } from '../../urlState';
 import { watchDocuments } from '../../ws/watchClient';
 import { AtlasCanvas } from './AtlasCanvas.tsx';
@@ -24,6 +24,7 @@ export function AtlasApp() {
   const [sourceId, setSourceId] = createSignal<string | null>(null);
   const [doc, setDoc] = createSignal<AtlasDocument | null>(null);
   const [toasts, setToasts] = createSignal<Toast[]>([]);
+  let ownWritesInFlight = 0;
 
   function enqueueToast(message: string) {
     const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -33,6 +34,17 @@ export function AtlasApp() {
 
   function dismissToast(id: string) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  // R6: a reserved, non-expiring toast slot for the pending-membership-change
+  // preview — its lifetime is the drag, not a timer, so it uses a fixed id
+  // instead of enqueueToast's random one.
+  const DRAG_TOAST_ID = 'atlas-drag-pending';
+  function setDragToast(message: string | null) {
+    setToasts((prev) => {
+      const rest = prev.filter((t) => t.id !== DRAG_TOAST_ID);
+      return message ? [...rest, { id: DRAG_TOAST_ID, message }] : rest;
+    });
   }
 
   function loadDoc(id: string) {
@@ -65,6 +77,19 @@ export function AtlasApp() {
     setDoc(null);
     writeParam('src', null);
     setShell({ kind: 'picker' });
+  }
+
+  async function dispatchDoc(next: AtlasDocument) {
+    const id = sourceId();
+    if (!id) return;
+    setDoc(next);
+    ownWritesInFlight += 1;
+    const result = await writeDocument(id, JSON.parse(serializeAtlasDocument(next)));
+    if (!result.ok) {
+      ownWritesInFlight -= 1;
+      enqueueToast(`Failed to save changes: ${result.error}`);
+      loadDoc(id);
+    }
   }
 
   function onSelect(source: CanvasSource) {
@@ -120,6 +145,10 @@ export function AtlasApp() {
     // eslint-disable-next-line solid/reactivity -- WS callback, not a render path; sourceId() read is intentionally untracked
     const dispose = watchDocuments((path) => {
       if (path !== sourceId()) return;
+      if (ownWritesInFlight > 0) {
+        ownWritesInFlight -= 1;
+        return;
+      }
       loadDoc(path);
     });
     onCleanup(dispose);
@@ -172,7 +201,12 @@ export function AtlasApp() {
             </div>
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>
-            <AtlasCanvas doc={doc()!} />
+            <AtlasCanvas
+              doc={doc()!}
+              dispatchDoc={dispatchDoc}
+              onPendingMembershipChange={setDragToast}
+              onDropRefused={(message) => enqueueToast(message)}
+            />
           </Match>
           <Match when={shell().kind === 'error'}>
             {(() => {
