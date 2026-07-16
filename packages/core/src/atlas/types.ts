@@ -9,6 +9,10 @@ export interface AtlasNode {
   name: string;
   parent?: string;
   content?: AtlasContent;
+  /** Offset from the parent's origin; canvas-absolute for a root node (no `parent`). */
+  x?: number;
+  /** Offset from the parent's origin; canvas-absolute for a root node (no `parent`). */
+  y?: number;
 }
 
 export type AtlasContentMode = 'markdown' | 'code';
@@ -29,6 +33,8 @@ export interface AddNodeAction {
   id: string;
   name: string;
   parent?: string;
+  x?: number;
+  y?: number;
 }
 
 export interface SetNodeAction {
@@ -36,6 +42,8 @@ export interface SetNodeAction {
   id: string;
   name?: string;
   content?: AtlasContent;
+  x?: number;
+  y?: number;
 }
 
 export interface RemoveNodeAction {

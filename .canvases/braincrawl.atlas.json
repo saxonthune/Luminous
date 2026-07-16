@@ -13,6 +13,8 @@
       "id": "cli.braincrawl.openalex",
       "name": "openalex",
       "parent": "cli.braincrawl",
+      "x": 300,
+      "y": 0,
       "content": {
         "mode": "markdown",
         "text": "Commands that pull from the OpenAlex provider — a scholarly metadata source, accessed via its HTTP API."
@@ -22,6 +24,8 @@
       "id": "cli.braincrawl.openalex.get",
       "name": "get",
       "parent": "cli.braincrawl.openalex",
+      "x": 40,
+      "y": 60,
       "content": {
         "mode": "markdown",
         "text": "Fetch one work by its OpenAlex id and push it into the local Catalog."
@@ -40,6 +44,8 @@
       "id": "cli.braincrawl.openalex.search",
       "name": "search",
       "parent": "cli.braincrawl.openalex",
+      "x": 40,
+      "y": 140,
       "content": {
         "mode": "markdown",
         "text": "Search OpenAlex by free-text query, optionally topic-gated."

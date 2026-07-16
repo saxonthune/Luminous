@@ -226,6 +226,50 @@ describe('parseAtlasDocument', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.issues).toContain('nodes[0].parent: must be a string');
   });
+
+  it('accepts a node with x and y', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', x: 10, y: 20 }], edges: [] };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('accepts a node with no position', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('rejects x without y', () => {
+    const result = parseAtlasDocument(JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', x: 10 }], edges: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0]: "x" and "y" must appear together');
+  });
+
+  it('rejects y without x', () => {
+    const result = parseAtlasDocument(JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', y: 10 }], edges: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0]: "x" and "y" must appear together');
+  });
+
+  it('rejects a non-number x', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', x: '10', y: 20 }], edges: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0].x: must be a finite number');
+  });
+
+  it('rejects 1e999, which JSON.parse turns into Infinity', () => {
+    const result = parseAtlasDocument('{"v":1,"nodes":[{"id":"a","name":"A","x":1e999,"y":0}],"edges":[]}');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0].x: must be a finite number');
+  });
+
+  it('round-trips a position through serialize/parse', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', x: 5, y: -5 }], edges: [] };
+    const result = parseAtlasDocument(serializeAtlasDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
 });
 
 describe('serializeAtlasDocument', () => {
@@ -233,5 +277,12 @@ describe('serializeAtlasDocument', () => {
     const doc = emptyAtlasDocument();
     const text = serializeAtlasDocument(doc);
     expect(text).toBe('{\n  "v": 1,\n  "nodes": [],\n  "edges": []\n}\n');
+  });
+
+  it('omits x and y for an unplaced node rather than emitting null', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const text = serializeAtlasDocument(doc);
+    expect(text).not.toContain('"x"');
+    expect(text).not.toContain('"y"');
   });
 });

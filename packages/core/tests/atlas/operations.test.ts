@@ -34,6 +34,11 @@ describe('addNode', () => {
     addNode(doc, { id: 'a', name: 'A' });
     expect(doc.nodes).toEqual([]);
   });
+
+  it('carries a position', () => {
+    const result = addNode(emptyAtlasDocument(), { id: 'a', name: 'A', x: 10, y: 20 });
+    expect(result).toEqual({ ok: true, doc: { v: 1, nodes: [{ id: 'a', name: 'A', x: 10, y: 20 }], edges: [] } });
+  });
 });
 
 describe('setNode', () => {
@@ -80,6 +85,29 @@ describe('setNode', () => {
   it('does not mutate the input document', () => {
     setNode(base, 'a', { name: 'Changed' });
     expect(base.nodes[0].name).toBe('A');
+  });
+
+  it('sets a position', () => {
+    const result = setNode(base, 'a', { x: 1, y: 2 });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'A', x: 1, y: 2 });
+  });
+
+  it('clears a position when explicitly set to undefined', () => {
+    const withPosition: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', x: 1, y: 2 }], edges: [] };
+    const result = setNode(withPosition, 'a', { x: undefined, y: undefined });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.doc.nodes[0].x).toBeUndefined();
+      expect(result.doc.nodes[0].y).toBeUndefined();
+    }
+  });
+
+  it('leaves an existing position untouched when the patch carries only name', () => {
+    const withPosition: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', x: 1, y: 2 }], edges: [] };
+    const result = setNode(withPosition, 'a', { name: 'Renamed' });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', x: 1, y: 2 });
   });
 });
 

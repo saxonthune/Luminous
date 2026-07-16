@@ -9,7 +9,7 @@ export function emptyAtlasDocument(): AtlasDocument {
 }
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'nodes', 'edges']);
-const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content']);
+const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y']);
 const CONTENT_FIELDS = new Set(['text', 'mode']);
 const EDGE_FIELDS = new Set(['from', 'to', 'label']);
 
@@ -64,10 +64,24 @@ function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | 
     content = parseContent(n['content'], `${path}.content`, issues);
     if (content === undefined) ok = false;
   }
+  if ((n['x'] !== undefined) !== (n['y'] !== undefined)) {
+    issues.push(`${path}: "x" and "y" must appear together`);
+    ok = false;
+  }
+  if (n['x'] !== undefined && !(typeof n['x'] === 'number' && Number.isFinite(n['x']))) {
+    issues.push(`${path}.x: must be a finite number`);
+    ok = false;
+  }
+  if (n['y'] !== undefined && !(typeof n['y'] === 'number' && Number.isFinite(n['y']))) {
+    issues.push(`${path}.y: must be a finite number`);
+    ok = false;
+  }
   if (!ok) return undefined;
   const node: AtlasNode = { id: n['id'] as string, name: n['name'] as string };
   if (n['parent'] !== undefined) node.parent = n['parent'] as string;
   if (content !== undefined) node.content = content;
+  if (n['x'] !== undefined) node.x = n['x'] as number;
+  if (n['y'] !== undefined) node.y = n['y'] as number;
   return node;
 }
 
@@ -201,6 +215,8 @@ function serializeNode(node: AtlasNode): Record<string, unknown> {
   const out: Record<string, unknown> = { id: node.id, name: node.name };
   if (node.parent !== undefined) out['parent'] = node.parent;
   if (node.content !== undefined) out['content'] = serializeContent(node.content);
+  if (node.x !== undefined) out['x'] = node.x;
+  if (node.y !== undefined) out['y'] = node.y;
   return out;
 }
 

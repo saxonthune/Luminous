@@ -4,7 +4,7 @@ export type AtlasResult = { ok: true; doc: AtlasDocument } | { ok: false; error:
 
 export function addNode(
   doc: AtlasDocument,
-  fields: { id: string; name: string; parent?: string },
+  fields: { id: string; name: string; parent?: string; x?: number; y?: number },
 ): AtlasResult {
   if (doc.nodes.some(n => n.id === fields.id)) {
     return { ok: false, error: `node "${fields.id}" already exists` };
@@ -14,13 +14,15 @@ export function addNode(
   }
   const node: AtlasNode = { id: fields.id, name: fields.name };
   if (fields.parent !== undefined) node.parent = fields.parent;
+  if (fields.x !== undefined) node.x = fields.x;
+  if (fields.y !== undefined) node.y = fields.y;
   return { ok: true, doc: { ...doc, nodes: [...doc.nodes, node] } };
 }
 
 export function setNode(
   doc: AtlasDocument,
   id: string,
-  patch: { name?: string; content?: AtlasContent },
+  patch: { name?: string; content?: AtlasContent; x?: number; y?: number },
 ): AtlasResult {
   const index = doc.nodes.findIndex(n => n.id === id);
   if (index === -1) {
@@ -33,6 +35,20 @@ export function setNode(
       delete node.content;
     } else {
       node.content = patch.content;
+    }
+  }
+  if ('x' in patch) {
+    if (patch.x === undefined) {
+      delete node.x;
+    } else {
+      node.x = patch.x;
+    }
+  }
+  if ('y' in patch) {
+    if (patch.y === undefined) {
+      delete node.y;
+    } else {
+      node.y = patch.y;
     }
   }
   const nodes = [...doc.nodes];
@@ -121,12 +137,20 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
     let result: AtlasResult;
     switch (action.type) {
       case 'addNode':
-        result = addNode(current, { id: action.id, name: action.name, parent: action.parent });
+        result = addNode(current, {
+          id: action.id,
+          name: action.name,
+          parent: action.parent,
+          x: action.x,
+          y: action.y,
+        });
         break;
       case 'setNode': {
-        const patch: { name?: string; content?: AtlasContent } = {};
+        const patch: { name?: string; content?: AtlasContent; x?: number; y?: number } = {};
         if (action.name !== undefined) patch.name = action.name;
         if ('content' in action) patch.content = action.content;
+        if ('x' in action) patch.x = action.x;
+        if ('y' in action) patch.y = action.y;
         result = setNode(current, action.id, patch);
         break;
       }
