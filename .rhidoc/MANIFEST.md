@@ -83,8 +83,11 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.07.00 | `07-atlas/00-index.md` |  |  | — | — | — |
-| doc01.07.01 | `07-atlas/01-idea.md` | A canvas app holding a dense visual representation of a whole piece of software — interface inventories plus the dataflow behind each entry — comprehensible to a human, readable and editable by an agent | atlas, apps, dataflow, interfaces | doc01.04, doc01.05.01 | doc01.07.02 | — |
+| doc01.07.01 | `07-atlas/01-idea.md` | A canvas app holding a dense visual representation of a whole piece of software — interface inventories plus the dataflow behind each entry — comprehensible to a human, readable and editable by an agent | atlas, apps, dataflow, interfaces | doc01.04, doc01.05.01 | doc01.07.02, doc01.07.03, doc01.07.04 | — |
 | doc01.07.02 | `07-atlas/02-braincrawl-case.md` | The motivating case — braincrawl is drawn as the first Atlas canvas, a rough-draft proof of concept, because it already carries every input Atlas needs and its own specs already name the smells an Atlas should show | atlas, case-study, braincrawl, cli, dataflow | doc01.07.01 | — | — |
+| doc01.07.03 | `07-atlas/03-glossary.md` | The Atlas controlled vocabulary — the terms Atlas docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, atlas | doc01.07.01 | doc01.07.04 | — |
+| doc01.07.04 | `07-atlas/04-ui-requirements.md` | Atlas's UI capabilities as a controlled, EARS-like list of shall-statements, plus the input-command bindings table mapping each (target, interaction) pair to its command | atlas, ui, requirements | doc01.07.01, doc01.07.03 | — | — |
+| doc01.07.05 | `07-atlas/05-allen-relations.md` | Neutral reference on Allen's interval algebra — the thirteen relations, their symbols and inverses — and Rectangle Algebra, which applies them per axis to axis-aligned boxes | reference, allen, rectangle-algebra, spatial, relations | — | — | — |
 
 ## 02-design — Design
 
@@ -171,12 +174,13 @@ Quick lookup for file-path→doc mapping:
 | `ai` | doc02.04, doc02.15 |
 | `ai-context` | doc01.01, doc03.06 |
 | `algorithms` | doc02.05.03 |
+| `allen` | doc01.07.05 |
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `app-shell` | doc02.12, doc02.13 |
 | `apps` | doc01.04, doc01.05.01, doc01.07.01, doc02.23 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
-| `atlas` | doc01.07.01, doc01.07.02 |
+| `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
 | `blender` | doc01.06.01.10 |
@@ -230,7 +234,7 @@ Quick lookup for file-path→doc mapping:
 | `format` | doc02.21 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03 |
 | `gojs` | doc01.06.01.06 |
 | `graph` | doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
@@ -288,11 +292,13 @@ Quick lookup for file-path→doc mapping:
 | `react-flow` | doc01.06.01.02 |
 | `reactive` | doc03.01 |
 | `reactivity` | doc02.06.01, doc03.05 |
-| `reference` | doc02.09, doc02.18 |
+| `rectangle-algebra` | doc01.07.05 |
+| `reference` | doc01.07.05, doc02.09, doc02.18 |
 | `reference-graph` | doc03.05 |
+| `relations` | doc01.07.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.23, doc03.05 |
-| `requirements` | doc01.05.04 |
+| `requirements` | doc01.05.04, doc01.07.04 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
@@ -305,6 +311,7 @@ Quick lookup for file-path→doc mapping:
 | `shell` | doc02.12 |
 | `software-design` | doc01.01 |
 | `solid` | doc02.06.01, doc02.07, doc02.10.01, doc03.01, doc03.05 |
+| `spatial` | doc01.07.05 |
 | `split` | doc01.02 |
 | `sql` | doc02.10.02 |
 | `statechart` | doc02.10.03, doc02.12 |
@@ -318,7 +325,7 @@ Quick lookup for file-path→doc mapping:
 | `tools` | doc02.04, doc02.15, doc02.22 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
-| `ui` | doc01.05.04, doc02.12 |
+| `ui` | doc01.05.04, doc01.07.04, doc02.12 |
 | `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `unreal` | doc01.06.01.09 |
@@ -327,7 +334,7 @@ Quick lookup for file-path→doc mapping:
 | `views` | doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc03.04 |
-| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc03.02 |
+| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc03.02 |
 | `web-library` | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07 |
 | `whiteboard` | doc01.06.01.03 |
 | `workbench` | doc03.08 |
