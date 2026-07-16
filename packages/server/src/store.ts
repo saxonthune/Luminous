@@ -13,9 +13,19 @@ const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const recentWrites = new Map<string, number>()
 
 const DATAFLOW_SUFFIX = ".dataflow.json"
+const ATLAS_SUFFIX = ".atlas.json"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
+}
+
+export function isAtlasPath(relativePath: string): boolean {
+  return relativePath.endsWith(ATLAS_SUFFIX)
+}
+
+/** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
+export function isRawDocPath(relativePath: string): boolean {
+  return isDataflowPath(relativePath) || isAtlasPath(relativePath)
 }
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
@@ -202,8 +212,8 @@ export async function applyAction(
   action: string,
   params: Record<string, unknown>
 ): Promise<ActionResult> {
-  if (isDataflowPath(relativePath)) {
-    return { ok: false, error: "graph actions are not supported on .dataflow.json documents" }
+  if (isRawDocPath(relativePath)) {
+    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json)" }
   }
   const doc = await getDocument(relativePath)
   const result = applyActionToDoc(doc, action, params)
@@ -218,8 +228,8 @@ export async function applyBatch(
   relativePath: string,
   actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
 ): Promise<Array<ActionResult & { ref?: string }>> {
-  if (isDataflowPath(relativePath)) {
-    return [{ ok: false, error: "graph actions are not supported on .dataflow.json documents" }]
+  if (isRawDocPath(relativePath)) {
+    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json)" }]
   }
   const doc = await getDocument(relativePath)
   const refs = new Map<string, string>()
@@ -312,7 +322,13 @@ export function watchDocuments(
       const watcher = watch(root.dir, { recursive: true }, (_event, filename) => {
         if (!filename) return
         const normalized = filename.toString().replace(/\\/g, "/")
-        if (!normalized.endsWith(".graph.json") && !normalized.endsWith(DATAFLOW_SUFFIX)) return
+        if (
+          !normalized.endsWith(".graph.json") &&
+          !normalized.endsWith(DATAFLOW_SUFFIX) &&
+          !normalized.endsWith(ATLAS_SUFFIX)
+        ) {
+          return
+        }
         const docPath = root.name ? `${root.name}/${normalized}` : normalized
         const absPath = resolve(root.dir, normalized)
         const lastWrite = recentWrites.get(absPath)

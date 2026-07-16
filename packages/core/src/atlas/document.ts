@@ -1,0 +1,226 @@
+import type { AtlasContract, AtlasDocument, AtlasEdge, AtlasNode } from './types.ts';
+
+export type ParseAtlasDocumentResult =
+  | { ok: true; doc: AtlasDocument }
+  | { ok: false; issues: string[] };
+
+export function emptyAtlasDocument(): AtlasDocument {
+  return { v: 1, nodes: [], edges: [] };
+}
+
+const TOP_LEVEL_FIELDS = new Set(['v', 'nodes', 'edges']);
+const NODE_FIELDS = new Set(['id', 'name', 'parent', 'description', 'contract']);
+const CONTRACT_FIELDS = new Set(['format', 'text']);
+const EDGE_FIELDS = new Set(['from', 'to', 'label']);
+
+function unknownFieldIssues(obj: Record<string, unknown>, allowed: Set<string>, path: string): string[] {
+  return Object.keys(obj)
+    .filter(key => !allowed.has(key))
+    .map(key => `${path}: unknown field "${key}"`);
+}
+
+function parseContract(value: unknown, path: string, issues: string[]): AtlasContract | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push(`${path}: "contract" must be an object`);
+    return undefined;
+  }
+  const c = value as Record<string, unknown>;
+  issues.push(...unknownFieldIssues(c, CONTRACT_FIELDS, path));
+  let ok = true;
+  if (typeof c['format'] !== 'string') {
+    issues.push(`${path}.format: must be a string`);
+    ok = false;
+  }
+  if (typeof c['text'] !== 'string') {
+    issues.push(`${path}.text: must be a string`);
+    ok = false;
+  }
+  if (!ok) return undefined;
+  return { format: c['format'] as string, text: c['text'] as string };
+}
+
+function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push(`${path}: node must be an object`);
+    return undefined;
+  }
+  const n = value as Record<string, unknown>;
+  issues.push(...unknownFieldIssues(n, NODE_FIELDS, path));
+  let ok = true;
+  if (typeof n['id'] !== 'string') {
+    issues.push(`${path}.id: must be a string`);
+    ok = false;
+  }
+  if (typeof n['name'] !== 'string') {
+    issues.push(`${path}.name: must be a string`);
+    ok = false;
+  }
+  if (n['parent'] !== undefined && typeof n['parent'] !== 'string') {
+    issues.push(`${path}.parent: must be a string`);
+    ok = false;
+  }
+  if (n['description'] !== undefined && typeof n['description'] !== 'string') {
+    issues.push(`${path}.description: must be a string`);
+    ok = false;
+  }
+  let contract: AtlasContract | undefined;
+  if (n['contract'] !== undefined) {
+    contract = parseContract(n['contract'], `${path}.contract`, issues);
+    if (contract === undefined) ok = false;
+  }
+  if (!ok) return undefined;
+  const node: AtlasNode = { id: n['id'] as string, name: n['name'] as string };
+  if (n['parent'] !== undefined) node.parent = n['parent'] as string;
+  if (n['description'] !== undefined) node.description = n['description'] as string;
+  if (contract !== undefined) node.contract = contract;
+  return node;
+}
+
+function parseEdge(value: unknown, path: string, issues: string[]): AtlasEdge | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push(`${path}: edge must be an object`);
+    return undefined;
+  }
+  const e = value as Record<string, unknown>;
+  issues.push(...unknownFieldIssues(e, EDGE_FIELDS, path));
+  let ok = true;
+  if (typeof e['from'] !== 'string') {
+    issues.push(`${path}.from: must be a string`);
+    ok = false;
+  }
+  if (typeof e['to'] !== 'string') {
+    issues.push(`${path}.to: must be a string`);
+    ok = false;
+  }
+  if (e['label'] !== undefined && typeof e['label'] !== 'string') {
+    issues.push(`${path}.label: must be a string`);
+    ok = false;
+  }
+  if (!ok) return undefined;
+  const edge: AtlasEdge = { from: e['from'] as string, to: e['to'] as string };
+  if (e['label'] !== undefined) edge.label = e['label'] as string;
+  return edge;
+}
+
+/** Walk each node's parent chain; report a cycle's member ids in the issue text. */
+function parentCycleIssues(nodes: AtlasNode[]): string[] {
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const issues: string[] = [];
+  const reported = new Set<string>();
+
+  for (const node of nodes) {
+    const chain: string[] = [];
+    const visited = new Set<string>();
+    let current: AtlasNode | undefined = node;
+    while (current) {
+      if (visited.has(current.id)) {
+        const cycleStart = chain.indexOf(current.id);
+        const cycle = chain.slice(cycleStart);
+        if (!cycle.some(id => reported.has(id))) {
+          for (const id of cycle) reported.add(id);
+          issues.push(`parent cycle: ${cycle.join(' -> ')} -> ${current.id}`);
+        }
+        break;
+      }
+      visited.add(current.id);
+      chain.push(current.id);
+      current = current.parent !== undefined ? byId.get(current.parent) : undefined;
+    }
+  }
+  return issues;
+}
+
+export function parseAtlasDocument(text: string): ParseAtlasDocumentResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    return { ok: false, issues: [`invalid JSON: ${e instanceof Error ? e.message : String(e)}`] };
+  }
+
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { ok: false, issues: ['document must be a non-null, non-array JSON object'] };
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const issues: string[] = unknownFieldIssues(obj, TOP_LEVEL_FIELDS, '');
+
+  if (typeof obj['v'] !== 'number') {
+    issues.push('v: must be a number');
+  }
+
+  const nodes: AtlasNode[] = [];
+  if (!Array.isArray(obj['nodes'])) {
+    issues.push('nodes: must be an array');
+  } else {
+    const seenIds = new Set<string>();
+    (obj['nodes'] as unknown[]).forEach((value, i) => {
+      const node = parseNode(value, `nodes[${i}]`, issues);
+      if (node === undefined) return;
+      if (seenIds.has(node.id)) {
+        issues.push(`nodes[${i}].id: duplicate node id "${node.id}"`);
+      }
+      seenIds.add(node.id);
+      nodes.push(node);
+    });
+
+    nodes.forEach((node, i) => {
+      if (node.parent !== undefined && !seenIds.has(node.parent)) {
+        issues.push(`nodes[${i}].parent: references unknown node id "${node.parent}"`);
+      }
+    });
+
+    issues.push(...parentCycleIssues(nodes));
+  }
+
+  const edges: AtlasEdge[] = [];
+  if (!Array.isArray(obj['edges'])) {
+    issues.push('edges: must be an array');
+  } else {
+    const nodeIds = new Set(nodes.map(n => n.id));
+    (obj['edges'] as unknown[]).forEach((value, i) => {
+      const edge = parseEdge(value, `edges[${i}]`, issues);
+      if (edge === undefined) return;
+      if (!nodeIds.has(edge.from)) {
+        issues.push(`edges[${i}].from: references unknown node id "${edge.from}"`);
+      }
+      if (!nodeIds.has(edge.to)) {
+        issues.push(`edges[${i}].to: references unknown node id "${edge.to}"`);
+      }
+      edges.push(edge);
+    });
+  }
+
+  if (issues.length > 0) {
+    return { ok: false, issues };
+  }
+
+  return { ok: true, doc: { v: obj['v'] as number, nodes, edges } };
+}
+
+function serializeContract(contract: AtlasContract): Record<string, unknown> {
+  return { format: contract.format, text: contract.text };
+}
+
+function serializeNode(node: AtlasNode): Record<string, unknown> {
+  const out: Record<string, unknown> = { id: node.id, name: node.name };
+  if (node.parent !== undefined) out['parent'] = node.parent;
+  if (node.description !== undefined) out['description'] = node.description;
+  if (node.contract !== undefined) out['contract'] = serializeContract(node.contract);
+  return out;
+}
+
+function serializeEdge(edge: AtlasEdge): Record<string, unknown> {
+  const out: Record<string, unknown> = { from: edge.from, to: edge.to };
+  if (edge.label !== undefined) out['label'] = edge.label;
+  return out;
+}
+
+export function serializeAtlasDocument(doc: AtlasDocument): string {
+  const out = {
+    v: doc.v,
+    nodes: doc.nodes.map(serializeNode),
+    edges: doc.edges.map(serializeEdge),
+  };
+  return JSON.stringify(out, null, 2) + '\n';
+}

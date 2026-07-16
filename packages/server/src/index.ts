@@ -16,6 +16,7 @@ import {
   getRawDocument,
   writeRawDocument,
   isDataflowPath,
+  isRawDocPath,
   copyDocument,
   moveDocument,
   deleteDocument,
@@ -162,7 +163,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return
     }
     console.log(`[api] GET document: ${docPath}`)
-    if (isDataflowPath(docPath)) {
+    if (isRawDocPath(docPath)) {
       try {
         const doc = await getRawDocument(docPath)
         sendJson(res, 200, doc)
