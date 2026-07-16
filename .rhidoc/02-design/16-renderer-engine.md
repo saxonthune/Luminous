@@ -1,8 +1,8 @@
 ---
-title: Renderer engine
-summary: Renderers are JSON over a primitive vocabulary; the engine interprets them; custom primitives are the code escape hatch.
-tags: [renderer, primitives, pack, rendering]
-deps: [doc02.14, doc02.11]
+title: Canvas renderer engine
+summary: Renderers are JSON over a primitive vocabulary; the engine interprets them; custom primitives are the code escape hatch. Pack-driven, so Canvas's alone — Dataflow and Atlas draw their nodes with hand-written components.
+tags: [renderer, primitives, pack, rendering, canvas]
+deps: [doc02.14, doc02.11, doc01.08]
 ---
 
 # Renderer engine
@@ -75,7 +75,7 @@ The `shape` attribute on `card` is the answer to flowchart-style packs that need
 
 ### Style references
 
-Colors, spacing, and font sizes are referenced by theme-token names (`accent`, `fg-muted`, `surface-alt`) rather than literal values. Theme switching (see [doc02.12](12-app-shell-statechart.md)) cascades through every rendered node without per-renderer changes.
+Colors, spacing, and font sizes are referenced by theme-token names (`accent`, `fg-muted`, `surface-alt`) rather than literal values. Theme switching (see [doc02.12](12-canvas-app-statechart.md)) cascades through every rendered node without per-renderer changes.
 
 ## A worked example
 
@@ -123,7 +123,7 @@ Renderers dispatch events as strings, not functions:
 { "type": "card", "onClick": "FOCUS_NODE" }
 ```
 
-The engine receives a `FOCUS_NODE` event with the node's id as payload and dispatches it into the app's statechart (see [doc02.12](12-app-shell-statechart.md)). This is exactly the pattern RTP transitions already use (`"actions": ["Collection.create"]` are strings, not function references). The pattern generalizes from statecharts to renderers: strings everywhere, code only at the engine.
+The engine receives a `FOCUS_NODE` event with the node's id as payload and dispatches it into the app's statechart (see [doc02.12](12-canvas-app-statechart.md)). This is exactly the pattern RTP transitions already use (`"actions": ["Collection.create"]` are strings, not function references). The pattern generalizes from statecharts to renderers: strings everywhere, code only at the engine.
 
 ## Custom primitives — the escape hatch
 

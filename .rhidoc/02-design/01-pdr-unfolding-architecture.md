@@ -1,15 +1,20 @@
 ---
-title: PDR: Unfolding Architecture
-summary: Product decision record for transforming Luminous from schema-first to unfolding-first
-tags: [pdr, architecture, unfolding, crystallization]
+title: "PDR: Unfolding Architecture"
+summary: Product decision record for transforming Luminous Canvas from schema-first to unfolding-first. Governs Canvas only — Dataflow and Atlas are sibling apps with their own formats.
+tags: [pdr, architecture, unfolding, crystallization, canvas]
 deps: [doc02.01]
 ---
 
 # PDR: Unfolding Architecture
 
+> **Scope: Luminous Canvas (doc01.08).** This PDR governs the Canvas app. Notes,
+> crystallization, and the schema-to-graph migration it describes are Canvas's
+> model. Dataflow (doc01.05) and Atlas (doc01.07) are sibling apps with their own
+> document formats; nothing here binds them.
+
 ## Context
 
-Luminous is a visual canvas for software design. Its core thesis: humans reason well with spatial tools, AI performs well with structured context, and Luminous bridges this gap. The canvas is simultaneously a visual workspace for humans and a source of structured context for AI agents.
+Canvas is a visual canvas for software design. Its core thesis: humans reason well with spatial tools, AI performs well with structured context, and Luminous bridges this gap. The canvas is simultaneously a visual workspace for humans and a source of structured context for AI agents.
 
 The tool was extracted from the Rhidoc monorepo as the TypeScript visual layer. It currently has a functional canvas editor with typed nodes (constructs), typed edges (via port schemas with polarity), organizer containers, multi-page documents, Yjs CRDT sync, and MCP tools for AI agents.
 

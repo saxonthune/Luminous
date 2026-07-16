@@ -2,7 +2,7 @@
 title: UI requirements
 summary: The Dataflow Designer's UI capabilities as a controlled, EARS-like list of shall-statements, plus the input-command bindings table mapping each (target, interaction) pair to its command
 tags: [dataflow, ui, requirements]
-deps: [doc01.05.01, doc02.23]
+deps: [doc01.05.01, doc02.21.03]
 ---
 
 # UI requirements

@@ -1,17 +1,17 @@
 ---
-title: Canvas component tree
-summary: What lives inside the canvas — toolbars, view switcher, layer toolbar, context menus — derived from inventories of state, mutation rate, and ownership boundary.
+title: Canvas viewport component tree
+summary: What lives inside the Canvas app's viewport — toolbars, view switcher, layer toolbar, context menus — derived from inventories of state, mutation rate, and ownership boundary. The black box doc02.13 mounts.
 tags: [canvas, chrome, component-tree, boundaries]
-deps: [doc02.13, doc02.14, doc02.17]
+deps: [doc02.13, doc02.14, doc02.17, doc01.08]
 ---
 
-# Canvas component tree
+# Canvas viewport component tree
 
 ## Intent
 
-The app-shell component tree ([doc02.13](13-app-shell-component-tree.md)) stops at `CanvasHost` and declares the canvas internals out of scope. This document picks up exactly there: it derives what lives inside the canvas — chrome, viewport, decoration layers, context menus — and names the ownership boundary that lets cactus paint chrome on the host's behalf.
+The Canvas app component tree ([doc02.13](13-canvas-app-component-tree.md)) stops at `CanvasHost` and declares the viewport internals out of scope. This document picks up exactly there: it derives what lives inside the viewport — chrome, decoration layers, context menus — and names the ownership boundary that lets cactus paint chrome on the host's behalf.
 
-The derivation procedure is the same one used for the app shell: walk six inventories, let the tree fall out. The conclusion is a three-layer split that mirrors the existing node/edge story.
+The derivation procedure is the same one used for the app's outer surface: walk six inventories, let the tree fall out. The conclusion is a three-layer split that mirrors the existing node/edge story.
 
 ## The ownership rule
 

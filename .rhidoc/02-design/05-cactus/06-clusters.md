@@ -2,7 +2,7 @@
 title: Clusters
 summary: The cluster — cactus's envelope over a member set — its declaration API, the laminar and annotation tiers, and how nesting decomposes into cluster plus coordinate ownership
 tags: [cactus, clusters, groups, layout, underlay]
-deps: [doc02.05.01, doc02.05.03, doc01.06.01.01, doc02.21]
+deps: [doc02.05.01, doc02.05.03, doc01.06.01.01, doc02.21.01]
 ---
 
 # Clusters
@@ -99,7 +99,7 @@ per relation.
 
 | | Relation source | Projection | Cactus sees |
 |---|---|---|---|
-| Dataflow Group | `box.group` field (doc02.21) | cluster: derived bounds, corner label | memberIds + clusterId |
+| Dataflow Group | `box.group` field (doc02.21.01) | cluster: derived bounds, corner label | memberIds + clusterId |
 | Canvas nesting | `contain`-role edges, per view | nest: envelope + coordinate frame | parentId (today's pipeline) |
 | Canvas grouping | `cluster`-role edges, per view | cluster, annotation-only first | memberIds |
 

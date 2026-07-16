@@ -1,17 +1,19 @@
 ---
-title: App-shell component tree (derived)
-summary: Component tree of the app shell, derived from the statechart and six inventories. Canvas internals are not modeled here.
-tags: [components, derivation, app-shell]
-deps: [doc02.12]
+title: Canvas app component tree (derived)
+summary: Component tree of the Canvas app's outer surface, derived from its statechart and six inventories. Canvas viewport internals are not modeled here.
+tags: [components, derivation, canvas]
+deps: [doc02.12, doc01.08]
 ---
 
-# App-shell component tree (derived)
+# Canvas app component tree (derived)
 
 ## Intent
 
-The component tree below is not designed — it is **derived** from the app-shell statechart ([doc02.12](12-app-shell-statechart.md)) by walking six inventories. The derivation procedure is mechanical: two contributors following it should reach the same tree. Where the procedure leaves a degree of freedom, this doc records the chosen tie-breaker explicitly.
+The component tree below is not designed — it is **derived** from the Canvas app statechart ([doc02.12](12-canvas-app-statechart.md)) by walking six inventories. The derivation procedure is mechanical: two contributors following it should reach the same tree. Where the procedure leaves a degree of freedom, this doc records the chosen tie-breaker explicitly.
 
-The scope is the **app shell only**. The canvas is a single black-box component (`CanvasHost`) the shell mounts. What lives inside the canvas — viewport, view switcher, layer toolbar, layout toolbar, inspector — is the canvas's own concern and is governed by a separate (future) document.
+The scope is the **Canvas app's outer surface** (doc01.08). The canvas viewport is a single black-box component (`CanvasHost`) the app mounts. What lives inside it — view switcher, layer toolbar, layout toolbar, inspector — is the viewport's own concern and is governed by a separate document.
+
+The platform wrapper is above this tree, not in it: `AppShell` selects an app from a registry and mounts it with no props. `sources`, `sourceId`, and `graph` below are Canvas's state, not the wrapper's.
 
 ## The six inventories
 

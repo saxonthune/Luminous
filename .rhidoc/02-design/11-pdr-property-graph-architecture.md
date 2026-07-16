@@ -1,17 +1,22 @@
 ---
 title: "PDR: Property Graph Architecture"
-summary: Successor PDR committing Luminous to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list.
+summary: Successor PDR committing Luminous Canvas to a property-graph contract, multi-document composition, per-view role semantics, packs, and a cactus-class Solid.js canvas engine. Supersedes parts of the unfolding PDR that assumed a single uniform node/edge list. Governs Canvas only — Dataflow and Atlas are not property graphs.
 tags: [pdr, architecture, property-graph, packs, views, disclosure, canvas-engine]
 deps: [doc02.01]
 ---
 
 # PDR: Property Graph Architecture
 
+> **Scope: Luminous Canvas (doc01.08).** This PDR governs the Canvas app. Dataflow
+> (doc01.05) and Atlas (doc01.07) are sibling apps with their own document formats;
+> neither is a property graph and neither has a pack. Nothing here binds them.
+> Cactus renders whatever projection an app hands it.
+
 ## 0. Executive summary
 
-Luminous will commit to a **property graph as the interface contract** between every part of the system: pipelines, MCP, the canvas runtime, saved views, and the persistence layer all speak "nodes with kinds, edges with kinds, both with typed props." The choice of backing store (in-memory, SQLite, KùzuDB, etc.) is an implementation detail we refuse to calcify.
+Canvas commits to a **property graph as the interface contract** between every part of the app: pipelines, MCP, the canvas runtime, saved views, and the persistence layer all speak "nodes with kinds, edges with kinds, both with typed props." The choice of backing store (in-memory, SQLite, KùzuDB, etc.) is an implementation detail we refuse to calcify.
 
-On top of this contract, Luminous will introduce:
+On top of this contract, Canvas introduces:
 
 - **Multi-document composition.** Substrate, layers, user annotations, positions, saved views, and per-agent contributions each live in their own document and compose into one virtual canvas at load time. Provenance is a directory path, not a field.
 - **Packs.** Each domain has a pack declaring node/edge kinds, renderer compositions, disclosure schemas, layers, saved views, and named MCP queries. **A pack is JSON data, owned by the domain it describes and co-located with its graph** — not trusted code installed into Luminous. See [doc02.14](14-pack-contract.md), which supersedes §5 below.

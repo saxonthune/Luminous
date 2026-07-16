@@ -18,5 +18,6 @@ deps: []
 | doc01.05 | Dataflow Designer | group (4) | — | — |
 | doc01.06 | Cactus | group (1) | — | — |
 | doc01.07 | Atlas | group (5) | — | — |
+| doc01.08 | Canvas | group (1) | — | — |
 
 Topics: ai-context, apps, architecture, background, canvas, history, platform, rhidoc, software-design, split, vision, visualization

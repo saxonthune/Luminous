@@ -1,8 +1,8 @@
 ---
-title: Pack Contract
-summary: A pack is JSON data owned by the domain it describes, co-located with its graph as a sibling file. What a pack declares, how a graph names it, and how Luminous resolves it.
-tags: [pack, contract, schema, data, co-location]
-deps: [doc02.11, doc02.16]
+title: Canvas pack contract
+summary: A pack is JSON data owned by the domain it describes, co-located with its graph as a sibling file. What a pack declares, how a graph names it, and how Canvas resolves it. Packs are Canvas's alone — Dataflow and Atlas have none.
+tags: [pack, contract, schema, data, co-location, canvas]
+deps: [doc02.11, doc02.16, doc01.08]
 ---
 
 # Pack Contract

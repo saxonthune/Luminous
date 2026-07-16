@@ -2,7 +2,7 @@
 title: Dataflow Designer app
 summary: The client app — read-only projection of dataflow Documents onto cactus, live-reloading as the agent writes; document plumbing shared with Luminous Canvas
 tags: [dataflow, apps, client, rendering]
-deps: [doc01.05.01, doc02.21, doc02.22, doc01.04]
+deps: [doc01.05.01, doc02.21.01, doc02.21.02, doc01.04]
 ---
 
 # Dataflow Designer app
@@ -12,7 +12,7 @@ lists the workspace's `*.dataflow.json` Documents; selecting one renders a
 read-only canvas.
 
 The canvas is read-only: the user reads, and the agent writes through the
-operations (doc02.22). The client subscribes to the server's file-change
+operations (doc02.21.02). The client subscribes to the server's file-change
 WebSocket and reloads the open Document when it changes, so the agent's edits
 appear without a refresh.
 

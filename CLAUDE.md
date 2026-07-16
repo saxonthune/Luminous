@@ -26,11 +26,24 @@ Luminous is a platform of apps (doc01.04) sharing one canvas engine and one wrap
 
 | Product | Code | Docs | What it is |
 |---|---|---|---|
-| **Canvas** | `src/apps/canvas/CanvasApp.tsx` | doc02.01 | The general canvas — graph + pack model, notes, freeform edges, nesting. The first app, formerly known simply as Luminous. |
-| **Dataflow** (Flow) | `src/apps/dataflow/` | doc01.05 | Read-only viewer of `*.dataflow.json` documents (doc02.23) — a program designed as boxes and flows before the program exists. |
-| **Atlas** | not yet built | doc01.07 | One dense canvas of a whole program: inventories of its interfaces, and from each entry the dataflow behind it. braincrawl is the first draft (doc01.07.02). |
+| **Canvas** | `src/apps/canvas/CanvasApp.tsx` | doc01.08 | The general canvas — graph + pack model, notes, freeform edges, nesting. The first app, formerly known simply as Luminous. |
+| **Dataflow** (Flow) | `src/apps/dataflow/` | doc01.05 | Read-only viewer of `*.dataflow.json` documents (doc02.21.03) — a program designed as boxes and flows before the program exists. |
+| **Atlas** | `src/apps/atlas/` | doc01.07 | One dense canvas of a whole program: inventories of its interfaces, and from each entry the dataflow behind it. braincrawl is the first draft (doc01.07.02). |
 
 Each app owns what it reads and writes. The graph-and-pack model belongs to Canvas, not to the platform — cactus renders whatever projection an app makes.
+
+### Naming and scope — two rules that keep the apps apart
+
+**"Luminous" means the platform; "Canvas" means the app.** Docs written before the
+platform had three apps say "Luminous" and mean Canvas. Read them that way, and never
+write new prose that way — name the app.
+
+**A doc's product scope is decided by the vocabulary it speaks, not by the package its
+code lives in.** Pack, graph, kind, view, render template, and primitive are Canvas's
+vocabulary, so a doc using them binds Canvas — even though that code lives in
+`@luminous/core`, which Atlas imports too. `@luminous/core` is not the platform's core;
+it holds Canvas's machinery, Atlas's module, and genuinely shared rendering in one
+package. The package boundary does not track the product boundary.
 
 ### Legacy (schema-first, being superseded)
 
@@ -85,33 +98,17 @@ This boundary is a first-class design principle under active test — see PDR D8
 
 The `.rhidoc/` directory contains structured specifications managed by the `rhidoc` CLI.
 
+- `.rhidoc/MANIFEST.md` is the index of every doc — read it first to find one.
 - **Content edits** to existing docs: direct file editing is fine, then `rhidoc regenerate`
-- **Structural changes**: use `rhidoc` commands (see below)
-- If confused about usage, run `rhidoc ai-skill` for the full CLI reference with examples
+- **Structural changes**: use `rhidoc` commands
+- **After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md
+- Run `rhidoc ai-skill` for the full CLI reference with examples
 
-### Rhidoc Commands Quick Reference
-
-All paths are relative to the workspace root, **without** the `.rhidoc/` prefix (e.g., `02-design`, not `.rhidoc/02-design`).
-
-**After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md. Most commands do this automatically; use `--no-regen` to skip (useful during batch operations).
-
-| Command | Use case | Flags |
-|---|---|---|
-| `rhidoc regenerate` | After editing frontmatter, or to fix a stale MANIFEST | (none) |
-| `rhidoc create <dest> <slug>` | Add a new doc to an existing section | `--title`, `--summary`, `--tags` (comma-sep), `--deps` (comma-sep), `--order`, `--dry-run` |
-| `rhidoc group <target>` | Create a new section (directory + 00-index.md) | `--title`, `--no-regen` |
-| `rhidoc delete <path> [paths...]` | Remove docs; siblings renumber to close gaps | `--dry-run`, `--output-mapping` |
-| `rhidoc move <src> <dest>` | Reorder docs or move between sections | `--order`, `--mkdir`, `--rename`, `--no-gap-close` (for batch moves), `--dry-run` |
-| `rhidoc punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
-| `rhidoc flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
-| `rhidoc rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
-| `rhidoc cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
-
-### Pack/graph schema changes
+### Pack/graph schema changes (Canvas)
 
 When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.
 
-The same rule covers the dataflow document shape: a change to `packages/core/src/dataflow/types.ts` (or the check/operation rules) updates `.claude/skills/luminous-dataflow/SKILL.md` and its `dataflow-document.schema.json` copy, plus the sidecar schema in doc02.21, in the same change.
+The same rule covers the dataflow document shape: a change to `packages/core/src/dataflow/types.ts` (or the check/operation rules) updates `.claude/skills/luminous-dataflow/SKILL.md` and its `dataflow-document.schema.json` copy, plus the sidecar schema in doc02.21.01, in the same change.
 
 ### Primitive vocabulary reference
 

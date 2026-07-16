@@ -1,8 +1,8 @@
 ---
 title: Chrome schema
-summary: Action records, menu and toolbar schemas, chrome slots; cactus owns chrome rendering, Luminous owns the schema producers, packs stay unchanged.
+summary: Action records, menu and toolbar schemas, chrome slots; cactus owns chrome rendering, the host app owns the schema producers, packs stay unchanged. The record types are an engine contract; the pack-fed producers are Canvas's.
 tags: [chrome, api, actions, menus, cactus, boundary]
-deps: [doc02.14, doc02.19]
+deps: [doc02.14, doc02.19, doc01.08]
 ---
 
 # Chrome schema
@@ -230,7 +230,7 @@ The full primitive set:
 | `Submenu` | nested menu | Kobalte `Menu.Sub` |
 | `Divider` | horizontal rule in a menu | plain `<hr>` |
 
-Theme tokens (CSS variables defined in `client/index.css`) drive all styling. Cactus does not hardcode colors. Theme switching ([doc02.12](12-app-shell-statechart.md)) cascades through chrome the same way it cascades through the viewport.
+Theme tokens (CSS variables defined in `client/index.css`) drive all styling. Cactus does not hardcode colors. Theme switching ([doc02.12](12-canvas-app-statechart.md)) cascades through chrome the same way it cascades through the viewport.
 
 ## Hotkeys
 
@@ -243,7 +243,7 @@ Rules:
 - Modifier syntax: `Cmd+K` on macOS, `Ctrl+K` on Windows/Linux, written as `Mod+K` for "either." `Shift+`, `Alt+`, `Cmd+`, `Ctrl+` accepted explicitly.
 - Single keys with no modifiers (`F2`, `Esc`) work but are reserved for unambiguous global actions.
 
-The F2 theme toggle ([doc02.12](12-app-shell-statechart.md)) is a shell-level binding outside this surface, but uses the same conventions; the two systems may merge if a global hotkey registry emerges.
+The F2 theme toggle ([doc02.12](12-canvas-app-statechart.md)) is a shell-level binding outside this surface, but uses the same conventions; the two systems may merge if a global hotkey registry emerges.
 
 ## Dispatch protocol
 
@@ -253,7 +253,7 @@ Cactus calls `onAction(id, payload)` on every activation. The protocol is intent
 - `payload` is whatever the producer attached, unchanged. Cactus does not inspect it.
 - Cactus never returns a value; dispatch is fire-and-forget.
 
-The host's dispatcher routes ids to mutations. A switch is fine at small scale; for larger surfaces, the same statechart pattern used by the app shell ([doc02.12](12-app-shell-statechart.md)) applies — actions become statechart events and dispatch is a single `send(id, payload)` call.
+The host's dispatcher routes ids to mutations. A switch is fine at small scale; for larger surfaces, the same statechart pattern used by the app shell ([doc02.12](12-canvas-app-statechart.md)) applies — actions become statechart events and dispatch is a single `send(id, payload)` call.
 
 ## Testing surface
 

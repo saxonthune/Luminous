@@ -1,8 +1,8 @@
 ---
-title: Projection and identity
-summary: Node identity persists across projections; decoration layers above projection; contain-per-view; animation between views falls out of identity stability.
-tags: [projection, identity, view, animation, decoration]
-deps: [doc02.11, doc02.14]
+title: Canvas projection and identity
+summary: Node identity persists across projections; decoration layers above projection; contain-per-view; animation between views falls out of identity stability. Views and roles are pack machinery, so Canvas's alone.
+tags: [projection, identity, view, animation, decoration, canvas]
+deps: [doc02.11, doc02.14, doc01.08]
 ---
 
 # Projection and identity

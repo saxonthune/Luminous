@@ -35,7 +35,9 @@ type LayoutEngine = (request: LayoutRequest) => LayoutResult | Promise<LayoutRes
 ```
 
 A layout engine is a function. It may be synchronous (`gridLayout`) or
-asynchronous (`elkLayout` wraps a worker). The caller awaits unconditionally.
+asynchronous (`elkLayout`, whose promise comes from elkjs's worker-shaped API —
+the layout itself runs in the calling thread unless a worker is supplied). The
+caller awaits unconditionally.
 
 ### LayoutRequest
 
@@ -80,26 +82,41 @@ interface LayoutResult {
 
 These hold regardless of which engine runs.
 
-### 1. Positions are ephemeral; the engine is their sole source
+### 1. Positions are the engine's output; the host decides whether to persist them
 
-V3 graph files (`.canvases/*.graph.json`) persist **no geometry**. A node is
-`{ id, kind, props, tags }` — there is no `x/y/w/h`. Positions are recomputed by
-a layout engine on every render. There is no "saved layout" to fall back on.
+Cactus holds no position between calls. It receives structure and sizes and
+returns coordinates; what becomes of those coordinates is the host app's choice,
+and the apps choose differently. A host that wants a position to survive stores
+it itself.
 
-> Consequence: a tool that reads a graph file cannot report node positions —
-> there are none on disk. The MCP `diag`/`node` tools assume persisted
+**Canvas recomputes.** A node in a graph file (`.canvases/*.graph.json`) is
+`{ id, kind, props, tags }` — there is no `x/y/w/h`. A layout engine recomputes
+positions on every render, and there is no saved layout to fall back on.
+
+> Consequence for Canvas: a tool that reads a graph file cannot report node
+> positions — there are none on disk. The MCP `diag`/`node` tools assume persisted
 > `geometry`, so they do not apply to v3 graphs. To inspect computed positions,
 > instrument the engine's `LayoutResult` or read the live rect registry
 > (`getNodeRects`), not the file.
 
+**Atlas persists.** A node in an atlas document (`.canvases/*.atlas.json`) carries
+`x` and `y`: an offset from its parent's origin, canvas-absolute for a root node,
+absent when the node is unplaced. An atlas is authored rather than regenerated
+(doc01.07.01), so a hand-placed node is authored data and a drag is an edit.
+
+Neither choice touches the engine. The invariant is about cactus, not about files.
+
 ### 2. Containment is declared, never inferred
 
-`childrenOf` comes from contain-role edges (e.g. `statechart.substate-of`,
-`prim.contains`) resolved by `evaluateContainment`. The engine must *honor*
-membership, never *discover* it by testing whether one rect sits inside
-another. Geometric inference is fragile: a sub-pixel drift or a stale
-mid-settle frame makes membership ambiguous. Every robust system (Graphviz
-clusters, ELK hierarchy, tldraw frames) stores parent→child explicitly.
+`childrenOf` is declared by the host. The engine must *honor* membership, never
+*discover* it by testing whether one rect sits inside another. Geometric inference
+is fragile: a sub-pixel drift or a stale mid-settle frame makes membership
+ambiguous. Every robust system (Graphviz clusters, ELK hierarchy, tldraw frames)
+stores parent→child explicitly.
+
+How a host declares it is the host's business: Canvas resolves contain-role edges
+(e.g. `statechart.substate-of`, `prim.contains`) through `evaluateContainment`,
+while Atlas reads a node's `parent` field directly.
 
 Geometry is an *output* of containment, not an input to it. The bottom-up walk
 (see invariant 4) is how a container is *sized*; it is never how membership is

@@ -2,7 +2,7 @@
 title: Dataflow operations
 summary: The operation set over a dataflow Document — the dataflow MCP tool group's verbs, their validation rules, and the check warnings
 tags: [dataflow, mcp, operations, tools]
-deps: [doc02.21, doc02.04]
+deps: [doc02.21.01, doc02.04]
 ---
 
 # Dataflow operations

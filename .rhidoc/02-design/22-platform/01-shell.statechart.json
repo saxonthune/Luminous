@@ -1,0 +1,42 @@
+{
+  "_placeholder": true,
+  "_note": "Tool-agnostic, XState v5-shaped. Runtime binding deferred until the toolchain doc selects one. See 01-shell-statechart.md (doc02.22.01) for prose. Each app's own surface is a black box — Canvas's is 12-canvas-app.statechart.json (doc02.12).",
+  "id": "platform-shell",
+  "type": "parallel",
+  "states": {
+    "app": {
+      "initial": "appMounted",
+      "states": {
+        "appMounted": {
+          "meta": {
+            "surface": "active-app",
+            "reads": ["activeAppId"]
+          },
+          "on": {
+            "SELECT_APP": { "target": "appMounted", "actions": ["setActiveAppId", "writeUrlApp"] }
+          }
+        }
+      }
+    },
+    "theme": {
+      "initial": "light",
+      "_note": "Initial state is overridden at boot from localStorage if present.",
+      "states": {
+        "light":  { "on": { "CYCLE_THEME": { "target": "dusk",   "actions": ["persistTheme"] } } },
+        "dusk":   { "on": { "CYCLE_THEME": { "target": "ground", "actions": ["persistTheme"] } } },
+        "ground": { "on": { "CYCLE_THEME": { "target": "light",  "actions": ["persistTheme"] } } }
+      }
+    }
+  },
+  "context": {
+    "activeAppId": { "type": "string", "initial": "canvas" }
+  },
+  "invariants": [
+    { "id": "SHELL-INV-1", "description": "activeAppId always names a registered app; an unrecognized ?app= resolves to the first registry entry" },
+    { "id": "SHELL-INV-2", "description": "?app= is a projection of activeAppId, not an input" },
+    { "id": "SHELL-INV-3", "description": "The shell holds no app's state" }
+  ],
+  "globalKeymap": {
+    "F2": "CYCLE_THEME"
+  }
+}

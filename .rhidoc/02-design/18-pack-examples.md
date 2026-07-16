@@ -1,8 +1,8 @@
 ---
-title: Pack examples
-summary: RTP, flowchart, Solid app, React app, Rust app — what each pack declares, what views each wants, and what falls out as Luminous's universal contract.
-tags: [pack, examples, reference, contract]
-deps: [doc02.14, doc02.16, doc02.17]
+title: Canvas pack examples
+summary: RTP, flowchart, Solid app, React app, Rust app — what each pack declares, what views each wants, and what falls out as the universal contract Canvas holds for all packs.
+tags: [pack, examples, reference, contract, canvas]
+deps: [doc02.14, doc02.16, doc02.17, doc01.08]
 ---
 
 # Pack examples
