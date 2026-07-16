@@ -5,6 +5,7 @@ import type { BoxEditForm } from './mutations';
 
 export interface BoxContentProps {
   box: () => DataflowBox | undefined;
+  selected: () => boolean;
   editing: () => boolean;
   onEnterEdit: () => void;
   onCommit: (form: BoxEditForm) => void;
@@ -46,7 +47,10 @@ export function BoxContent(props: BoxContentProps): JSX.Element {
 
   return (
     <div
-      class="flex h-full w-full flex-col gap-1 overflow-hidden rounded border border-border-subtle bg-surface p-2"
+      class={`flex h-full w-full flex-col gap-1 overflow-hidden rounded border bg-surface p-2 ${
+        // Negative offset keeps the outline inside NodeContainer's overflow:hidden clip.
+        props.selected() ? 'border-accent-subtle outline outline-2 -outline-offset-2 outline-accent-subtle' : 'border-border-subtle'
+      }`}
       onDblClick={(e) => {
         if (props.editing()) return;
         e.stopPropagation();

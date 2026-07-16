@@ -26,12 +26,14 @@
     {
       "id": "enriched-data",
       "name": "Enriched data",
-      "description": "Standings enriched with the team list into a display-ready model of each match's teams and results."
+      "description": "Standings enriched with the team list into a display-ready model of each match's teams and results.",
+      "group": "Pure Functions"
     },
     {
       "id": "scorer",
       "name": "Scorer",
-      "description": "Grades an entrant's bracket picks against the enriched standings into a bracket score."
+      "description": "Grades an entrant's bracket picks against the enriched standings into a bracket score. WOW",
+      "group": "Pure Functions"
     },
     {
       "id": "standings-view",
@@ -53,12 +55,33 @@
     }
   ],
   "flows": [
-    { "from": "standings", "to": "enriched-data" },
-    { "from": "team-list", "to": "enriched-data" },
-    { "from": "enriched-data", "to": "standings-view" },
-    { "from": "enriched-data", "to": "scorer" },
-    { "from": "user-brackets", "to": "scorer" },
-    { "from": "scorer", "to": "bracket-view" },
-    { "from": "scorer", "to": "leaderboard" }
+    {
+      "from": "standings",
+      "to": "enriched-data"
+    },
+    {
+      "from": "team-list",
+      "to": "enriched-data"
+    },
+    {
+      "from": "enriched-data",
+      "to": "standings-view"
+    },
+    {
+      "from": "enriched-data",
+      "to": "scorer"
+    },
+    {
+      "from": "user-brackets",
+      "to": "scorer"
+    },
+    {
+      "from": "scorer",
+      "to": "bracket-view"
+    },
+    {
+      "from": "scorer",
+      "to": "leaderboard"
+    }
   ]
 }

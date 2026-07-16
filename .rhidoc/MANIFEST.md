@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc02.12, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc02.23 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc02.23 | — |
 
 ### Milestones
 
@@ -53,7 +53,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.05.00 | `05-dataflow-designer/00-index.md` |  |  | — | — | — |
-| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03, doc01.05.04, doc02.21, doc02.23 | — |
+| doc01.05.01 | `05-dataflow-designer/01-idea.md` | A canvas app for designing a program as a dataflow diagram — boxes with prose descriptions and optional data contracts, grown by unfolding differentiation from one source and one artifact | dataflow, apps, unfolding, design | doc01.04, doc01.05.02 | doc01.05.02, doc01.05.03, doc01.05.04, doc01.07.01, doc02.21, doc02.23 | — |
 | doc01.05.02 | `05-dataflow-designer/02-fifa-bracketing-case.md` | The motivating case — a bracket-game app built human-with-agent in one evening; the build succeeded, but its largest tax fell exactly where vocabulary and data flow were not visible early | dataflow, case-study, fifa-bracketing, vocabulary, glossary | doc01.05.01 | doc01.05.01 | — |
 | doc01.05.03 | `05-dataflow-designer/03-glossary.md` | The Dataflow Designer's controlled vocabulary — Document, Box, Flow, Description, Contract, Group, and the loose Source/Transform/View subtypes | glossary, vocabulary, dataflow | doc01.05.01 | doc02.21 | — |
 | doc01.05.04 | `05-dataflow-designer/04-ui-requirements.md` | The Dataflow Designer's UI capabilities as a controlled, EARS-like list of shall-statements, plus the input-command bindings table mapping each (target, interaction) pair to its command | dataflow, ui, requirements | doc01.05.01, doc02.23 | — | — |
@@ -76,6 +76,15 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.06.01.09 | `06-cactus/01-prior-art/09-unreal-blueprints.md` | The Blueprint Visual Scripting mental model — Blueprint classes and the Event Graph, nodes and the exec-versus-data pin system, the three subgraph forms, and the annotative comment box | cactus, prior-art, unreal, blueprints, node-editor, product | doc01.06.01.01 | — | — |
 | doc01.06.01.10 | `06-cactus/01-prior-art/10-blender-nodes.md` | Blender's node editor mental model — node trees, typed color-coded sockets, links, and the two organization constructs side by side, frames (derived envelope) and node groups (owning subgraph) | cactus, prior-art, blender, node-editor, product | doc01.06.01.01 | — | — |
 | doc01.06.01.11 | `06-cactus/01-prior-art/11-houdini-networks.md` | Houdini's network editor mental model — contexts and nested networks, nodes with inputs, outputs, and flags, wires, and the organization ladder of network boxes, sticky notes, subnets, and digital assets | cactus, prior-art, houdini, node-editor, product | doc01.06.01.01 | — | — |
+
+### Atlas
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.07.00 | `07-atlas/00-index.md` |  |  | — | — | — |
+| doc01.07.01 | `07-atlas/01-idea.md` | A canvas app holding a dense visual representation of a whole piece of software — interface inventories plus the dataflow behind each entry — comprehensible to a human, readable and editable by an agent | atlas, apps, dataflow, interfaces | doc01.04, doc01.05.01 | doc01.07.02 | — |
+| doc01.07.02 | `07-atlas/02-braincrawl-case.md` | The motivating case — braincrawl is drawn as the first Atlas canvas, a rough-draft proof of concept, because it already carries every input Atlas needs and its own specs already name the smells an Atlas should show | atlas, case-study, braincrawl, cli, dataflow | doc01.07.01 | — | — |
 
 ## 02-design — Design
 
@@ -165,20 +174,23 @@ Quick lookup for file-path→doc mapping:
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `app-shell` | doc02.12, doc02.13 |
-| `apps` | doc01.04, doc01.05.01, doc02.23 |
+| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc02.23 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
+| `atlas` | doc01.07.01, doc01.07.02 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
 | `blender` | doc01.06.01.10 |
 | `blueprints` | doc01.06.01.09 |
 | `boundaries` | doc02.19 |
 | `boundary` | doc02.20 |
+| `braincrawl` | doc01.07.02 |
 | `cactus` | doc01.06.01.01, doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11, doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.20, doc03.07 |
 | `cactus-boundary` | doc02.08 |
 | `canvas` | doc01.01, doc01.06.01.01, doc02.05.01, doc02.05.02, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
-| `case-study` | doc01.05.02 |
+| `case-study` | doc01.05.02, doc01.07.02 |
 | `chrome` | doc02.19, doc02.20 |
+| `cli` | doc01.07.02 |
 | `cli-grammar` | doc03.08 |
 | `client` | doc02.23 |
 | `clusters` | doc02.05.06 |
@@ -197,7 +209,7 @@ Quick lookup for file-path→doc mapping:
 | `cytoscape` | doc01.06.01.05 |
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
-| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc02.21, doc02.22, doc02.23 |
+| `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc01.07.01, doc01.07.02, doc02.21, doc02.22, doc02.23 |
 | `decoration` | doc02.17 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
@@ -228,6 +240,7 @@ Quick lookup for file-path→doc mapping:
 | `houdini` | doc01.06.01.11 |
 | `http` | doc02.03 |
 | `identity` | doc02.17 |
+| `interfaces` | doc01.07.01 |
 | `iteration` | doc02.15 |
 | `jackson` | doc02.02 |
 | `json-schema` | doc02.10.02 |

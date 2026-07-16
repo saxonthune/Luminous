@@ -103,6 +103,7 @@ function DataflowNodeLayer(props: {
           >
             <BoxContent
               box={box}
+              selected={() => ctx.isSelected(node.id)}
               editing={editing}
               onEnterEdit={() => {
                 props.onEnterEdit(node.id, { x: pos().x, y: pos().y, width: node.w, height: EDIT_HEIGHT });
@@ -121,6 +122,7 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
   const [groupPromptTargets, setGroupPromptTargets] = createSignal<string[] | null>(null);
   const [editingId, setEditingId] = createSignal<string | null>(null);
+  const [selectedCount, setSelectedCount] = createSignal(0);
 
   const nodes = createMemo(() => toTidyNodes(props.doc));
   const sizes = createMemo(() => new Map(nodes().map((n) => [n.id, { w: n.w, h: n.h }])));
@@ -232,9 +234,12 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
     const ids = targetIds(nodeId);
     const groups = [...new Set(props.doc.boxes.map((b) => b.group).filter((g): g is string => Boolean(g)))].sort();
     const hasGroup = ids.some((id) => boxesById().get(id)?.group);
+    // In a multi-selection the labels carry the count, so the menu reads as
+    // a bulk menu ("Delete 3 Boxes") rather than a single-box one.
+    const bulk = ids.length > 1 ? ` ${ids.length} Boxes` : '';
     const items: MenuItem[] = [
-      { type: 'action', action: { id: 'box.duplicate', label: 'Duplicate', payload: { ids } } },
-      { type: 'action', action: { id: 'box.duplicateWithFlows', label: 'Duplicate with Flows', payload: { ids } } },
+      { type: 'action', action: { id: 'box.duplicate', label: `Duplicate${bulk}`, payload: { ids } } },
+      { type: 'action', action: { id: 'box.duplicateWithFlows', label: `Duplicate${bulk} with Flows`, payload: { ids } } },
       {
         type: 'submenu',
         label: 'Add to Group',
@@ -250,7 +255,7 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
         ? ([{ type: 'action', action: { id: 'box.removeFromGroup', label: 'Remove from Group', payload: { ids } } }] as MenuItem[])
         : []),
       { type: 'divider' },
-      { type: 'action', action: { id: 'box.delete', label: 'Delete', tone: 'danger', payload: { ids } } },
+      { type: 'action', action: { id: 'box.delete', label: `Delete${bulk}`, tone: 'danger', payload: { ids } } },
     ];
     return { id: `node-menu-${nodeId}`, items };
   }
@@ -330,40 +335,51 @@ export function DataflowCanvas(props: DataflowCanvasProps): JSX.Element {
   return (
     <>
       <style>{BOX_MD_STYLES}</style>
-      <Canvas
-        ref={(r) => { canvasRef = r; }}
-        edges={edges()}
-        clusters={clusters()}
-        nodeContextMenu={nodeContextMenu}
-        edgeContextMenu={edgeContextMenu}
-        backgroundContextMenu={backgroundContextMenu}
-        onAction={onAction}
-        boxSelect={{
-          trigger: 'drag',
-          getNodeRects: () => {
-            const pos = positions();
-            const sz = sizes();
-            return nodes().map((n) => {
-              const p = pos.get(n.id) ?? { x: 0, y: 0 };
-              const s = sz.get(n.id) ?? { w: n.w, h: n.h };
-              return { id: n.id, x: p.x, y: p.y, width: s.w, height: s.h };
-            });
-          },
-        }}
-      >
-        <DataflowNodeLayer
-          doc={props.doc}
-          nodes={nodes}
-          positions={positions}
-          onDragStart={beginDrag}
-          onDrag={moveDrag}
-          onDragEnd={endDrag}
-          editingId={editingId}
-          onEnterEdit={enterBoxEdit}
-          onCommit={commitBoxEdit}
-          onCancel={cancelBoxEdit}
-        />
-      </Canvas>
+      <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
+        <Canvas
+          ref={(r) => { canvasRef = r; }}
+          edges={edges()}
+          clusters={clusters()}
+          nodeContextMenu={nodeContextMenu}
+          edgeContextMenu={edgeContextMenu}
+          backgroundContextMenu={backgroundContextMenu}
+          onAction={onAction}
+          onSelectionChange={(ids) => setSelectedCount(ids.length)}
+          boxSelect={{
+            trigger: 'drag',
+            getNodeRects: () => {
+              const pos = positions();
+              const sz = sizes();
+              return nodes().map((n) => {
+                const p = pos.get(n.id) ?? { x: 0, y: 0 };
+                const s = sz.get(n.id) ?? { w: n.w, h: n.h };
+                return { id: n.id, x: p.x, y: p.y, width: s.w, height: s.h };
+              });
+            },
+          }}
+        >
+          <DataflowNodeLayer
+            doc={props.doc}
+            nodes={nodes}
+            positions={positions}
+            onDragStart={beginDrag}
+            onDrag={moveDrag}
+            onDragEnd={endDrag}
+            editingId={editingId}
+            onEnterEdit={enterBoxEdit}
+            onCommit={commitBoxEdit}
+            onCancel={cancelBoxEdit}
+          />
+        </Canvas>
+        <Show when={selectedCount() > 1}>
+          <div
+            data-testid="selection-count"
+            class="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border-subtle bg-surface px-3 py-1 text-xs text-fg shadow-sm"
+          >
+            {selectedCount()} Boxes selected
+          </div>
+        </Show>
+      </div>
       <Show when={groupPromptTargets()}>
         {(ids) => (
           <NamePromptDialog

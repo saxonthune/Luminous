@@ -71,6 +71,8 @@ export interface CanvasProps {
   backgroundContextMenu?: () => MenuSchema | undefined;
   /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
   edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
+  /** Fires whenever the selection changes (click, marquee, clear). */
+  onSelectionChange?: (ids: ReadonlyArray<string>) => void;
 }
 
 export interface CanvasRef {
@@ -359,7 +361,7 @@ export function Canvas(props: CanvasProps) {
   );
   const { connectionDrag: connectionDragState, startConnection } = connectionDragResult;
 
-  const selection = useSelection({});
+  const selection = useSelection({ onSelectionChange: (ids) => props.onSelectionChange?.(ids) });
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
 
   const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();

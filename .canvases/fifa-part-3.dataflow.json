@@ -41,10 +41,25 @@
     }
   ],
   "flows": [
-    { "from": "json-w-standings", "to": "enriched-data" },
-    { "from": "team-list", "to": "enriched-data" },
-    { "from": "enriched-data", "to": "scorer" },
-    { "from": "user-brackets", "to": "scorer" },
-    { "from": "scorer", "to": "bracket-w-teams" }
+    {
+      "from": "json-w-standings",
+      "to": "enriched-data"
+    },
+    {
+      "from": "team-list",
+      "to": "enriched-data"
+    },
+    {
+      "from": "enriched-data",
+      "to": "scorer"
+    },
+    {
+      "from": "user-brackets",
+      "to": "scorer"
+    },
+    {
+      "from": "scorer",
+      "to": "bracket-w-teams"
+    }
   ]
 }

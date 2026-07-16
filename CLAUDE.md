@@ -18,7 +18,19 @@ client  (Solid.js canvas, all domain logic)
 ```
 
 - `@luminous/server` (`packages/server`) — filesystem serving, WebSocket file-change notifications, no domain logic
-- `@luminous/client` (`packages/client`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting. It is a platform wrapper (`AppShell`, `AppHeader`) hosting apps under `src/apps/`; Luminous Canvas (`src/apps/canvas/CanvasApp.tsx`) is the first app, and the Dataflow Designer (`src/apps/dataflow/`) is the second — a read-only viewer of `*.dataflow.json` documents (doc02.23).
+- `@luminous/client` (`packages/client`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting. It is a platform wrapper (`AppShell`, `AppHeader`) hosting apps under `src/apps/`.
+
+## The three products
+
+Luminous is a platform of apps (doc01.04) sharing one canvas engine and one wrapper. Three are under development:
+
+| Product | Code | Docs | What it is |
+|---|---|---|---|
+| **Canvas** | `src/apps/canvas/CanvasApp.tsx` | doc02.01 | The general canvas — graph + pack model, notes, freeform edges, nesting. The first app, formerly known simply as Luminous. |
+| **Dataflow** (Flow) | `src/apps/dataflow/` | doc01.05 | Read-only viewer of `*.dataflow.json` documents (doc02.23) — a program designed as boxes and flows before the program exists. |
+| **Atlas** | not yet built | doc01.07 | One dense canvas of a whole program: inventories of its interfaces, and from each entry the dataflow behind it. braincrawl is the first draft (doc01.07.02). |
+
+Each app owns what it reads and writes. The graph-and-pack model belongs to Canvas, not to the platform — cactus renders whatever projection an app makes.
 
 ### Legacy (schema-first, being superseded)
 

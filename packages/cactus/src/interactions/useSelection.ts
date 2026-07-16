@@ -28,6 +28,13 @@ export function useSelection(options: UseSelectionOptions): UseSelectionResult {
   const mergeBoxSelection = (ids: string[]) => setSelectedIds(ids);
 
   const onNodePointerDown = (nodeId: string, event: PointerEvent) => {
+    // Right-click: the context menu acts on the whole selection, so keep a
+    // selection the node is already part of; otherwise select just the node.
+    if (event.button === 2) {
+      if (!selectedIds().includes(nodeId)) setSelectedIds([nodeId]);
+      return;
+    }
+    if (event.button !== 0) return;
     if (event.shiftKey || event.ctrlKey || event.metaKey) {
       if (selectedIds().includes(nodeId)) {
         setSelectedIds(selectedIds().filter((id) => id !== nodeId));

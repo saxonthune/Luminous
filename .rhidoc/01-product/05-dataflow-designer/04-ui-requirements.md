@@ -51,6 +51,9 @@ glossary terms (doc01.05.03).
 - **R15.** The system shall allow the user to add a selection of Boxes to a Group.
 - **R16.** The system shall allow the user to edit a Box's contents.
 - **R17.** The system shall allow the user to add a new Box to the Document.
+- **R18.** While a Box is selected, the system shall highlight it.
+- **R19.** While two or more Boxes are selected, the system shall display a
+  floating count indicator at the bottom center of the view.
 
 ## Input-command bindings
 
@@ -77,7 +80,7 @@ navigation or gaps with no assigned requirement yet.
 | Box | Shift/Ctrl + left click | Toggle the Box in the selection | R13 |
 | Box | drag | Move the Box; the position is ephemeral — the next layout run wins | R6 |
 | Box | right click | Context menu: Duplicate, Duplicate with Flows, Add to Group ▸ (existing Groups + New Group…), Delete | R7, R8, R10, R11 |
-| Box in a multi-selection | right click | The same menu, applied to every selected Box | R14, R15 |
+| Box in a multi-selection | right click | The same menu with the count in its labels (e.g. "Delete 3 Boxes"), applied to every selected Box; the selection is kept | R14, R15 |
 | Box | double left click | Enter edit mode: name input, Description as a raw-markdown textarea, Contract format and text fields; the view fits to the Box | R16 |
 | Box in edit mode | Ctrl+Enter, or blur | Commit the edits to the Document | R16 |
 | Box in edit mode | Esc | Cancel the edits | R16 |
