@@ -85,6 +85,17 @@ An arrange command lets the user set several Nodes' positions at once.
 - **R30.** When the system arranges Nodes within a Container, it shall place them
   without overlapping other Nodes in the Container.
 
+## Edges
+
+An Edge connects one Node to another and carries no label. Where an Edge needs
+explanation, the user bisects it, inserting a Node that carries the explanation
+(doc01.07.03, Bisection).
+
+- **R31.** The system shall allow the user to bisect an Edge, inserting a new Node
+  between the Edge's two ends so that `A → B` becomes `A → N → B`.
+- **R32.** When the user right-clicks an Edge, the system shall open a context menu
+  with a "Bisect" option.
+
 ## Input-command bindings
 
 An **input** is an ordered pair — a target and an interaction method (left click,
@@ -116,4 +127,6 @@ baseline navigation or gaps with no assigned requirement yet.
 | Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
+| Edge | right click | Open the context menu with a "Bisect" option | R32 |
+| Bisect (context menu) | left click | Bisect the Edge, inserting a new Node between its ends | R31 |
 | Fit control | left click | Move the camera to frame every Node | R22 |

@@ -51,6 +51,15 @@ by being capitalized in a requirement. Two kinds are kept out:
 - **Parent** — the Node whose Container a given Node is in.
   `parent-of(Node, Node)`
 
+- **Edge** — a connection from one Node to another. An Edge carries no label; it
+  only connects. `edge(Node, Node)`
+
+- **Bisection** — splitting an Edge by inserting a Node between its two ends. The
+  Edge `A → B` becomes `A → N → B`, and the new Node N carries the explanation as
+  its Content. This is why an Edge carries no label: where an Edge needs
+  explanation, the user bisects it, and the explanation is a Node, not text on the
+  Edge.
+
 ## Layout
 
 > The relation vocabulary. A term here is borrowed rather than coined wherever a
