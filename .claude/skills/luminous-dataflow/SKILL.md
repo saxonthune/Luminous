@@ -166,8 +166,8 @@ Guidance per field:
 
 The Dataflow Designer lists every `*.dataflow.json` in the served workspace and live-reloads the open Document when the file changes — an agent's writes appear without a refresh.
 
-- **In the Luminous repo**: write to `.canvases/`, run `just dev`, open the client, switch to the Dataflow app.
-- **In another repo**: add the directory holding the Document to the `roots` array of Luminous's `luminous.config.json` (machine-local config, gitignored), then run `just dev` in the Luminous repo. Conventional location in a consumer repo: a `.canvases/` directory at the repo root.
+- **In the Luminous repo**: write to `.luminous/`, run `just dev`, open the client, switch to the Dataflow app.
+- **In another repo**: add the directory holding the Document to the `roots` array of Luminous's `luminous.config.json` (machine-local config, gitignored), then run `just dev` in the Luminous repo. Conventional location in a consumer repo: a `.luminous/` directory at the repo root.
 
 ## Two Write Paths
 

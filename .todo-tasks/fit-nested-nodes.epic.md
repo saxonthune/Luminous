@@ -2,7 +2,7 @@
 
 ## Motivation
 
-After landing the `prim.contains` edge kind and nesting Beta over Parser/Evaluator/Cache in `.canvases/sample-primitives.graph.json`, both grid and ELK views render parents that do not actually enclose their children (Cache spills below Beta in grid view; Beta's right edge clips Cache in ELK view). The root cause is the layout's lack of correct inputs: it doesn't know the rendered sizes of leaves and doesn't reserve enough header space for parents' intrinsic content (BoxCard label + description).
+After landing the `prim.contains` edge kind and nesting Beta over Parser/Evaluator/Cache in `.luminous/sample-primitives.graph.json`, both grid and ELK views render parents that do not actually enclose their children (Cache spills below Beta in grid view; Beta's right edge clips Cache in ELK view). The root cause is the layout's lack of correct inputs: it doesn't know the rendered sizes of leaves and doesn't reserve enough header space for parents' intrinsic content (BoxCard label + description).
 
 The fix is the two-region model — every parent rect has a header region (its own intrinsic content) and a body region (packed children) — implemented in three unfolding steps so each step is independently testable and useful.
 

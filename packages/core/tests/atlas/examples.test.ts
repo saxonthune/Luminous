@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import { parseAtlasDocument } from '../../src/atlas/document.ts';
 
-const CANVASES_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../../.canvases');
+const CANVASES_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../../.luminous');
 const files = readdirSync(CANVASES_DIR).filter((f) => f.endsWith('.atlas.json'));
 
-describe('.canvases/*.atlas.json examples', () => {
+describe('.luminous/*.atlas.json examples', () => {
   it('found at least one example document', () => {
     expect(files.length).toBeGreaterThan(0);
   });

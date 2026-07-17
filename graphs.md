@@ -1979,7 +1979,7 @@ This is a *design* tool, not a diagramming tool. Diagrams are pictures. Design i
 
 ## What a Canvas Is
 
-A `.canvas.json` file in `.canvases/` contains:
+A `.canvas.json` file in `.luminous/` contains:
 
 - **Schemas** — define what kinds of nodes and edges exist on this canvas. Each schema has a name, label, and primitives (visual building blocks like title, markdown body, drag-bar).
 - **Structure** — the nodes. Each node references a schema, has geometry (x, y, w, h), optional content (field values), and optional nesting (parentId).
@@ -2108,7 +2108,7 @@ A couple of options:
 
 3. **Ask you to check** — run `/mcp` in Claude Code to see what MCP servers are connected. If `luminous` is listed but no tools surfaced, it's a tool-registration issue; if not listed, it's a config issue.
 
-Which do you want? If you just want the canvas and don't care which path, I'd go with option 2 — I'll design the topology for this conversation (nodes for the big concepts: DOM, rendering pipeline, bootstrap, signals, currentListener, reference graph, primitives vs objects, frameworks-as-DSLs; edges for the "builds on" dependencies between them) and write the JSON to `.canvases/`.
+Which do you want? If you just want the canvas and don't care which path, I'd go with option 2 — I'll design the topology for this conversation (nodes for the big concepts: DOM, rendering pipeline, bootstrap, signals, currentListener, reference graph, primitives vs objects, frameworks-as-DSLs; edges for the "builds on" dependencies between them) and write the JSON to `.luminous/`.
 
 ## User
 
@@ -2116,7 +2116,7 @@ Which do you want? If you just want the canvas and don't care which path, I'd go
 
 ## Assistant
 
-The MCP tools are configured in the Luminous project, not tinyForum — that's why they weren't loaded. A restart would be needed to pick them up here. Faster path: write the canvas JSON directly into Luminous's `.canvases/` directory.
+The MCP tools are configured in the Luminous project, not tinyForum — that's why they weren't loaded. A restart would be needed to pick them up here. Faster path: write the canvas JSON directly into Luminous's `.luminous/` directory.
 
 ## User
 
@@ -2161,7 +2161,7 @@ This is a *design* tool, not a diagramming tool. Diagrams are pictures. Design i
 
 ## What a Canvas Is
 
-A `.canvas.json` file in `.canvases/` contains:
+A `.canvas.json` file in `.luminous/` contains:
 
 - **Schemas** — define what kinds of nodes and edges exist on this canvas. Each schema has a name, label, and primitives (visual building blocks like title, markdown body, drag-bar).
 - **Structure** — the nodes. Each node references a schema, has geometry (x, y, w, h), optional content (field values), and optional nesting (parentId).
@@ -2764,7 +2764,7 @@ Nobody combines all the pieces you want:
 - **Living alongside code** (Android Nav, React Navigation — but only in their narrow scope).
 - **Legible to AI, not just humans** (nobody has really done this yet; it's Luminous's wedge).
 
-The closest combined tools are **XState + a component library integration** or **Figma interactive components with external variables**. Both have rough edges. What you're proposing — a canvas that models screens → components → state sources, living in `.canvases/`, pipeline-extractable from source where possible and human-authored where not — is **a novel composition of existing pieces**, not an entirely new invention. That's usually the right kind of novelty: reach for the known formalisms, assemble them for your specific forces.
+The closest combined tools are **XState + a component library integration** or **Figma interactive components with external variables**. Both have rough edges. What you're proposing — a canvas that models screens → components → state sources, living in `.luminous/`, pipeline-extractable from source where possible and human-authored where not — is **a novel composition of existing pieces**, not an entirely new invention. That's usually the right kind of novelty: reach for the known formalisms, assemble them for your specific forces.
 
 ## Your "another model of DOM + mutations" insight
 
@@ -3074,7 +3074,7 @@ This is the strongest possible alignment between your tooling (Carta's spec-driv
 
 If you want to test this concretely, the minimum experiment is:
 
-1. In tinyForum's (eventual) `.canvases/` directory, create one canvas: `threads-screen.canvas.json`.
+1. In tinyForum's (eventual) `.luminous/` directory, create one canvas: `threads-screen.canvas.json`.
 2. One node: `ThreadsScreen`, type `screen`, body: markdown description.
 3. Ask an agent (via MCP, once M2 is live) to implement the page from that one node.
 4. Observe where the agent's output diverges from what you wanted. Those divergences are the forces that tell you what to split or formalize next.
@@ -4382,7 +4382,7 @@ Summary:
      "mcp__luminous__schema",
      ```
    - `/home/saxon/.claude.json` — modified via `claude mcp add luminous --scope user --env LUMINOUS_SERVER_URL=http://127.0.0.1:4080 -- node /home/saxon/code/github/saxonthune/Luminous/packages/mcp/dist/server.js`
-   - `/home/saxon/code/github/saxonthune/Luminous/.canvases/reactive-reference-graph.canvas.json` — **created** via MCP batch. Contains:
+   - `/home/saxon/code/github/saxonthune/Luminous/.luminous/reactive-reference-graph.canvas.json` — **created** via MCP batch. Contains:
      - Schemas: binding, object, primitive, container, reference, captures, contains_ref, dynamic
      - Nodes: Module scope (container root with count/setCount/currentListener bindings), read closure, write closure, Signal env record (with value:0 primitive and subscribers slot), Set (subscribers), run closure, fn closure
      - Edges: holds-ref (bindings to closures), captures (read/write to env, run to fn), → (subs_slot to Set), member (Set to run), reads count() (fn to b_count), dynamic (b_listener to run), self (run to run)

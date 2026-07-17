@@ -13,8 +13,8 @@ beforeEach(() => {
 
 describe('siblingPackUrl', () => {
   it('derives the sibling URL from a namespaced source id', () => {
-    const url = siblingPackUrl('workspace/.canvases/foo.graph.json', 'primitives');
-    expect(url).toBe('/api/pack/' + encodeURIComponent('workspace/.canvases/primitives.pack.json'));
+    const url = siblingPackUrl('workspace/.luminous/foo.graph.json', 'primitives');
+    expect(url).toBe('/api/pack/' + encodeURIComponent('workspace/.luminous/primitives.pack.json'));
   });
 
   it('handles a root-level source id with no directory', () => {

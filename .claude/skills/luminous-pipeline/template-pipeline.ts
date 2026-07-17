@@ -7,7 +7,7 @@
  *   npx tsx template-pipeline.ts
  *   node --import=tsx/esm template-pipeline.ts
  *
- * Output: .canvases/<DOMAIN>.graph.json  (and .canvases/<DOMAIN>.pack.json if uncommented)
+ * Output: .luminous/<DOMAIN>.graph.json  (and .luminous/<DOMAIN>.pack.json if uncommented)
  */
 
 import * as fs from 'node:fs';
@@ -379,7 +379,7 @@ const graph = {
   defaultView: 'component-tree',
 };
 
-const outDir = path.join(ROOT, '.canvases');
+const outDir = path.join(ROOT, '.luminous');
 fs.mkdirSync(outDir, { recursive: true });
 
 const graphPath = path.join(outDir, `${PACK_ID}.graph.json`);

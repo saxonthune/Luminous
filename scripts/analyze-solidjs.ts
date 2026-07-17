@@ -8,7 +8,7 @@
  * Usage: npx tsx scripts/analyze-solidjs.ts [target-dirs...] [--output path]
  *
  * Default targets: packages/client/src packages/cactus/src
- * Default output:  .canvases/solidjs-analysis.graph.json
+ * Default output:  .luminous/solidjs-analysis.graph.json
  */
 
 import ts from 'typescript';
@@ -1292,7 +1292,7 @@ function main() {
   // Parse CLI
   const outputIdx = args.indexOf('--output');
   const outputPath =
-    outputIdx >= 0 ? args[outputIdx + 1] : resolve(ROOT, '.canvases/solidjs-analysis.graph.json');
+    outputIdx >= 0 ? args[outputIdx + 1] : resolve(ROOT, '.luminous/solidjs-analysis.graph.json');
 
   const targetDirs = args
     .filter((a, i) => a !== '--output' && (outputIdx < 0 || i !== outputIdx + 1))

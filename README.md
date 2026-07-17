@@ -29,7 +29,7 @@ The dev server starts at `localhost:5200` with the canvas client, proxying to th
 just generate-canvas
 ```
 
-Runs `scripts/analyze-solidjs.ts`, which reads the Solid.js source and emits `.canvases/solidjs-analysis.canvas.json`.
+Runs `scripts/analyze-solidjs.ts`, which reads the Solid.js source and emits `.luminous/solidjs-analysis.canvas.json`.
 
 ## Tech
 

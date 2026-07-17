@@ -25,7 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // The suite serves its own fixture workspace, never the live .canvases —
+    // The suite serves its own fixture workspace, never the live .luminous —
     // the app writes documents, so live data churns out from under assertions.
     command: `PORT=${API_PORT} pnpm -C ../server exec tsx src/index.ts -- --dir ../client/e2e/fixtures & CLIENT_PORT=${CLIENT_PORT} API_PORT=${API_PORT} pnpm dev`,
     url: `http://localhost:${CLIENT_PORT}`,

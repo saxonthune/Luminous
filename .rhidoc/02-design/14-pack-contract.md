@@ -29,7 +29,7 @@ This is what lets an agent working in any repo produce a Luminous model of that 
 A pack file and the graph file it serves are **siblings in the same directory, sharing a basename**:
 
 ```
-<domain-repo>/.canvases/
+<domain-repo>/.luminous/
   navigation.graph.json     ← the model
   navigation.pack.json      ← its vocabulary
 ```

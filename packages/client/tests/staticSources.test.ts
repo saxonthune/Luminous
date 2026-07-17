@@ -73,8 +73,8 @@ describe('siblingPackUrl', () => {
   });
 
   it('static=false produces an /api/pack/... URL', () => {
-    const url = siblingPackUrl('workspace/.canvases/foo.graph.json', 'primitives', false);
-    expect(url).toBe('/api/pack/' + encodeURIComponent('workspace/.canvases/primitives.pack.json'));
+    const url = siblingPackUrl('workspace/.luminous/foo.graph.json', 'primitives', false);
+    expect(url).toBe('/api/pack/' + encodeURIComponent('workspace/.luminous/primitives.pack.json'));
   });
 
   it('static=false with top-level sourceId encodes correctly', () => {

@@ -28,14 +28,14 @@ jobs:
       - name: Stage generated canvas for bundling
         # TODO: wire in solidjs-analysis pack once it exists alongside the graph
         run: |
-          if [ -f .canvases/solidjs-analysis.canvas.json ]; then
-            cp .canvases/solidjs-analysis.canvas.json packages/client/public/canvases/solidjs-analysis.graph.json
+          if [ -f .luminous/solidjs-analysis.canvas.json ]; then
+            cp .luminous/solidjs-analysis.canvas.json packages/client/public/canvases/solidjs-analysis.graph.json
             node -e "
               const fs = require('fs');
               const p = 'packages/client/public/canvases/index.json';
               const m = JSON.parse(fs.readFileSync(p, 'utf8'));
-              if (!m.canvases.find(c => c.path === 'solidjs-analysis.graph.json')) {
-                m.canvases.push({ path: 'solidjs-analysis.graph.json', name: 'Luminous – Solid.js Analysis', root: 'Luminous' });
+              if (!m.luminous.find(c => c.path === 'solidjs-analysis.graph.json')) {
+                m.luminous.push({ path: 'solidjs-analysis.graph.json', name: 'Luminous – Solid.js Analysis', root: 'Luminous' });
                 fs.writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
               }
             "

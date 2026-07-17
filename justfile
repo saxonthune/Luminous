@@ -89,7 +89,7 @@ lint:
 
 # run the storage server + canvas client together
 dev:
-    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.canvases & pnpm -C packages/client exec vite
+    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.luminous & pnpm -C packages/client exec vite
 
 # run the canvas client only
 dev-client:
@@ -97,7 +97,7 @@ dev-client:
 
 # run the storage server only
 dev-server:
-    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.canvases
+    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.luminous
 
 # run the MCP server from source over stdio
 dev-mcp:

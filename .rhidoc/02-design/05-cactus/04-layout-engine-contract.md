@@ -89,7 +89,7 @@ returns coordinates; what becomes of those coordinates is the host app's choice,
 and the apps choose differently. A host that wants a position to survive stores
 it itself.
 
-**Canvas recomputes.** A node in a graph file (`.canvases/*.graph.json`) is
+**Canvas recomputes.** A node in a graph file (`.luminous/*.graph.json`) is
 `{ id, kind, props, tags }` — there is no `x/y/w/h`. A layout engine recomputes
 positions on every render, and there is no saved layout to fall back on.
 
@@ -99,7 +99,7 @@ positions on every render, and there is no saved layout to fall back on.
 > instrument the engine's `LayoutResult` or read the live rect registry
 > (`getNodeRects`), not the file.
 
-**Atlas persists.** A node in an atlas document (`.canvases/*.atlas.json`) carries
+**Atlas persists.** A node in an atlas document (`.luminous/*.atlas.json`) carries
 `x` and `y`: an offset from its parent's origin, canvas-absolute for a root node,
 absent when the node is unplaced. An atlas is authored rather than regenerated
 (doc01.07.01), so a hand-placed node is authored data and a drag is an edit.

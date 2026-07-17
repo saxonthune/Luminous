@@ -11,7 +11,7 @@ deps: [doc01.03]
 
 ## What the user sees
 
-tinyForum gets a `.canvases/` directory containing project canvases. These canvases are built two ways:
+tinyForum gets a `.luminous/` directory containing project canvases. These canvases are built two ways:
 
 - **Human-authored via MCP and UI.** An agent or developer builds canvases from product documentation, architecture decisions, and design reasoning — the kind of context that lives in `.rhidoc/` specs but benefits from spatial arrangement and visual relationships.
 - **Generated from code via pipeline scripts.** Scripts perform static analysis of tinyForum's codebase and emit `.canvas.json` files: its Solid.js component tree, API endpoints, backend module tree, database schema, etc. Each pipeline is a reusable artifact, just as in milestone 1.
@@ -22,7 +22,7 @@ The canvases become working context — something a developer or agent opens alo
 
 For a project outside the Luminous repo to use Luminous, it needs:
 
-1. **A `.canvases/` directory** with `.canvas.json` files. These can be hand-authored, MCP-built, or pipeline-generated.
+1. **A `.luminous/` directory** with `.canvas.json` files. These can be hand-authored, MCP-built, or pipeline-generated.
 
 2. **Luminous server + client running.** The consumer project has a gitignored launch script that runs Luminous from a local checkout via `npx /path/to/Luminous/packages/server`. This simulates the eventual `npx @luminous/server` experience without publishing. The script also starts the client. No Luminous dependency appears in the consumer's `package.json`.
 
@@ -58,7 +58,7 @@ A consumer can always check what version they're running from any surface — UI
 
 ## Open questions
 
-- **Canvas discovery.** Should the server scan the whole project tree for `.canvas.json` files, or only a designated `.canvases/` directory? A designated directory is cleaner — canvases are artifacts, not source code.
+- **Canvas discovery.** Should the server scan the whole project tree for `.canvas.json` files, or only a designated `.luminous/` directory? A designated directory is cleaner — canvases are artifacts, not source code.
 
 ## Feedback loop
 
@@ -71,7 +71,7 @@ Usage in tinyForum will surface friction: missing features, awkward workflows, t
 
 ## Done when
 
-- tinyForum has a `.canvases/` directory with at least one human-built canvas (from product docs) and one pipeline-generated canvas (from code).
+- tinyForum has a `.luminous/` directory with at least one human-built canvas (from product docs) and one pipeline-generated canvas (from code).
 - A developer can start the Luminous server, open the UI, and browse tinyForum's canvases.
 - An agent can use MCP tools to read and modify tinyForum's canvases from within the tinyForum working directory.
 - At least one round of friction → feedback → fix has completed.

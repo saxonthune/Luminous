@@ -5,10 +5,10 @@ import { join, dirname } from 'node:path';
 import { parseDataflowDocument } from '../../src/dataflow/document.ts';
 import { checkDocument } from '../../src/dataflow/check.ts';
 
-const CANVASES_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../../.canvases');
+const CANVASES_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../../.luminous');
 const files = readdirSync(CANVASES_DIR).filter((f) => f.endsWith('.dataflow.json'));
 
-describe('.canvases/*.dataflow.json examples', () => {
+describe('.luminous/*.dataflow.json examples', () => {
   it('found at least one example document', () => {
     expect(files.length).toBeGreaterThan(0);
   });

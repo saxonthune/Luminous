@@ -27,9 +27,9 @@ In rough priority. For each, RTP doesn't know the current state — these are qu
 
 ### 1. A stable `.canvas.json` v2 schema RTP can target
 
-RTP saw `version: 2` canvases under `.canvases/`. It needs:
+RTP saw `version: 2` canvases under `.luminous/`. It needs:
 
-- **A documented spec** for the v2 file format: `schemas` (node + edge), `structure` (id, schemaName, parent, order, geometry, content), edge records (source, target, label, schema). The existing canvases under `.canvases/` are an okay reference but reading source to reverse-engineer the contract is fragile.
+- **A documented spec** for the v2 file format: `schemas` (node + edge), `structure` (id, schemaName, parent, order, geometry, content), edge records (source, target, label, schema). The existing canvases under `.luminous/` are an okay reference but reading source to reverse-engineer the contract is fragile.
 - **Stability commitment**: if v3 lands, v2 keeps working in the viewer for at least one major version.
 
 If the spec exists in `.carta/01-luminous/`, point RTP at the doc ref; that's enough.

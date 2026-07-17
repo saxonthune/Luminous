@@ -29,7 +29,7 @@ This skill equips an agent to write a `graph.json` + `pack.json` pair for any re
 A pipeline produces two sibling files sharing a basename:
 
 ```
-<repo>/.canvases/
+<repo>/.luminous/
   my-domain.graph.json   ← the model (nodes + edges)
   my-domain.pack.json    ← the vocabulary (kinds + renderers)
 ```
@@ -402,7 +402,7 @@ Selection (`selectedArm`) is graph-side node data — it travels with the canvas
 `"pack": "my-domain"` resolves to `my-domain.pack.json` **in the same directory as the graph file**. The client derives the path; the server treats `.pack.json` files as opaque bytes.
 
 ```
-.canvases/
+.luminous/
   my-domain.graph.json   ← declares "pack": "my-domain"
   my-domain.pack.json    ← resolved automatically
 ```

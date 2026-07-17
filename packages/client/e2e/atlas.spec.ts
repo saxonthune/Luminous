@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test'
 // composed app renders — the floor for headless-agent verify gates) plus
 // regression pins for defects no cheaper layer could have caught. Pins are
 // earned by incident, never written speculatively. Tests run against the
-// fixture workspace in e2e/fixtures/, never the live .canvases.
+// fixture workspace in e2e/fixtures/, never the live .luminous.
 
 test('atlas app boots: fixture document renders nodes', async ({ page }) => {
   await page.goto('/?app=atlas')

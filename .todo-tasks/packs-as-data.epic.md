@@ -69,7 +69,7 @@ deviation loudly and the affected downstream specs are re-checked before launch.
 
 ## Validation (epic done when)
 
-A graph file placed in a non-Luminous repo (e.g. `RankThePlanet/.canvases/`), with
+A graph file placed in a non-Luminous repo (e.g. `RankThePlanet/.luminous/`), with
 its own sibling `*.pack.json`, opens in Luminous and renders correctly — the pack
 is loaded from disk as data, with zero Luminous code change. An agent given the
 pipeline-authoring skill can produce that graph + pack pair for a fresh repo.
