@@ -35,7 +35,6 @@ export interface AtlasContent {
 export interface AtlasEdge {
   from: string;
   to: string;
-  label?: string;
 }
 
 export interface AddNodeAction {
@@ -70,4 +69,22 @@ export interface ReparentAction {
   parent?: string;
 }
 
-export type AtlasAction = AddNodeAction | SetNodeAction | RemoveNodeAction | ReparentAction;
+export interface AddEdgeAction {
+  type: 'addEdge';
+  from: string;
+  to: string;
+}
+
+export interface RemoveEdgeAction {
+  type: 'removeEdge';
+  from: string;
+  to: string;
+}
+
+export type AtlasAction =
+  | AddNodeAction
+  | SetNodeAction
+  | RemoveNodeAction
+  | ReparentAction
+  | AddEdgeAction
+  | RemoveEdgeAction;

@@ -9,6 +9,8 @@ export type {
   SetNodeAction,
   RemoveNodeAction,
   ReparentAction,
+  AddEdgeAction,
+  RemoveEdgeAction,
 } from './types.ts';
 export {
   emptyAtlasDocument,
@@ -23,6 +25,9 @@ export {
   setNode,
   removeNode,
   reparent,
+  addEdge,
+  removeEdge,
+  buildBisectActions,
   applyAtlasBatch,
 } from './operations.ts';
 export type { AtlasResult } from './operations.ts';

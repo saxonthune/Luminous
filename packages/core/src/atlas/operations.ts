@@ -1,5 +1,5 @@
 import type { AtlasColorToken } from './colors.ts';
-import type { AtlasAction, AtlasContent, AtlasDocument, AtlasNode } from './types.ts';
+import type { AtlasAction, AtlasContent, AtlasDocument, AtlasEdge, AtlasNode } from './types.ts';
 
 export type AtlasResult = { ok: true; doc: AtlasDocument } | { ok: false; error: string };
 
@@ -161,6 +161,55 @@ export function reparent(doc: AtlasDocument, id: string, parent: string | undefi
   return { ok: true, doc: { ...doc, nodes } };
 }
 
+export function addEdge(doc: AtlasDocument, from: string, to: string): AtlasResult {
+  if (!doc.nodes.some(n => n.id === from)) {
+    return { ok: false, error: `node "${from}" does not exist` };
+  }
+  if (!doc.nodes.some(n => n.id === to)) {
+    return { ok: false, error: `node "${to}" does not exist` };
+  }
+  if (doc.edges.some(e => e.from === from && e.to === to)) {
+    return { ok: true, doc };
+  }
+  const edge: AtlasEdge = { from, to };
+  return { ok: true, doc: { ...doc, edges: [...doc.edges, edge] } };
+}
+
+export function removeEdge(doc: AtlasDocument, from: string, to: string): AtlasResult {
+  if (!doc.nodes.some(n => n.id === from)) {
+    return { ok: false, error: `node "${from}" does not exist` };
+  }
+  if (!doc.nodes.some(n => n.id === to)) {
+    return { ok: false, error: `node "${to}" does not exist` };
+  }
+  return {
+    ok: true,
+    doc: { ...doc, edges: doc.edges.filter(e => !(e.from === from && e.to === to)) },
+  };
+}
+
+/** Splits `A -> B` into `A -> newNode -> B`, carrying newNode's explanation as
+ * its Content — a pure list of primitive actions, applied by the caller via
+ * `applyAtlasBatch` so the batch flows through undo/redo inversion unchanged. */
+export function buildBisectActions(
+  _doc: AtlasDocument,
+  edge: { from: string; to: string },
+  newNode: { id: string; name?: string; content?: AtlasContent; x?: number; y?: number; parent?: string },
+): AtlasAction[] {
+  const actions: AtlasAction[] = [
+    { type: 'removeEdge', from: edge.from, to: edge.to },
+    { type: 'addNode', id: newNode.id, name: newNode.name ?? newNode.id, parent: newNode.parent, x: newNode.x, y: newNode.y },
+  ];
+  if (newNode.content !== undefined) {
+    actions.push({ type: 'setNode', id: newNode.id, content: newNode.content });
+  }
+  actions.push(
+    { type: 'addEdge', from: edge.from, to: newNode.id },
+    { type: 'addEdge', from: newNode.id, to: edge.to },
+  );
+  return actions;
+}
+
 export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): AtlasResult {
   let current = doc;
   for (const action of actions) {
@@ -200,6 +249,12 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
         break;
       case 'reparent':
         result = reparent(current, action.id, action.parent);
+        break;
+      case 'addEdge':
+        result = addEdge(current, action.from, action.to);
+        break;
+      case 'removeEdge':
+        result = removeEdge(current, action.from, action.to);
         break;
     }
     if (!result.ok) {

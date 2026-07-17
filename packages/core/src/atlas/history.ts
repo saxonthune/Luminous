@@ -15,10 +15,10 @@ function invertSetNode(before: AtlasDocument, action: SetNodeAction): AtlasActio
 }
 
 /** Inverts one `AtlasAction` against `before`, the Document state immediately
- * preceding it. `removeNode` has no inverse: its cascade deletes edges that no
- * `AtlasAction` can recreate (there is no `addEdge`). No current UI issues a
- * user-initiated `removeNode`, so this is deliberately unsupported — a future
- * delete-Node feature needs an `addEdge` action or a snapshot-based inverse. */
+ * preceding it. `removeNode` has no inverse: its cascade deletes edges, and
+ * even though `addEdge` now exists (making a hand-rolled inverse batch
+ * possible), no current UI issues a user-initiated `removeNode` — reinstating
+ * its inversion is deliberately deferred (see atlas-edge-operations plan). */
 export function invertAtlasAction(before: AtlasDocument, action: AtlasAction): AtlasAction[] {
   switch (action.type) {
     case 'addNode':
@@ -31,6 +31,10 @@ export function invertAtlasAction(before: AtlasDocument, action: AtlasAction): A
     }
     case 'setNode':
       return invertSetNode(before, action);
+    case 'addEdge':
+      return [{ type: 'removeEdge', from: action.from, to: action.to }];
+    case 'removeEdge':
+      return [{ type: 'addEdge', from: action.from, to: action.to }];
     case 'removeNode':
       throw new Error(
         `invertAtlasAction: cannot invert removeNode for "${action.id}" — its cascade ` +

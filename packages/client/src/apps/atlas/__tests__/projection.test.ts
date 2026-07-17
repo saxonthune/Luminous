@@ -20,7 +20,7 @@ const doc: AtlasDocument = {
     { id: 'grandchild', name: 'Grandchild', parent: 'child-a' },
     { id: 'sibling', name: 'Sibling' },
   ],
-  edges: [{ from: 'root', to: 'sibling', label: 'connects to' }],
+  edges: [{ from: 'root', to: 'sibling' }],
 };
 
 describe('layoutAtlas', () => {
@@ -270,7 +270,7 @@ describe('toEdgeDeclarations', () => {
   it('projects one EdgeDeclaration per AtlasEdge', () => {
     const edges = toEdgeDeclarations(doc);
     expect(edges).toHaveLength(1);
-    expect(edges[0]).toMatchObject({ sourceId: 'root', targetId: 'sibling', labelText: 'connects to' });
+    expect(edges[0]).toMatchObject({ sourceId: 'root', targetId: 'sibling' });
   });
 });
 

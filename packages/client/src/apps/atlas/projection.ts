@@ -65,7 +65,6 @@ export function toEdgeDeclarations(doc: AtlasDocument): EdgeDeclaration[] {
     id: edgeId(edge, i),
     sourceId: edge.from,
     targetId: edge.to,
-    labelText: edge.label,
     styling: { arrowHead: true, dash: 'solid' },
   }));
 }

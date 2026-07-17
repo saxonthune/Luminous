@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { addNode, applyAtlasBatch, removeNode, reparent, setNode } from '../../src/atlas/operations.ts';
+import {
+  addEdge,
+  addNode,
+  applyAtlasBatch,
+  buildBisectActions,
+  removeEdge,
+  removeNode,
+  reparent,
+  setNode,
+} from '../../src/atlas/operations.ts';
 import { emptyAtlasDocument } from '../../src/atlas/document.ts';
 import type { AtlasDocument } from '../../src/atlas/types.ts';
 
@@ -272,6 +281,88 @@ describe('reparent', () => {
     };
     const result = reparent(doc, 'a', 'c');
     expect(result).toEqual({ ok: false, error: 'reparenting "a" to "c" would create a cycle' });
+  });
+});
+
+describe('addEdge', () => {
+  const base: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], edges: [] };
+
+  it('adds an edge between existing nodes', () => {
+    const result = addEdge(base, 'a', 'b');
+    expect(result).toEqual({ ok: true, doc: { ...base, edges: [{ from: 'a', to: 'b' }] } });
+  });
+
+  it('is idempotent when the pair already exists', () => {
+    const withEdge: AtlasDocument = { ...base, edges: [{ from: 'a', to: 'b' }] };
+    const result = addEdge(withEdge, 'a', 'b');
+    expect(result).toEqual({ ok: true, doc: withEdge });
+  });
+
+  it('errors when "from" does not exist', () => {
+    const result = addEdge(base, 'missing', 'b');
+    expect(result).toEqual({ ok: false, error: 'node "missing" does not exist' });
+  });
+
+  it('errors when "to" does not exist', () => {
+    const result = addEdge(base, 'a', 'missing');
+    expect(result).toEqual({ ok: false, error: 'node "missing" does not exist' });
+  });
+});
+
+describe('removeEdge', () => {
+  const withEdge: AtlasDocument = {
+    v: 1,
+    nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+    edges: [{ from: 'a', to: 'b' }],
+  };
+
+  it('removes the matching pair', () => {
+    const result = removeEdge(withEdge, 'a', 'b');
+    expect(result).toEqual({ ok: true, doc: { ...withEdge, edges: [] } });
+  });
+
+  it('is a no-op when the pair does not exist', () => {
+    const noEdge: AtlasDocument = { ...withEdge, edges: [] };
+    const result = removeEdge(noEdge, 'a', 'b');
+    expect(result).toEqual({ ok: true, doc: noEdge });
+  });
+
+  it('errors when a node does not exist', () => {
+    const result = removeEdge(withEdge, 'a', 'missing');
+    expect(result).toEqual({ ok: false, error: 'node "missing" does not exist' });
+  });
+});
+
+describe('buildBisectActions', () => {
+  it('turns A -> B into A -> N -> B via applyAtlasBatch', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+      edges: [{ from: 'a', to: 'b' }],
+    };
+    const actions = buildBisectActions(doc, { from: 'a', to: 'b' }, { id: 'n', name: 'N' });
+    const result = applyAtlasBatch(doc, actions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.doc.nodes.map((n) => n.id)).toEqual(['a', 'b', 'n']);
+    expect(result.doc.edges).toEqual([{ from: 'a', to: 'n' }, { from: 'n', to: 'b' }]);
+  });
+
+  it('carries content onto the new node', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+      edges: [{ from: 'a', to: 'b' }],
+    };
+    const actions = buildBisectActions(doc, { from: 'a', to: 'b' }, {
+      id: 'n',
+      name: 'N',
+      content: { text: 'explanation', mode: 'markdown' },
+    });
+    const result = applyAtlasBatch(doc, actions);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.doc.nodes.find((n) => n.id === 'n')?.content).toEqual({ text: 'explanation', mode: 'markdown' });
   });
 });
 

@@ -113,6 +113,8 @@ function parseEdge(value: unknown, path: string, issues: string[]): AtlasEdge | 
     return undefined;
   }
   const e = value as Record<string, unknown>;
+  // "label" is a legacy field from before edges dropped labels (see
+  // atlas-edge-operations plan) — tolerated silently, not in EDGE_FIELDS below.
   issues.push(...unknownFieldIssues(e, EDGE_FIELDS, path));
   let ok = true;
   if (typeof e['from'] !== 'string') {
@@ -123,14 +125,8 @@ function parseEdge(value: unknown, path: string, issues: string[]): AtlasEdge | 
     issues.push(`${path}.to: must be a string`);
     ok = false;
   }
-  if (e['label'] !== undefined && typeof e['label'] !== 'string') {
-    issues.push(`${path}.label: must be a string`);
-    ok = false;
-  }
   if (!ok) return undefined;
-  const edge: AtlasEdge = { from: e['from'] as string, to: e['to'] as string };
-  if (e['label'] !== undefined) edge.label = e['label'] as string;
-  return edge;
+  return { from: e['from'] as string, to: e['to'] as string };
 }
 
 /** Walk each node's parent chain; report a cycle's member ids in the issue text. */
@@ -246,9 +242,7 @@ function serializeNode(node: AtlasNode): Record<string, unknown> {
 }
 
 function serializeEdge(edge: AtlasEdge): Record<string, unknown> {
-  const out: Record<string, unknown> = { from: edge.from, to: edge.to };
-  if (edge.label !== undefined) out['label'] = edge.label;
-  return out;
+  return { from: edge.from, to: edge.to };
 }
 
 export function serializeAtlasDocument(doc: AtlasDocument): string {

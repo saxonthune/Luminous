@@ -523,6 +523,254 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
       },
     },
   },
+  atlas: {
+    description:
+      "Author Atlas canvases — .atlas.json documents made of Nodes (with optional Markdown/code Content, nesting via parent, and free x/y placement) connected by directed Edges. Unlike the v3 canvas/node/edge tools, an Atlas document has no pack and node ids are author-supplied, not generated — pick meaningful ids (e.g. 'cli.braincrawl.openalex'). Use `list` to discover documents, `create` to start one, `node/create`/`edge/connect` to build it up, and `edge/bisect` to split an edge by inserting a node in its middle.",
+    local: true,
+    actions: {
+      list: {
+        description: "Return the paths of all atlas documents (files ending '.atlas.json') in the workspace.",
+        method: 'GET',
+        path: '',
+        params: {},
+      },
+      create: {
+        description: "Create a new empty atlas document at path. Fails if path does not end '.atlas.json'.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: {
+            type: 'described',
+            innerType: 'string',
+            description: "Filename to create, must end '.atlas.json', e.g. 'braincrawl.atlas.json'.",
+          },
+        },
+      },
+      read: {
+        description: "Load the complete atlas document: all Nodes (id, name, parent, content, x, y, color) and all Edges (from, to).",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      'node/create': {
+        description: "Add a new Node to the document with an explicit, author-chosen id — ids are meaningful (e.g. 'cli.braincrawl.openalex'), never generated. Fails if the id already exists or the parent does not exist.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new node, e.g. 'cli.braincrawl.openalex'. Must not already exist.",
+          },
+          name: {
+            type: 'described',
+            innerType: 'string',
+            description: "Human-readable name for the node.",
+          },
+          'parent?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the containing node, if nested. Must already exist.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Position, offset from the parent's origin (or canvas-absolute for a root node). x and y must appear together.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Position, offset from the parent's origin (or canvas-absolute for a root node). x and y must appear together.",
+          },
+        },
+      },
+      'node/set': {
+        description: "Update an existing node's name, content, position, color, or content sizing. Only fields provided are changed.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the node to update.",
+          },
+          'name?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New name for the node.",
+          },
+          'content?': {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: { text: 'string', mode: 'string' },
+              required: ['text', 'mode'],
+            },
+            description: "New content for the node: { text, mode }, where mode is 'markdown' or 'code'.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "New x position.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "New y position.",
+          },
+          'color?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New color token for the node.",
+          },
+          'contentHeight?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Stored override for the node's header band height.",
+          },
+          'contentWidth?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Stored override for the node's width floor.",
+          },
+        },
+      },
+      'node/reparent': {
+        description: "Move a node to a new parent (or to the root when parent is omitted). Rejects a move that would create a cycle.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the node to reparent.",
+          },
+          'parent?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the new parent. Omit to move the node to the root.",
+          },
+        },
+      },
+      'node/delete': {
+        description: "Remove a node and all its descendants, along with any edges touching them.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the node to remove, along with its descendants.",
+          },
+        },
+      },
+      'edge/connect': {
+        description: "Add a directed edge from one node to another. Both nodes must already exist; a duplicate edge between the same pair is a no-op.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the source node.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the target node.",
+          },
+        },
+      },
+      'edge/disconnect': {
+        description: "Remove the edge from one node to another.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the edge's source node.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the edge's target node.",
+          },
+        },
+      },
+      'edge/bisect': {
+        description: "Split an existing edge A -> B into A -> newNode -> B, inserting newNode in the middle. newNode's id must be explicit and not already exist.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the edge's source node (unchanged).",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the edge's target node (unchanged).",
+          },
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new node inserted between from and to.",
+          },
+          'name?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Name for the new node. Defaults to its id.",
+          },
+          'content?': {
+            type: 'described',
+            innerType: {
+              type: 'object',
+              properties: { text: 'string', mode: 'string' },
+              required: ['text', 'mode'],
+            },
+            description: "Content for the new node: { text, mode }, where mode is 'markdown' or 'code'.",
+          },
+          'parent?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the containing node for the new node, if nested.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Position for the new node.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Position for the new node.",
+          },
+        },
+      },
+      batch: {
+        description: "Apply a sequence of atlas actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNode' | 'setNode' | 'removeNode' | 'reparent' | 'addEdge' | 'removeEdge') and that action's own fields.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          actions: {
+            type: 'described',
+            innerType: { type: 'array', items: { type: 'object', properties: {} } },
+            description: "Ordered array of atlas actions to apply atomically.",
+          },
+        },
+      },
+    },
+  },
 }
 
 export const batchToolConfig: BatchToolConfig = {

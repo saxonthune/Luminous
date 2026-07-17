@@ -21,10 +21,24 @@ describe('parseAtlasDocument', () => {
           content: { text: 'a child node', mode: 'markdown' },
         },
       ],
-      edges: [{ from: 'root', to: 'child', label: 'contains' }],
+      edges: [{ from: 'root', to: 'child' }],
     };
     const result = parseAtlasDocument(JSON.stringify(doc));
     expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('tolerates a legacy label field on an edge, ignoring it', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({
+        v: 1,
+        nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+        edges: [{ from: 'a', to: 'b', label: 'legacy' }],
+      }),
+    );
+    expect(result).toEqual({
+      ok: true,
+      doc: { v: 1, nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], edges: [{ from: 'a', to: 'b' }] },
+    });
   });
 
   it('accepts a node with code-mode content', () => {
@@ -215,7 +229,7 @@ describe('parseAtlasDocument', () => {
         { id: 'a', name: 'A' },
         { id: 'b', name: 'B', parent: 'a' },
       ],
-      edges: [{ from: 'a', to: 'b', label: 'contains' }],
+      edges: [{ from: 'a', to: 'b' }],
     };
     const result = parseAtlasDocument(serializeAtlasDocument(doc));
     expect(result).toEqual({ ok: true, doc });
@@ -366,5 +380,15 @@ describe('serializeAtlasDocument', () => {
     const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
     const text = serializeAtlasDocument(doc);
     expect(text).not.toContain('"contentWidth"');
+  });
+
+  it('omits label from a serialized edge', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+      edges: [{ from: 'a', to: 'b' }],
+    };
+    const text = serializeAtlasDocument(doc);
+    expect(text).not.toContain('"label"');
   });
 });

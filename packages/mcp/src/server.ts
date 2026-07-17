@@ -18,6 +18,20 @@ import {
   batchTool,
 } from './dataflow-tools.js'
 import type { ContractBlock, DataflowAction } from '@luminous/core/dataflow'
+import {
+  listAtlases,
+  createAtlas,
+  readAtlas,
+  nodeCreate,
+  nodeSet,
+  nodeReparent,
+  nodeDelete,
+  edgeConnect,
+  edgeDisconnect,
+  edgeBisect,
+  applyBatch,
+} from './atlas-tools.js'
+import type { AtlasAction, AtlasColorToken, AtlasContent } from '@luminous/core/atlas'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -166,7 +180,7 @@ All mutations go through the same API that the browser canvas uses — there is 
 
 Prefer the batch tool for multi-step operations. Batch executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack).`
+Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
@@ -328,6 +342,93 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } else {
         return {
           content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'dataflow'` }],
+          isError: true,
+        }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
+  if (name === 'atlas') {
+    const a = args as {
+      action: string
+      path?: string
+      id?: string
+      name?: string
+      parent?: string
+      x?: number
+      y?: number
+      content?: AtlasContent
+      color?: AtlasColorToken
+      contentHeight?: number
+      contentWidth?: number
+      from?: string
+      to?: string
+      actions?: AtlasAction[]
+    }
+    try {
+      let result: unknown
+      if (a.action === 'list') {
+        result = await listAtlases(serverUrl)
+      } else if (a.action === 'create') {
+        if (!a.path) throw new Error("'path' is required for atlas/create")
+        result = await createAtlas(serverUrl, a.path)
+      } else if (a.action === 'read') {
+        if (!a.path) throw new Error("'path' is required for atlas/read")
+        result = await readAtlas(serverUrl, a.path)
+      } else if (a.action === 'node/create') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/create")
+        if (!a.id) throw new Error("'id' is required for atlas/node/create")
+        if (!a.name) throw new Error("'name' is required for atlas/node/create")
+        result = await nodeCreate(serverUrl, a.path, { id: a.id, name: a.name, parent: a.parent, x: a.x, y: a.y })
+      } else if (a.action === 'node/set') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/set")
+        if (!a.id) throw new Error("'id' is required for atlas/node/set")
+        result = await nodeSet(serverUrl, a.path, a.id, {
+          name: a.name,
+          content: a.content,
+          x: a.x,
+          y: a.y,
+          color: a.color,
+          contentHeight: a.contentHeight,
+          contentWidth: a.contentWidth,
+        })
+      } else if (a.action === 'node/reparent') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/reparent")
+        if (!a.id) throw new Error("'id' is required for atlas/node/reparent")
+        result = await nodeReparent(serverUrl, a.path, a.id, a.parent)
+      } else if (a.action === 'node/delete') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/delete")
+        if (!a.id) throw new Error("'id' is required for atlas/node/delete")
+        result = await nodeDelete(serverUrl, a.path, a.id)
+      } else if (a.action === 'edge/connect') {
+        if (!a.path) throw new Error("'path' is required for atlas/edge/connect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for atlas/edge/connect")
+        result = await edgeConnect(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'edge/disconnect') {
+        if (!a.path) throw new Error("'path' is required for atlas/edge/disconnect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for atlas/edge/disconnect")
+        result = await edgeDisconnect(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'edge/bisect') {
+        if (!a.path) throw new Error("'path' is required for atlas/edge/bisect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for atlas/edge/bisect")
+        if (!a.id) throw new Error("'id' is required for atlas/edge/bisect")
+        result = await edgeBisect(
+          serverUrl,
+          a.path,
+          { from: a.from, to: a.to },
+          { id: a.id, name: a.name, content: a.content, x: a.x, y: a.y, parent: a.parent },
+        )
+      } else if (a.action === 'batch') {
+        if (!a.path) throw new Error("'path' is required for atlas/batch")
+        if (!a.actions) throw new Error("'actions' is required for atlas/batch")
+        result = await applyBatch(serverUrl, a.path, a.actions)
+      } else {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'atlas'` }],
           isError: true,
         }
       }

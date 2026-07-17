@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { invertAtlasAction, invertAtlasBatch } from '../../src/atlas/history.ts';
-import { applyAtlasBatch } from '../../src/atlas/operations.ts';
+import { applyAtlasBatch, buildBisectActions } from '../../src/atlas/operations.ts';
 import type { AtlasAction, AtlasDocument } from '../../src/atlas/types.ts';
 
-function doc(nodes: AtlasDocument['nodes']): AtlasDocument {
-  return { v: 1, nodes, edges: [] };
+function doc(nodes: AtlasDocument['nodes'], edges: AtlasDocument['edges'] = []): AtlasDocument {
+  return { v: 1, nodes, edges };
 }
 
 function roundTrips(before: AtlasDocument, actions: AtlasAction[]) {
@@ -67,6 +67,18 @@ describe('invertAtlasAction', () => {
     const action: AtlasAction = { type: 'removeNode', id: 'a' };
     expect(() => invertAtlasAction(before, action)).toThrow();
   });
+
+  it('inverts addEdge into a matching removeEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+    const action: AtlasAction = { type: 'addEdge', from: 'a', to: 'b' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'removeEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('inverts removeEdge into a matching addEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    const action: AtlasAction = { type: 'removeEdge', from: 'a', to: 'b' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'addEdge', from: 'a', to: 'b' }]);
+  });
 });
 
 describe('invertAtlasBatch', () => {
@@ -112,5 +124,29 @@ describe('invertAtlasBatch', () => {
       { type: 'removeNode', id: 'a' },
     ]);
     roundTrips(before, actions);
+  });
+
+  it('round-trips a single addEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+    roundTrips(before, [{ type: 'addEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('round-trips a single removeEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    roundTrips(before, [{ type: 'removeEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('inverts a bisect batch back to the original single edge, with the new node gone', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    const actions = buildBisectActions(before, { from: 'a', to: 'b' }, { id: 'n', name: 'N' });
+    const applied = applyAtlasBatch(before, actions);
+    if (!applied.ok) throw new Error(`setup: ${applied.error}`);
+    expect(applied.doc.nodes.map((n) => n.id)).toEqual(['a', 'b', 'n']);
+
+    roundTrips(before, actions);
+    const inverse = invertAtlasBatch(before, actions);
+    const restored = applyAtlasBatch(applied.doc, inverse);
+    if (!restored.ok) throw new Error(`undo: ${restored.error}`);
+    expect(restored.doc.nodes.some((n) => n.id === 'n')).toBe(false);
   });
 });
