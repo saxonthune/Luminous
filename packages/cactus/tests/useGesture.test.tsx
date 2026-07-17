@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from 'solid-js/web';
 import { useGesture, type Gesture } from '../src/interactions/useGesture';
+import type { NodeRect } from '../src/interactions/useBoxSelect';
 
 function Harness(props: {
   zoomScale: number;
@@ -149,6 +150,319 @@ describe('useGesture', () => {
     expect(gesture()).toEqual({ kind: 'idle' });
     move({ clientX: 10, clientY: 0 });
     expect(started).toEqual([]);
+    cleanup();
+  });
+});
+
+function MarqueeHarness(props: {
+  trigger?: 'shift-drag' | 'drag';
+  nodeRects: NodeRect[];
+  onHits: (ids: string[]) => void;
+  exposeEl: (el: HTMLDivElement) => void;
+}) {
+  let el: HTMLDivElement | undefined;
+  useGesture({
+    zoomScale: () => 1,
+    callbacks: {},
+    boxSelect: {
+      transform: () => ({ x: 0, y: 0, k: 1 }),
+      containerEl: () => el,
+      getNodeRects: () => props.nodeRects,
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      trigger: props.trigger,
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      onBoxSelectHits: props.onHits,
+    },
+  });
+  return <div ref={(e) => { el = e; props.exposeEl(e); }} />;
+}
+
+function mountMarquee(trigger: 'shift-drag' | 'drag' | undefined, nodeRects: NodeRect[]) {
+  const hits: string[][] = [];
+  let el!: HTMLDivElement;
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const cleanup = render(
+    () => (
+      <MarqueeHarness
+        trigger={trigger}
+        nodeRects={nodeRects}
+        onHits={(ids) => hits.push(ids)}
+        exposeEl={(e) => { el = e; }}
+      />
+    ),
+    host
+  );
+  return { hits, el, cleanup };
+}
+
+const MARQUEE_NODE: NodeRect = { id: 'a', x: 10, y: 10, width: 50, height: 50 };
+
+function ConnectHarness(props: {
+  onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;
+  isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean;
+  exposeGesture: (g: () => Gesture) => void;
+  exposeBeginConnect: (fn: (sourceId: string, sourceHandle: string | null, clientX: number, clientY: number) => void) => void;
+}) {
+  const gesture = useGesture({
+    zoomScale: () => 1,
+    callbacks: {},
+    connection: {
+      screenToCanvas: (x, y) => ({ x, y }),
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      onConnect: (c) => props.onConnect(c),
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      isValidConnection: props.isValidConnection,
+    },
+  });
+  props.exposeGesture(gesture.gesture);
+  props.exposeBeginConnect(gesture.beginConnect);
+  return <div />;
+}
+
+function mountConnect(isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean) {
+  const connected: Array<{ source: string; sourceHandle: string | null; target: string; targetHandle: string | null }> = [];
+  let gesture!: () => Gesture;
+  let beginConnect!: (sourceId: string, sourceHandle: string | null, clientX: number, clientY: number) => void;
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const cleanup = render(
+    () => (
+      <ConnectHarness
+        onConnect={(c) => connected.push(c)}
+        isValidConnection={isValidConnection}
+        exposeGesture={(g) => { gesture = g; }}
+        exposeBeginConnect={(fn) => { beginConnect = fn; }}
+      />
+    ),
+    host
+  );
+  return { connected, gesture: () => gesture(), beginConnect: (...args: Parameters<typeof beginConnect>) => beginConnect(...args), cleanup };
+}
+
+describe('useGesture connecting', () => {
+  it('beginConnect enters connecting with the source and start coords', () => {
+    const { gesture, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    expect(gesture()).toEqual({
+      kind: 'connecting',
+      sourceId: 'node-a',
+      sourceHandle: 'out',
+      startCanvasX: 10,
+      startCanvasY: 20,
+      currentScreenX: 10,
+      currentScreenY: 20,
+    });
+    cleanup();
+  });
+
+  it('pointermove updates the preview coords', async () => {
+    const { gesture, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', null, 10, 20);
+    move({ clientX: 30, clientY: 40 });
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(gesture()).toMatchObject({ kind: 'connecting', currentScreenX: 30, currentScreenY: 40 });
+    cleanup();
+  });
+
+  it('pointerup over a data-connection-target fires onConnect with source/target', () => {
+    const target = document.createElement('div');
+    target.setAttribute('data-connection-target', 'true');
+    target.setAttribute('data-node-id', 'node-b');
+    target.setAttribute('data-handle-id', 'in');
+    document.body.appendChild(target);
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [target],
+      configurable: true,
+    });
+
+    const { gesture, connected, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    expect(connected).toEqual([{ source: 'node-a', sourceHandle: 'out', target: 'node-b', targetHandle: 'in' }]);
+    expect(gesture()).toEqual({ kind: 'idle' });
+    cleanup();
+    target.remove();
+  });
+
+  it('pointerup over empty space does not fire onConnect', () => {
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [],
+      configurable: true,
+    });
+
+    const { connected, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    expect(connected).toEqual([]);
+    cleanup();
+  });
+
+  it('isValidConnection returning false suppresses onConnect', () => {
+    const target = document.createElement('div');
+    target.setAttribute('data-connection-target', 'true');
+    target.setAttribute('data-node-id', 'node-b');
+    document.body.appendChild(target);
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [target],
+      configurable: true,
+    });
+
+    const { connected, beginConnect, cleanup } = mountConnect(() => false);
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    expect(connected).toEqual([]);
+    cleanup();
+    target.remove();
+  });
+});
+
+function ResizeHarness(props: {
+  zoomScale: number;
+  onResizeStart: (nodeId: string, dir: { horizontal: string; vertical: string }) => void;
+  onResize: (nodeId: string, deltaWidth: number, deltaHeight: number, dir: { horizontal: string; vertical: string }) => void;
+  onResizeEnd: (nodeId: string) => void;
+  exposeGesture: (g: () => Gesture) => void;
+  exposeBeginResize: (
+    fn: (nodeId: string, direction: { horizontal: 'left' | 'right' | 'none'; vertical: 'top' | 'bottom' | 'none' }, event: PointerEvent) => void
+  ) => void;
+}) {
+  const gesture = useGesture({
+    // eslint-disable-next-line solid/reactivity -- test harness; props are static
+    zoomScale: () => props.zoomScale,
+    callbacks: {
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      onResizeStart: (nodeId, dir) => props.onResizeStart(nodeId, dir),
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      onResize: (nodeId, dw, dh, dir) => props.onResize(nodeId, dw, dh, dir),
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      onResizeEnd: (nodeId) => props.onResizeEnd(nodeId),
+    },
+  });
+  props.exposeGesture(gesture.gesture);
+  props.exposeBeginResize(gesture.beginResize);
+  return <div />;
+}
+
+function mountResize(zoomScale = 1) {
+  const started: Array<[string, { horizontal: string; vertical: string }]> = [];
+  const resized: Array<[string, number, number, { horizontal: string; vertical: string }]> = [];
+  const ended: string[] = [];
+  let gesture!: () => Gesture;
+  let beginResize!: (
+    nodeId: string,
+    direction: { horizontal: 'left' | 'right' | 'none'; vertical: 'top' | 'bottom' | 'none' },
+    event: PointerEvent
+  ) => void;
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const cleanup = render(
+    () => (
+      <ResizeHarness
+        zoomScale={zoomScale}
+        onResizeStart={(nodeId, dir) => started.push([nodeId, dir])}
+        onResize={(nodeId, dw, dh, dir) => resized.push([nodeId, dw, dh, dir])}
+        onResizeEnd={(nodeId) => ended.push(nodeId)}
+        exposeGesture={(g) => { gesture = g; }}
+        exposeBeginResize={(fn) => { beginResize = fn; }}
+      />
+    ),
+    host
+  );
+  return {
+    started,
+    resized,
+    ended,
+    gesture: () => gesture(),
+    beginResize: (...args: Parameters<typeof beginResize>) => beginResize(...args),
+    cleanup,
+  };
+}
+
+const resizeDown = (init: MouseEventInit) => new MouseEvent('pointerdown', { bubbles: true, ...init }) as unknown as PointerEvent;
+
+describe('useGesture resizing', () => {
+  it('beginResize enters resizing with the node, direction, and start coords', () => {
+    const { gesture, beginResize, cleanup } = mountResize();
+    beginResize('a', { horizontal: 'right', vertical: 'none' }, resizeDown({ clientX: 10, clientY: 20 }));
+    expect(gesture()).toEqual({ kind: 'resizing', nodeId: 'a', dir: { horizontal: 'right', vertical: 'none' }, startX: 10, startY: 20 });
+    cleanup();
+  });
+
+  it('right/bottom direction produces positive signed deltas on move', () => {
+    const { resized, beginResize, cleanup } = mountResize();
+    beginResize('a', { horizontal: 'right', vertical: 'bottom' }, resizeDown({ clientX: 0, clientY: 0 }));
+    move({ clientX: 15, clientY: 8 });
+    expect(resized).toEqual([['a', 15, 8, { horizontal: 'right', vertical: 'bottom' }]]);
+    cleanup();
+  });
+
+  it('left/top direction inverts the sign', () => {
+    const { resized, beginResize, cleanup } = mountResize();
+    beginResize('a', { horizontal: 'left', vertical: 'top' }, resizeDown({ clientX: 0, clientY: 0 }));
+    move({ clientX: 15, clientY: 8 });
+    expect(resized).toEqual([['a', -15, -8, { horizontal: 'left', vertical: 'top' }]]);
+    cleanup();
+  });
+
+  it('zoom scale divides the delta', () => {
+    const { resized, beginResize, cleanup } = mountResize(2);
+    beginResize('a', { horizontal: 'right', vertical: 'bottom' }, resizeDown({ clientX: 0, clientY: 0 }));
+    move({ clientX: 10, clientY: 4 });
+    expect(resized).toEqual([['a', 5, 2, { horizontal: 'right', vertical: 'bottom' }]]);
+    cleanup();
+  });
+
+  it('pointerup fires onResizeEnd and returns to idle', () => {
+    const { started, ended, gesture, beginResize, cleanup } = mountResize();
+    beginResize('a', { horizontal: 'right', vertical: 'none' }, resizeDown({ clientX: 0, clientY: 0 }));
+    expect(started).toEqual([['a', { horizontal: 'right', vertical: 'none' }]]);
+    move({ clientX: 5, clientY: 0 });
+    up();
+    expect(ended).toEqual(['a']);
+    expect(gesture()).toEqual({ kind: 'idle' });
+    cleanup();
+  });
+});
+
+describe('useGesture marquee', () => {
+  it("'drag': plain left-drag marquees without Shift", () => {
+    const { hits, el, cleanup } = mountMarquee('drag', [MARQUEE_NODE]);
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([['a']]);
+    cleanup();
+  });
+
+  it("'drag': a plain background click (no movement) clears the selection", () => {
+    const { hits, el, cleanup } = mountMarquee('drag', [MARQUEE_NODE]);
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    up();
+    expect(hits).toEqual([[]]);
+    cleanup();
+  });
+
+  it("'drag': ignores non-left buttons", () => {
+    const { hits, el, cleanup } = mountMarquee('drag', [MARQUEE_NODE]);
+    down(el, { button: 1, clientX: 0, clientY: 0 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([]);
+    cleanup();
+  });
+
+  it("default 'shift-drag': plain drag does nothing, Shift+drag marquees", () => {
+    const { hits, el, cleanup } = mountMarquee(undefined, [MARQUEE_NODE]);
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([]);
+
+    down(el, { button: 0, shiftKey: true, clientX: 0, clientY: 0 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([['a']]);
     cleanup();
   });
 });

@@ -2,11 +2,11 @@ import { createSignal, createMemo, onCleanup, Show, For, type JSX } from 'solid-
 import { Portal } from 'solid-js/web';
 import { useViewport, type UseViewportOptions, type Transform } from './interactions/useViewport.js';
 import { observeLongTasks } from './perf.js';
-import { useConnectionDrag } from './interactions/useConnectionDrag.js';
-import { useBoxSelect } from './interactions/useBoxSelect.js';
+import { useGesture } from './interactions/useGesture.js';
 import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
+import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
 import { EdgeLayer } from './EdgeLayer.js';
 import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
 import { computeBounds } from './geometry/geometry.js';
@@ -354,34 +354,42 @@ export function Canvas(props: CanvasProps) {
     return headerHeightsData;
   };
 
-  const connectionDragResult = useConnectionDrag(
-    props.connectionDrag
-      ? { ...props.connectionDrag, screenToCanvas }
-      : { onConnect: () => {}, screenToCanvas }
-  );
-  const { connectionDrag: connectionDragState, startConnection } = connectionDragResult;
-
   const selection = useSelection({ onSelectionChange: (ids) => props.onSelectionChange?.(ids) });
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
 
   const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
 
-  const boxSelectResult = useBoxSelect(
-    props.boxSelect
-      ? {
-          transform,
-          containerEl,
-          getNodeRects: props.boxSelect.getNodeRects,
-          trigger: props.boxSelect.trigger,
-          onBoxSelectHits: selection.mergeBoxSelection,
-        }
-      : {
-          transform,
-          containerEl,
-          getNodeRects: () => [],
-        }
-  );
-  const { selectionRect } = boxSelectResult;
+  const gestureResult = useGesture({
+    zoomScale: () => transform().k,
+    callbacks: {},
+    boxSelect: {
+      transform,
+      containerEl,
+      getNodeRects: props.boxSelect?.getNodeRects ?? (() => []),
+      trigger: props.boxSelect?.trigger,
+      onBoxSelectHits: props.boxSelect ? selection.mergeBoxSelection : undefined,
+    },
+    connection: props.connectionDrag
+      ? { ...props.connectionDrag, screenToCanvas }
+      : undefined,
+  });
+  const { gesture, beginConnect } = gestureResult;
+  const marqueeRect = () => {
+    const g = gesture();
+    return g.kind === 'marquee' ? g.rect : null;
+  };
+  const connectionDragState = (): ConnectionDragState | null => {
+    const g = gesture();
+    if (g.kind !== 'connecting') return null;
+    return {
+      sourceNodeId: g.sourceId,
+      sourceHandle: g.sourceHandle,
+      startCanvasX: g.startCanvasX,
+      startCanvasY: g.startCanvasY,
+      currentScreenX: g.currentScreenX,
+      currentScreenY: g.currentScreenY,
+    };
+  };
 
   if (import.meta.env.DEV) {
     const cleanup = observeLongTasks();
@@ -427,7 +435,7 @@ export function Canvas(props: CanvasProps) {
   const contextValue: CanvasContextValue = {
     transform,
     screenToCanvas,
-    startConnection: props.connectionDrag ? startConnection : () => {},
+    startConnection: props.connectionDrag ? beginConnect : () => {},
     connectionDrag: props.connectionDrag ? connectionDragState : () => null,
     selectedIds,
     clearSelection,
@@ -595,7 +603,7 @@ export function Canvas(props: CanvasProps) {
           </svg>
         </Show>
 
-        <Show when={selectionRect()}>
+        <Show when={marqueeRect()}>
           {(rect) => (
             <div
               style={{

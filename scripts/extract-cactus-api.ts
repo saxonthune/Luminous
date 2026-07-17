@@ -305,7 +305,7 @@ const CATEGORIES: Record<string, string[]> = {
     'EdgeLabel', 'ConnectionPreview',
   ],
   Hooks: [
-    'useViewport', 'useConnectionDrag', 'useNodeDrag', 'useNodeResize',
+    'useViewport', 'useConnectionDrag', 'useNodeDrag', 'useGesture',
     'useKeyboardShortcuts', 'useBoxSelect', 'useSelection', 'useNodeLinks',
   ],
   Context: ['CanvasContext', 'useCanvasContext'],

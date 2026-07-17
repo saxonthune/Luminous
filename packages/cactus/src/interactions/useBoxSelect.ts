@@ -129,7 +129,7 @@ export function useBoxSelect(options: UseBoxSelectOptions): UseBoxSelectResult {
   return { selectedIds, clearSelection, selectionRect };
 }
 
-function rectsIntersect(
+export function rectsIntersect(
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number }
 ): boolean {
