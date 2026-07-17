@@ -126,11 +126,18 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
   // (which always wins over the classes) rather than a dynamic Tailwind
   // class, since a `bg-atlas-${token}` string built at runtime is invisible
   // to Tailwind's static content scan.
+  //
+  // Fill with the muted `-container` tint (a mix toward --surface) and reserve
+  // the saturated solid for the border accent — the container role/on-container
+  // pattern. The tint stays near --surface, so the existing --fg/--fg-muted text
+  // keeps its contrast in every theme; the solid at full saturation would blend.
   const colorStyle = (): JSX.CSSProperties => {
     const token = props.color();
     if (!token) return {};
-    const solid = `var(--color-atlas-${token})`;
-    return { 'background-color': solid, 'border-color': solid };
+    return {
+      'background-color': `var(--color-atlas-${token}-container)`,
+      'border-color': `var(--color-atlas-${token})`,
+    };
   };
 
   return (
