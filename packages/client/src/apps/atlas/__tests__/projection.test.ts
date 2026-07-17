@@ -8,7 +8,7 @@ import {
   childAreaOrigin,
   childArea,
   CONTAINER_HEADER,
-  liveAncestorSizes,
+  NODE_WIDTH,
 } from '../projection.ts';
 
 const doc: AtlasDocument = {
@@ -225,6 +225,47 @@ describe('contentHeight override', () => {
   });
 });
 
+describe('contentWidth override', () => {
+  it('sizes a leaf\'s box to its stored contentWidth instead of NODE_WIDTH', () => {
+    const wideLeaf: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', contentWidth: 400 }],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(wideLeaf);
+    const a = rendered.find((rn) => rn.node.id === 'a')!;
+    expect(a.w).toBe(400);
+  });
+
+  it('floors a container\'s width to its stored contentWidth when wider than its children', () => {
+    const wideContainer: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root', contentWidth: 500 },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(wideContainer);
+    const root = rendered.find((rn) => rn.node.id === 'root')!;
+    expect(root.w).toBe(500);
+  });
+
+  it('lets the children\'s extent win when it is larger than contentWidth', () => {
+    const narrowOverride: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root', contentWidth: 1 },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(narrowOverride);
+    const root = rendered.find((rn) => rn.node.id === 'root')!;
+    expect(root.w).toBeGreaterThanOrEqual(NODE_WIDTH);
+  });
+});
+
 describe('toEdgeDeclarations', () => {
   it('projects one EdgeDeclaration per AtlasEdge', () => {
     const edges = toEdgeDeclarations(doc);
@@ -233,73 +274,3 @@ describe('toEdgeDeclarations', () => {
   });
 });
 
-describe('liveAncestorSizes', () => {
-  // A single-child chain (root -> mid -> leaf), all at (0,0) manual so every
-  // offset is deterministic — matches the "manual position override" style
-  // above (see childAreaOrigin() equality checks there).
-  const chain: AtlasDocument = {
-    v: 1,
-    nodes: [
-      { id: 'root', name: 'Root', x: 0, y: 0 },
-      { id: 'mid', name: 'Mid', parent: 'root', x: 0, y: 0 },
-      { id: 'leaf', name: 'Leaf', parent: 'mid', x: 0, y: 0 },
-    ],
-    edges: [],
-  };
-
-  it('returns an empty map for a top-level node — no ancestor to expand', () => {
-    const rendered = projectAtlasNodes(chain);
-    expect(liveAncestorSizes(rendered, ['root'], 50, 30)).toEqual(new Map());
-  });
-
-  it('grows every ancestor on the path by the drag delta, one memo down the chain', () => {
-    const rendered = projectAtlasNodes(chain);
-    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
-    const mid = byId.get('mid')!;
-    const root = byId.get('root')!;
-
-    const live = liveAncestorSizes(rendered, ['leaf', 'mid', 'root'], 50, 30);
-
-    expect(live.get('mid')).toEqual({ w: mid.w + 50, h: mid.h + 30 });
-    expect(live.get('root')).toEqual({ w: root.w + 50, h: root.h + 30 });
-    // Only the two ancestors are keyed — the dragged leaf itself never grows.
-    expect(live.has('leaf')).toBe(false);
-    expect(live.size).toBe(2);
-  });
-
-  it('leaves a sibling branch unaffected, and stops growing an ancestor once a bigger sibling already dominates it', () => {
-    const withSibling: AtlasDocument = {
-      v: 1,
-      nodes: [
-        ...chain.nodes,
-        // Far enough from the origin that its extent already exceeds
-        // whatever the grown "mid" branch can reach.
-        { id: 'big', name: 'Big', parent: 'root', x: 500, y: 500 },
-      ],
-      edges: [],
-    };
-    const rendered = projectAtlasNodes(withSibling);
-    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
-    const root = byId.get('root')!;
-
-    const live = liveAncestorSizes(rendered, ['leaf', 'mid', 'root'], 50, 30);
-
-    // root's committed size already accounts for "big" as the dominant
-    // child, so the live-expand preview leaves it exactly as committed.
-    expect(live.get('root')).toEqual({ w: root.w, h: root.h });
-    // "big" itself is never touched — it isn't on the dragged node's path.
-    expect(live.has('big')).toBe(false);
-  });
-
-  it('clamps a negative (up/left) delta to no growth, matching committed sizes exactly', () => {
-    const rendered = projectAtlasNodes(chain);
-    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
-    const mid = byId.get('mid')!;
-    const root = byId.get('root')!;
-
-    const live = liveAncestorSizes(rendered, ['leaf', 'mid', 'root'], -50, -30);
-
-    expect(live.get('mid')).toEqual({ w: mid.w, h: mid.h });
-    expect(live.get('root')).toEqual({ w: root.w, h: root.h });
-  });
-});

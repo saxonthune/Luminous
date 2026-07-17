@@ -19,6 +19,10 @@ export interface AtlasNode {
   /** Stored override for the header band's height (a leaf's whole box, a
    * container's own-content band). Absent falls back to the fixed constant. */
   contentHeight?: number;
+  /** Stored override for a leaf's width, or a container's own-content width
+   * floor (still clamped up to children extent). Absent falls back to the
+   * fixed constant. */
+  contentWidth?: number;
 }
 
 export type AtlasContentMode = 'markdown' | 'code';
@@ -52,6 +56,7 @@ export interface SetNodeAction {
   y?: number;
   color?: AtlasColorToken;
   contentHeight?: number;
+  contentWidth?: number;
 }
 
 export interface RemoveNodeAction {

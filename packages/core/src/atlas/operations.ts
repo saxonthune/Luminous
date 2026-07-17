@@ -23,7 +23,15 @@ export function addNode(
 export function setNode(
   doc: AtlasDocument,
   id: string,
-  patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken; contentHeight?: number },
+  patch: {
+    name?: string;
+    content?: AtlasContent;
+    x?: number;
+    y?: number;
+    color?: AtlasColorToken;
+    contentHeight?: number;
+    contentWidth?: number;
+  },
 ): AtlasResult {
   const index = doc.nodes.findIndex(n => n.id === id);
   if (index === -1) {
@@ -64,6 +72,13 @@ export function setNode(
       delete node.contentHeight;
     } else {
       node.contentHeight = patch.contentHeight;
+    }
+  }
+  if ('contentWidth' in patch) {
+    if (patch.contentWidth === undefined) {
+      delete node.contentWidth;
+    } else {
+      node.contentWidth = patch.contentWidth;
     }
   }
   const nodes = [...doc.nodes];
@@ -161,13 +176,22 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
         });
         break;
       case 'setNode': {
-        const patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken; contentHeight?: number } = {};
+        const patch: {
+          name?: string;
+          content?: AtlasContent;
+          x?: number;
+          y?: number;
+          color?: AtlasColorToken;
+          contentHeight?: number;
+          contentWidth?: number;
+        } = {};
         if (action.name !== undefined) patch.name = action.name;
         if ('content' in action) patch.content = action.content;
         if ('x' in action) patch.x = action.x;
         if ('y' in action) patch.y = action.y;
         if ('color' in action) patch.color = action.color;
         if ('contentHeight' in action) patch.contentHeight = action.contentHeight;
+        if ('contentWidth' in action) patch.contentWidth = action.contentWidth;
         result = setNode(current, action.id, patch);
         break;
       }

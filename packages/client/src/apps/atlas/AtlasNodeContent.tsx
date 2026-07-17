@@ -2,7 +2,16 @@ import { createEffect, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { marked } from 'marked';
 import type { AtlasColorToken, AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
 import type { NodeEditForm } from './mutations.ts';
-import { containerHeaderHeight, leafHeight, MIN_CONTENT_HEIGHT } from './projection.ts';
+import { containerHeaderHeight, leafHeight, leafWidth, MIN_CONTENT_HEIGHT, MIN_CONTENT_WIDTH } from './projection.ts';
+
+/** Mirrors cactus's `ResizeDirection` shape (`useGesture.ts`) — the domain
+ * only ever drags right/bottom (the Do NOT list defers origin-shifting
+ * left/top resize), so each axis is a plain boolean instead of the full
+ * left/right/top/bottom/none union. */
+export interface ContentResizeDirection {
+  horizontal: boolean;
+  vertical: boolean;
+}
 
 export interface AtlasNodeContentProps {
   node: () => AtlasNode | undefined;
@@ -20,22 +29,37 @@ export interface AtlasNodeContentProps {
   onCommit: (form: NodeEditForm) => void;
   onCancel: () => void;
   onModeChange: (mode: AtlasContentMode) => void;
-  /** The live drag preview for this Node's content height — `undefined`
-   * outside of a drag. Owned by AtlasCanvas, same pattern as color preview. */
-  previewHeight: () => number | undefined;
-  /** Canvas zoom scale, so a screen-pixel drag maps to a canvas-space height. */
+  /** The live drag preview for this Node's content size — `undefined`
+   * outside of a drag. Owned by AtlasCanvas, same pattern as color preview.
+   * Either dimension may be absent: an edge grip drags one, the corner
+   * grip drags both. */
+  previewSize: () => { width?: number; height?: number } | undefined;
+  /** Canvas zoom scale, so a screen-pixel drag maps to canvas-space size. */
   zoomScale: () => number;
-  /** Fires with a live height while dragging the resize handle, and
-   * `undefined` once the drag ends (including a cancelled drag). */
-  onResizePreview: (height: number | undefined) => void;
-  /** Fires once, on release, with the final height to persist. */
-  onResizeCommit: (height: number) => void;
+  /** Fires with a live size while dragging a resize handle, and `undefined`
+   * once the drag ends (including a cancelled drag). */
+  onResizePreview: (size: { width?: number; height?: number } | undefined) => void;
+  /** Fires once, on release, with the final size to persist. */
+  onResizeCommit: (size: { width?: number; height?: number }) => void;
 }
 
 const MODES: Array<{ value: AtlasContentMode; label: string }> = [
   { value: 'markdown', label: 'MD' },
   { value: 'code', label: 'Code' },
 ];
+
+/** Whether a wheel event should scroll the content element (true) rather
+ * than bubble to d3-zoom for canvas zoom (false): the element must overflow
+ * and have room left to scroll in the wheel's direction. */
+export function shouldConsumeWheel(
+  el: { scrollHeight: number; clientHeight: number; scrollTop: number },
+  deltaY: number,
+): boolean {
+  if (el.scrollHeight <= el.clientHeight) return false;
+  if (deltaY > 0) return el.scrollTop + el.clientHeight < el.scrollHeight;
+  if (deltaY < 0) return el.scrollTop > 0;
+  return false;
+}
 
 /** A quiet two-segment toggle for `content.mode`, present in read and edit
  * views alike so a reader sees a Node's declared intention without entering
@@ -92,31 +116,43 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
   }
 
   // The value this Node's box is currently sized to: the live drag preview
-  // while resizing, else the committed height (stored override, or the
-  // fixed constant for this Node's kind).
+  // while resizing, else the committed size (stored override, or the fixed
+  // constant for this Node's kind).
   const committedHeight = () =>
     props.hasChildren() ? containerHeaderHeight(props.node()) : leafHeight(props.node());
-  const effectiveHeight = () => props.previewHeight() ?? committedHeight();
+  const effectiveHeight = () => props.previewSize()?.height ?? committedHeight();
+  const committedWidth = () => leafWidth(props.node());
 
-  // Drags the header/body divider (container) or a leaf's bottom edge.
-  // Raw pointer events, not cactus's useGesture drag — this is the
-  // Node's own content band, not the whole-Node move/resize gesture.
-  function beginResize(e: PointerEvent) {
+  // Drags the header/body divider (container) or a leaf's bottom edge,
+  // right edge, or corner, per `dir`. Raw pointer events, not cactus's
+  // useGesture drag — this is the Node's own content band, not the
+  // whole-Node move/resize gesture.
+  function beginResize(e: PointerEvent, dir: ContentResizeDirection) {
     e.stopPropagation();
     e.preventDefault();
+    const startX = e.clientX;
     const startY = e.clientY;
+    const startWidth = props.previewSize()?.width ?? committedWidth();
     const startHeight = effectiveHeight();
 
     const handleMove = (ev: PointerEvent) => {
-      const dy = (ev.clientY - startY) / props.zoomScale();
-      props.onResizePreview(Math.max(MIN_CONTENT_HEIGHT, startHeight + dy));
+      const next: { width?: number; height?: number } = {};
+      if (dir.horizontal) {
+        const dx = (ev.clientX - startX) / props.zoomScale();
+        next.width = Math.max(MIN_CONTENT_WIDTH, startWidth + dx);
+      }
+      if (dir.vertical) {
+        const dy = (ev.clientY - startY) / props.zoomScale();
+        next.height = Math.max(MIN_CONTENT_HEIGHT, startHeight + dy);
+      }
+      props.onResizePreview(next);
     };
     const handleUp = () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
-      const finalHeight = props.previewHeight();
+      const finalSize = props.previewSize();
       props.onResizePreview(undefined);
-      if (finalHeight !== undefined) props.onResizeCommit(finalHeight);
+      if (finalSize !== undefined) props.onResizeCommit(finalSize);
     };
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
@@ -173,7 +209,13 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
                 ...(props.hasChildren() ? { 'max-height': `${effectiveHeight()}px` } : {}),
               }}
             >
-              <div class="h-full overflow-auto p-1 pb-3">
+              <div
+                class="h-full overflow-auto p-1 pb-3"
+                style={{ 'overscroll-behavior': 'contain' }}
+                on:wheel={(e) => {
+                  if (shouldConsumeWheel(e.currentTarget, e.deltaY)) e.stopPropagation();
+                }}
+              >
                 <Show when={props.node()?.content?.mode === 'markdown' ? props.node()?.content : undefined}>
                   {(content) => (
                     // SECURITY: marked does not sanitize HTML; atlas documents are
@@ -202,11 +244,31 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
               <div
                 class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
                 data-no-pan="true"
-                on:pointerdown={(e) => beginResize(e)}
+                on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
                 onDblClick={(e) => e.stopPropagation()}
               >
                 <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
               </div>
+            </div>
+            {/* Width/diagonal grips, on the whole Node box (not the content
+                band): a right-edge grip for width alone, a corner grip for
+                both at once. Same native-pointerdown pattern as the height
+                grip above. */}
+            <div
+              class="absolute inset-y-0 right-0 flex w-3 cursor-col-resize items-center justify-end"
+              data-no-pan="true"
+              on:pointerdown={(e) => beginResize(e, { horizontal: true, vertical: false })}
+              onDblClick={(e) => e.stopPropagation()}
+            >
+              <div class="mr-0.5 h-8 w-1 rounded-full bg-border-subtle" />
+            </div>
+            <div
+              class="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
+              data-no-pan="true"
+              on:pointerdown={(e) => beginResize(e, { horizontal: true, vertical: true })}
+              onDblClick={(e) => e.stopPropagation()}
+            >
+              <div class="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full bg-border-subtle" />
             </div>
           </>
         }

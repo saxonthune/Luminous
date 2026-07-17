@@ -149,6 +149,26 @@ describe('setNode', () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', contentHeight: 150 });
   });
+
+  it('sets a content width', () => {
+    const result = setNode(base, 'a', { contentWidth: 300 });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'A', contentWidth: 300 });
+  });
+
+  it('clears a content width when explicitly set to undefined', () => {
+    const withWidth: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', contentWidth: 300 }], edges: [] };
+    const result = setNode(withWidth, 'a', { contentWidth: undefined });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0].contentWidth).toBeUndefined();
+  });
+
+  it('leaves an existing content width untouched when the patch carries only name', () => {
+    const withWidth: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', contentWidth: 300 }], edges: [] };
+    const result = setNode(withWidth, 'a', { name: 'Renamed' });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', contentWidth: 300 });
+  });
 });
 
 describe('removeNode', () => {
@@ -287,6 +307,17 @@ describe('applyAtlasBatch', () => {
     expect(result).toEqual({
       ok: true,
       doc: { v: 1, nodes: [{ id: 'a', name: 'A', contentHeight: 150 }], edges: [] },
+    });
+  });
+
+  it('carries a content width through a setNode action', () => {
+    const result = applyAtlasBatch(emptyAtlasDocument(), [
+      { type: 'addNode', id: 'a', name: 'A' },
+      { type: 'setNode', id: 'a', contentWidth: 300 },
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      doc: { v: 1, nodes: [{ id: 'a', name: 'A', contentWidth: 300 }], edges: [] },
     });
   });
 

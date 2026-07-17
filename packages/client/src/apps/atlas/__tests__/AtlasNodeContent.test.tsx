@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from 'solid-js/web';
 import type { AtlasNode } from '@luminous/core/atlas';
-import { AtlasNodeContent, type AtlasNodeContentProps } from '../AtlasNodeContent';
+import { AtlasNodeContent, shouldConsumeWheel, type AtlasNodeContentProps } from '../AtlasNodeContent';
 
 let container: HTMLDivElement;
 let dispose: (() => void) | undefined;
@@ -33,7 +33,7 @@ function mount(overrides: Partial<AtlasNodeContentProps> = {}) {
     onCommit,
     onCancel,
     onModeChange,
-    previewHeight: () => undefined,
+    previewSize: () => undefined,
     zoomScale: () => 1,
     onResizePreview,
     onResizeCommit,
@@ -83,5 +83,27 @@ describe('AtlasNodeContent interactions', () => {
     expect(onResizePreview).toHaveBeenCalled();
 
     window.dispatchEvent(new MouseEvent('pointerup', {}));
+  });
+});
+
+describe('shouldConsumeWheel', () => {
+  it('does not consume when content fits (no overflow)', () => {
+    expect(shouldConsumeWheel({ scrollHeight: 100, clientHeight: 100, scrollTop: 0 }, 10)).toBe(false);
+  });
+
+  it('consumes a downward scroll when overflowing with room below', () => {
+    expect(shouldConsumeWheel({ scrollHeight: 200, clientHeight: 100, scrollTop: 0 }, 10)).toBe(true);
+  });
+
+  it('does not consume a downward scroll already at the bottom boundary', () => {
+    expect(shouldConsumeWheel({ scrollHeight: 200, clientHeight: 100, scrollTop: 100 }, 10)).toBe(false);
+  });
+
+  it('consumes an upward scroll when overflowing with room above', () => {
+    expect(shouldConsumeWheel({ scrollHeight: 200, clientHeight: 100, scrollTop: 50 }, -10)).toBe(true);
+  });
+
+  it('does not consume an upward scroll already at the top boundary', () => {
+    expect(shouldConsumeWheel({ scrollHeight: 200, clientHeight: 100, scrollTop: 0 }, -10)).toBe(false);
   });
 });
