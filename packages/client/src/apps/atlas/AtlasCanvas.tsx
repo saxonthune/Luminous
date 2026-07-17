@@ -1,6 +1,6 @@
 import { For, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
-import type { AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
-import { addNode, setNode } from '@luminous/core/atlas';
+import type { AtlasAction, AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
+import { applyAtlasBatch, invertAtlasBatch } from '@luminous/core/atlas';
 import { Canvas, NodeContainer, useCanvasContext, useGesture, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef, ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
 import { toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
@@ -9,14 +9,16 @@ import {
   buildModePatch,
   buildColorPatch,
   uniqueId,
-  duplicateNode,
+  buildDuplicateActions,
   selfAndDescendantIds,
-  applyDrop,
+  resolveDrop,
   describePendingDrop,
   type NodeEditForm,
 } from './mutations.ts';
 import { AtlasNodeContent } from './AtlasNodeContent.tsx';
 import { ColorSwatchGrid } from './ColorSwatchGrid.tsx';
+import { buildArrangeAsColumnActions, sameParent } from './arrange.ts';
+import { useAtlasHistory } from './history.ts';
 
 // Scoped styling for the rendered markdown Content — mirrors dataflow's
 // BoxContent MD_STYLES but scoped under its own class.
@@ -124,6 +126,64 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
   const [editingId, setEditingId] = createSignal<string | null>(null);
 
+  const history = useAtlasHistory();
+  // Set just before an own dispatch reaches props.dispatchDoc so the
+  // reload-guard effect below can tell "our own edit echoing back down"
+  // from "the Document changed under us" and only clear history for the
+  // latter (R-preserve external-reload clears history).
+  let isEcho = false;
+
+  /** The seam every user edit routes through: applies `actions`, records the
+   * inverse for undo, marks the resulting `dispatchDoc` call as an echo, and
+   * pushes the new Document down. A failed batch is surfaced via
+   * `onDropRefused` and never dispatched or recorded. */
+  function dispatchAction(actions: AtlasAction[], label: string): void {
+    if (actions.length === 0) return;
+    const before = props.doc;
+    const result = applyAtlasBatch(before, actions);
+    if (!result.ok) {
+      props.onDropRefused?.(result.error);
+      return;
+    }
+    history.record({ label, do: actions, undo: invertAtlasBatch(before, actions) });
+    isEcho = true;
+    props.dispatchDoc(result.doc);
+  }
+
+  /** Applies `actions` (from undo/redo) without recording a new entry. */
+  function applyHistoryActions(actions: AtlasAction[]): void {
+    const result = applyAtlasBatch(props.doc, actions);
+    if (!result.ok) {
+      props.onDropRefused?.(result.error);
+      return;
+    }
+    isEcho = true;
+    props.dispatchDoc(result.doc);
+  }
+
+  function undo(): void {
+    const actions = history.undo();
+    if (actions) applyHistoryActions(actions);
+  }
+
+  function redo(): void {
+    const actions = history.redo();
+    if (actions) applyHistoryActions(actions);
+  }
+
+  // A genuine external reload (a non-echo props.doc change, e.g. a remote
+  // write) invalidates every recorded action's preimage, so history must be
+  // cleared. Our own dispatches flow through the same prop and must not
+  // clear it — the isEcho flag set in dispatchAction/applyHistoryActions
+  // distinguishes the two.
+  createEffect(on(() => props.doc, () => {
+    if (isEcho) {
+      isEcho = false;
+      return;
+    }
+    history.clear();
+  }));
+
   // Color preview: a local-only signal, scoped to the node being previewed so
   // one node's hover can never tint another. Never passed to dispatchDoc.
   const [previewColor, setPreviewColor] = createSignal<{ nodeId: string; token: AtlasColorToken | undefined } | undefined>();
@@ -178,12 +238,17 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     const droppedAbs = { x: rn.x + dx, y: rn.y + dy };
     const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : undefined;
 
-    const result = applyDrop(props.doc, nodeId, hitContainerId, droppedAbs, parentAbs);
-    if (result.ok) {
-      props.dispatchDoc(result.doc);
-    } else {
-      props.onDropRefused?.(result.error);
+    const outcome = resolveDrop(props.doc, nodeId, hitContainerId);
+    if (outcome.changed && !outcome.result.ok) {
+      props.onDropRefused?.(outcome.result.error);
+      return;
     }
+    const relX = droppedAbs.x - (parentAbs?.x ?? 0);
+    const relY = droppedAbs.y - (parentAbs?.y ?? 0);
+    const actions: AtlasAction[] = [];
+    if (outcome.changed) actions.push({ type: 'reparent', id: nodeId, parent: newParentId });
+    actions.push({ type: 'setNode', id: nodeId, x: relX, y: relY });
+    dispatchAction(actions, 'Move Node');
   }
 
   function enterEdit(id: string) {
@@ -194,8 +259,8 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     const node = nodesById().get(id);
     setEditingId(null);
     if (!node) return;
-    const result = setNode(props.doc, id, buildContentEditPatch(form, node.name, node.content?.mode));
-    if (result.ok) props.dispatchDoc(result.doc);
+    const patch = buildContentEditPatch(form, node.name, node.content?.mode);
+    dispatchAction([{ type: 'setNode', id, ...patch }], 'Edit Node');
   }
 
   function cancelEdit() {
@@ -205,8 +270,8 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   function changeMode(id: string, mode: AtlasContentMode) {
     const node = nodesById().get(id);
     if (!node) return;
-    const result = setNode(props.doc, id, buildModePatch(node.content, mode));
-    if (result.ok) props.dispatchDoc(result.doc);
+    const patch = buildModePatch(node.content, mode);
+    dispatchAction([{ type: 'setNode', id, ...patch }], 'Change Mode');
   }
 
   // Drop out of edit mode if the document reloads out from under the editing
@@ -227,8 +292,8 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
 
   function selectColor(nodeId: string, token: AtlasColorToken) {
     setPreviewColor(undefined);
-    const result = setNode(props.doc, nodeId, buildColorPatch(token));
-    if (result.ok) props.dispatchDoc(result.doc);
+    const patch = buildColorPatch(token);
+    dispatchAction([{ type: 'setNode', id: nodeId, ...patch }], 'Set Color');
   }
 
   function nodeContextMenu(nodeId: string): MenuSchema | undefined {
@@ -254,17 +319,55 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         ],
       },
     ];
+    // R28/R29: only offered for a 2+-Node selection; disabled when the
+    // selection spans different Containers rather than hidden, per the plan.
+    const selectedIds = canvasRef?.getSelectedIds() ?? [];
+    if (selectedIds.length >= 2) {
+      items.push(
+        { type: 'divider' },
+        {
+          type: 'submenu',
+          label: 'Arrange as',
+          items: [
+            {
+              type: 'action',
+              action: {
+                id: 'arrange.column',
+                label: 'Column',
+                enabled: sameParent(props.doc, [...selectedIds]),
+                payload: { ids: [...selectedIds] },
+              },
+            },
+          ],
+        },
+      );
+    }
     return { id: `node-menu-${nodeId}`, items };
   }
 
-  const chrome: ChromeSchema = {
-    top: [
-      {
-        id: 'atlas-view-toolbar',
-        controls: [{ type: 'button', action: { id: 'view.fit', label: 'Fit' } }],
-      },
-    ],
-  };
+  function buildChrome(): ChromeSchema {
+    return {
+      top: [
+        {
+          id: 'atlas-history-toolbar',
+          controls: [
+            {
+              type: 'button',
+              action: { id: 'history.undo', label: 'Undo', hotkey: 'Mod+z', enabled: history.canUndo() },
+            },
+            {
+              type: 'button',
+              action: { id: 'history.redo', label: 'Redo', hotkey: 'Mod+Shift+z', enabled: history.canRedo() },
+            },
+          ],
+        },
+        {
+          id: 'atlas-view-toolbar',
+          controls: [{ type: 'button', action: { id: 'view.fit', label: 'Fit' } }],
+        },
+      ],
+    };
+  }
 
   function backgroundContextMenu(): MenuSchema | undefined {
     return {
@@ -279,17 +382,31 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         fitAll();
         break;
       }
+      case 'history.undo': {
+        undo();
+        break;
+      }
+      case 'history.redo': {
+        redo();
+        break;
+      }
       case 'node.duplicate': {
         const { id: nodeId } = payload as { id: string };
-        props.dispatchDoc(duplicateNode(props.doc, nodeId));
+        dispatchAction(buildDuplicateActions(props.doc, nodeId), 'Duplicate');
         break;
       }
       case 'node.add': {
         const { parent } = payload as { parent?: string };
         const existingIds = new Set(props.doc.nodes.map((n) => n.id));
         const newId = uniqueId('new-node', existingIds);
-        const result = addNode(props.doc, { id: newId, name: 'New Node', parent });
-        if (result.ok) props.dispatchDoc(result.doc);
+        const action: AtlasAction = { type: 'addNode', id: newId, name: 'New Node', parent };
+        dispatchAction([action], 'Add Node');
+        break;
+      }
+      case 'arrange.column': {
+        const { ids } = payload as { ids: string[] };
+        if (!sameParent(props.doc, ids)) break;
+        dispatchAction(buildArrangeAsColumnActions(props.doc, ids), 'Arrange as Column');
         break;
       }
     }
@@ -302,7 +419,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         <Canvas
           ref={(r) => { canvasRef = r; }}
           edges={edges()}
-          chrome={chrome}
+          chrome={buildChrome()}
           nodeContextMenu={nodeContextMenu}
           backgroundContextMenu={backgroundContextMenu}
           onAction={onAction}

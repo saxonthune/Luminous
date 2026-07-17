@@ -1,4 +1,4 @@
-import type { AtlasColorToken, AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
+import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
 import { reparent, setNode, type AtlasResult } from '@luminous/core/atlas';
 
 /** Raw values collected from the Node edit form. */
@@ -67,6 +67,34 @@ export function duplicateNode(doc: AtlasDocument, id: string): AtlasDocument {
   if (node.parent !== undefined) copy.parent = node.parent;
   if (node.content !== undefined) copy.content = node.content;
   return { ...doc, nodes: [...doc.nodes, copy] };
+}
+
+/**
+ * The `AtlasAction`s that produce `duplicateNode`'s result: an `addNode` for
+ * the copy, plus a trailing `setNode` carrying its Content (`AddNodeAction`
+ * has no content field). Derived by diffing against `duplicateNode` rather
+ * than reimplementing its id/field logic — stays correct if duplication ever
+ * grows to cover descendants.
+ */
+export function buildDuplicateActions(doc: AtlasDocument, id: string): AtlasAction[] {
+  const existingIds = new Set(doc.nodes.map((n) => n.id));
+  const next = duplicateNode(doc, id);
+  const added = next.nodes.find((n) => !existingIds.has(n.id));
+  if (!added) return [];
+  const actions: AtlasAction[] = [
+    {
+      type: 'addNode',
+      id: added.id,
+      name: added.name,
+      ...(added.parent !== undefined ? { parent: added.parent } : {}),
+      ...(added.x !== undefined ? { x: added.x } : {}),
+      ...(added.y !== undefined ? { y: added.y } : {}),
+    },
+  ];
+  if (added.content !== undefined) {
+    actions.push({ type: 'setNode', id: added.id, content: added.content });
+  }
+  return actions;
 }
 
 /** Every node reachable from `id` by following child -> parent links, plus `id` itself. */

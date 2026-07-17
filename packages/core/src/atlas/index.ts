@@ -28,3 +28,4 @@ export {
 export type { AtlasResult } from './operations.ts';
 export { checkAtlasDocument } from './check.ts';
 export type { AtlasCheckIssue } from './check.ts';
+export { invertAtlasAction, invertAtlasBatch } from './history.ts';
