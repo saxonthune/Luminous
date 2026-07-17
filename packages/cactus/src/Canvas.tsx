@@ -504,6 +504,12 @@ export function Canvas(props: CanvasProps) {
         }}
         onContextMenu={handleContextMenu}
       >
+        <div
+          data-cactus-pan-surface
+          data-pan-surface
+          style={{ position: 'absolute', inset: '0' }}
+        />
+
         {props.renderBackground
           ? props.renderBackground(transform(), props.patternId)
           : <DotGrid transform={transform()} patternId={props.patternId} />
@@ -538,6 +544,7 @@ export function Canvas(props: CanvasProps) {
             "transform-origin": '0 0',
             position: 'absolute',
             inset: '0',
+            "pointer-events": 'none',
           }}
         >
           {props.children}

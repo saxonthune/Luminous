@@ -58,6 +58,7 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         width: `${props.w()}px`,
         height: `${props.h()}px`,
         overflow: 'hidden',
+        'pointer-events': 'auto',
       }}
       onPointerDown={(e) => props.onPointerDown?.(e)}
       onContextMenu={(e) => props.onContextMenu?.(e)}

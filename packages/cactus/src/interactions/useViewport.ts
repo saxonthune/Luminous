@@ -17,6 +17,29 @@ export interface UseViewportOptions {
   leftDragPan?: boolean;
 }
 
+export interface PanFilterEvent {
+  type: string;
+  button?: number;
+  target: EventTarget | null;
+}
+
+/** The viewport pan/zoom gate. Fail-safe by default: a pointer gesture pans
+ *  only when it lands on an explicit `[data-pan-surface]` element. Wheel and
+ *  middle-drag always pass regardless of target. */
+export function shouldViewportPan(
+  event: PanFilterEvent,
+  opts: { leftDragPan: boolean }
+): boolean {
+  if (event.type === 'wheel') return true;
+  if (event.type === 'mousedown' && event.button === 1) return true; // middle-drag always pans
+  const target = event.target as HTMLElement | null;
+  const onSurface = !!target?.closest?.('[data-pan-surface]');
+  if (!onSurface) return false; // fail safe: not the background → never pan
+  if (event.type === 'mousedown') return opts.leftDragPan || event.button !== 0;
+  if (event.type === 'touchstart') return true;
+  return false;
+}
+
 export interface UseViewportResult {
   transform: () => Transform;
   setContainerRef: (el: HTMLDivElement) => void;
@@ -47,16 +70,7 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
 
     const zb = d3Zoom<HTMLDivElement, unknown>()
       .scaleExtent([minZoom, maxZoom])
-      .filter((event) => {
-        if (event.type === 'wheel') return true;
-        // Middle mouse (button 1) always pans, regardless of target
-        if (event.type === 'mousedown' && event.button === 1) return true;
-        const target = event.target as HTMLElement;
-        if (target.closest?.('[data-no-pan]')) return false;
-        if (event.type === 'mousedown') return leftDragPan || event.button !== 0;
-        if (event.type === 'touchstart') return true;
-        return false;
-      })
+      .filter((event) => shouldViewportPan(event, { leftDragPan }))
       .on('zoom', (event) => {
         setTransform({
           x: event.transform.x,
