@@ -60,7 +60,7 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         overflow: 'hidden',
         'pointer-events': 'auto',
       }}
-      onPointerDown={(e) => props.onPointerDown?.(e)}
+      on:pointerdown={(e) => props.onPointerDown?.(e)}
       onContextMenu={(e) => props.onContextMenu?.(e)}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}

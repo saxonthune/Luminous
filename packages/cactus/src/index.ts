@@ -2,6 +2,8 @@ import './env.d.ts';
 export { useViewport } from './interactions/useViewport.js';
 export { useConnectionDrag } from './interactions/useConnectionDrag.js';
 export { useNodeDrag } from './interactions/useNodeDrag.js';
+export { useGesture, DRAG_THRESHOLD } from './interactions/useGesture.js';
+export type { Gesture, GestureCallbacks, UseGestureOptions, UseGestureResult } from './interactions/useGesture.js';
 export { useNodeResize } from './interactions/useNodeResize.js';
 export { useKeyboardShortcuts } from './interactions/useKeyboardShortcuts.js';
 export { useBoxSelect } from './interactions/useBoxSelect.js';

@@ -1,7 +1,7 @@
 import { For, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
 import type { AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
 import { addNode, setNode } from '@luminous/core/atlas';
-import { Canvas, NodeContainer, useCanvasContext, useNodeDrag, findContainerAt } from '@luminous/cactus';
+import { Canvas, NodeContainer, useCanvasContext, useGesture, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef, ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
 import { toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
 import {
@@ -55,20 +55,18 @@ function AtlasNodeLayer(props: {
   onCancel: () => void;
   onModeChange: (id: string, mode: AtlasContentMode) => void;
   onDragStart: (nodeId: string) => void;
-  onDrag: (nodeId: string, dx: number, dy: number) => void;
-  onDragEnd: (nodeId: string) => void;
+  onDragEnd: (nodeId: string, dx: number, dy: number) => void;
   /** The Color to draw a Node in — the preview override when this node is
    * being previewed, else its own `node.color`. Never written to the Document. */
   effectiveColor: (nodeId: string) => AtlasColorToken | undefined;
 }): JSX.Element {
   const ctx = useCanvasContext();
 
-  const { onPointerDown: dragPointerDown } = useNodeDrag({
+  const gesture = useGesture({
     zoomScale: () => ctx.transform().k,
     callbacks: {
       onDragStart: (nodeId) => props.onDragStart(nodeId),
-      onDrag: (nodeId, dx, dy) => props.onDrag(nodeId, dx, dy),
-      onDragEnd: (nodeId) => props.onDragEnd(nodeId),
+      onDragEnd: (nodeId, dx, dy) => props.onDragEnd(nodeId, dx, dy),
     },
   });
 
@@ -85,18 +83,23 @@ function AtlasNodeLayer(props: {
           const token = color();
           return token ? { '--cactus-container-tint': `var(--color-atlas-${token}-container)` } : {};
         };
+        // Read the drag offset per-row from the gesture, not from a mapped
+        // render-node object — nodes() stays reference-stable during a drag,
+        // so <For> never disposes/rebuilds this row (see 1b in the task spec).
+        const dx = () => (gesture.isDraggingNode(rn.node.id) ? gesture.dragDelta().dx : 0);
+        const dy = () => (gesture.isDraggingNode(rn.node.id) ? gesture.dragDelta().dy : 0);
         return (
           <div style={wrapperStyle()}>
             <NodeContainer
               nodeId={rn.node.id}
-              x={() => rn.x}
-              y={() => rn.y}
+              x={() => rn.x + dx()}
+              y={() => rn.y + dy()}
               w={() => rn.w}
               h={() => (editing() ? EDIT_HEIGHT : rn.h)}
               softContainer={() => rn.hasChildren}
               onPointerDown={(e) => {
                 ctx.onNodePointerDown(rn.node.id, e);
-                dragPointerDown(rn.node.id, e);
+                gesture.beginPress(rn.node.id, e);
               }}
             >
               <AtlasNodeContent
@@ -134,28 +137,15 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   const nodesById = createMemo(() => new Map(props.doc.nodes.map((n) => [n.id, n])));
   const edges = createMemo(() => toEdgeDeclarations(props.doc));
 
-  // Drag position override for the node currently being dragged — ephemeral,
-  // merged over projectAtlasNodes's layout-computed positions and discarded
-  // whenever the drag ends or the document changes. See DataflowCanvas.tsx:135,138-144,147.
-  const [nodeOverride, setNodeOverride] = createSignal<{ id: string; x: number; y: number } | null>(null);
   let dragStart: { id: string; x: number; y: number } | null = null;
   let lastHit: string | null = null;
   let dragPointerMove: ((e: PointerEvent) => void) | null = null;
-
-  const renderNodes = createMemo(() => {
-    const override = nodeOverride();
-    if (!override) return nodes();
-    return nodes().map((rn) => (rn.node.id === override.id ? { ...rn, x: override.x, y: override.y } : rn));
-  });
-
-  createEffect(on(() => props.doc, () => setNodeOverride(null), { defer: true }));
 
   function beginDrag(nodeId: string) {
     const rn = nodes().find((n) => n.node.id === nodeId);
     if (!rn) return;
     dragStart = { id: nodeId, x: rn.x, y: rn.y };
     lastHit = null;
-    setNodeOverride({ id: nodeId, x: rn.x, y: rn.y });
     const exclude = selfAndDescendantIds(props.doc, nodeId);
     // eslint-disable-next-line solid/reactivity -- pointermove callback, not a render path; props.doc is read fresh on each invocation
     dragPointerMove = (e: PointerEvent) => {
@@ -165,18 +155,15 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     window.addEventListener('pointermove', dragPointerMove);
   }
 
-  function moveDrag(nodeId: string, dx: number, dy: number) {
-    if (!dragStart || dragStart.id !== nodeId) return;
-    setNodeOverride({ id: nodeId, x: dragStart.x + dx, y: dragStart.y + dy });
-  }
-
-  function endDrag(nodeId: string) {
+  // dx/dy (the final canvas-space delta) are unused here: Atlas positions
+  // are not yet persisted (bug 3, a separate task), so a drop only decides
+  // membership via resolveDrop — the layout recomputes x/y afterward.
+  function endDrag(nodeId: string, _dx: number, _dy: number) {
     if (dragPointerMove) {
       window.removeEventListener('pointermove', dragPointerMove);
       dragPointerMove = null;
     }
     props.onPendingMembershipChange?.(null);
-    setNodeOverride(null);
     dragStart = null;
 
     const outcome = resolveDrop(props.doc, nodeId, lastHit);
@@ -311,14 +298,13 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
           onAction={onAction}
         >
           <AtlasNodeLayer
-            nodes={renderNodes}
+            nodes={nodes}
             editingId={editingId}
             onEnterEdit={enterEdit}
             onCommit={commitEdit}
             onCancel={cancelEdit}
             onModeChange={changeMode}
             onDragStart={beginDrag}
-            onDrag={moveDrag}
             onDragEnd={endDrag}
             effectiveColor={effectiveColor}
           />
