@@ -1,4 +1,4 @@
-import type { AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
+import type { AtlasColorToken, AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
 import { reparent, type AtlasResult } from '@luminous/core/atlas';
 
 /** Raw values collected from the Node edit form. */
@@ -33,6 +33,15 @@ export function buildModePatch(
   mode: AtlasContentMode,
 ): { content: AtlasContent } {
   return { content: { text: currentContent?.text ?? '', mode } };
+}
+
+/**
+ * Builds the `setNode` patch for a Color swatch pick. The `color` key is
+ * always present (even when `undefined`) because `setNode` reads `'color' in
+ * patch` to decide whether to clear the field, not just its value.
+ */
+export function buildColorPatch(color: AtlasColorToken | undefined): { color?: AtlasColorToken } {
+  return { color };
 }
 
 /** Appends `-2`, `-3`, … to `base` until it is absent from `taken`. Mirrors

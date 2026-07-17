@@ -1,10 +1,14 @@
 import { createEffect, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { marked } from 'marked';
-import type { AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
+import type { AtlasColorToken, AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
 import type { NodeEditForm } from './mutations.ts';
 
 export interface AtlasNodeContentProps {
   node: () => AtlasNode | undefined;
+  /** The Color to draw this Node in — the live preview when hovering a
+   * swatch, else its own `node.color`. `undefined` draws the unchanged
+   * bg-surface/border-border-subtle look. */
+  color: () => AtlasColorToken | undefined;
   selected: () => boolean;
   editing: () => boolean;
   onEnterEdit: () => void;
@@ -72,12 +76,24 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
     props.onCommit({ name: name(), text: text() });
   }
 
+  // The Color overrides bg-surface/border-border-subtle via inline style
+  // (which always wins over the classes) rather than a dynamic Tailwind
+  // class, since a `bg-atlas-${token}` string built at runtime is invisible
+  // to Tailwind's static content scan.
+  const colorStyle = (): JSX.CSSProperties => {
+    const token = props.color();
+    if (!token) return {};
+    const solid = `var(--color-atlas-${token})`;
+    return { 'background-color': solid, 'border-color': solid };
+  };
+
   return (
     <div
       class={`flex h-full w-full flex-col gap-1 overflow-hidden rounded border bg-surface p-2 ${
         // Negative offset keeps the outline inside NodeContainer's overflow:hidden clip.
         props.selected() ? 'border-accent-subtle outline outline-2 -outline-offset-2 outline-accent-subtle' : 'border-border-subtle'
       }`}
+      style={colorStyle()}
       onDblClick={(e) => {
         if (props.editing()) return;
         e.stopPropagation();

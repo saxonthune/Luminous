@@ -160,6 +160,12 @@ function MenuItemRenderer(props: { item: MenuItem } & OnActionProp): JSX.Element
           );
         }}
       </Match>
+      <Match when={props.item.type === 'custom' && props.item}>
+        {(item) => {
+          const custom = () => item() as Extract<MenuItem, { type: 'custom' }>;
+          return <div data-menu-custom={custom().id}>{custom().render()}</div>;
+        }}
+      </Match>
     </Switch>
   );
 }

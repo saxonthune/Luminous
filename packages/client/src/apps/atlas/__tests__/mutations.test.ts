@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { AtlasDocument } from '@luminous/core/atlas';
+import { setNode } from '@luminous/core/atlas';
 import {
   buildContentEditPatch,
   buildModePatch,
+  buildColorPatch,
   uniqueId,
   duplicateNode,
   selfAndDescendantIds,
@@ -36,6 +38,27 @@ describe('buildModePatch', () => {
   it('creates an empty-text Content for a Node with no Content yet', () => {
     const patch = buildModePatch(undefined, 'code');
     expect(patch).toEqual({ content: { text: '', mode: 'code' } });
+  });
+});
+
+describe('buildColorPatch', () => {
+  it('carries the color key for a token', () => {
+    const patch = buildColorPatch('rose');
+    expect('color' in patch).toBe(true);
+    expect(patch.color).toBe('rose');
+  });
+
+  it('carries the color key as undefined so setNode clears it', () => {
+    const patch = buildColorPatch(undefined);
+    expect('color' in patch).toBe(true);
+    expect(patch.color).toBeUndefined();
+  });
+
+  it('selecting a swatch produces a Document whose node carries the token', () => {
+    const d: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const result = setNode(d, 'a', buildColorPatch('violet'));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes.find((n) => n.id === 'a')?.color).toBe('violet');
   });
 });
 

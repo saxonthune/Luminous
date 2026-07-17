@@ -270,6 +270,34 @@ describe('parseAtlasDocument', () => {
     const result = parseAtlasDocument(serializeAtlasDocument(doc));
     expect(result).toEqual({ ok: true, doc });
   });
+
+  it('accepts a node with a valid color', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'moss' }], edges: [] };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('accepts a node with no color', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('rejects an unrecognized color token', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', color: 'chartreuse' }], edges: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContain('nodes[0].color: unrecognized color token "chartreuse"');
+    }
+  });
+
+  it('round-trips a color through serialize/parse', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'rose' }], edges: [] };
+    const result = parseAtlasDocument(serializeAtlasDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
 });
 
 describe('serializeAtlasDocument', () => {
@@ -284,5 +312,11 @@ describe('serializeAtlasDocument', () => {
     const text = serializeAtlasDocument(doc);
     expect(text).not.toContain('"x"');
     expect(text).not.toContain('"y"');
+  });
+
+  it('omits color for a node with no color', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const text = serializeAtlasDocument(doc);
+    expect(text).not.toContain('"color"');
   });
 });

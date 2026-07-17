@@ -1,3 +1,5 @@
+import type { AtlasColorToken } from './colors.ts';
+
 export interface AtlasDocument {
   v: number;
   nodes: AtlasNode[];
@@ -13,6 +15,7 @@ export interface AtlasNode {
   x?: number;
   /** Offset from the parent's origin; canvas-absolute for a root node (no `parent`). */
   y?: number;
+  color?: AtlasColorToken;
 }
 
 export type AtlasContentMode = 'markdown' | 'code';
@@ -44,6 +47,7 @@ export interface SetNodeAction {
   content?: AtlasContent;
   x?: number;
   y?: number;
+  color?: AtlasColorToken;
 }
 
 export interface RemoveNodeAction {

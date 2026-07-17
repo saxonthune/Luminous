@@ -1,3 +1,4 @@
+import type { AtlasColorToken } from './colors.ts';
 import type { AtlasAction, AtlasContent, AtlasDocument, AtlasNode } from './types.ts';
 
 export type AtlasResult = { ok: true; doc: AtlasDocument } | { ok: false; error: string };
@@ -22,7 +23,7 @@ export function addNode(
 export function setNode(
   doc: AtlasDocument,
   id: string,
-  patch: { name?: string; content?: AtlasContent; x?: number; y?: number },
+  patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken },
 ): AtlasResult {
   const index = doc.nodes.findIndex(n => n.id === id);
   if (index === -1) {
@@ -49,6 +50,13 @@ export function setNode(
       delete node.y;
     } else {
       node.y = patch.y;
+    }
+  }
+  if ('color' in patch) {
+    if (patch.color === undefined) {
+      delete node.color;
+    } else {
+      node.color = patch.color;
     }
   }
   const nodes = [...doc.nodes];
@@ -146,11 +154,12 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
         });
         break;
       case 'setNode': {
-        const patch: { name?: string; content?: AtlasContent; x?: number; y?: number } = {};
+        const patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken } = {};
         if (action.name !== undefined) patch.name = action.name;
         if ('content' in action) patch.content = action.content;
         if ('x' in action) patch.x = action.x;
         if ('y' in action) patch.y = action.y;
+        if ('color' in action) patch.color = action.color;
         result = setNode(current, action.id, patch);
         break;
       }

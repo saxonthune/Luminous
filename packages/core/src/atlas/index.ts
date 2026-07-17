@@ -16,6 +16,8 @@ export {
   serializeAtlasDocument,
 } from './document.ts';
 export type { ParseAtlasDocumentResult } from './document.ts';
+export { ATLAS_COLOR_TOKENS, isAtlasColorToken } from './colors.ts';
+export type { AtlasColorToken } from './colors.ts';
 export {
   addNode,
   setNode,

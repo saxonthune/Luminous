@@ -54,6 +54,16 @@ body {
   --color-kind-hook-border: #a5b4fc;
   --color-kind-datasource-bg: #ffe4e6;
   --color-kind-datasource-border: #fda4af;
+  /* Atlas color tokens */
+  --color-token-slate: #64748b;
+  --color-token-moss: #4d7c4d;
+  --color-token-deep-moss: #365e36;
+  --color-token-ochre: #a16207;
+  --color-token-violet: #7c3aed;
+  --color-token-indigo: #4f46e5;
+  --color-token-oxide: #b45309;
+  --color-token-rose: #e11d48;
+  --color-token-container-mix: 40%;
 }
 
 [data-theme="dusk"] {
@@ -97,6 +107,15 @@ body {
   --color-kind-hook-border: #6366f1;
   --color-kind-datasource-bg: #4c0519;
   --color-kind-datasource-border: #f43f5e;
+  /* Atlas color tokens */
+  --color-token-slate: #8a9aab;
+  --color-token-moss: #7fae7f;
+  --color-token-deep-moss: #5c8a5c;
+  --color-token-ochre: #d4a13a;
+  --color-token-violet: #a78bd4;
+  --color-token-indigo: #8e8ad4;
+  --color-token-oxide: #d4915a;
+  --color-token-rose: #e8768f;
 }
 
 [data-theme="ground"] {
@@ -116,6 +135,7 @@ body {
   --hue-violet: #7a6a8a;
   --hue-indigo: #6a6a8a;
   --hue-oxide: #9a4a2a;
+  --hue-rose: #a8525a;
 
   /* TIER 2: semantic vars referencing palette */
   --canvas: var(--tone-0);
@@ -158,6 +178,16 @@ body {
   --color-kind-hook-border: color-mix(in oklch, var(--color-kind-hook-bg) 55%, var(--tone-5));
   --color-kind-datasource-bg: color-mix(in oklch, var(--tone-2) 85%, var(--hue-oxide));
   --color-kind-datasource-border: color-mix(in oklch, var(--color-kind-datasource-bg) 55%, var(--tone-5));
+
+  /* Atlas color tokens */
+  --color-token-slate: var(--hue-slate);
+  --color-token-moss: var(--hue-moss);
+  --color-token-deep-moss: var(--hue-deep-moss);
+  --color-token-ochre: var(--hue-ochre);
+  --color-token-violet: var(--hue-violet);
+  --color-token-indigo: var(--hue-indigo);
+  --color-token-oxide: var(--hue-oxide);
+  --color-token-rose: var(--hue-rose);
 }
 
 /* cactus theme contract (doc02.05.05) — Luminous brings its own theme by
@@ -184,6 +214,7 @@ body {
   --cactus-resize-handle: var(--resize-handle);
   --cactus-shadow-sm:     var(--shadow-sm);
   --cactus-shadow-lg:     var(--shadow-lg);
+  --cactus-container-tint: var(--surface-alt);
 }
 
 /* TIER 3: Tailwind token layer — never overridden, generates utilities */
@@ -207,4 +238,21 @@ body {
   --color-edge-label:    var(--edge-label);
   --color-dot-grid:      var(--dot-grid);
   --color-resize-handle: var(--resize-handle);
+
+  --color-atlas-slate:              var(--color-token-slate);
+  --color-atlas-slate-container:    color-mix(in oklch, var(--color-token-slate) var(--color-token-container-mix), var(--surface));
+  --color-atlas-moss:               var(--color-token-moss);
+  --color-atlas-moss-container:     color-mix(in oklch, var(--color-token-moss) var(--color-token-container-mix), var(--surface));
+  --color-atlas-deep-moss:          var(--color-token-deep-moss);
+  --color-atlas-deep-moss-container: color-mix(in oklch, var(--color-token-deep-moss) var(--color-token-container-mix), var(--surface));
+  --color-atlas-ochre:              var(--color-token-ochre);
+  --color-atlas-ochre-container:    color-mix(in oklch, var(--color-token-ochre) var(--color-token-container-mix), var(--surface));
+  --color-atlas-violet:             var(--color-token-violet);
+  --color-atlas-violet-container:   color-mix(in oklch, var(--color-token-violet) var(--color-token-container-mix), var(--surface));
+  --color-atlas-indigo:             var(--color-token-indigo);
+  --color-atlas-indigo-container:   color-mix(in oklch, var(--color-token-indigo) var(--color-token-container-mix), var(--surface));
+  --color-atlas-oxide:              var(--color-token-oxide);
+  --color-atlas-oxide-container:    color-mix(in oklch, var(--color-token-oxide) var(--color-token-container-mix), var(--surface));
+  --color-atlas-rose:               var(--color-token-rose);
+  --color-atlas-rose-container:     color-mix(in oklch, var(--color-token-rose) var(--color-token-container-mix), var(--surface));
 }

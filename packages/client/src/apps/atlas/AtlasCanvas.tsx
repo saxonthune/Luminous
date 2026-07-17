@@ -1,5 +1,5 @@
 import { For, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
-import type { AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
+import type { AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
 import { addNode, setNode } from '@luminous/core/atlas';
 import { Canvas, NodeContainer, useCanvasContext, useNodeDrag, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef, MenuSchema, MenuItem } from '@luminous/cactus';
@@ -7,6 +7,7 @@ import { toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './p
 import {
   buildContentEditPatch,
   buildModePatch,
+  buildColorPatch,
   uniqueId,
   duplicateNode,
   selfAndDescendantIds,
@@ -15,6 +16,7 @@ import {
   type NodeEditForm,
 } from './mutations.ts';
 import { AtlasNodeContent } from './AtlasNodeContent.tsx';
+import { ColorSwatchGrid } from './ColorSwatchGrid.tsx';
 
 // Scoped styling for the rendered markdown Content — mirrors dataflow's
 // BoxContent MD_STYLES but scoped under its own class.
@@ -55,6 +57,9 @@ function AtlasNodeLayer(props: {
   onDragStart: (nodeId: string) => void;
   onDrag: (nodeId: string, dx: number, dy: number) => void;
   onDragEnd: (nodeId: string) => void;
+  /** The Color to draw a Node in — the preview override when this node is
+   * being previewed, else its own `node.color`. Never written to the Document. */
+  effectiveColor: (nodeId: string) => AtlasColorToken | undefined;
 }): JSX.Element {
   const ctx = useCanvasContext();
 
@@ -71,29 +76,41 @@ function AtlasNodeLayer(props: {
     <For each={props.nodes()}>
       {(rn) => {
         const editing = () => props.editingId() === rn.node.id;
+        const color = () => props.effectiveColor(rn.node.id);
+        // The container-tint override lives on this wrapper, an ancestor of
+        // NodeContainer's own root div — CSS custom properties inherit down
+        // to the soft-container div NodeContainer renders, so this reaches it
+        // with no color-shaped change to cactus (see NodeContainer.tsx:74).
+        const wrapperStyle = (): JSX.CSSProperties => {
+          const token = color();
+          return token ? { '--cactus-container-tint': `var(--color-atlas-${token}-container)` } : {};
+        };
         return (
-          <NodeContainer
-            nodeId={rn.node.id}
-            x={() => rn.x}
-            y={() => rn.y}
-            w={() => rn.w}
-            h={() => (editing() ? EDIT_HEIGHT : rn.h)}
-            softContainer={() => rn.hasChildren}
-            onPointerDown={(e) => {
-              ctx.onNodePointerDown(rn.node.id, e);
-              dragPointerDown(rn.node.id, e);
-            }}
-          >
-            <AtlasNodeContent
-              node={() => rn.node}
-              selected={() => ctx.isSelected(rn.node.id)}
-              editing={editing}
-              onEnterEdit={() => props.onEnterEdit(rn.node.id, { x: rn.x, y: rn.y, width: rn.w, height: EDIT_HEIGHT })}
-              onCommit={(form) => props.onCommit(rn.node.id, form)}
-              onCancel={props.onCancel}
-              onModeChange={(mode) => props.onModeChange(rn.node.id, mode)}
-            />
-          </NodeContainer>
+          <div style={wrapperStyle()}>
+            <NodeContainer
+              nodeId={rn.node.id}
+              x={() => rn.x}
+              y={() => rn.y}
+              w={() => rn.w}
+              h={() => (editing() ? EDIT_HEIGHT : rn.h)}
+              softContainer={() => rn.hasChildren}
+              onPointerDown={(e) => {
+                ctx.onNodePointerDown(rn.node.id, e);
+                dragPointerDown(rn.node.id, e);
+              }}
+            >
+              <AtlasNodeContent
+                node={() => rn.node}
+                color={color}
+                selected={() => ctx.isSelected(rn.node.id)}
+                editing={editing}
+                onEnterEdit={() => props.onEnterEdit(rn.node.id, { x: rn.x, y: rn.y, width: rn.w, height: EDIT_HEIGHT })}
+                onCommit={(form) => props.onCommit(rn.node.id, form)}
+                onCancel={props.onCancel}
+                onModeChange={(mode) => props.onModeChange(rn.node.id, mode)}
+              />
+            </NodeContainer>
+          </div>
         );
       }}
     </For>
@@ -103,6 +120,15 @@ function AtlasNodeLayer(props: {
 export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
   const [editingId, setEditingId] = createSignal<string | null>(null);
+
+  // Color preview: a local-only signal, scoped to the node being previewed so
+  // one node's hover can never tint another. Never passed to dispatchDoc.
+  const [previewColor, setPreviewColor] = createSignal<{ nodeId: string; token: AtlasColorToken | undefined } | undefined>();
+  function effectiveColor(nodeId: string): AtlasColorToken | undefined {
+    const preview = previewColor();
+    if (preview && preview.nodeId === nodeId) return preview.token;
+    return nodesById().get(nodeId)?.color;
+  }
 
   const nodes = createMemo(() => projectAtlasNodes(props.doc));
   const nodesById = createMemo(() => new Map(props.doc.nodes.map((n) => [n.id, n])));
@@ -201,10 +227,34 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     canvasRef.fitView(rects, 64);
   });
 
+  function selectColor(nodeId: string, token: AtlasColorToken) {
+    setPreviewColor(undefined);
+    const result = setNode(props.doc, nodeId, buildColorPatch(token));
+    if (result.ok) props.dispatchDoc(result.doc);
+  }
+
   function nodeContextMenu(nodeId: string): MenuSchema | undefined {
     const items: MenuItem[] = [
       { type: 'action', action: { id: 'node.duplicate', label: 'Duplicate', payload: { id: nodeId } } },
       { type: 'action', action: { id: 'node.add', label: 'Add Node', payload: { parent: nodeId } } },
+      { type: 'divider' },
+      {
+        type: 'submenu',
+        label: 'Color',
+        items: [
+          {
+            type: 'custom',
+            id: 'color-swatches',
+            render: () => (
+              <ColorSwatchGrid
+                current={() => nodesById().get(nodeId)?.color}
+                onPreview={(token) => setPreviewColor(token === undefined ? undefined : { nodeId, token })}
+                onSelect={(token) => selectColor(nodeId, token)}
+              />
+            ),
+          },
+        ],
+      },
     ];
     return { id: `node-menu-${nodeId}`, items };
   }
@@ -255,6 +305,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             onDragStart={beginDrag}
             onDrag={moveDrag}
             onDragEnd={endDrag}
+            effectiveColor={effectiveColor}
           />
         </Canvas>
       </div>
