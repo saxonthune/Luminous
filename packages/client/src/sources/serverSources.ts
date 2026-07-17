@@ -19,6 +19,14 @@ function rootOf(doc: DocumentMeta): string {
   return slash !== -1 ? doc.path.slice(0, slash) : 'workspace';
 }
 
+/** Absolute path of the document, joining rootDir with the path's in-root remainder. */
+function absPathOf(doc: DocumentMeta): string | undefined {
+  if (!doc.rootDir) return undefined;
+  const prefix = `${rootOf(doc)}/`;
+  const rel = doc.path.startsWith(prefix) ? doc.path.slice(prefix.length) : doc.path;
+  return `${doc.rootDir}/${rel}`;
+}
+
 export async function fetchServerSources(suffix: string): Promise<CanvasSource[]> {
   const res = await fetch('/api/documents');
   const data: DocumentsResponse = await res.json();
@@ -29,6 +37,7 @@ export async function fetchServerSources(suffix: string): Promise<CanvasSource[]
       label: doc.name,
       root: rootOf(doc),
       rootDir: doc.rootDir,
+      absPath: absPathOf(doc),
       load: () =>
         fetch('/api/document/' + encodeURIComponent(doc.path)).then((r) => r.text()),
     }));

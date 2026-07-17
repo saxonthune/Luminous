@@ -5,5 +5,7 @@ export interface CanvasSource {
   root: string;
   /** Resolved absolute directory of the root, shown under the group header. */
   rootDir?: string;
+  /** Resolved absolute path of the document itself, shown on row hover. */
+  absPath?: string;
   load: () => Promise<string>;
 }

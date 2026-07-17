@@ -114,6 +114,7 @@ export function DocumentPicker(props: DocumentPickerProps) {
                             <button
                               onClick={() => props.onSelect(source)}
                               disabled={!!props.loadingId}
+                              title={source.absPath ?? source.id}
                               class="flex flex-1 items-center justify-between py-3 text-left hover:text-accent disabled:opacity-60"
                             >
                               <span class="text-sm font-medium text-fg hover:text-accent">
