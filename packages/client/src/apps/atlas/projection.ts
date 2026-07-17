@@ -31,13 +31,42 @@ export interface AtlasRenderNode {
 }
 
 /**
+ * A Node's position intent, derived from its stored fields. `manual` is
+ * parent-relative, same frame as the tidy layout it overrides. The union is
+ * the seam future modes (`relative`, `pinned`, …) extend.
+ */
+export type NodePosition =
+  | { mode: 'auto' }
+  | { mode: 'manual'; x: number; y: number };
+
+export function nodePositionOf(node: AtlasNode): NodePosition {
+  return node.x !== undefined && node.y !== undefined
+    ? { mode: 'manual', x: node.x, y: node.y }
+    : { mode: 'auto' };
+}
+
+/**
  * Node geometry for rendering: layoutAtlas's parent-relative positions resolved
  * to absolute canvas coordinates, and sizes shrink-wrapped to each node's
  * children (leaves get a constant size). Plain arithmetic over the position
  * map — no cactus layout types cross out of layout.ts.
+ *
+ * A Node with a stored position (`nodePositionOf` mode `manual`) overrides the
+ * tidy position at that slot; an `auto` Node keeps the tidy layout. tidyLayout
+ * still runs for every Node — its output is the fallback and the auto siblings'
+ * source of truth — so a manual Node's relative slot can overlap an auto
+ * Node's; that's the loose canvas (see the task's Do NOT list).
  */
 export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
-  const relativePositions = layoutAtlas(doc);
+  const tidyPositions = layoutAtlas(doc);
+  const relativePositions = new Map<string, { x: number; y: number }>();
+  for (const node of doc.nodes) {
+    const intent = nodePositionOf(node);
+    relativePositions.set(
+      node.id,
+      intent.mode === 'manual' ? { x: intent.x, y: intent.y } : (tidyPositions.get(node.id) ?? { x: 0, y: 0 }),
+    );
+  }
   const parentOf = new Map<string, string>();
   const childrenOf = new Map<string, string[]>();
   for (const node of doc.nodes) {

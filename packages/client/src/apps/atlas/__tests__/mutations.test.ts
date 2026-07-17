@@ -9,6 +9,7 @@ import {
   duplicateNode,
   selfAndDescendantIds,
   resolveDrop,
+  applyDrop,
   describePendingDrop,
 } from '../mutations';
 
@@ -159,6 +160,53 @@ describe('resolveDrop', () => {
     const outcome = resolveDrop(d, 'a', 'child');
     expect(outcome.changed).toBe(true);
     if (outcome.changed) expect(outcome.result.ok).toBe(false);
+  });
+});
+
+describe('applyDrop', () => {
+  const d = doc([
+    { id: 'container', name: 'Container' },
+    { id: 'other', name: 'Other' },
+    { id: 'a', name: 'A', parent: 'container' },
+    { id: 'child', name: 'Child', parent: 'a' },
+  ]);
+
+  it('a plain move persists the dropped parent-relative x/y without reparenting', () => {
+    // container sits at (100, 100) absolute; "a" drops at (150, 260) absolute.
+    const result = applyDrop(d, 'a', 'container', { x: 150, y: 260 }, { x: 100, y: 100 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const a = result.doc.nodes.find((n) => n.id === 'a')!;
+    expect(a.parent).toBe('container');
+    expect(a.x).toBe(50);
+    expect(a.y).toBe(160);
+  });
+
+  it('a root-level move persists position relative to the origin', () => {
+    const result = applyDrop(d, 'other', null, { x: 300, y: 40 }, undefined);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const other = result.doc.nodes.find((n) => n.id === 'other')!;
+    expect(other.parent).toBeUndefined();
+    expect(other.x).toBe(300);
+    expect(other.y).toBe(40);
+  });
+
+  it('a reparenting drop carries both the new parent and the reparented-relative position', () => {
+    const result = applyDrop(d, 'a', 'other', { x: 520, y: 420 }, { x: 500, y: 400 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const a = result.doc.nodes.find((n) => n.id === 'a')!;
+    expect(a.parent).toBe('other');
+    expect(a.x).toBe(20);
+    expect(a.y).toBe(20);
+  });
+
+  it('a refused reparent (dropping onto a descendant) writes no position', () => {
+    const result = applyDrop(d, 'a', 'child', { x: 999, y: 999 }, { x: 0, y: 0 });
+    expect(result.ok).toBe(false);
+    const a = d.nodes.find((n) => n.id === 'a')!;
+    expect(a.x).toBeUndefined();
   });
 });
 

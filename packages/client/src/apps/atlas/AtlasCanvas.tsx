@@ -11,7 +11,7 @@ import {
   uniqueId,
   duplicateNode,
   selfAndDescendantIds,
-  resolveDrop,
+  applyDrop,
   describePendingDrop,
   type NodeEditForm,
 } from './mutations.ts';
@@ -155,10 +155,11 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     window.addEventListener('pointermove', dragPointerMove);
   }
 
-  // dx/dy (the final canvas-space delta) are unused here: Atlas positions
-  // are not yet persisted (bug 3, a separate task), so a drop only decides
-  // membership via resolveDrop — the layout recomputes x/y afterward.
-  function endDrag(nodeId: string, _dx: number, _dy: number) {
+  // A drop persists the Node's new parent-relative x/y so it no longer snaps
+  // back to its computed slot (see doc01.07.04 R24-R26). Reparenting composes
+  // with the position write: resolveDrop's reparent applies first, then the
+  // position is written relative to the (possibly new) parent.
+  function endDrag(nodeId: string, dx: number, dy: number) {
     if (dragPointerMove) {
       window.removeEventListener('pointermove', dragPointerMove);
       dragPointerMove = null;
@@ -166,13 +167,22 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     props.onPendingMembershipChange?.(null);
     dragStart = null;
 
-    const outcome = resolveDrop(props.doc, nodeId, lastHit);
+    const hitContainerId = lastHit;
     lastHit = null;
-    if (!outcome.changed) return;
-    if (outcome.result.ok) {
-      props.dispatchDoc(outcome.result.doc);
+
+    const rn = nodes().find((n) => n.node.id === nodeId);
+    if (!rn) return;
+
+    const newParentId = hitContainerId ?? undefined;
+    const parentRn = newParentId ? nodes().find((n) => n.node.id === newParentId) : undefined;
+    const droppedAbs = { x: rn.x + dx, y: rn.y + dy };
+    const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : undefined;
+
+    const result = applyDrop(props.doc, nodeId, hitContainerId, droppedAbs, parentAbs);
+    if (result.ok) {
+      props.dispatchDoc(result.doc);
     } else {
-      props.onDropRefused?.(outcome.result.error);
+      props.onDropRefused?.(result.error);
     }
   }
 

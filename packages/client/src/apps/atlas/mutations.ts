@@ -1,5 +1,5 @@
 import type { AtlasColorToken, AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
-import { reparent, type AtlasResult } from '@luminous/core/atlas';
+import { reparent, setNode, type AtlasResult } from '@luminous/core/atlas';
 
 /** Raw values collected from the Node edit form. */
 export interface NodeEditForm {
@@ -108,6 +108,30 @@ export function resolveDrop(doc: AtlasDocument, nodeId: string, hitContainerId: 
   const targetParent = hitContainerId ?? undefined;
   if (targetParent === node?.parent) return { changed: false };
   return { changed: true, result: reparent(doc, nodeId, targetParent) };
+}
+
+/**
+ * Composes a drag-drop into a single result: reparent (via `resolveDrop`) then
+ * persist the dropped Node's parent-relative position, so a move never snaps
+ * back (doc01.07.04 R24-R26). `droppedAbs` and `parentAbs` are canvas-space
+ * absolute positions the caller reads from its current projection —
+ * `parentAbs` is `undefined` for a root-level drop (relative to the origin).
+ * A refused reparent short-circuits: no position is written either, so the
+ * whole drop snaps back together.
+ */
+export function applyDrop(
+  doc: AtlasDocument,
+  nodeId: string,
+  hitContainerId: string | null,
+  droppedAbs: { x: number; y: number },
+  parentAbs: { x: number; y: number } | undefined,
+): AtlasResult {
+  const outcome = resolveDrop(doc, nodeId, hitContainerId);
+  if (outcome.changed && !outcome.result.ok) return outcome.result;
+  const workingDoc = outcome.changed && outcome.result.ok ? outcome.result.doc : doc;
+  const relX = droppedAbs.x - (parentAbs?.x ?? 0);
+  const relY = droppedAbs.y - (parentAbs?.y ?? 0);
+  return setNode(workingDoc, nodeId, { x: relX, y: relY });
 }
 
 /**
