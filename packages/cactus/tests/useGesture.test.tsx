@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from 'solid-js/web';
 import { useGesture, type Gesture } from '../src/interactions/useGesture';
 import type { NodeRect } from '../src/interactions/useBoxSelect';
@@ -150,6 +150,40 @@ describe('useGesture', () => {
     expect(gesture()).toEqual({ kind: 'idle' });
     move({ clientX: 10, clientY: 0 });
     expect(started).toEqual([]);
+    cleanup();
+  });
+
+  it('a press without movement does not capture the pointer, and a click on a child fires', () => {
+    const { el, cleanup } = mount();
+    el.setPointerCapture = vi.fn();
+    el.releasePointerCapture = vi.fn();
+    const child = document.createElement('button');
+    el.appendChild(child);
+    const onChildClick = vi.fn();
+    child.addEventListener('click', onChildClick);
+
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    expect(el.setPointerCapture).not.toHaveBeenCalled();
+    up();
+    expect(el.releasePointerCapture).not.toHaveBeenCalled();
+
+    // Never captured, so the click dispatches to the child normally instead
+    // of being redirected to the capturing ancestor.
+    child.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(onChildClick).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
+  it('crossing the drag threshold captures the pointer, and release frees it', () => {
+    const { el, cleanup } = mount();
+    el.setPointerCapture = vi.fn();
+    el.releasePointerCapture = vi.fn();
+
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    move({ clientX: 10, clientY: 0 });
+    expect(el.setPointerCapture).toHaveBeenCalledTimes(1);
+    up();
+    expect(el.releasePointerCapture).toHaveBeenCalledTimes(1);
     cleanup();
   });
 });

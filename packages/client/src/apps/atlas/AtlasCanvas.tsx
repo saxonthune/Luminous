@@ -8,6 +8,7 @@ import {
   projectAtlasNodes,
   childAreaOrigin,
   containerHeaderHeight,
+  liveAncestorSizes,
   type AtlasRenderNode,
 } from './projection.ts';
 import {
@@ -75,6 +76,12 @@ function AtlasNodeLayer(props: {
   onModeChange: (id: string, mode: AtlasContentMode) => void;
   onDragStart: (nodeId: string) => void;
   onDragEnd: (nodeId: string, dx: number, dy: number) => void;
+  /** Whether Ctrl/Meta is currently held during an active drag — see
+   * `beginCtrlTracking` on AtlasCanvas. */
+  ctrlHeld: () => boolean;
+  /** Fired synchronously on a node's pointerdown, before `useGesture` gets it
+   * — seeds ctrlHeld tracking from the initiating event. */
+  onPressStart: (e: PointerEvent) => void;
   /** The Color to draw a Node in — the preview override when this node is
    * being previewed, else its own `node.color`. Never written to the Document. */
   effectiveColor: (nodeId: string) => AtlasColorToken | undefined;
@@ -98,6 +105,24 @@ function AtlasNodeLayer(props: {
     const m = new Map<string, string>();
     for (const rn of props.nodes()) if (rn.node.parent) m.set(rn.node.id, rn.node.parent);
     return m;
+  });
+
+  // The Ctrl-drag live-expand preview (R5): while Ctrl is held and a Node is
+  // being dragged, each ancestor on its path grows to contain the dragged
+  // Node's live position. Empty whenever Ctrl is up or nothing is dragging,
+  // so rows fall back to their committed sizes — snap-back is just the
+  // absence of an override, no revert code needed.
+  const draggingId = () => {
+    const g = gesture.gesture();
+    return g.kind === 'draggingNode' ? g.nodeId : null;
+  };
+  const liveSizes = createMemo(() => {
+    if (!props.ctrlHeld()) return new Map<string, { w: number; h: number }>();
+    const id = draggingId();
+    if (!id) return new Map<string, { w: number; h: number }>();
+    const path = selfAndAncestors(id, parentOf());
+    const { dx, dy } = gesture.dragDelta();
+    return liveAncestorSizes(props.nodes(), path, dx, dy);
   });
 
   return (
@@ -139,15 +164,18 @@ function AtlasNodeLayer(props: {
               nodeId={rn.node.id}
               x={() => rn.x + dx()}
               y={() => rn.y + dy()}
-              w={() => rn.w}
+              w={() => liveSizes().get(rn.node.id)?.w ?? rn.w}
               h={() => {
                 if (editing()) return EDIT_HEIGHT;
                 const preview = resizePreview();
-                if (preview === undefined) return rn.h;
-                return rn.hasChildren ? rn.h - containerHeaderHeight(rn.node) + preview : preview;
+                if (preview !== undefined) {
+                  return rn.hasChildren ? rn.h - containerHeaderHeight(rn.node) + preview : preview;
+                }
+                return liveSizes().get(rn.node.id)?.h ?? rn.h;
               }}
               softContainer={() => rn.hasChildren}
               onPointerDown={(e) => {
+                props.onPressStart(e);
                 ctx.onNodePointerDown(rn.node.id, e);
                 gesture.beginPress(rn.node.id, e);
               }}
@@ -258,6 +286,35 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   const nodesById = createMemo(() => new Map(props.doc.nodes.map((n) => [n.id, n])));
   const edges = createMemo(() => toEdgeDeclarations(props.doc));
 
+  // R5: whether Ctrl/Meta is held during the current drag. Ctrl can be
+  // pressed/released mid-drag with no pointer event, so it's tracked via
+  // keydown/keyup while a press is active, seeded from the pointerdown event
+  // that started the press. Cleared on the matching pointerup — a click that
+  // never becomes a drag clears it the same way a drag's end does.
+  const [ctrlHeld, setCtrlHeld] = createSignal(false);
+  let ctrlTrackingActive = false;
+  function beginCtrlTracking(e: PointerEvent) {
+    setCtrlHeld(e.ctrlKey || e.metaKey);
+    if (ctrlTrackingActive) return;
+    ctrlTrackingActive = true;
+    const handleKeyDown = (ke: KeyboardEvent) => {
+      if (ke.key === 'Control' || ke.key === 'Meta') setCtrlHeld(true);
+    };
+    const handleKeyUp = (ke: KeyboardEvent) => {
+      if (ke.key === 'Control' || ke.key === 'Meta') setCtrlHeld(false);
+    };
+    const handlePointerUp = () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('pointerup', handlePointerUp);
+      ctrlTrackingActive = false;
+      setCtrlHeld(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('pointerup', handlePointerUp);
+  }
+
   let dragStart: { id: string; x: number; y: number } | null = null;
   let lastHit: string | null = null;
   let dragPointerMove: ((e: PointerEvent) => void) | null = null;
@@ -271,7 +328,9 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     // eslint-disable-next-line solid/reactivity -- pointermove callback, not a render path; props.doc is read fresh on each invocation
     dragPointerMove = (e: PointerEvent) => {
       lastHit = findContainerAt(e.clientX, e.clientY, exclude);
-      props.onPendingMembershipChange?.(describePendingDrop(props.doc, nodeId, lastHit));
+      // R5: Ctrl held means the Node stays a member of its current
+      // Container — no membership change is pending, so the toast is silent.
+      props.onPendingMembershipChange?.(ctrlHeld() ? null : describePendingDrop(props.doc, nodeId, lastHit));
     };
     window.addEventListener('pointermove', dragPointerMove);
   }
@@ -294,23 +353,31 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     const rn = nodes().find((n) => n.node.id === nodeId);
     if (!rn) return;
 
-    const newParentId = hitContainerId ?? undefined;
+    // R5: Ctrl held keeps the Node in its current Container — skip the
+    // reparent entirely (hitContainerId is ignored) and persist position
+    // relative to that same parent. Shrink-wrap then makes the expansion
+    // permanent since the Node's committed position now sits at its dragged
+    // spot inside the unchanged parent.
+    const ctrl = ctrlHeld();
+    const newParentId = ctrl ? rn.node.parent : (hitContainerId ?? undefined);
     const parentRn = newParentId ? nodes().find((n) => n.node.id === newParentId) : undefined;
     const droppedAbs = { x: rn.x + dx, y: rn.y + dy };
     const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : undefined;
 
-    const outcome = resolveDrop(props.doc, nodeId, hitContainerId);
-    if (outcome.changed && !outcome.result.ok) {
-      props.onDropRefused?.(outcome.result.error);
-      return;
+    const actions: AtlasAction[] = [];
+    if (!ctrl) {
+      const outcome = resolveDrop(props.doc, nodeId, hitContainerId);
+      if (outcome.changed && !outcome.result.ok) {
+        props.onDropRefused?.(outcome.result.error);
+        return;
+      }
+      if (outcome.changed) actions.push({ type: 'reparent', id: nodeId, parent: newParentId });
     }
     // A dropped Node's stored position is relative to its parent's child-area
     // origin, not the parent's top-left corner — must match applyDrop's inverse.
     const origin = parentAbs ? childAreaOrigin(parentRn?.node) : { x: 0, y: 0 };
     const relX = droppedAbs.x - (parentAbs?.x ?? 0) - origin.x;
     const relY = droppedAbs.y - (parentAbs?.y ?? 0) - origin.y;
-    const actions: AtlasAction[] = [];
-    if (outcome.changed) actions.push({ type: 'reparent', id: nodeId, parent: newParentId });
     actions.push({ type: 'setNode', id: nodeId, x: relX, y: relY });
     dispatchAction(actions, 'Move Node');
   }
@@ -497,6 +564,8 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             onModeChange={changeMode}
             onDragStart={beginDrag}
             onDragEnd={endDrag}
+            ctrlHeld={ctrlHeld}
+            onPressStart={beginCtrlTracking}
             effectiveColor={effectiveColor}
             previewContentHeight={previewContentHeight}
             onResizePreview={(nodeId, height) =>

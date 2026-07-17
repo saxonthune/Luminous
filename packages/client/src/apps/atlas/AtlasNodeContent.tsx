@@ -142,17 +142,10 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
 
   return (
     <div
-      class={`relative flex h-full w-full flex-col gap-1 overflow-hidden rounded border bg-surface p-2 ${
+      class={`relative flex h-full w-full flex-col gap-1 overflow-hidden rounded p-2 ${
         // Negative offset keeps the outline inside NodeContainer's overflow:hidden clip.
-        props.selected() ? 'border-accent-subtle outline outline-2 -outline-offset-2 outline-accent-subtle' : 'border-border-subtle'
+        props.selected() ? 'outline outline-2 -outline-offset-2 outline-accent-subtle' : ''
       }`}
-      style={{
-        ...colorStyle(),
-        // A container's own content stops at the header band — its children
-        // draw below, in the space this clamp reserves for them. The bound
-        // tracks the live resize preview, else the committed height.
-        ...(props.hasChildren() ? { 'max-height': `${effectiveHeight()}px` } : {}),
-      }}
       onDblClick={(e) => {
         if (props.editing()) return;
         e.stopPropagation();
@@ -167,29 +160,53 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
               <div class="truncate text-sm font-semibold text-fg">{props.node()?.name}</div>
               <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
             </div>
-            {/* Bounded to whatever's left of the box (the header clamp for a
-                container, the whole box for a leaf) and scrolls rather than
-                bleeding — generalizes the code view's existing clamp. */}
-            <div class="min-h-0 flex-1 overflow-auto">
-              <Show when={props.node()?.content?.mode === 'markdown' ? props.node()?.content : undefined}>
-                {(content) => (
-                  // SECURITY: marked does not sanitize HTML; atlas documents are
-                  // author-controlled workspace files, same trust class as graph data
-                  // (see InfoModal.tsx).
-                  <div
-                    class="atlas-node-md text-xs text-fg-muted"
-                    // eslint-disable-next-line solid/no-innerhtml
-                    innerHTML={marked.parse(content().text, { async: false }) as string}
-                  />
-                )}
-              </Show>
-              <Show when={props.node()?.content?.mode === 'code' ? props.node()?.content : undefined}>
-                {(content) => (
-                  <pre class="whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
-                    {content().text}
-                  </pre>
-                )}
-              </Show>
+            {/* The Content itself: a visually distinct bordered section beneath
+                the title/switcher row. For a container this is the header
+                band and stops there — its children draw below, in the space
+                this clamp reserves for them. For a leaf it fills the rest of
+                the box. The bound tracks the live resize preview, else the
+                committed height. */}
+            <div
+              class="relative min-h-0 flex-1 overflow-hidden rounded border border-border-subtle bg-surface"
+              style={{
+                ...colorStyle(),
+                ...(props.hasChildren() ? { 'max-height': `${effectiveHeight()}px` } : {}),
+              }}
+            >
+              <div class="h-full overflow-auto p-1 pb-3">
+                <Show when={props.node()?.content?.mode === 'markdown' ? props.node()?.content : undefined}>
+                  {(content) => (
+                    // SECURITY: marked does not sanitize HTML; atlas documents are
+                    // author-controlled workspace files, same trust class as graph data
+                    // (see InfoModal.tsx).
+                    <div
+                      class="atlas-node-md text-xs text-fg-muted"
+                      // eslint-disable-next-line solid/no-innerhtml
+                      innerHTML={marked.parse(content().text, { async: false }) as string}
+                    />
+                  )}
+                </Show>
+                <Show when={props.node()?.content?.mode === 'code' ? props.node()?.content : undefined}>
+                  {(content) => (
+                    <pre class="whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
+                      {content().text}
+                    </pre>
+                  )}
+                </Show>
+              </div>
+              {/* The content resize handle, a visible grip at the section's
+                  bottom edge — native pointerdown so its stopPropagation
+                  (beginResize) genuinely blocks NodeContainer's native
+                  pointerdown during bubbling, instead of losing the race to
+                  it (see the task's Do NOT list). */}
+              <div
+                class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
+                data-no-pan="true"
+                on:pointerdown={(e) => beginResize(e)}
+                onDblClick={(e) => e.stopPropagation()}
+              >
+                <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
+              </div>
             </div>
           </>
         }
@@ -230,20 +247,6 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
             onInput={(e) => setText(e.currentTarget.value)}
           />
         </form>
-      </Show>
-      {/* The content-band resize handle: sits exactly at the header/body
-          divider for a container, or the leaf's own bottom edge — both are
-          the effective bottom of this div, since its rendered height is
-          already clamped (container) or fills the box (leaf) to that value.
-          stopPropagation keeps a drag here from reaching the Node's own
-          move gesture (see the task's Do NOT list). */}
-      <Show when={!props.editing()}>
-        <div
-          class="absolute inset-x-0 bottom-0 h-1.5 cursor-row-resize"
-          data-no-pan="true"
-          onPointerDown={(e) => beginResize(e)}
-          onDblClick={(e) => e.stopPropagation()}
-        />
       </Show>
     </div>
   );

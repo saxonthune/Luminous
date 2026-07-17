@@ -112,7 +112,7 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
     setGesture({ kind: 'pressing', nodeId, startX, startY });
 
     const target = event.currentTarget as Element | null;
-    target?.setPointerCapture?.(event.pointerId);
+    let captured = false;
 
     const handlePointerMove = (e: PointerEvent) => {
       const g = gesture();
@@ -125,6 +125,8 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
       if (g.kind === 'pressing') {
         if (Math.hypot(rawDx, rawDy) < DRAG_THRESHOLD) return;
         setGesture({ kind: 'draggingNode', nodeId, startX, startY, dx: rawDx / k, dy: rawDy / k });
+        target?.setPointerCapture?.(event.pointerId);
+        captured = true;
         options.callbacks.onDragStart?.(nodeId);
         return;
       }
@@ -141,7 +143,7 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
         options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy);
       }
       setGesture(IDLE);
-      target?.releasePointerCapture?.(event.pointerId);
+      if (captured) target?.releasePointerCapture?.(event.pointerId);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
