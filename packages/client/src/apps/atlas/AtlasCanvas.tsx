@@ -3,7 +3,13 @@ import type { AtlasAction, AtlasColorToken, AtlasContentMode, AtlasDocument } fr
 import { applyAtlasBatch, invertAtlasBatch } from '@luminous/core/atlas';
 import { Canvas, NodeContainer, useCanvasContext, useGesture, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef, ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
-import { toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
+import {
+  toEdgeDeclarations,
+  projectAtlasNodes,
+  childAreaOrigin,
+  containerHeaderHeight,
+  type AtlasRenderNode,
+} from './projection.ts';
 import {
   buildContentEditPatch,
   buildModePatch,
@@ -35,6 +41,17 @@ const ATLAS_NODE_MD_STYLES = `
 // EDIT_HEIGHT (v1, no content-driven auto-grow).
 const EDIT_HEIGHT = 220;
 
+/** `id` and every ancestor reached by following `parentOf` upward. */
+export function selfAndAncestors(id: string, parentOf: Map<string, string>): string[] {
+  const result = [id];
+  let current = parentOf.get(id);
+  while (current !== undefined) {
+    result.push(current);
+    current = parentOf.get(current);
+  }
+  return result;
+}
+
 export interface AtlasCanvasProps {
   doc: AtlasDocument;
   dispatchDoc: (next: AtlasDocument) => void;
@@ -61,6 +78,11 @@ function AtlasNodeLayer(props: {
   /** The Color to draw a Node in — the preview override when this node is
    * being previewed, else its own `node.color`. Never written to the Document. */
   effectiveColor: (nodeId: string) => AtlasColorToken | undefined;
+  /** The live content-height drag preview — `undefined` outside of a drag,
+   * same pattern as color preview. */
+  previewContentHeight: () => { nodeId: string; height: number } | undefined;
+  onResizePreview: (nodeId: string, height: number | undefined) => void;
+  onResizeCommit: (nodeId: string, height: number) => void;
 }): JSX.Element {
   const ctx = useCanvasContext();
 
@@ -70,6 +92,12 @@ function AtlasNodeLayer(props: {
       onDragStart: (nodeId) => props.onDragStart(nodeId),
       onDragEnd: (nodeId, dx, dy) => props.onDragEnd(nodeId, dx, dy),
     },
+  });
+
+  const parentOf = createMemo(() => {
+    const m = new Map<string, string>();
+    for (const rn of props.nodes()) if (rn.node.parent) m.set(rn.node.id, rn.node.parent);
+    return m;
   });
 
   return (
@@ -88,8 +116,23 @@ function AtlasNodeLayer(props: {
         // Read the drag offset per-row from the gesture, not from a mapped
         // render-node object — nodes() stays reference-stable during a drag,
         // so <For> never disposes/rebuilds this row (see 1b in the task spec).
-        const dx = () => (gesture.isDraggingNode(rn.node.id) ? gesture.dragDelta().dx : 0);
-        const dy = () => (gesture.isDraggingNode(rn.node.id) ? gesture.dragDelta().dy : 0);
+        // A row moves when the dragged Node is itself or any ancestor, so a
+        // container drag carries its whole subtree along live.
+        const movedByDrag = () => {
+          for (const id of selfAndAncestors(rn.node.id, parentOf())) {
+            if (gesture.isDraggingNode(id)) return true;
+          }
+          return false;
+        };
+        const dx = () => (movedByDrag() ? gesture.dragDelta().dx : 0);
+        const dy = () => (movedByDrag() ? gesture.dragDelta().dy : 0);
+        // A live content-height drag grows/shrinks this row's own box: for a
+        // container, the header band grows by the same delta as its box; for
+        // a leaf, the whole box height IS the preview.
+        const resizePreview = () => {
+          const p = props.previewContentHeight();
+          return p && p.nodeId === rn.node.id ? p.height : undefined;
+        };
         return (
           <div style={wrapperStyle()}>
             <NodeContainer
@@ -97,7 +140,12 @@ function AtlasNodeLayer(props: {
               x={() => rn.x + dx()}
               y={() => rn.y + dy()}
               w={() => rn.w}
-              h={() => (editing() ? EDIT_HEIGHT : rn.h)}
+              h={() => {
+                if (editing()) return EDIT_HEIGHT;
+                const preview = resizePreview();
+                if (preview === undefined) return rn.h;
+                return rn.hasChildren ? rn.h - containerHeaderHeight(rn.node) + preview : preview;
+              }}
               softContainer={() => rn.hasChildren}
               onPointerDown={(e) => {
                 ctx.onNodePointerDown(rn.node.id, e);
@@ -106,6 +154,7 @@ function AtlasNodeLayer(props: {
             >
               <AtlasNodeContent
                 node={() => rn.node}
+                hasChildren={() => rn.hasChildren}
                 color={color}
                 selected={() => ctx.isSelected(rn.node.id)}
                 editing={editing}
@@ -113,6 +162,10 @@ function AtlasNodeLayer(props: {
                 onCommit={(form) => props.onCommit(rn.node.id, form)}
                 onCancel={props.onCancel}
                 onModeChange={(mode) => props.onModeChange(rn.node.id, mode)}
+                previewHeight={resizePreview}
+                zoomScale={() => ctx.transform().k}
+                onResizePreview={(height) => props.onResizePreview(rn.node.id, height)}
+                onResizeCommit={(height) => props.onResizeCommit(rn.node.id, height)}
               />
             </NodeContainer>
           </div>
@@ -193,6 +246,14 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     return nodesById().get(nodeId)?.color;
   }
 
+  // Content-height resize: a local-only live preview (mirrors previewColor)
+  // until release, when it's dispatched as one undoable setNode and cleared.
+  const [previewContentHeight, setPreviewContentHeight] = createSignal<{ nodeId: string; height: number } | undefined>();
+  function resizeContent(nodeId: string, height: number) {
+    setPreviewContentHeight(undefined);
+    dispatchAction([{ type: 'setNode', id: nodeId, contentHeight: height }], 'Resize Content');
+  }
+
   const nodes = createMemo(() => projectAtlasNodes(props.doc));
   const nodesById = createMemo(() => new Map(props.doc.nodes.map((n) => [n.id, n])));
   const edges = createMemo(() => toEdgeDeclarations(props.doc));
@@ -243,8 +304,11 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
       props.onDropRefused?.(outcome.result.error);
       return;
     }
-    const relX = droppedAbs.x - (parentAbs?.x ?? 0);
-    const relY = droppedAbs.y - (parentAbs?.y ?? 0);
+    // A dropped Node's stored position is relative to its parent's child-area
+    // origin, not the parent's top-left corner — must match applyDrop's inverse.
+    const origin = parentAbs ? childAreaOrigin(parentRn?.node) : { x: 0, y: 0 };
+    const relX = droppedAbs.x - (parentAbs?.x ?? 0) - origin.x;
+    const relY = droppedAbs.y - (parentAbs?.y ?? 0) - origin.y;
     const actions: AtlasAction[] = [];
     if (outcome.changed) actions.push({ type: 'reparent', id: nodeId, parent: newParentId });
     actions.push({ type: 'setNode', id: nodeId, x: relX, y: relY });
@@ -434,6 +498,11 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             onDragStart={beginDrag}
             onDragEnd={endDrag}
             effectiveColor={effectiveColor}
+            previewContentHeight={previewContentHeight}
+            onResizePreview={(nodeId, height) =>
+              setPreviewContentHeight(height === undefined ? undefined : { nodeId, height })
+            }
+            onResizeCommit={resizeContent}
           />
         </Canvas>
       </div>

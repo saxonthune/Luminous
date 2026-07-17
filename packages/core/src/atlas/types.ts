@@ -16,6 +16,9 @@ export interface AtlasNode {
   /** Offset from the parent's origin; canvas-absolute for a root node (no `parent`). */
   y?: number;
   color?: AtlasColorToken;
+  /** Stored override for the header band's height (a leaf's whole box, a
+   * container's own-content band). Absent falls back to the fixed constant. */
+  contentHeight?: number;
 }
 
 export type AtlasContentMode = 'markdown' | 'code';
@@ -48,6 +51,7 @@ export interface SetNodeAction {
   x?: number;
   y?: number;
   color?: AtlasColorToken;
+  contentHeight?: number;
 }
 
 export interface RemoveNodeAction {

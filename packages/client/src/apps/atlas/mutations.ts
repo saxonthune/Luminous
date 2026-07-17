@@ -1,5 +1,6 @@
 import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
 import { reparent, setNode, type AtlasResult } from '@luminous/core/atlas';
+import { childAreaOrigin } from './projection.ts';
 
 /** Raw values collected from the Node edit form. */
 export interface NodeEditForm {
@@ -157,8 +158,13 @@ export function applyDrop(
   const outcome = resolveDrop(doc, nodeId, hitContainerId);
   if (outcome.changed && !outcome.result.ok) return outcome.result;
   const workingDoc = outcome.changed && outcome.result.ok ? outcome.result.doc : doc;
-  const relX = droppedAbs.x - (parentAbs?.x ?? 0);
-  const relY = droppedAbs.y - (parentAbs?.y ?? 0);
+  // A dropped Node's stored position is relative to its parent's child-area
+  // origin, not the parent's top-left corner — see childAreaOrigin. The
+  // parent's own header override (if any) governs that origin.
+  const parentNode = hitContainerId !== null ? doc.nodes.find((n) => n.id === hitContainerId) : undefined;
+  const origin = parentAbs ? childAreaOrigin(parentNode) : { x: 0, y: 0 };
+  const relX = droppedAbs.x - (parentAbs?.x ?? 0) - origin.x;
+  const relY = droppedAbs.y - (parentAbs?.y ?? 0) - origin.y;
   return setNode(workingDoc, nodeId, { x: relX, y: relY });
 }
 

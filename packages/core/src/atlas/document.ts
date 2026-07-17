@@ -10,7 +10,7 @@ export function emptyAtlasDocument(): AtlasDocument {
 }
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'nodes', 'edges']);
-const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y', 'color']);
+const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y', 'color', 'contentHeight']);
 const CONTENT_FIELDS = new Set(['text', 'mode']);
 const EDGE_FIELDS = new Set(['from', 'to', 'label']);
 
@@ -81,6 +81,13 @@ function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | 
     issues.push(`${path}.color: unrecognized color token "${String(n['color'])}"`);
     ok = false;
   }
+  if (
+    n['contentHeight'] !== undefined &&
+    !(typeof n['contentHeight'] === 'number' && Number.isFinite(n['contentHeight']))
+  ) {
+    issues.push(`${path}.contentHeight: must be a finite number`);
+    ok = false;
+  }
   if (!ok) return undefined;
   const node: AtlasNode = { id: n['id'] as string, name: n['name'] as string };
   if (n['parent'] !== undefined) node.parent = n['parent'] as string;
@@ -88,6 +95,7 @@ function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | 
   if (n['x'] !== undefined) node.x = n['x'] as number;
   if (n['y'] !== undefined) node.y = n['y'] as number;
   if (n['color'] !== undefined) node.color = n['color'] as AtlasNode['color'];
+  if (n['contentHeight'] !== undefined) node.contentHeight = n['contentHeight'] as number;
   return node;
 }
 
@@ -224,6 +232,7 @@ function serializeNode(node: AtlasNode): Record<string, unknown> {
   if (node.x !== undefined) out['x'] = node.x;
   if (node.y !== undefined) out['y'] = node.y;
   if (node.color !== undefined) out['color'] = node.color;
+  if (node.contentHeight !== undefined) out['contentHeight'] = node.contentHeight;
   return out;
 }
 

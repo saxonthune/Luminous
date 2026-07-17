@@ -23,7 +23,7 @@ export function addNode(
 export function setNode(
   doc: AtlasDocument,
   id: string,
-  patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken },
+  patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken; contentHeight?: number },
 ): AtlasResult {
   const index = doc.nodes.findIndex(n => n.id === id);
   if (index === -1) {
@@ -57,6 +57,13 @@ export function setNode(
       delete node.color;
     } else {
       node.color = patch.color;
+    }
+  }
+  if ('contentHeight' in patch) {
+    if (patch.contentHeight === undefined) {
+      delete node.contentHeight;
+    } else {
+      node.contentHeight = patch.contentHeight;
     }
   }
   const nodes = [...doc.nodes];
@@ -154,12 +161,13 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
         });
         break;
       case 'setNode': {
-        const patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken } = {};
+        const patch: { name?: string; content?: AtlasContent; x?: number; y?: number; color?: AtlasColorToken; contentHeight?: number } = {};
         if (action.name !== undefined) patch.name = action.name;
         if ('content' in action) patch.content = action.content;
         if ('x' in action) patch.x = action.x;
         if ('y' in action) patch.y = action.y;
         if ('color' in action) patch.color = action.color;
+        if ('contentHeight' in action) patch.contentHeight = action.contentHeight;
         result = setNode(current, action.id, patch);
         break;
       }

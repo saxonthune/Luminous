@@ -6,6 +6,37 @@ import { layoutAtlas } from './layout.ts';
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 72;
 const CONTAINER_PADDING = 10;
+export const CONTAINER_HEADER = 72; // reserved band for a container's own content, absent an override
+/** Floor on a dragged `contentHeight`, so the resize handle can't collapse a Node to nothing. */
+export const MIN_CONTENT_HEIGHT = 40;
+
+/** A container's header-band height: its stored override, else the fixed constant. */
+export function containerHeaderHeight(node?: AtlasNode): number {
+  return node?.contentHeight ?? CONTAINER_HEADER;
+}
+
+/** A leaf's whole-box height: its stored override, else the fixed constant. */
+export function leafHeight(node?: AtlasNode): number {
+  return node?.contentHeight ?? NODE_HEIGHT;
+}
+
+/** Parent-relative: where a container's children begin, inside its own rect. */
+export function childAreaOrigin(node?: AtlasNode): { x: number; y: number } {
+  return { x: CONTAINER_PADDING, y: containerHeaderHeight(node) };
+}
+
+/** The absolute child-area rect of a container render node — its own rect
+ * shrunk by the header band (the node's own override, else the fixed
+ * constant) and padding on every other side. */
+export function childArea(rn: { x: number; y: number; w: number; h: number; node?: AtlasNode }): { x: number; y: number; w: number; h: number } {
+  const header = containerHeaderHeight(rn.node);
+  return {
+    x: rn.x + CONTAINER_PADDING,
+    y: rn.y + header,
+    w: rn.w - 2 * CONTAINER_PADDING,
+    h: rn.h - header - CONTAINER_PADDING,
+  };
+}
 
 function edgeId(edge: AtlasEdge, i: number): string {
   return `${edge.from}->${edge.to}-${i}`;
@@ -59,6 +90,7 @@ export function nodePositionOf(node: AtlasNode): NodePosition {
  */
 export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
   const tidyPositions = layoutAtlas(doc);
+  const nodeById = new Map(doc.nodes.map((node) => [node.id, node]));
   const relativePositions = new Map<string, { x: number; y: number }>();
   for (const node of doc.nodes) {
     const intent = nodePositionOf(node);
@@ -76,14 +108,35 @@ export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
     childrenOf.get(node.parent)!.push(node.id);
   }
 
+  // The fold (resolveAbsolutePositionByParentOf) walks parent chains adding
+  // each level's relative position, so a child's stored/tidy slot must be
+  // offset into its parent's child area here — sizeOf above deliberately
+  // reads the un-offset relativePositions instead, to avoid double-counting.
+  // Each parent's own header override (if any) governs its own children's
+  // offset, so the origin is looked up per parent rather than once globally.
+  const foldPositions = new Map<string, { x: number; y: number }>();
+  for (const [id, pos] of relativePositions) {
+    const parentId = parentOf.get(id);
+    if (parentId === undefined) {
+      foldPositions.set(id, pos);
+      continue;
+    }
+    const origin = childAreaOrigin(nodeById.get(parentId));
+    foldPositions.set(id, { x: pos.x + origin.x, y: pos.y + origin.y });
+  }
+
+  // sizeOf measures children in their raw (un-offset) relative frame — the
+  // header/padding inset is added by the formula below, not baked into
+  // relativePositions, so the two don't double-count.
   const sizes = new Map<string, { w: number; h: number }>();
   function sizeOf(id: string): { w: number; h: number } {
     const cached = sizes.get(id);
     if (cached) return cached;
     const children = childrenOf.get(id) ?? [];
+    const node = nodeById.get(id);
     let size: { w: number; h: number };
     if (children.length === 0) {
-      size = { w: NODE_WIDTH, h: NODE_HEIGHT };
+      size = { w: NODE_WIDTH, h: leafHeight(node) };
     } else {
       let maxX = 0;
       let maxY = 0;
@@ -93,7 +146,7 @@ export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
         maxX = Math.max(maxX, pos.x + childSize.w);
         maxY = Math.max(maxY, pos.y + childSize.h);
       }
-      size = { w: maxX + CONTAINER_PADDING, h: maxY + CONTAINER_PADDING };
+      size = { w: Math.max(NODE_WIDTH, maxX + 2 * CONTAINER_PADDING), h: containerHeaderHeight(node) + maxY + CONTAINER_PADDING };
     }
     sizes.set(id, size);
     return size;
@@ -114,7 +167,7 @@ export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
   const ordered = [...doc.nodes].sort((a, b) => depthOf(a.id) - depthOf(b.id));
 
   return ordered.map((node) => {
-    const abs = resolveAbsolutePositionByParentOf(node.id, relativePositions, parentOf);
+    const abs = resolveAbsolutePositionByParentOf(node.id, foldPositions, parentOf);
     const size = sizeOf(node.id);
     return {
       node,

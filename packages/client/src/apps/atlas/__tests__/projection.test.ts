@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { AtlasDocument } from '@luminous/core/atlas';
 import { layoutAtlas } from '../layout.ts';
-import { toEdgeDeclarations, projectAtlasNodes, nodePositionOf } from '../projection.ts';
+import { toEdgeDeclarations, projectAtlasNodes, nodePositionOf, childAreaOrigin, childArea, CONTAINER_HEADER } from '../projection.ts';
 
 const doc: AtlasDocument = {
   v: 1,
@@ -107,7 +107,7 @@ describe('projectAtlasNodes — manual position override', () => {
     expect(sibling.y).toBe(tidyPos.y);
   });
 
-  it('resolves a manual child relative to its parent\'s absolute position', () => {
+  it('resolves a manual child relative to its parent\'s child-area origin', () => {
     const manualDoc: AtlasDocument = {
       v: 1,
       nodes: [
@@ -119,10 +119,101 @@ describe('projectAtlasNodes — manual position override', () => {
     const rendered = projectAtlasNodes(manualDoc);
     const root = rendered.find((rn) => rn.node.id === 'root')!;
     const child = rendered.find((rn) => rn.node.id === 'child')!;
+    const origin = childAreaOrigin();
     expect(root.x).toBe(100);
     expect(root.y).toBe(200);
-    expect(child.x).toBe(110);
-    expect(child.y).toBe(220);
+    expect(child.x).toBe(100 + 10 + origin.x);
+    expect(child.y).toBe(200 + 20 + origin.y);
+  });
+});
+
+describe('header/child-area split', () => {
+  it('reserves the header band in a container\'s size, not in a leaf\'s', () => {
+    const rendered = projectAtlasNodes(doc);
+    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
+    const root = byId.get('root')!;
+    const sibling = byId.get('sibling')!;
+    expect(root.h).toBeGreaterThanOrEqual(CONTAINER_HEADER);
+    expect(sibling.h).toBe(72);
+  });
+
+  it('places a child below the header band, inside its parent\'s child area', () => {
+    const rendered = projectAtlasNodes(doc);
+    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
+    const root = byId.get('root')!;
+    const childA = byId.get('child-a')!;
+    const area = childArea(root);
+    expect(childA.y).toBeGreaterThanOrEqual(area.y);
+    expect(childA.x).toBeGreaterThanOrEqual(area.x);
+  });
+
+  it('composes the header offset down two levels for a grandchild', () => {
+    const rendered = projectAtlasNodes(doc);
+    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
+    const childA = byId.get('child-a')!;
+    const grandchild = byId.get('grandchild')!;
+    const area = childArea(childA);
+    expect(grandchild.y).toBeGreaterThanOrEqual(area.y);
+    expect(grandchild.x).toBeGreaterThanOrEqual(area.x);
+  });
+});
+
+describe('contentHeight override', () => {
+  it('sizes a leaf\'s box to its stored contentHeight instead of NODE_HEIGHT', () => {
+    const tallLeaf: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', contentHeight: 300 }],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(tallLeaf);
+    const a = rendered.find((rn) => rn.node.id === 'a')!;
+    expect(a.h).toBe(300);
+  });
+
+  it('sizes a container\'s header band to its stored contentHeight instead of CONTAINER_HEADER', () => {
+    const tallHeader: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root', contentHeight: 300 },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(tallHeader);
+    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
+    const root = byId.get('root')!;
+    const child = byId.get('child')!;
+    // The container's size grows to include the taller header band.
+    expect(root.h).toBeGreaterThanOrEqual(300);
+    // The child area shifts down by the new header height.
+    const area = childArea(root);
+    expect(area.y).toBe(root.y + 300);
+    expect(child.y).toBeGreaterThanOrEqual(area.y);
+  });
+
+  it('propagates a grown header up through an ancestor chain', () => {
+    const nested: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root' },
+        { id: 'mid', name: 'Mid', parent: 'root', contentHeight: 250 },
+        { id: 'leaf', name: 'Leaf', parent: 'mid' },
+      ],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(nested);
+    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
+    const root = byId.get('root')!;
+    const mid = byId.get('mid')!;
+    const leaf = byId.get('leaf')!;
+    // mid's own size reflects its grown header band.
+    expect(mid.h).toBeGreaterThanOrEqual(250 + leaf.h);
+    // root's size grows to include mid's larger box — no impact-analysis
+    // code, just the sizing recursion revisiting mid's new size.
+    expect(root.h).toBeGreaterThanOrEqual(CONTAINER_HEADER + mid.h);
+    // leaf still sits inside mid's (shifted) child area.
+    const midArea = childArea(mid);
+    expect(leaf.y).toBeGreaterThanOrEqual(midArea.y);
   });
 });
 

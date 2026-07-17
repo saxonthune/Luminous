@@ -10,6 +10,7 @@ function invertSetNode(before: AtlasDocument, action: SetNodeAction): AtlasActio
   if ('x' in action) inverse.x = node.x;
   if ('y' in action) inverse.y = node.y;
   if ('color' in action) inverse.color = node.color;
+  if ('contentHeight' in action) inverse.contentHeight = node.contentHeight;
   return [inverse];
 }
 

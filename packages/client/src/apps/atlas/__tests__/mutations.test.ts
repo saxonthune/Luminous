@@ -12,6 +12,7 @@ import {
   applyDrop,
   describePendingDrop,
 } from '../mutations';
+import { projectAtlasNodes } from '../projection.ts';
 
 describe('buildContentEditPatch', () => {
   it('carries the form name and text, preserving the current Mode', () => {
@@ -171,15 +172,16 @@ describe('applyDrop', () => {
     { id: 'child', name: 'Child', parent: 'a' },
   ]);
 
-  it('a plain move persists the dropped parent-relative x/y without reparenting', () => {
+  it('a plain move persists the dropped parent-relative x/y, offset by the child-area origin', () => {
     // container sits at (100, 100) absolute; "a" drops at (150, 260) absolute.
+    // Stored position is relative to the child area, not the container's top-left.
     const result = applyDrop(d, 'a', 'container', { x: 150, y: 260 }, { x: 100, y: 100 });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const a = result.doc.nodes.find((n) => n.id === 'a')!;
     expect(a.parent).toBe('container');
-    expect(a.x).toBe(50);
-    expect(a.y).toBe(160);
+    expect(a.x).toBe(40);
+    expect(a.y).toBe(88);
   });
 
   it('a root-level move persists position relative to the origin', () => {
@@ -198,8 +200,8 @@ describe('applyDrop', () => {
     if (!result.ok) return;
     const a = result.doc.nodes.find((n) => n.id === 'a')!;
     expect(a.parent).toBe('other');
-    expect(a.x).toBe(20);
-    expect(a.y).toBe(20);
+    expect(a.x).toBe(10);
+    expect(a.y).toBe(-52);
   });
 
   it('a refused reparent (dropping onto a descendant) writes no position', () => {
@@ -207,6 +209,25 @@ describe('applyDrop', () => {
     expect(result.ok).toBe(false);
     const a = d.nodes.find((n) => n.id === 'a')!;
     expect(a.x).toBeUndefined();
+  });
+
+  it('round-trips: a dropped child re-projects to the same screen position it was dropped at', () => {
+    const start = doc([
+      { id: 'container', name: 'Container', x: 300, y: 300 },
+      { id: 'child', name: 'Child', parent: 'container' },
+    ]);
+    const beforeDrop = projectAtlasNodes(start);
+    const containerRn = beforeDrop.find((rn) => rn.node.id === 'container')!;
+    const droppedAbs = { x: containerRn.x + 60, y: containerRn.y + 90 };
+
+    const result = applyDrop(start, 'child', 'container', droppedAbs, { x: containerRn.x, y: containerRn.y });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const rendered = projectAtlasNodes(result.doc);
+    const childRn = rendered.find((rn) => rn.node.id === 'child')!;
+    expect(childRn.x).toBe(droppedAbs.x);
+    expect(childRn.y).toBe(droppedAbs.y);
   });
 });
 

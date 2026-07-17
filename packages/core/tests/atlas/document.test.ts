@@ -298,6 +298,24 @@ describe('parseAtlasDocument', () => {
     const result = parseAtlasDocument(serializeAtlasDocument(doc));
     expect(result).toEqual({ ok: true, doc });
   });
+
+  it('accepts a node with a valid content height', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', contentHeight: 150 }], edges: [] };
+    const result = parseAtlasDocument(JSON.stringify(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('rejects a non-finite content height', () => {
+    const result = parseAtlasDocument('{"v":1,"nodes":[{"id":"a","name":"A","contentHeight":1e999}],"edges":[]}');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0].contentHeight: must be a finite number');
+  });
+
+  it('round-trips a content height through serialize/parse', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', contentHeight: 220 }], edges: [] };
+    const result = parseAtlasDocument(serializeAtlasDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
 });
 
 describe('serializeAtlasDocument', () => {
@@ -318,5 +336,11 @@ describe('serializeAtlasDocument', () => {
     const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
     const text = serializeAtlasDocument(doc);
     expect(text).not.toContain('"color"');
+  });
+
+  it('omits content height for a node with no content height', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const text = serializeAtlasDocument(doc);
+    expect(text).not.toContain('"contentHeight"');
   });
 });

@@ -2,9 +2,14 @@ import { createEffect, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { marked } from 'marked';
 import type { AtlasColorToken, AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
 import type { NodeEditForm } from './mutations.ts';
+import { containerHeaderHeight, leafHeight, MIN_CONTENT_HEIGHT } from './projection.ts';
 
 export interface AtlasNodeContentProps {
   node: () => AtlasNode | undefined;
+  /** Whether this Node has children — a container's own content is clamped
+   * to the header band so it never bleeds behind the child area (a leaf
+   * fills its whole box). */
+  hasChildren: () => boolean;
   /** The Color to draw this Node in — the live preview when hovering a
    * swatch, else its own `node.color`. `undefined` draws the unchanged
    * bg-surface/border-border-subtle look. */
@@ -15,6 +20,16 @@ export interface AtlasNodeContentProps {
   onCommit: (form: NodeEditForm) => void;
   onCancel: () => void;
   onModeChange: (mode: AtlasContentMode) => void;
+  /** The live drag preview for this Node's content height — `undefined`
+   * outside of a drag. Owned by AtlasCanvas, same pattern as color preview. */
+  previewHeight: () => number | undefined;
+  /** Canvas zoom scale, so a screen-pixel drag maps to a canvas-space height. */
+  zoomScale: () => number;
+  /** Fires with a live height while dragging the resize handle, and
+   * `undefined` once the drag ends (including a cancelled drag). */
+  onResizePreview: (height: number | undefined) => void;
+  /** Fires once, on release, with the final height to persist. */
+  onResizeCommit: (height: number) => void;
 }
 
 const MODES: Array<{ value: AtlasContentMode; label: string }> = [
@@ -76,6 +91,37 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
     props.onCommit({ name: name(), text: text() });
   }
 
+  // The value this Node's box is currently sized to: the live drag preview
+  // while resizing, else the committed height (stored override, or the
+  // fixed constant for this Node's kind).
+  const committedHeight = () =>
+    props.hasChildren() ? containerHeaderHeight(props.node()) : leafHeight(props.node());
+  const effectiveHeight = () => props.previewHeight() ?? committedHeight();
+
+  // Drags the header/body divider (container) or a leaf's bottom edge.
+  // Raw pointer events, not cactus's useGesture drag — this is the
+  // Node's own content band, not the whole-Node move/resize gesture.
+  function beginResize(e: PointerEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = effectiveHeight();
+
+    const handleMove = (ev: PointerEvent) => {
+      const dy = (ev.clientY - startY) / props.zoomScale();
+      props.onResizePreview(Math.max(MIN_CONTENT_HEIGHT, startHeight + dy));
+    };
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      const finalHeight = props.previewHeight();
+      props.onResizePreview(undefined);
+      if (finalHeight !== undefined) props.onResizeCommit(finalHeight);
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }
+
   // The Color overrides bg-surface/border-border-subtle via inline style
   // (which always wins over the classes) rather than a dynamic Tailwind
   // class, since a `bg-atlas-${token}` string built at runtime is invisible
@@ -89,11 +135,17 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
 
   return (
     <div
-      class={`flex h-full w-full flex-col gap-1 overflow-hidden rounded border bg-surface p-2 ${
+      class={`relative flex h-full w-full flex-col gap-1 overflow-hidden rounded border bg-surface p-2 ${
         // Negative offset keeps the outline inside NodeContainer's overflow:hidden clip.
         props.selected() ? 'border-accent-subtle outline outline-2 -outline-offset-2 outline-accent-subtle' : 'border-border-subtle'
       }`}
-      style={colorStyle()}
+      style={{
+        ...colorStyle(),
+        // A container's own content stops at the header band — its children
+        // draw below, in the space this clamp reserves for them. The bound
+        // tracks the live resize preview, else the committed height.
+        ...(props.hasChildren() ? { 'max-height': `${effectiveHeight()}px` } : {}),
+      }}
       onDblClick={(e) => {
         if (props.editing()) return;
         e.stopPropagation();
@@ -108,25 +160,30 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
               <div class="truncate text-sm font-semibold text-fg">{props.node()?.name}</div>
               <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
             </div>
-            <Show when={props.node()?.content?.mode === 'markdown' ? props.node()?.content : undefined}>
-              {(content) => (
-                // SECURITY: marked does not sanitize HTML; atlas documents are
-                // author-controlled workspace files, same trust class as graph data
-                // (see InfoModal.tsx).
-                <div
-                  class="atlas-node-md text-xs text-fg-muted"
-                  // eslint-disable-next-line solid/no-innerhtml
-                  innerHTML={marked.parse(content().text, { async: false }) as string}
-                />
-              )}
-            </Show>
-            <Show when={props.node()?.content?.mode === 'code' ? props.node()?.content : undefined}>
-              {(content) => (
-                <pre class="max-h-16 overflow-auto whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
-                  {content().text}
-                </pre>
-              )}
-            </Show>
+            {/* Bounded to whatever's left of the box (the header clamp for a
+                container, the whole box for a leaf) and scrolls rather than
+                bleeding — generalizes the code view's existing clamp. */}
+            <div class="min-h-0 flex-1 overflow-auto">
+              <Show when={props.node()?.content?.mode === 'markdown' ? props.node()?.content : undefined}>
+                {(content) => (
+                  // SECURITY: marked does not sanitize HTML; atlas documents are
+                  // author-controlled workspace files, same trust class as graph data
+                  // (see InfoModal.tsx).
+                  <div
+                    class="atlas-node-md text-xs text-fg-muted"
+                    // eslint-disable-next-line solid/no-innerhtml
+                    innerHTML={marked.parse(content().text, { async: false }) as string}
+                  />
+                )}
+              </Show>
+              <Show when={props.node()?.content?.mode === 'code' ? props.node()?.content : undefined}>
+                {(content) => (
+                  <pre class="whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
+                    {content().text}
+                  </pre>
+                )}
+              </Show>
+            </div>
           </>
         }
       >
@@ -166,6 +223,20 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
             onInput={(e) => setText(e.currentTarget.value)}
           />
         </form>
+      </Show>
+      {/* The content-band resize handle: sits exactly at the header/body
+          divider for a container, or the leaf's own bottom edge — both are
+          the effective bottom of this div, since its rendered height is
+          already clamped (container) or fills the box (leaf) to that value.
+          stopPropagation keeps a drag here from reaching the Node's own
+          move gesture (see the task's Do NOT list). */}
+      <Show when={!props.editing()}>
+        <div
+          class="absolute inset-x-0 bottom-0 h-1.5 cursor-row-resize"
+          data-no-pan="true"
+          onPointerDown={(e) => beginResize(e)}
+          onDblClick={(e) => e.stopPropagation()}
+        />
       </Show>
     </div>
   );

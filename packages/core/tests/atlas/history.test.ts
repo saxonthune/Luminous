@@ -56,6 +56,12 @@ describe('invertAtlasAction', () => {
     expect(inverse[0]).toHaveProperty('color');
   });
 
+  it('inverts a content height setNode by restoring the prior value', () => {
+    const before = doc([{ id: 'a', name: 'A', contentHeight: 100 }]);
+    const action: AtlasAction = { type: 'setNode', id: 'a', contentHeight: 200 };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setNode', id: 'a', contentHeight: 100 }]);
+  });
+
   it('throws for removeNode', () => {
     const before = doc([{ id: 'a', name: 'A' }]);
     const action: AtlasAction = { type: 'removeNode', id: 'a' };
@@ -78,9 +84,13 @@ describe('invertAtlasBatch', () => {
     roundTrips(before, [{ type: 'reparent', id: 'a', parent: 'p2' }]);
   });
 
-  it('round-trips setNode fields, including field-deletion (content, color, x/y)', () => {
-    const before = doc([{ id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown' }, color: 'rose', x: 1, y: 2 }]);
-    roundTrips(before, [{ type: 'setNode', id: 'a', content: undefined, color: undefined, x: undefined, y: undefined }]);
+  it('round-trips setNode fields, including field-deletion (content, color, x/y, contentHeight)', () => {
+    const before = doc([
+      { id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown' }, color: 'rose', x: 1, y: 2, contentHeight: 100 },
+    ]);
+    roundTrips(before, [
+      { type: 'setNode', id: 'a', content: undefined, color: undefined, x: undefined, y: undefined, contentHeight: undefined },
+    ]);
   });
 
   it('round-trips setNode name', () => {

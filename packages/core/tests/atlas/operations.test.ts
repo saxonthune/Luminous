@@ -129,6 +129,26 @@ describe('setNode', () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', color: 'moss' });
   });
+
+  it('sets a content height', () => {
+    const result = setNode(base, 'a', { contentHeight: 150 });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'A', contentHeight: 150 });
+  });
+
+  it('clears a content height when explicitly set to undefined', () => {
+    const withHeight: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', contentHeight: 150 }], edges: [] };
+    const result = setNode(withHeight, 'a', { contentHeight: undefined });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0].contentHeight).toBeUndefined();
+  });
+
+  it('leaves an existing content height untouched when the patch carries only name', () => {
+    const withHeight: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', contentHeight: 150 }], edges: [] };
+    const result = setNode(withHeight, 'a', { name: 'Renamed' });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', contentHeight: 150 });
+  });
 });
 
 describe('removeNode', () => {
@@ -256,6 +276,17 @@ describe('applyAtlasBatch', () => {
     expect(result).toEqual({
       ok: true,
       doc: { v: 1, nodes: [{ id: 'a', name: 'A', color: 'moss' }], edges: [] },
+    });
+  });
+
+  it('carries a content height through a setNode action', () => {
+    const result = applyAtlasBatch(emptyAtlasDocument(), [
+      { type: 'addNode', id: 'a', name: 'A' },
+      { type: 'setNode', id: 'a', contentHeight: 150 },
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      doc: { v: 1, nodes: [{ id: 'a', name: 'A', contentHeight: 150 }], edges: [] },
     });
   });
 

@@ -4,7 +4,7 @@
 // constraint — "Column" is forgotten once this returns.
 import type { AtlasDocument, SetNodeAction } from '@luminous/core/atlas';
 import { setNode } from '@luminous/core/atlas';
-import { projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
+import { projectAtlasNodes, childArea, type AtlasRenderNode } from './projection.ts';
 
 const COLUMN_GAP = 24;
 const MAX_SHIFT_TRIES = 20;
@@ -46,7 +46,9 @@ export function arrangeAsColumn(doc: AtlasDocument, ids: string[]): AtlasDocumen
 
   const parentId = selected[0].node.parent;
   const parentRn = parentId ? byId.get(parentId) : undefined;
-  const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : { x: 0, y: 0 };
+  // Stored positions are relative to the parent's child area, not its
+  // top-left corner — matches applyDrop/endDrag's childAreaOrigin inverse.
+  const parentAbs = parentRn ? childArea(parentRn) : { x: 0, y: 0 };
 
   const ordered = [...selected].sort((a, b) => a.y - b.y);
   const columnWidth = Math.max(...ordered.map((rn) => rn.w));

@@ -90,4 +90,18 @@ describe('arrangeAsColumn', () => {
     const d = doc([{ id: 'a', name: 'A' }]);
     expect(arrangeAsColumn(d, ['a'])).toBe(d);
   });
+
+  it('anchors a column inside its container\'s child area, below the header', () => {
+    const d = doc([
+      { id: 'container', name: 'Container', x: 300, y: 300 },
+      { id: 'a', name: 'A', parent: 'container', x: 0, y: 300 },
+      { id: 'b', name: 'B', parent: 'container', x: 0, y: 0 },
+    ]);
+    const result = arrangeAsColumn(d, ['a', 'b']);
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+    // Stored positions are relative to the child area, so a non-negative
+    // anchor here means the column sits below the header, not over it.
+    expect(byId.get('b')!.y).toBeGreaterThanOrEqual(0);
+    expect(byId.get('a')!.y).toBeGreaterThanOrEqual(0);
+  });
 });
