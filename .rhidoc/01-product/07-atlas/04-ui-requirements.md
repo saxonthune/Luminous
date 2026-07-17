@@ -36,6 +36,22 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
   Node's contents are drawn as markdown or as code.
 - **R11.** The system shall save each Node's switcher setting to the Document, so
   that an agent can read the intention of the contents.
+- **R12.** The system shall allow the user to change a Node's Color.
+- **R13.** The system shall draw a Node in the Color the Node is set to, and shall
+  draw that Node's Container in the same Color, drawing the Container lighter than
+  the Node so the two are told apart.
+- **R14.** The system shall set a Color from a fixed set of Color Tokens, and shall
+  not offer the user an arbitrary color.
+- **R15.** When the user right clicks a Node or a Container, the system shall open a
+  context menu.
+- **R16.** The context menu shall offer a Color option.
+- **R17.** When the user hovers the Color option, the system shall open a submenu of
+  Swatches, laid out as two rows of Swatches.
+- **R18.** While the user hovers a Swatch, the system shall draw the Node in that
+  Swatch's Color, and shall discard that Color if the user does not select the
+  Swatch.
+- **R19.** When the user selects a Swatch, the system shall set the Node's Color to
+  that Swatch's Color.
 
 ## Input-command bindings
 
@@ -61,3 +77,8 @@ baseline navigation or gaps with no assigned requirement yet.
 | Node in edit mode | Ctrl+Enter, or blur | Commit the edits to the Document | R7 |
 | Node in edit mode | Esc | Cancel the edits | R7 |
 | Node switcher | left click | Switch the Node's Content Mode between markdown and code | R10 |
+| Node | right click | Open the context menu | R15 |
+| Container | right click | Open the context menu | R15 |
+| Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
+| Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
+| Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |

@@ -22,6 +22,16 @@ section use these terms exactly.
   - Code is drawn monospaced.
   - A Mode records the intention of a Content, so an agent can read it.
 
+- **Color** — the Color Token a Node is drawn in.
+  - A Node has at most one Color.
+  - A Node and its Container are drawn in the same Color.
+
+- **Color Token** — a named entry in the fixed set of colors a Node can be set to.
+  - A Color Token names a color; it is not itself a color.
+  - Each theme decides what color a Color Token is drawn as.
+
+- **Swatch** — the Color Token as the user picks it, drawn in the color it names.
+
 ## Structure
 
 - **Container** — what a Node holds other Nodes in.
