@@ -63,6 +63,28 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
   activates the fit control, and shall not move the camera when the Document
   changes.
 
+## Layout
+
+Where a Node sits, and how the user controls it. A Node's position is either
+computed for it or set by the user; a user-set position is kept in the Document.
+An arrange command lets the user set several Nodes' positions at once.
+
+- **R24.** The system shall allow the user to place a Node at a custom position,
+  both for a top-level Node and for a Child within its Container.
+- **R25.** When the user moves a Node, the system shall persist the Node's position
+  to the Document, so the Node remains where it was placed when the Document is
+  reloaded.
+- **R26.** When a Node has no stored position, the system shall compute a position
+  for it.
+- **R27.** The system shall allow the user to arrange a selection of Nodes with a
+  layout command.
+- **R28.** The system shall offer the arrange command as an "Arrange as" submenu in
+  the context menu, with "Column" as an option.
+- **R29.** When the selected Nodes are not all in the same Container, the system
+  shall disable the arrange command.
+- **R30.** When the system arranges Nodes within a Container, it shall place them
+  without overlapping other Nodes in the Container.
+
 ## Input-command bindings
 
 An **input** is an ordered pair — a target and an interaction method (left click,
@@ -79,7 +101,7 @@ baseline navigation or gaps with no assigned requirement yet.
 
 | Target | Interaction | Action | Req |
 |---|---|---|---|
-| Node | left click + drag | Move the Node | R1 |
+| Node | left click + drag | Move the Node and persist its position | R1, R24, R25 |
 | Node | drag into a Container | Add the Node to the Container | R4 |
 | Node | drag out of a Container | Remove the Node from the Container | R4 |
 | Node | Ctrl + drag out of a Container | Expand the Container's boundary to contain the Node being moved | R5 |
@@ -89,6 +111,8 @@ baseline navigation or gaps with no assigned requirement yet.
 | Node switcher | left click | Switch the Node's Content Mode between markdown and code | R10 |
 | Node | right click | Open the context menu | R15 |
 | Container | right click | Open the context menu | R15 |
+| Node selection (2+) | right click | Open the context menu with an "Arrange as" submenu | R15, R28 |
+| Arrange as ▸ Column | left click | Arrange the selected Nodes as a column, without overlapping other Nodes in the Container | R27, R28, R30 |
 | Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
