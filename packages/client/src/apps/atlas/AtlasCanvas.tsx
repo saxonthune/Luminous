@@ -2,7 +2,7 @@ import { For, createMemo, createEffect, createSignal, on, type JSX } from 'solid
 import type { AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
 import { addNode, setNode } from '@luminous/core/atlas';
 import { Canvas, NodeContainer, useCanvasContext, useNodeDrag, findContainerAt } from '@luminous/cactus';
-import type { CanvasRef, MenuSchema, MenuItem } from '@luminous/cactus';
+import type { CanvasRef, ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
 import { toEdgeDeclarations, projectAtlasNodes, type AtlasRenderNode } from './projection.ts';
 import {
   buildContentEditPatch,
@@ -50,7 +50,7 @@ export interface AtlasCanvasProps {
 function AtlasNodeLayer(props: {
   nodes: () => AtlasRenderNode[];
   editingId: () => string | null;
-  onEnterEdit: (id: string, rect: { x: number; y: number; width: number; height: number }) => void;
+  onEnterEdit: (id: string) => void;
   onCommit: (id: string, form: NodeEditForm) => void;
   onCancel: () => void;
   onModeChange: (id: string, mode: AtlasContentMode) => void;
@@ -104,7 +104,7 @@ function AtlasNodeLayer(props: {
                 color={color}
                 selected={() => ctx.isSelected(rn.node.id)}
                 editing={editing}
-                onEnterEdit={() => props.onEnterEdit(rn.node.id, { x: rn.x, y: rn.y, width: rn.w, height: EDIT_HEIGHT })}
+                onEnterEdit={() => props.onEnterEdit(rn.node.id)}
                 onCommit={(form) => props.onCommit(rn.node.id, form)}
                 onCancel={props.onCancel}
                 onModeChange={(mode) => props.onModeChange(rn.node.id, mode)}
@@ -189,9 +189,8 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     }
   }
 
-  function enterEdit(id: string, rect: { x: number; y: number; width: number; height: number }) {
+  function enterEdit(id: string) {
     setEditingId(id);
-    canvasRef?.fitView([rect], 64);
   }
 
   function commitEdit(id: string, form: NodeEditForm) {
@@ -220,12 +219,14 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     if (id && !doc.nodes.some((n) => n.id === id)) setEditingId(null);
   }));
 
-  createEffect(() => {
+  // R23: the camera moves only on pan, zoom, or the fit control. Nothing here
+  // may move it in response to a Document change.
+  function fitAll() {
     const list = nodes();
     if (!canvasRef || list.length === 0) return;
     const rects = list.map((n) => ({ x: n.x, y: n.y, width: n.w, height: n.h }));
     canvasRef.fitView(rects, 64);
-  });
+  }
 
   function selectColor(nodeId: string, token: AtlasColorToken) {
     setPreviewColor(undefined);
@@ -259,6 +260,15 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     return { id: `node-menu-${nodeId}`, items };
   }
 
+  const chrome: ChromeSchema = {
+    top: [
+      {
+        id: 'atlas-view-toolbar',
+        controls: [{ type: 'button', action: { id: 'view.fit', label: 'Fit' } }],
+      },
+    ],
+  };
+
   function backgroundContextMenu(): MenuSchema | undefined {
     return {
       id: 'background-menu',
@@ -268,6 +278,10 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
 
   function onAction(id: string, payload?: unknown) {
     switch (id) {
+      case 'view.fit': {
+        fitAll();
+        break;
+      }
       case 'node.duplicate': {
         const { id: nodeId } = payload as { id: string };
         props.dispatchDoc(duplicateNode(props.doc, nodeId));
@@ -291,6 +305,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         <Canvas
           ref={(r) => { canvasRef = r; }}
           edges={edges()}
+          chrome={chrome}
           nodeContextMenu={nodeContextMenu}
           backgroundContextMenu={backgroundContextMenu}
           onAction={onAction}

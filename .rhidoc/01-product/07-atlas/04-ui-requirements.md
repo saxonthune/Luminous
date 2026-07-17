@@ -53,6 +53,16 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
 - **R19.** When the user selects a Swatch, the system shall set the Node's Color to
   that Swatch's Color.
 
+## UI chrome
+
+- **R20.** The system shall display a toolbar in the Atlas view.
+- **R21.** The toolbar shall offer a fit control.
+- **R22.** When the user activates the fit control, the system shall move the camera
+  to frame every Node.
+- **R23.** The system shall move the camera only when the user pans, zooms, or
+  activates the fit control, and shall not move the camera when the Document
+  changes.
+
 ## Input-command bindings
 
 An **input** is an ordered pair — a target and an interaction method (left click,
@@ -82,3 +92,4 @@ baseline navigation or gaps with no assigned requirement yet.
 | Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
+| Fit control | left click | Move the camera to frame every Node | R22 |

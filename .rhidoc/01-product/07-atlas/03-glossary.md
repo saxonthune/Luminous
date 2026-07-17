@@ -10,6 +10,14 @@ deps: [doc01.07.01]
 Atlas's controlled vocabulary, in the entry kinds of doc00.05. Docs in this
 section use these terms exactly.
 
+A term is added here only when the user asks for it. A term does not earn a place
+by being capitalized in a requirement. Two kinds are kept out:
+
+- **Basic, universal concepts** — UI elements, camera, and the like. These mean the
+  same thing in every tool, so defining them says nothing about Atlas.
+- **A state of another concept** — a term like "fit" is a state of the camera, not a
+  concept of its own, and does not carry enough meaning to stand alone.
+
 ## Document
 
 - **Node** — the basic unit.
