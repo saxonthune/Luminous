@@ -2,6 +2,7 @@ import { createSignal, createSelector, onMount, onCleanup } from 'solid-js';
 import type { Transform } from './useViewport.js';
 import { rectsIntersect, type NodeRect } from './useBoxSelect.js';
 import { traceCallback, markInteraction } from '../perf.js';
+import { isOverContainerInterior } from '../geometry/containment.js';
 
 export interface ResizeDirection {
   horizontal: 'left' | 'right' | 'none';
@@ -301,7 +302,14 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
 
         const target = e.target as HTMLElement;
         if (target.closest?.('[data-no-pan]')) return;
-        if (target.closest?.('[data-container-id]')) return;
+        // A press inside some node's own box bails out, UNLESS it lands on
+        // that node's `[data-soft-container]` interior (Atlas's container
+        // body) — a container-interior press marquees instead of moving the
+        // node. Dataflow's boxes have no soft-container interior, so
+        // isOverContainerInterior is always false for them and this collapses
+        // to the old "any node press bails" behavior.
+        const nodeEl = target.closest?.('[data-container-id]');
+        if (nodeEl && !isOverContainerInterior(nodeEl, e.clientX, e.clientY)) return;
 
         e.preventDefault();
         e.stopPropagation();

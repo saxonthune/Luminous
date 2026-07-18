@@ -10,6 +10,11 @@ export interface NodeContainerProps {
   w: () => number;
   h: () => number;
   softContainer?: () => boolean;
+  /** Inset of the soft-container box from this Node's own edges (top/left/
+   * right/bottom, in px) — when absent, the box fills the Node at `inset:0`
+   * as before (Canvas, Dataflow). Atlas supplies this to draw the container
+   * as its own bordered box, separated from the Node's outer edge by a bezel. */
+  containerInset?: () => { top: number; left: number; right: number; bottom: number };
   onPointerDown?: (e: PointerEvent) => void;
   onContextMenu?: (e: MouseEvent) => void;
   children?: JSX.Element;
@@ -70,7 +75,10 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
           data-soft-container="true"
           style={{
             position: 'absolute',
-            inset: '0',
+            top: `${props.containerInset?.().top ?? 0}px`,
+            left: `${props.containerInset?.().left ?? 0}px`,
+            right: `${props.containerInset?.().right ?? 0}px`,
+            bottom: `${props.containerInset?.().bottom ?? 0}px`,
             'z-index': '-1',
             background: 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
             border: '1px solid var(--cactus-border-subtle, #f3f4f6)',

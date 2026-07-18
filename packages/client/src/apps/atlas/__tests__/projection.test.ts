@@ -7,7 +7,10 @@ import {
   nodePositionOf,
   childAreaOrigin,
   childArea,
+  containerHeaderHeight,
   CONTAINER_HEADER,
+  CONTAINER_BEZEL,
+  CONTAINER_PADDING,
   NODE_WIDTH,
 } from '../projection.ts';
 
@@ -178,7 +181,7 @@ describe('contentHeight override', () => {
     expect(a.h).toBe(300);
   });
 
-  it('sizes a container\'s header band to its stored contentHeight instead of CONTAINER_HEADER', () => {
+  it('does not grow a container\'s header band from its stored contentHeight — the header is a fixed constant', () => {
     const tallHeader: AtlasDocument = {
       v: 1,
       nodes: [
@@ -191,37 +194,30 @@ describe('contentHeight override', () => {
     const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
     const root = byId.get('root')!;
     const child = byId.get('child')!;
-    // The container's size grows to include the taller header band.
-    expect(root.h).toBeGreaterThanOrEqual(300);
-    // The child area shifts down by the new header height.
+    expect(containerHeaderHeight(root.node)).toBe(CONTAINER_HEADER);
+    // The child area still starts right after the fixed header + bezel,
+    // unaffected by the stored contentHeight override.
     const area = childArea(root);
-    expect(area.y).toBe(root.y + 300);
+    expect(area.y).toBe(root.y + CONTAINER_HEADER + CONTAINER_BEZEL);
     expect(child.y).toBeGreaterThanOrEqual(area.y);
   });
+});
 
-  it('propagates a grown header up through an ancestor chain', () => {
-    const nested: AtlasDocument = {
-      v: 1,
-      nodes: [
-        { id: 'root', name: 'Root' },
-        { id: 'mid', name: 'Mid', parent: 'root', contentHeight: 250 },
-        { id: 'leaf', name: 'Leaf', parent: 'mid' },
-      ],
-      edges: [],
-    };
-    const rendered = projectAtlasNodes(nested);
-    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
-    const root = byId.get('root')!;
-    const mid = byId.get('mid')!;
-    const leaf = byId.get('leaf')!;
-    // mid's own size reflects its grown header band.
-    expect(mid.h).toBeGreaterThanOrEqual(250 + leaf.h);
-    // root's size grows to include mid's larger box — no impact-analysis
-    // code, just the sizing recursion revisiting mid's new size.
-    expect(root.h).toBeGreaterThanOrEqual(CONTAINER_HEADER + mid.h);
-    // leaf still sits inside mid's (shifted) child area.
-    const midArea = childArea(mid);
-    expect(leaf.y).toBeGreaterThanOrEqual(midArea.y);
+describe('CONTAINER_BEZEL', () => {
+  it('insets the container box from the node\'s outer edge on every side', () => {
+    const rendered = projectAtlasNodes(doc);
+    const root = rendered.find((rn) => rn.node.id === 'root')!;
+    const area = childArea(root);
+    expect(area.x).toBe(root.x + CONTAINER_BEZEL);
+    expect(area.y).toBe(root.y + CONTAINER_HEADER + CONTAINER_BEZEL);
+    expect(area.w).toBe(root.w - 2 * CONTAINER_BEZEL);
+    expect(area.h).toBe(root.h - CONTAINER_HEADER - 2 * CONTAINER_BEZEL);
+  });
+
+  it('offsets childAreaOrigin by the bezel beyond the padding and header', () => {
+    const origin = childAreaOrigin();
+    expect(origin.x).toBe(CONTAINER_PADDING + CONTAINER_BEZEL);
+    expect(origin.y).toBe(CONTAINER_HEADER + CONTAINER_BEZEL);
   });
 });
 
@@ -263,6 +259,64 @@ describe('contentWidth override', () => {
     const rendered = projectAtlasNodes(narrowOverride);
     const root = rendered.find((rn) => rn.node.id === 'root')!;
     expect(root.w).toBeGreaterThanOrEqual(NODE_WIDTH);
+  });
+});
+
+describe('contentHeight as a container-box floor', () => {
+  it('floors a container\'s box height to its stored contentHeight when taller than its children', () => {
+    const tallContainer: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root', contentHeight: 500 },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(tallContainer);
+    const root = rendered.find((rn) => rn.node.id === 'root')!;
+    expect(root.h).toBe(500);
+  });
+
+  it('lets the children\'s extent win when it is larger than contentHeight, never clipping them', () => {
+    const shortOverride: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root', contentHeight: 1 },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    const rendered = projectAtlasNodes(shortOverride);
+    const byId = new Map(rendered.map((rn) => [rn.node.id, rn]));
+    const root = byId.get('root')!;
+    const child = byId.get('child')!;
+    // The child's box still fits entirely inside the root's, despite the
+    // tiny stored floor — the children-extent term wins (R38).
+    expect(root.h).toBeGreaterThanOrEqual(CONTAINER_HEADER);
+    expect(child.y + child.h).toBeLessThanOrEqual(root.y + root.h);
+  });
+
+  it('behaves as pure shrink-wrap when no contentHeight is stored — unchanged from the previous phase', () => {
+    const noOverride: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root' },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    const withOverride: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'root', name: 'Root', contentHeight: 1 },
+        { id: 'child', name: 'Child', parent: 'root' },
+      ],
+      edges: [],
+    };
+    // A stored floor smaller than the shrink-wrapped extent changes nothing.
+    const plain = projectAtlasNodes(noOverride).find((rn) => rn.node.id === 'root')!;
+    const overridden = projectAtlasNodes(withOverride).find((rn) => rn.node.id === 'root')!;
+    expect(overridden.h).toBe(plain.h);
   });
 });
 

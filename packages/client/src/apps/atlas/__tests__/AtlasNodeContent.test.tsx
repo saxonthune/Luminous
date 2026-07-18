@@ -34,6 +34,7 @@ function mount(overrides: Partial<AtlasNodeContentProps> = {}) {
     onCancel,
     onModeChange,
     previewSize: () => undefined,
+    frameSize: () => ({ width: 220, height: 72 }),
     zoomScale: () => 1,
     onResizePreview,
     onResizeCommit,
@@ -81,6 +82,18 @@ describe('AtlasNodeContent interactions', () => {
 
     window.dispatchEvent(new MouseEvent('pointermove', { clientX: 0, clientY: 10 }));
     expect(onResizePreview).toHaveBeenCalled();
+
+    window.dispatchEvent(new MouseEvent('pointerup', {}));
+  });
+
+  it('a container\'s corner grip drags both axes, sizing the container box (frameSize) rather than the header', () => {
+    const { onResizePreview } = mount({ hasChildren: () => true, frameSize: () => ({ width: 300, height: 150 }) });
+    const handles = container.querySelectorAll('[data-no-pan="true"]');
+    const corner = handles[handles.length - 1] as HTMLElement;
+    corner.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 0 }));
+
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 10, clientY: 20 }));
+    expect(onResizePreview).toHaveBeenCalledWith({ width: 310, height: 170 });
 
     window.dispatchEvent(new MouseEvent('pointerup', {}));
   });

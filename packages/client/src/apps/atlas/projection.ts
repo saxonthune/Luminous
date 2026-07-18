@@ -6,15 +6,21 @@ import { layoutAtlas } from './layout.ts';
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 72;
 export const CONTAINER_PADDING = 10;
-export const CONTAINER_HEADER = 72; // reserved band for a container's own content, absent an override
+export const CONTAINER_HEADER = 72; // fixed title-row + Content-band height; not user-draggable
+/** Gap between a Node's outer edge and the container box's edge — the bezel
+ * that makes the container's own bordered box visible as distinct from the
+ * Node's frame (doc01.07.04 R40). */
+export const CONTAINER_BEZEL = 8;
 /** Floor on a dragged `contentHeight`, so the resize handle can't collapse a Node to nothing. */
 export const MIN_CONTENT_HEIGHT = 40;
 /** Floor on a dragged `contentWidth`, so the resize handle can't collapse a Node to nothing. */
 export const MIN_CONTENT_WIDTH = 80;
 
-/** A container's header-band height: its stored override, else the fixed constant. */
-export function containerHeaderHeight(node?: AtlasNode): number {
-  return node?.contentHeight ?? CONTAINER_HEADER;
+/** A container's header-band height: a fixed constant (title row + the
+ * always-present Content band). `contentHeight` no longer governs this — it
+ * is reserved as the container-box floor for the resize phase instead. */
+export function containerHeaderHeight(_node?: AtlasNode): number {
+  return CONTAINER_HEADER;
 }
 
 /** A leaf's whole-box height: its stored override, else the fixed constant. */
@@ -27,32 +33,40 @@ export function leafWidth(node?: AtlasNode): number {
   return node?.contentWidth ?? NODE_WIDTH;
 }
 
-/** Parent-relative: where a container's children begin, inside its own rect. */
+/** Parent-relative: where a container's children begin, inside its own rect —
+ * past the header band, then the bezel gap into the container box, then the
+ * box's own interior padding. */
 export function childAreaOrigin(node?: AtlasNode): { x: number; y: number } {
-  return { x: CONTAINER_PADDING, y: containerHeaderHeight(node) };
+  return { x: CONTAINER_PADDING + CONTAINER_BEZEL, y: containerHeaderHeight(node) + CONTAINER_BEZEL };
 }
 
-/** The absolute child-area rect of a container render node — its own rect
- * shrunk by the header band (the node's own override, else the fixed
- * constant) and padding on every other side. */
+/** The absolute rect of a container render node's own bordered box — its rect
+ * inset by the header band on top and the bezel on every side the box sits
+ * inset from (left, right, bottom, and the gap below the header). */
 export function childArea(rn: { x: number; y: number; w: number; h: number; node?: AtlasNode }): { x: number; y: number; w: number; h: number } {
   const header = containerHeaderHeight(rn.node);
   return {
-    x: rn.x + CONTAINER_PADDING,
-    y: rn.y + header,
-    w: rn.w - 2 * CONTAINER_PADDING,
-    h: rn.h - header - CONTAINER_PADDING,
+    x: rn.x + CONTAINER_BEZEL,
+    y: rn.y + header + CONTAINER_BEZEL,
+    w: rn.w - 2 * CONTAINER_BEZEL,
+    h: rn.h - header - 2 * CONTAINER_BEZEL,
   };
 }
 
 /** A container's shrink-wrapped size given its children's bounding-box extent
  * `(maxX, maxY)` in its own child-area frame — the formula `sizeOf` (below)
  * and `growAncestors` (`layoutOverride.ts`) both need single-sourced, since a
- * live grow must match the committed re-projection of the same geometry. */
+ * live grow must match the committed re-projection of the same geometry.
+ * Both axes account for the bezel inset so the container box wraps its
+ * children with the bezel visible. `contentWidth`/`contentHeight`, when set,
+ * are a floor on top of the child extent — never a ceiling — so a resize can
+ * only ever grow the box past its children, never clip them (R38, R39). */
 export function shrinkWrapSize(node: AtlasNode | undefined, maxX: number, maxY: number): { w: number; h: number } {
+  const childExtentW = Math.max(leafWidth(node), maxX + 2 * (CONTAINER_PADDING + CONTAINER_BEZEL));
+  const childExtentH = containerHeaderHeight(node) + CONTAINER_BEZEL + maxY + CONTAINER_BEZEL;
   return {
-    w: Math.max(leafWidth(node), maxX + 2 * CONTAINER_PADDING),
-    h: containerHeaderHeight(node) + maxY + CONTAINER_PADDING,
+    w: node?.contentWidth !== undefined ? Math.max(childExtentW, node.contentWidth) : childExtentW,
+    h: node?.contentHeight !== undefined ? Math.max(childExtentH, node.contentHeight) : childExtentH,
   };
 }
 

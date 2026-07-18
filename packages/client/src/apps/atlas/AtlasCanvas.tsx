@@ -1,13 +1,14 @@
-import { For, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
+import { For, Show, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
 import type { AtlasAction, AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
 import { applyAtlasBatch, invertAtlasBatch } from '@luminous/core/atlas';
-import { Canvas, NodeContainer, useCanvasContext, useGesture, findContainerAt } from '@luminous/cactus';
+import { Canvas, NodeContainer, useCanvasContext, useGesture, findContainerAt, isOverContainerInterior } from '@luminous/cactus';
 import type { CanvasRef, ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
 import {
   toEdgeDeclarations,
   projectAtlasNodes,
   childAreaOrigin,
   containerHeaderHeight,
+  CONTAINER_BEZEL,
   type AtlasRenderNode,
 } from './projection.ts';
 import {
@@ -132,12 +133,12 @@ function AtlasNodeLayer(props: {
     }
 
     // Content-resize: the resized Node's own box grows by the width/height
-    // delta. A height delta also shifts its children down by the same
-    // amount (the header band grows); a width delta never shifts children
-    // (widening doesn't push them). Ancestors grow once, from both deltas
-    // together, to contain the resized Node — matching the committed
-    // re-projection of the same contentWidth/contentHeight (see
-    // projection.ts's childAreaOrigin + shrink-wrap).
+    // delta, for both a leaf and a container — a container's frame grip
+    // sizes the container box (the shrink-wrap floor, projection.ts), so it
+    // never shifts children; it only adds empty room past their extent.
+    // Ancestors grow once, from both deltas together, to contain the resized
+    // Node — matching the committed re-projection of the same
+    // contentWidth/contentHeight (see projection.ts's shrinkWrapSize).
     const preview = props.previewContentSize();
     if (preview) {
       const rn = props.nodes().find((n) => n.node.id === preview.nodeId);
@@ -149,10 +150,8 @@ function AtlasNodeLayer(props: {
           ownDelta.dw = dw;
         }
         if (preview.height !== undefined) {
-          const committed = rn.hasChildren ? containerHeaderHeight(rn.node) : rn.h;
-          const dh = preview.height - committed;
+          const dh = preview.height - rn.h;
           addDelta(map, preview.nodeId, { dh });
-          shiftSubtree(map, preview.nodeId, childrenOf(), 0, dh, { includeRoot: false });
           ownDelta.dh = dh;
         }
         growAncestors(map, preview.nodeId, parentOf(), props.nodes(), ownDelta);
@@ -195,7 +194,22 @@ function AtlasNodeLayer(props: {
               w={() => rn.w + delta().dw}
               h={() => (editing() ? EDIT_HEIGHT : rn.h + delta().dh)}
               softContainer={() => rn.hasChildren}
+              containerInset={() => ({
+                top: containerHeaderHeight(rn.node),
+                left: CONTAINER_BEZEL,
+                right: CONTAINER_BEZEL,
+                bottom: CONTAINER_BEZEL,
+              })}
               onPointerDown={(e) => {
+                // R36: a container Node moves only from its header/frame — a
+                // press on its soft-container interior falls through
+                // untouched (no beginPress, no stopPropagation) so the
+                // canvas-level marquee listener (useGesture's boxSelect,
+                // relaxed for `[data-soft-container]` in useGesture.ts) sees
+                // it instead. A leaf has no interior, so it always moves.
+                if (rn.hasChildren && isOverContainerInterior(e.currentTarget as Element, e.clientX, e.clientY)) {
+                  return;
+                }
                 props.onPressStart(e);
                 ctx.onNodePointerDown(rn.node.id, e);
                 gesture.beginPress(rn.node.id, e);
@@ -212,6 +226,7 @@ function AtlasNodeLayer(props: {
                 onCancel={props.onCancel}
                 onModeChange={(mode) => props.onModeChange(rn.node.id, mode)}
                 previewSize={resizePreview}
+                frameSize={() => ({ width: rn.w, height: rn.h })}
                 zoomScale={() => ctx.transform().k}
                 onResizePreview={(size) => props.onResizePreview(rn.node.id, size)}
                 onResizeCommit={(size) => props.onResizeCommit(rn.node.id, size)}
@@ -227,6 +242,7 @@ function AtlasNodeLayer(props: {
 export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
   const [editingId, setEditingId] = createSignal<string | null>(null);
+  const [selectedCount, setSelectedCount] = createSignal(0);
 
   const history = useAtlasHistory();
   // Set just before an own dispatch reaches props.dispatchDoc so the
@@ -580,6 +596,11 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
           nodeContextMenu={nodeContextMenu}
           backgroundContextMenu={backgroundContextMenu}
           onAction={onAction}
+          onSelectionChange={(ids) => setSelectedCount(ids.length)}
+          boxSelect={{
+            trigger: 'drag',
+            getNodeRects: () => nodes().map((rn) => ({ id: rn.node.id, x: rn.x, y: rn.y, width: rn.w, height: rn.h })),
+          }}
         >
           <AtlasNodeLayer
             nodes={nodes}
@@ -600,6 +621,14 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             onResizeCommit={resizeContent}
           />
         </Canvas>
+        <Show when={selectedCount() > 1}>
+          <div
+            data-testid="selection-count"
+            class="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border-subtle bg-surface px-3 py-1 text-xs text-fg shadow-sm"
+          >
+            {selectedCount()} Nodes selected
+          </div>
+        </Show>
       </div>
     </>
   );

@@ -2,6 +2,27 @@
 export { computeBounds, isPointInRect } from './geometry.js';
 export type { Rect, ComputeBoundsOptions } from './geometry.js';
 
+import { isPointInRect } from './geometry.js';
+
+/**
+ * Whether a screen point falls within a node's `[data-soft-container]`
+ * interior — the drawn container box, not the header/frame around it. The
+ * interior element itself is `pointer-events: none` (NodeContainer.tsx), so
+ * it never receives the native hit-test; callers instead pass the node's own
+ * element (found via `closest('[data-container-id]')` or `currentTarget`)
+ * and this measures the interior's rendered rect directly.
+ *
+ * Returns false for a leaf node (no `[data-soft-container]` descendant) —
+ * so this also doubles as "is this node a container being pressed on its
+ * interior."
+ */
+export function isOverContainerInterior(nodeEl: Element, clientX: number, clientY: number): boolean {
+  const interior = nodeEl.querySelector('[data-soft-container]');
+  if (!interior) return false;
+  const rect = interior.getBoundingClientRect();
+  return isPointInRect({ x: clientX, y: clientY }, { x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+}
+
 /**
  * Hit-test for drop targets using DOM data attributes.
  * Looks for elements with data-drop-target="true" and data-container-id.

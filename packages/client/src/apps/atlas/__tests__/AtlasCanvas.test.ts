@@ -1,40 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import type { AtlasDocument } from '@luminous/core/atlas';
-import { projectAtlasNodes, containerHeaderHeight } from '../projection.ts';
-import { addDelta, growAncestors, shiftSubtree, type LayoutDelta } from '../layoutOverride.ts';
-
-/**
- * Builds the same delta a live content-resize composes in AtlasNodeLayer
- * (AtlasCanvas.tsx's `layoutDeltas` memo) — kept here as a plain-function
- * mirror so the composition can be asserted without mounting the component.
- */
-function contentResizeDelta(doc: AtlasDocument, nodeId: string, previewHeight: number): Map<string, LayoutDelta> {
-  const rendered = projectAtlasNodes(doc);
-  const rn = rendered.find((n) => n.node.id === nodeId)!;
-  const parentOf = new Map<string, string>();
-  const childrenOf = new Map<string, string[]>();
-  for (const r of rendered) {
-    if (r.node.parent === undefined) continue;
-    parentOf.set(r.node.id, r.node.parent);
-    const list = childrenOf.get(r.node.parent) ?? [];
-    list.push(r.node.id);
-    childrenOf.set(r.node.parent, list);
-  }
-  const committed = rn.hasChildren ? containerHeaderHeight(rn.node) : rn.h;
-  const dh = previewHeight - committed;
-
-  const map = new Map<string, LayoutDelta>();
-  addDelta(map, nodeId, { dh });
-  shiftSubtree(map, nodeId, childrenOf, 0, dh, { includeRoot: false });
-  growAncestors(map, nodeId, parentOf, rendered, { dh });
-  return map;
-}
+import { projectAtlasNodes } from '../projection.ts';
+import { addDelta, growAncestors, type LayoutDelta } from '../layoutOverride.ts';
 
 /**
  * Builds the same delta a live content-resize composes in AtlasNodeLayer
  * (AtlasCanvas.tsx's `layoutDeltas` memo) for a width and/or height preview —
  * kept here as a plain-function mirror so the composition can be asserted
- * without mounting the component.
+ * without mounting the component. A leaf and a container behave alike: the
+ * resized Node's own box grows by the delta and children never shift — a
+ * container's frame grip sizes the container box (the shrink-wrap floor),
+ * not the header band.
  */
 function contentResizeDelta2D(
   doc: AtlasDocument,
@@ -44,13 +20,9 @@ function contentResizeDelta2D(
   const rendered = projectAtlasNodes(doc);
   const rn = rendered.find((n) => n.node.id === nodeId)!;
   const parentOf = new Map<string, string>();
-  const childrenOf = new Map<string, string[]>();
   for (const r of rendered) {
     if (r.node.parent === undefined) continue;
     parentOf.set(r.node.id, r.node.parent);
-    const list = childrenOf.get(r.node.parent) ?? [];
-    list.push(r.node.id);
-    childrenOf.set(r.node.parent, list);
   }
 
   const map = new Map<string, LayoutDelta>();
@@ -61,10 +33,8 @@ function contentResizeDelta2D(
     ownDelta.dw = dw;
   }
   if (preview.height !== undefined) {
-    const committed = rn.hasChildren ? containerHeaderHeight(rn.node) : rn.h;
-    const dh = preview.height - committed;
+    const dh = preview.height - rn.h;
     addDelta(map, nodeId, { dh });
-    shiftSubtree(map, nodeId, childrenOf, 0, dh, { includeRoot: false });
     ownDelta.dh = dh;
   }
   growAncestors(map, nodeId, parentOf, rendered, ownDelta);
@@ -96,23 +66,30 @@ describe('live content-resize composition (2D)', () => {
     expect(deltas.get('root')?.dw).toBeGreaterThan(0);
   });
 
-  it('a diagonal drag grows the Node and its ancestor on both axes and shifts children down only', () => {
+  it('a diagonal drag on a leaf grows it and its ancestor on both axes and shifts children down', () => {
+    // Resize the leaf itself, not mid — a leaf has no children to test the
+    // no-shift rule against, so its own diagonal drag still composes with a
+    // subtree shift of nothing (it's a no-op here) while ancestors grow.
     const rendered = projectAtlasNodes(chain);
-    const mid = rendered.find((rn) => rn.node.id === 'mid')!;
-    const widerMid = mid.w + 60;
-    const tallerMid = containerHeaderHeight(mid.node) + 40;
+    const leaf = rendered.find((rn) => rn.node.id === 'leaf')!;
+    const widerLeaf = leaf.w + 60;
+    const tallerLeaf = leaf.h + 40;
 
-    const deltas = contentResizeDelta2D(chain, 'mid', { width: widerMid, height: tallerMid });
+    const deltas = contentResizeDelta2D(chain, 'leaf', { width: widerLeaf, height: tallerLeaf });
 
-    expect(deltas.get('mid')).toMatchObject({ dw: 60, dh: 40 });
-    expect(deltas.get('leaf')).toMatchObject({ dx: 0, dy: 40 });
+    expect(deltas.get('leaf')).toMatchObject({ dw: 60, dh: 40 });
+    expect(deltas.get('mid')?.dw).toBeGreaterThan(0);
+    expect(deltas.get('mid')?.dh).toBeGreaterThan(0);
     expect(deltas.get('root')?.dw).toBeGreaterThan(0);
     expect(deltas.get('root')?.dh).toBeGreaterThan(0);
   });
 });
 
-describe('live content-resize composition', () => {
-  // root -> mid -> leaf, all manual so geometry is deterministic.
+describe('live content-resize composition — container frame (sizes the container box, not the header)', () => {
+  // root -> mid -> leaf, all manual so geometry is deterministic. A
+  // container's frame grip now sizes the container box itself (the
+  // shrink-wrap floor from projection.ts) — a height (or width) delta grows
+  // mid's own box and never shifts its children (R37-R39).
   const chain: AtlasDocument = {
     v: 1,
     nodes: [
@@ -123,40 +100,31 @@ describe('live content-resize composition', () => {
     edges: [],
   };
 
-  it('growing a container header shifts its children down and grows it and its ancestor, matching a committed re-projection', () => {
+  it('a height delta on a container grows it and its ancestor without shifting children', () => {
     const rendered = projectAtlasNodes(chain);
     const mid = rendered.find((rn) => rn.node.id === 'mid')!;
-    const grownHeader = containerHeaderHeight(mid.node) + 40;
+    const tallerMid = mid.h + 40;
 
-    const deltas = contentResizeDelta(chain, 'mid', grownHeader);
+    const deltas = contentResizeDelta2D(chain, 'mid', { height: tallerMid });
 
-    // mid's own box grows by the header delta.
+    // mid's own box grows by the height delta.
     expect(deltas.get('mid')).toMatchObject({ dh: 40 });
-    // leaf (mid's only child) shifts down by the same delta, not sideways.
-    expect(deltas.get('leaf')).toMatchObject({ dx: 0, dy: 40 });
+    // leaf (mid's only child) never moves — the container gains empty room
+    // below it instead of pushing it down.
+    expect(deltas.get('leaf')).toBeUndefined();
     // root, mid's ancestor, grows to contain mid's live extent.
     expect(deltas.get('root')?.dh).toBeGreaterThan(0);
+  });
 
-    // The live preview must match what committing the same contentHeight and
-    // re-projecting would produce.
-    const committedDoc: AtlasDocument = {
-      ...chain,
-      nodes: chain.nodes.map((n) => (n.id === 'mid' ? { ...n, contentHeight: grownHeader } : n)),
-    };
-    const committedRendered = projectAtlasNodes(committedDoc);
-    const committedMid = committedRendered.find((rn) => rn.node.id === 'mid')!;
-    const committedRoot = committedRendered.find((rn) => rn.node.id === 'root')!;
-    const committedLeaf = committedRendered.find((rn) => rn.node.id === 'leaf')!;
+  it('a width delta on a container grows it and its ancestor without shifting children', () => {
+    const rendered = projectAtlasNodes(chain);
+    const mid = rendered.find((rn) => rn.node.id === 'mid')!;
+    const widerMid = mid.w + 60;
 
-    const liveMid = mid.h + (deltas.get('mid')?.dh ?? 0);
-    expect(liveMid).toBe(committedMid.h);
+    const deltas = contentResizeDelta2D(chain, 'mid', { width: widerMid });
 
-    const root = rendered.find((rn) => rn.node.id === 'root')!;
-    const liveRoot = root.h + (deltas.get('root')?.dh ?? 0);
-    expect(liveRoot).toBe(committedRoot.h);
-
-    const leaf = rendered.find((rn) => rn.node.id === 'leaf')!;
-    const liveLeafY = leaf.y + (deltas.get('leaf')?.dy ?? 0);
-    expect(liveLeafY).toBe(committedLeaf.y);
+    expect(deltas.get('mid')).toMatchObject({ dw: 60 });
+    expect(deltas.get('leaf')).toBeUndefined();
+    expect(deltas.get('root')?.dw).toBeGreaterThan(0);
   });
 });

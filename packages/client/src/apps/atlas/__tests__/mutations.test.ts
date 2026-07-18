@@ -180,8 +180,8 @@ describe('applyDrop', () => {
     if (!result.ok) return;
     const a = result.doc.nodes.find((n) => n.id === 'a')!;
     expect(a.parent).toBe('container');
-    expect(a.x).toBe(40);
-    expect(a.y).toBe(88);
+    expect(a.x).toBe(32);
+    expect(a.y).toBe(80);
   });
 
   it('a root-level move persists position relative to the origin', () => {
@@ -200,8 +200,8 @@ describe('applyDrop', () => {
     if (!result.ok) return;
     const a = result.doc.nodes.find((n) => n.id === 'a')!;
     expect(a.parent).toBe('other');
-    expect(a.x).toBe(10);
-    expect(a.y).toBe(-52);
+    expect(a.x).toBe(2);
+    expect(a.y).toBe(-60);
   });
 
   it('a refused reparent (dropping onto a descendant) writes no position', () => {

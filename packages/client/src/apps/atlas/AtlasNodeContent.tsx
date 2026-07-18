@@ -2,7 +2,7 @@ import { createEffect, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { marked } from 'marked';
 import type { AtlasColorToken, AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
 import type { NodeEditForm } from './mutations.ts';
-import { containerHeaderHeight, leafHeight, leafWidth, MIN_CONTENT_HEIGHT, MIN_CONTENT_WIDTH } from './projection.ts';
+import { containerHeaderHeight, MIN_CONTENT_HEIGHT, MIN_CONTENT_WIDTH } from './projection.ts';
 
 /** Mirrors cactus's `ResizeDirection` shape (`useGesture.ts`) — the domain
  * only ever drags right/bottom (the Do NOT list defers origin-shifting
@@ -34,6 +34,12 @@ export interface AtlasNodeContentProps {
    * Either dimension may be absent: an edge grip drags one, the corner
    * grip drags both. */
   previewSize: () => { width?: number; height?: number } | undefined;
+  /** This Node's current committed box size (post shrink-wrap floor) — the
+   * drag-start reference for the frame grips. For a leaf it's the leaf's own
+   * stored/default size; for a container it's the shrink-wrapped floor size
+   * from projection.ts, since the frame grip sizes the container box itself,
+   * not the header band. */
+  frameSize: () => { width: number; height: number };
   /** Canvas zoom scale, so a screen-pixel drag maps to canvas-space size. */
   zoomScale: () => number;
   /** Fires with a live size while dragging a resize handle, and `undefined`
@@ -115,25 +121,19 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
     props.onCommit({ name: name(), text: text() });
   }
 
-  // The value this Node's box is currently sized to: the live drag preview
-  // while resizing, else the committed size (stored override, or the fixed
-  // constant for this Node's kind).
-  const committedHeight = () =>
-    props.hasChildren() ? containerHeaderHeight(props.node()) : leafHeight(props.node());
-  const effectiveHeight = () => props.previewSize()?.height ?? committedHeight();
-  const committedWidth = () => leafWidth(props.node());
-
-  // Drags the header/body divider (container) or a leaf's bottom edge,
-  // right edge, or corner, per `dir`. Raw pointer events, not cactus's
-  // useGesture drag — this is the Node's own content band, not the
-  // whole-Node move/resize gesture.
+  // Drags a Node frame's right edge, bottom edge, or corner grip, per `dir`.
+  // Raw pointer events, not cactus's useGesture drag — this is the Node's
+  // own frame grip, not the whole-Node move gesture. The drag-start
+  // reference is the current committed box size (`frameSize`) for both a
+  // leaf and a container — a container's grip now sizes its box, not its
+  // (fixed) header band.
   function beginResize(e: PointerEvent, dir: ContentResizeDirection) {
     e.stopPropagation();
     e.preventDefault();
     const startX = e.clientX;
     const startY = e.clientY;
-    const startWidth = props.previewSize()?.width ?? committedWidth();
-    const startHeight = effectiveHeight();
+    const startWidth = props.previewSize()?.width ?? props.frameSize().width;
+    const startHeight = props.previewSize()?.height ?? props.frameSize().height;
 
     const handleMove = (ev: PointerEvent) => {
       const next: { width?: number; height?: number } = {};
@@ -196,17 +196,21 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
               <div class="truncate text-sm font-semibold text-fg">{props.node()?.name}</div>
               <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
             </div>
-            {/* The Content itself: a visually distinct bordered section beneath
-                the title/switcher row. For a container this is the header
-                band and stops there — its children draw below, in the space
-                this clamp reserves for them. For a leaf it fills the rest of
-                the box. The bound tracks the live resize preview, else the
+            {/* The Content band (R42): always present, even for a Node with no
+                Content — then it shows an "Add content" affordance instead of
+                rendered text. For a container this band is the fixed header
+                region and stops there — its children draw below, in the
+                container box the geometry reserves for them (not this band
+                bleeding into it). For a leaf it fills the rest of the box.
+                For a container this is the fixed header height regardless
+                of any live frame-resize preview (the header doesn't grow);
+                for a leaf it tracks the live resize preview, else the
                 committed height. */}
             <div
               class="relative min-h-0 flex-1 overflow-hidden rounded border border-border-subtle bg-surface"
               style={{
                 ...colorStyle(),
-                ...(props.hasChildren() ? { 'max-height': `${effectiveHeight()}px` } : {}),
+                ...(props.hasChildren() ? { 'max-height': `${containerHeaderHeight(props.node())}px` } : {}),
               }}
             >
               <div
@@ -235,25 +239,42 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
                     </pre>
                   )}
                 </Show>
+                <Show when={!props.node()?.content}>
+                  <button
+                    type="button"
+                    class="text-xs text-fg-subtle underline decoration-dotted hover:text-fg-muted"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onEnterEdit();
+                    }}
+                  >
+                    + Add content
+                  </button>
+                </Show>
               </div>
               {/* The content resize handle, a visible grip at the section's
                   bottom edge — native pointerdown so its stopPropagation
                   (beginResize) genuinely blocks NodeContainer's native
                   pointerdown during bubbling, instead of losing the race to
-                  it (see the task's Do NOT list). */}
-              <div
-                class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
-                data-no-pan="true"
-                on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
-                onDblClick={(e) => e.stopPropagation()}
-              >
-                <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
-              </div>
+                  it (see the task's Do NOT list). A container's header no
+                  longer drags (it auto-sizes) — its height grip lives on the
+                  Node frame instead, below. */}
+              <Show when={!props.hasChildren()}>
+                <div
+                  class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
+                  data-no-pan="true"
+                  on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
+                  onDblClick={(e) => e.stopPropagation()}
+                >
+                  <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
+                </div>
+              </Show>
             </div>
-            {/* Width/diagonal grips, on the whole Node box (not the content
-                band): a right-edge grip for width alone, a corner grip for
-                both at once. Same native-pointerdown pattern as the height
-                grip above. */}
+            {/* Width grip, on the Node frame (not the content band): sizes
+                the whole box for a leaf, the container box for a container
+                (both store into contentWidth), same native-pointerdown
+                pattern as above. */}
             <div
               class="absolute inset-y-0 right-0 flex w-3 cursor-col-resize items-center justify-end"
               data-no-pan="true"
@@ -262,6 +283,22 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
             >
               <div class="mr-0.5 h-8 w-1 rounded-full bg-border-subtle" />
             </div>
+            {/* Height grip, on the Node frame's bottom edge — a container's
+                own equivalent of the leaf's content-band bottom grip above:
+                it sizes the container box (the shrink-wrap floor), never the
+                fixed header band, and never moves children (R37-R39). */}
+            <Show when={props.hasChildren()}>
+              <div
+                class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
+                data-no-pan="true"
+                on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
+                onDblClick={(e) => e.stopPropagation()}
+              >
+                <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
+              </div>
+            </Show>
+            {/* Diagonal grip: both axes, for a leaf and a container alike —
+                a container's corner now sizes its box on both axes too. */}
             <div
               class="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
               data-no-pan="true"

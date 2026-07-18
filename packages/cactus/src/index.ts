@@ -28,7 +28,7 @@ export { EdgeLabel } from './EdgeLabel.js';
 export { ConnectionPreview } from './ConnectionPreview.js';
 export { Canvas } from './Canvas.js';
 export { CanvasContext, useCanvasContext } from './CanvasContext.js';
-export { computeBounds, findContainerAt, isPointInRect } from './geometry/containment.js';
+export { computeBounds, findContainerAt, isPointInRect, isOverContainerInterior } from './geometry/containment.js';
 export { resolveAbsolutePosition, resolveAbsolutePositionByParentOf, computeAttach, computeDetach, computeContainerFit } from './geometry/containerOps.js';
 export type { ContainerNode, ContainerFitConfig } from './geometry/containerOps.js';
 export { gridLayout } from './gridLayout.js';

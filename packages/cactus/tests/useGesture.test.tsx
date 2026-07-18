@@ -499,4 +499,67 @@ describe('useGesture marquee', () => {
     expect(hits).toEqual([['a']]);
     cleanup();
   });
+
+  function stubRect(target: Element, rect: { left: number; top: number; width: number; height: number }): void {
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({
+      ...rect,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      x: rect.left,
+      y: rect.top,
+      toJSON: () => ({}),
+    });
+  }
+
+  /** A node div shaped like NodeContainer.tsx's output: an outer
+   * data-container-id div wrapping a data-soft-container interior. */
+  function appendContainerNode(
+    parent: HTMLElement,
+    interiorRect: { left: number; top: number; width: number; height: number },
+  ): HTMLElement {
+    const node = document.createElement('div');
+    node.setAttribute('data-container-id', 'container-a');
+    const interior = document.createElement('div');
+    interior.setAttribute('data-soft-container', 'true');
+    node.appendChild(interior);
+    parent.appendChild(node);
+    stubRect(interior, interiorRect);
+    return node;
+  }
+
+  it("'drag': a press on a container's soft-container interior starts a marquee", () => {
+    const { hits, el, cleanup } = mountMarquee('drag', [MARQUEE_NODE]);
+    const node = appendContainerNode(el, { left: 0, top: 0, width: 100, height: 100 });
+    // The interior press target is the outer node div itself — the interior
+    // element is pointer-events:none in NodeContainer.tsx, so it never
+    // receives the native hit-test (see NodeContainer.tsx).
+    down(node, { button: 0, clientX: 40, clientY: 40 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([['a']]);
+    cleanup();
+  });
+
+  it("'drag': a press outside a container's soft-container interior (its header/frame) does not marquee", () => {
+    const { hits, el, cleanup } = mountMarquee('drag', [MARQUEE_NODE]);
+    // Interior inset starting at y:20 leaves a 20px header band above it.
+    const node = appendContainerNode(el, { left: 0, top: 20, width: 100, height: 100 });
+    down(node, { button: 0, clientX: 40, clientY: 5 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([]);
+    cleanup();
+  });
+
+  it("'drag': a press on a leaf node (no soft-container interior) does not marquee", () => {
+    const { hits, el, cleanup } = mountMarquee('drag', [MARQUEE_NODE]);
+    const leaf = document.createElement('div');
+    leaf.setAttribute('data-container-id', 'leaf-a');
+    el.appendChild(leaf);
+    down(leaf, { button: 0, clientX: 40, clientY: 40 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([]);
+    cleanup();
+  });
 });
