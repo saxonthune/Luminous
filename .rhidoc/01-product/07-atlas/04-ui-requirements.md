@@ -52,6 +52,32 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
   Swatch.
 - **R19.** When the user selects a Swatch, the system shall set the Node's Color to
   that Swatch's Color.
+- **R40.** The system shall draw a Container as a box nested inside its Node — a
+  component alongside the Node's title and contents — inset so a bezel separates
+  the Node's edge from the Container's edge.
+- **R42.** The system shall draw a space for Content on every Node, including a
+  Node that has no Content, and shall allow the user to add Content to a Node that
+  has none.
+
+## Selection
+
+- **R33.** The system shall allow the user to select Nodes by dragging a selection
+  box over them.
+- **R34.** The system shall begin a selection box when the user presses the left
+  button on the canvas background or on a Container's interior.
+- **R35.** When the user presses the left button on the canvas background and
+  releases without dragging, the system shall clear the selection.
+
+## Moving and resizing
+
+- **R36.** The system shall move a Node when the user drags the Node's header or
+  frame, and shall not move a Node when the user drags a Container's interior. A
+  leaf Node has no Container, so the user may move it by dragging anywhere on it.
+- **R37.** The system shall allow the user to resize a Node from its frame.
+- **R38.** The system shall not allow the user to resize a Node smaller than the
+  extent of its Children.
+- **R39.** The system shall allow a Container to be sized larger than the extent of
+  its Children.
 
 ## UI chrome
 
@@ -62,6 +88,7 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
 - **R23.** The system shall move the camera only when the user pans, zooms, or
   activates the fit control, and shall not move the camera when the Document
   changes.
+- **R41.** The system shall pan the camera on a middle-button drag.
 
 ## Layout
 
@@ -112,7 +139,12 @@ baseline navigation or gaps with no assigned requirement yet.
 
 | Target | Interaction | Action | Req |
 |---|---|---|---|
-| Node | left click + drag | Move the Node and persist its position | R1, R24, R25 |
+| Node header or frame | left click + drag | Move the Node and persist its position | R1, R24, R25, R36 |
+| Node frame | left click + drag | Resize the Node | R37, R38, R39 |
+| Canvas background | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34 |
+| Container interior | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34 |
+| Canvas background | left click | Clear the selection | R35 |
+| Canvas or Node | middle click + drag | Pan the camera | R41 |
 | Node | drag into a Container | Add the Node to the Container | R4 |
 | Node | drag out of a Container | Remove the Node from the Container | R4 |
 | Node | Ctrl + drag out of a Container | Expand the Container's boundary to contain the Node being moved | R5 |
