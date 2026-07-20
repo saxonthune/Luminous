@@ -120,23 +120,23 @@ describe('setNode', () => {
   });
 
   it('sets a color', () => {
-    const result = setNode(base, 'a', { color: 'moss' });
+    const result = setNode(base, 'a', { color: 'accent-2' });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.doc.nodes[0].color).toBe('moss');
+    if (result.ok) expect(result.doc.nodes[0].color).toBe('accent-2');
   });
 
   it('clears a color when explicitly set to undefined', () => {
-    const withColor: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'moss' }], edges: [] };
+    const withColor: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'accent-2' }], edges: [] };
     const result = setNode(withColor, 'a', { color: undefined });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.doc.nodes[0].color).toBeUndefined();
   });
 
   it('leaves an existing color untouched when the patch carries only name', () => {
-    const withColor: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'moss' }], edges: [] };
+    const withColor: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'accent-2' }], edges: [] };
     const result = setNode(withColor, 'a', { name: 'Renamed' });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', color: 'moss' });
+    if (result.ok) expect(result.doc.nodes[0]).toEqual({ id: 'a', name: 'Renamed', color: 'accent-2' });
   });
 
   it('sets a content height', () => {
@@ -382,11 +382,11 @@ describe('applyAtlasBatch', () => {
   it('carries a color through a setNode action', () => {
     const result = applyAtlasBatch(emptyAtlasDocument(), [
       { type: 'addNode', id: 'a', name: 'A' },
-      { type: 'setNode', id: 'a', color: 'moss' },
+      { type: 'setNode', id: 'a', color: 'accent-2' },
     ]);
     expect(result).toEqual({
       ok: true,
-      doc: { v: 1, nodes: [{ id: 'a', name: 'A', color: 'moss' }], edges: [] },
+      doc: { v: 1, nodes: [{ id: 'a', name: 'A', color: 'accent-2' }], edges: [] },
     });
   });
 

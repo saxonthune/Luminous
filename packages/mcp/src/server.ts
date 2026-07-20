@@ -59,6 +59,9 @@ function paramToJsonSchema(param: ParamType): object {
       items: paramToJsonSchema(param.items),
     }
   }
+  if (param.type === 'enum') {
+    return { type: 'string', enum: [...param.values] }
+  }
   throw new Error(`Unknown param type: ${JSON.stringify(param)}`)
 }
 
@@ -383,7 +386,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!a.path) throw new Error("'path' is required for atlas/node/create")
         if (!a.id) throw new Error("'id' is required for atlas/node/create")
         if (!a.name) throw new Error("'name' is required for atlas/node/create")
-        result = await nodeCreate(serverUrl, a.path, { id: a.id, name: a.name, parent: a.parent, x: a.x, y: a.y })
+        result = await nodeCreate(serverUrl, a.path, { id: a.id, name: a.name, parent: a.parent, x: a.x, y: a.y, color: a.color })
       } else if (a.action === 'node/set') {
         if (!a.path) throw new Error("'path' is required for atlas/node/set")
         if (!a.id) throw new Error("'id' is required for atlas/node/set")

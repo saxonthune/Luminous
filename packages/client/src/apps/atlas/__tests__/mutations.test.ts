@@ -45,9 +45,9 @@ describe('buildModePatch', () => {
 
 describe('buildColorPatch', () => {
   it('carries the color key for a token', () => {
-    const patch = buildColorPatch('rose');
+    const patch = buildColorPatch('accent-8');
     expect('color' in patch).toBe(true);
-    expect(patch.color).toBe('rose');
+    expect(patch.color).toBe('accent-8');
   });
 
   it('carries the color key as undefined so setNode clears it', () => {
@@ -58,9 +58,9 @@ describe('buildColorPatch', () => {
 
   it('selecting a swatch produces a Document whose node carries the token', () => {
     const d: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
-    const result = setNode(d, 'a', buildColorPatch('violet'));
+    const result = setNode(d, 'a', buildColorPatch('accent-5'));
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.doc.nodes.find((n) => n.id === 'a')?.color).toBe('violet');
+    if (result.ok) expect(result.doc.nodes.find((n) => n.id === 'a')?.color).toBe('accent-5');
   });
 });
 

@@ -34,11 +34,11 @@ by being capitalized in a requirement. Two kinds are kept out:
   - A Node has at most one Color.
   - A Node and its Container are drawn in the same Color.
 
-- **Color Token** — a named entry in the fixed set of colors a Node can be set to.
-  - A Color Token names a color; it is not itself a color.
+- **Color Token** — a fixed, opaque category a Node can be set to.
+  - A Color Token carries no color of its own; it is a slot, not a color name.
   - Each theme decides what color a Color Token is drawn as.
 
-- **Swatch** — the Color Token as the user picks it, drawn in the color it names.
+- **Swatch** — the Color Token as the user picks it, drawn in the color the theme assigns it.
 
 ## Structure
 

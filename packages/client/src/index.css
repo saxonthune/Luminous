@@ -219,24 +219,27 @@ body {
 
 /* Atlas color-picker vars must live in a plain :root block, not @theme inline —
    Tailwind only materializes a @theme var when a static utility class referencing
-   it appears in scanned source, and these are only ever read via inline var(). */
+   it appears in scanned source, and these are only ever read via inline var().
+   These are the theme seam: each --color-atlas-accent-N slot is a hue-agnostic
+   key a node's stored data references. A theme may reassign accent-N to a
+   different --color-token-* below to remap the palette without touching data. */
 :root {
-  --color-atlas-slate:              var(--color-token-slate);
-  --color-atlas-slate-container:    color-mix(in oklch, var(--color-token-slate) var(--color-token-container-mix), var(--surface));
-  --color-atlas-moss:               var(--color-token-moss);
-  --color-atlas-moss-container:     color-mix(in oklch, var(--color-token-moss) var(--color-token-container-mix), var(--surface));
-  --color-atlas-deep-moss:          var(--color-token-deep-moss);
-  --color-atlas-deep-moss-container: color-mix(in oklch, var(--color-token-deep-moss) var(--color-token-container-mix), var(--surface));
-  --color-atlas-ochre:              var(--color-token-ochre);
-  --color-atlas-ochre-container:    color-mix(in oklch, var(--color-token-ochre) var(--color-token-container-mix), var(--surface));
-  --color-atlas-violet:             var(--color-token-violet);
-  --color-atlas-violet-container:   color-mix(in oklch, var(--color-token-violet) var(--color-token-container-mix), var(--surface));
-  --color-atlas-indigo:             var(--color-token-indigo);
-  --color-atlas-indigo-container:   color-mix(in oklch, var(--color-token-indigo) var(--color-token-container-mix), var(--surface));
-  --color-atlas-oxide:              var(--color-token-oxide);
-  --color-atlas-oxide-container:    color-mix(in oklch, var(--color-token-oxide) var(--color-token-container-mix), var(--surface));
-  --color-atlas-rose:               var(--color-token-rose);
-  --color-atlas-rose-container:     color-mix(in oklch, var(--color-token-rose) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-1:              var(--color-token-slate);
+  --color-atlas-accent-1-container:    color-mix(in oklch, var(--color-token-slate) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-2:               var(--color-token-moss);
+  --color-atlas-accent-2-container:     color-mix(in oklch, var(--color-token-moss) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-3:          var(--color-token-deep-moss);
+  --color-atlas-accent-3-container: color-mix(in oklch, var(--color-token-deep-moss) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-4:              var(--color-token-ochre);
+  --color-atlas-accent-4-container:    color-mix(in oklch, var(--color-token-ochre) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-5:             var(--color-token-violet);
+  --color-atlas-accent-5-container:   color-mix(in oklch, var(--color-token-violet) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-6:             var(--color-token-indigo);
+  --color-atlas-accent-6-container:   color-mix(in oklch, var(--color-token-indigo) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-7:              var(--color-token-oxide);
+  --color-atlas-accent-7-container:    color-mix(in oklch, var(--color-token-oxide) var(--color-token-container-mix), var(--surface));
+  --color-atlas-accent-8:               var(--color-token-rose);
+  --color-atlas-accent-8-container:     color-mix(in oklch, var(--color-token-rose) var(--color-token-container-mix), var(--surface));
 }
 
 /* TIER 3: Tailwind token layer — never overridden, generates utilities */
