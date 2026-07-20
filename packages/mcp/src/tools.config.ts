@@ -1,3 +1,5 @@
+import { ATLAS_COLOR_TOKENS } from '@luminous/core/atlas'
+
 export type ParamType =
   | 'string'
   | 'number'
@@ -5,6 +7,7 @@ export type ParamType =
   | { type: 'object'; properties: Record<string, ParamType>; required?: string[] }
   | { type: 'array'; items: ParamType }
   | { type: 'described'; innerType: ParamType; description: string }
+  | { type: 'enum'; values: readonly string[] }
 
 export interface ActionConfig {
   description?: string
@@ -583,6 +586,11 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             innerType: 'number',
             description: "Position, offset from the parent's origin (or canvas-absolute for a root node). x and y must appear together.",
           },
+          'color?': {
+            type: 'described',
+            innerType: { type: 'enum', values: ATLAS_COLOR_TOKENS },
+            description: "Color slot to apply at creation — one of eight fixed categorical tokens. The pigment each slot paints is theme-owned; the tokens carry no inherent hue.",
+          },
         },
       },
       'node/set': {
@@ -622,8 +630,8 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           },
           'color?': {
             type: 'described',
-            innerType: 'string',
-            description: "New color token for the node.",
+            innerType: { type: 'enum', values: ATLAS_COLOR_TOKENS },
+            description: "Color slot for the node — one of eight fixed categorical tokens. The pigment each slot paints is theme-owned; the tokens carry no inherent hue.",
           },
           'contentHeight?': {
             type: 'described',

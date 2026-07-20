@@ -5,7 +5,7 @@ export type AtlasResult = { ok: true; doc: AtlasDocument } | { ok: false; error:
 
 export function addNode(
   doc: AtlasDocument,
-  fields: { id: string; name: string; parent?: string; x?: number; y?: number },
+  fields: { id: string; name: string; parent?: string; x?: number; y?: number; color?: AtlasColorToken },
 ): AtlasResult {
   if (doc.nodes.some(n => n.id === fields.id)) {
     return { ok: false, error: `node "${fields.id}" already exists` };
@@ -17,6 +17,7 @@ export function addNode(
   if (fields.parent !== undefined) node.parent = fields.parent;
   if (fields.x !== undefined) node.x = fields.x;
   if (fields.y !== undefined) node.y = fields.y;
+  if (fields.color !== undefined) node.color = fields.color;
   return { ok: true, doc: { ...doc, nodes: [...doc.nodes, node] } };
 }
 

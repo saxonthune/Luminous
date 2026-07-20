@@ -71,7 +71,7 @@ export async function readAtlas(serverUrl: string, path: string): Promise<AtlasD
 export async function nodeCreate(
   serverUrl: string,
   path: string,
-  fields: { id: string; name: string; parent?: string; x?: number; y?: number },
+  fields: { id: string; name: string; parent?: string; x?: number; y?: number; color?: AtlasColorToken },
 ): Promise<AtlasDocument> {
   const doc = await loadAtlas(serverUrl, path)
   const result = addNode(doc, fields)
