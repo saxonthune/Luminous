@@ -51,7 +51,7 @@
     {
       "id": "cli.braincrawl.openalex.search",
       "name": "search",
-      "parent": "cli.braincrawl.openalex.get",
+      "parent": "cli.braincrawl.openalex",
       "content": {
         "text": "Search OpenAlex by free-text query, optionally topic-gated.",
         "mode": "markdown"
@@ -86,6 +86,7 @@
     {
       "id": "cli.braincrawl.semanticscholar.get",
       "name": "get",
+      "parent": "cli.braincrawl.semanticscholar",
       "content": {
         "text": "Fetch one work by its Semantic Scholar id.",
         "mode": "markdown"
@@ -96,7 +97,7 @@
     {
       "id": "cli.braincrawl.semanticscholar.get.id",
       "name": "--id",
-      "parent": "cli.braincrawl",
+      "parent": "cli.braincrawl.semanticscholar.get",
       "content": {
         "text": "The Semantic Scholar work id to fetch.\n\n```shell\n--id <s2-id>\n```",
         "mode": "markdown"
@@ -119,7 +120,7 @@
         "text": "The free-text search string.\n\n```shell\n--query <text>\n```",
         "mode": "markdown"
       },
-      "color": "oxide"
+      "color": "accent-7"
     },
     {
       "id": "cli.braincrawl.crossref",
@@ -129,21 +130,29 @@
         "text": "Commands that pull citation data from Crossref. Narrower than openalex/semanticscholar — Crossref is used for reference lookups only, not general search.",
         "mode": "markdown"
       },
-      "color": "deep-moss"
+      "x": 1086.6666870117188,
+      "y": 53.66665649414057,
+      "color": "accent-3",
+      "contentHeight": 218.3149020678846,
+      "contentWidth": 2947.3852256794994
     },
     {
       "id": "cli.braincrawl.crossref.refs",
       "name": "refs",
+      "parent": "cli.braincrawl.crossref",
       "content": {
         "text": "Fetch the works a given work cites (backward citations, `refs`).",
         "mode": "markdown"
       },
       "x": 1166.1808001730572,
-      "y": -5.509525579383055
+      "y": -5.509525579383055,
+      "contentHeight": 113.37620867890823,
+      "contentWidth": 945.8534410821037
     },
     {
       "id": "cli.braincrawl.crossref.refs.id",
       "name": "--id",
+      "parent": "cli.braincrawl.crossref.refs",
       "content": {
         "text": "The work id (DOI) whose references to fetch.\n\n```shell\n--id <doi>\n```",
         "mode": "markdown"
@@ -194,7 +203,7 @@
     {
       "id": "cli.braincrawl.graph",
       "name": "graph",
-      "parent": "cli.braincrawl.openalex",
+      "parent": "cli.braincrawl",
       "content": {
         "text": "Traverse the Catalog's citation graph from a starting work — forward (`cited-by`) or backward (`refs`), optionally topic-gated.",
         "mode": "markdown"
@@ -325,7 +334,7 @@
       },
       "x": 1929.144824988183,
       "y": 659.5644068556028,
-      "color": "deep-moss",
+      "color": "accent-3",
       "contentHeight": 168.76601631649106,
       "contentWidth": 340.9574747968284
     },
@@ -348,7 +357,7 @@
       },
       "x": 1434.2464218473897,
       "y": -282.4192624854906,
-      "color": "deep-moss"
+      "color": "accent-3"
     },
     {
       "id": "store.l1-library.api",
