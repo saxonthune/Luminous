@@ -286,7 +286,7 @@ describe('parseAtlasDocument', () => {
   });
 
   it('accepts a node with a valid color', () => {
-    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'moss' }], edges: [] };
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'accent-2' }], edges: [] };
     const result = parseAtlasDocument(JSON.stringify(doc));
     expect(result).toEqual({ ok: true, doc });
   });
@@ -308,7 +308,7 @@ describe('parseAtlasDocument', () => {
   });
 
   it('round-trips a color through serialize/parse', () => {
-    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'rose' }], edges: [] };
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A', color: 'accent-8' }], edges: [] };
     const result = parseAtlasDocument(serializeAtlasDocument(doc));
     expect(result).toEqual({ ok: true, doc });
   });

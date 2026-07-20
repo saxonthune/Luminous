@@ -50,7 +50,7 @@ describe('invertAtlasAction', () => {
 
   it('inverts a field-deletion setNode by restoring absence as an explicit undefined', () => {
     const before = doc([{ id: 'a', name: 'A' }]);
-    const action: AtlasAction = { type: 'setNode', id: 'a', color: 'rose' };
+    const action: AtlasAction = { type: 'setNode', id: 'a', color: 'accent-8' };
     const inverse = invertAtlasAction(before, action);
     expect(inverse).toEqual([{ type: 'setNode', id: 'a', color: undefined }]);
     expect(inverse[0]).toHaveProperty('color');
@@ -98,7 +98,7 @@ describe('invertAtlasBatch', () => {
 
   it('round-trips setNode fields, including field-deletion (content, color, x/y, contentHeight)', () => {
     const before = doc([
-      { id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown' }, color: 'rose', x: 1, y: 2, contentHeight: 100 },
+      { id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown' }, color: 'accent-8', x: 1, y: 2, contentHeight: 100 },
     ]);
     roundTrips(before, [
       { type: 'setNode', id: 'a', content: undefined, color: undefined, x: undefined, y: undefined, contentHeight: undefined },
