@@ -42,8 +42,8 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
   the Node so the two are told apart.
 - **R14.** The system shall set a Color from a fixed set of Color Tokens, and shall
   not offer the user an arbitrary color.
-- **R15.** When the user right clicks a Node or a Container, the system shall open a
-  context menu.
+- **R15.** When the user right clicks a Node or a Container and releases without
+  dragging, the system shall open a context menu.
 - **R16.** The context menu shall offer a Color option.
 - **R17.** When the user hovers the Color option, the system shall open a submenu of
   Swatches, laid out as two rows of Swatches.
@@ -89,6 +89,9 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
   activates the fit control, and shall not move the camera when the Document
   changes.
 - **R41.** The system shall pan the camera on a middle-button drag.
+- **R43.** The system shall pan the camera on a right-button drag, and shall open the
+  context menu instead when the user releases the right button without dragging (R15,
+  R32).
 
 ## Layout
 
@@ -130,6 +133,13 @@ right click, double click, drag, a key). Each row binds one input to the command
 it performs and the requirement it serves. Rows with `—` in the Req column are
 baseline navigation or gaps with no assigned requirement yet.
 
+A **click** is a press and release with no movement past a small drag threshold; a
+**drag** is a press, movement past that threshold, then a release. A button's click
+and its drag are therefore different inputs, bound to different commands: a right
+click opens the context menu, while a right click + drag pans the camera. The same
+holds for the left button — a left click clears the selection, a left click + drag
+draws a selection box.
+
 ### File selector view
 
 | Target | Interaction | Action | Req |
@@ -145,6 +155,7 @@ baseline navigation or gaps with no assigned requirement yet.
 | Container interior | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34 |
 | Canvas background | left click | Clear the selection | R35 |
 | Canvas or Node | middle click + drag | Pan the camera | R41 |
+| Canvas or Node | right click + drag | Pan the camera | R43 |
 | Node | drag into a Container | Add the Node to the Container | R4 |
 | Node | drag out of a Container | Remove the Node from the Container | R4 |
 | Node | Ctrl + drag out of a Container | Expand the Container's boundary to contain the Node being moved | R5 |

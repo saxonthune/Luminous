@@ -8,8 +8,8 @@
         "text": "Drives desktop research sessions: gathers from providers, pushes into the local store, and hosts the L3 sync verbs (`l3 push` / `l3 pull`).",
         "mode": "markdown"
       },
-      "x": -807.5086705427859,
-      "y": 151.21074089949775
+      "x": -950.7627502880656,
+      "y": 299.8201302995492
     },
     {
       "id": "cli.braincrawl.openalex",
@@ -19,8 +19,10 @@
         "text": "Commands that pull from the OpenAlex provider — a scholarly metadata source, accessed via its HTTP API.",
         "mode": "markdown"
       },
-      "x": 501.05770011923244,
-      "y": 102.48089085664617
+      "x": 485.05420090164586,
+      "y": 77.3324332784926,
+      "contentHeight": 649.5416815498158,
+      "contentWidth": 529.4654188147252
     },
     {
       "id": "cli.braincrawl.openalex.get",
@@ -30,8 +32,10 @@
         "text": "Fetch one work by its OpenAlex id and push it into the local Catalog.",
         "mode": "markdown"
       },
-      "x": 40,
-      "y": 60
+      "x": 30.584298305721973,
+      "y": 110.81392946884233,
+      "contentHeight": 403.0562282855305,
+      "contentWidth": 433.7090500092341
     },
     {
       "id": "cli.braincrawl.openalex.get.id",
@@ -40,18 +44,22 @@
       "content": {
         "text": "The OpenAlex work id to fetch (e.g. `W2741809807`).\n\n```shell\n--id <openalex-id>\n```",
         "mode": "markdown"
-      }
+      },
+      "x": -6.66668701171875,
+      "y": 146.16668701171875
     },
     {
       "id": "cli.braincrawl.openalex.search",
       "name": "search",
-      "parent": "cli.braincrawl.openalex",
+      "parent": "cli.braincrawl.openalex.get",
       "content": {
         "text": "Search OpenAlex by free-text query, optionally topic-gated.",
         "mode": "markdown"
       },
-      "x": 40,
-      "y": 140
+      "x": 60.55753906803187,
+      "y": 39.6150692138051,
+      "contentHeight": 287.53692739656725,
+      "contentWidth": 345.68968808511465
     },
     {
       "id": "cli.braincrawl.openalex.search.query",
@@ -60,7 +68,9 @@
       "content": {
         "text": "The free-text search string.\n\n```shell\n--query <text>\n```",
         "mode": "markdown"
-      }
+      },
+      "x": 51.979388328535435,
+      "y": 106.90303404071051
     },
     {
       "id": "cli.braincrawl.semanticscholar",
@@ -70,8 +80,8 @@
         "text": "Commands that pull from the Semantic Scholar provider — mirrors the openalex subcommand shape (`get`, `search`, `refs`, `cited-by`).",
         "mode": "markdown"
       },
-      "x": 893.333343505861,
-      "y": 253.66665649414148
+      "x": 1101.0956887496625,
+      "y": 198.1685050587106
     },
     {
       "id": "cli.braincrawl.semanticscholar.get",
@@ -79,7 +89,9 @@
       "content": {
         "text": "Fetch one work by its Semantic Scholar id.",
         "mode": "markdown"
-      }
+      },
+      "x": 2170.6785725390055,
+      "y": 246.18285060726404
     },
     {
       "id": "cli.braincrawl.semanticscholar.get.id",
@@ -125,7 +137,9 @@
       "content": {
         "text": "Fetch the works a given work cites (backward citations, `refs`).",
         "mode": "markdown"
-      }
+      },
+      "x": 1166.1808001730572,
+      "y": -5.509525579383055
     },
     {
       "id": "cli.braincrawl.crossref.refs.id",
@@ -133,7 +147,9 @@
       "content": {
         "text": "The work id (DOI) whose references to fetch.\n\n```shell\n--id <doi>\n```",
         "mode": "markdown"
-      }
+      },
+      "x": 2158.7461981132,
+      "y": -88.15240927012889
     },
     {
       "id": "cli.braincrawl.opencitations",
@@ -183,8 +199,8 @@
         "text": "Traverse the Catalog's citation graph from a starting work — forward (`cited-by`) or backward (`refs`), optionally topic-gated.",
         "mode": "markdown"
       },
-      "x": 90.19085966741511,
-      "y": 38.0938568895167
+      "x": 89.35754667913386,
+      "y": 24.76051338365727
     },
     {
       "id": "store.l1-library",
@@ -203,8 +219,8 @@
         "text": "The shared index over the Library: every work's metadata, which artifacts are held and where, and the citation edges between works.",
         "mode": "markdown"
       },
-      "x": 702.2967032860552,
-      "y": 554.0239903397725
+      "x": 842.3367890001216,
+      "y": 800.035269638159
     },
     {
       "id": "store.l3-research-collection",
@@ -213,8 +229,8 @@
         "text": "A consumer's own research: Research Documents that point at works by canonical id in the Catalog rather than copying them.",
         "mode": "markdown"
       },
-      "x": 1731.8049976359139,
-      "y": 1060.76916960791
+      "x": 1897.8191556712673,
+      "y": 1130.3880480324192
     },
     {
       "id": "catalog.canonical-id",
@@ -255,8 +271,8 @@
         "text": "The `braincrawl` CLI: drives desktop research sessions, gathers from OpenAlex, and hosts the sync verbs (`l3 push` / `l3 pull`). Sync is a client operation — the CLI reaches both research-doc stores; the stores never know about each other.",
         "mode": "markdown"
       },
-      "x": 298.7711190883558,
-      "y": 196.91963104505447
+      "x": 1530.5579331455915,
+      "y": 175.64625555792426
     },
     {
       "id": "box.local-store",
@@ -295,8 +311,8 @@
         "text": "The worker-held copy of the Research Collection: one R2 object per doc, plus the agent context files (principles, memory). Canonical for phone-made edits between syncs. Every write is normalized server-side.\n\n```prose\nR2 keys l3/<slug>.l3.md and l3-agent/<name>.md. PUT validates the node grammar (400 + warnings on failure), assigns missing ^r- anchors store-globally, stamps updated:, returns the normalized markdown. GET serves raw markdown; /api/l3/graph serves the parsed graph with an ETag.\n```",
         "mode": "markdown"
       },
-      "x": 3277.3505660042915,
-      "y": 469.39617396302356,
+      "x": 2704.8062365292662,
+      "y": 570.4467680882263,
       "contentHeight": 230.76038800596154,
       "contentWidth": 294.000598817224
     },
@@ -307,8 +323,8 @@
         "text": "The PWA chat client. A thin client, never a replica: it fetches the doc and page chunks it needs, edits docs via the normalizing PUT, and pushes what it gathers from OpenAlex into the Cloudflare store. Local state is only the conversation (localStorage) and per-session caches.",
         "mode": "markdown"
       },
-      "x": 1055.5998117196068,
-      "y": 127.05563860280955,
+      "x": 1929.144824988183,
+      "y": 659.5644068556028,
       "color": "deep-moss",
       "contentHeight": 168.76601631649106,
       "contentWidth": 340.9574747968284

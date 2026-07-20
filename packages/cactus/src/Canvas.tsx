@@ -307,6 +307,41 @@ export function Canvas(props: CanvasProps) {
       : props.viewportOptions
   );
 
+  // Right-button click vs. drag disambiguation. The right button both pans (drag)
+  // and opens the context menu (click). We cannot decide from the `contextmenu`
+  // event, whose timing is not portable — Chromium/Linux and macOS fire it on
+  // press (before any drag is visible); Firefox fires it on release. So we drive
+  // the menu from pointer events instead: track how far the pointer moved between
+  // right-button pointerdown and pointerup, and open the menu on pointerup only
+  // when movement stayed within the slop threshold. `contextmenu` is always
+  // suppressed so the native menu never shows.
+  const RIGHT_DRAG_SLOP_PX = 4;
+  let rightGesture: { x: number; y: number; moved: boolean } | null = null;
+  // A pointer-driven right gesture already decided the menu on pointerup; ignore
+  // the trailing native `contextmenu` (Firefox fires it after release).
+  let swallowContextMenu = false;
+
+  const onRightPointerMove = (e: PointerEvent) => {
+    if (rightGesture && Math.hypot(e.clientX - rightGesture.x, e.clientY - rightGesture.y) > RIGHT_DRAG_SLOP_PX) {
+      rightGesture.moved = true;
+    }
+  };
+  const onRightPointerUp = (e: PointerEvent) => {
+    if (e.button !== 2) return;
+    window.removeEventListener('pointermove', onRightPointerMove);
+    window.removeEventListener('pointerup', onRightPointerUp);
+    const gesture = rightGesture;
+    rightGesture = null;
+    swallowContextMenu = true;
+    if (gesture && !gesture.moved) {
+      openContextMenuAt(e.target as HTMLElement, e.clientX, e.clientY, e);
+    }
+  };
+  onCleanup(() => {
+    window.removeEventListener('pointermove', onRightPointerMove);
+    window.removeEventListener('pointerup', onRightPointerUp);
+  });
+
   // Node rect registry — populated by NodeContainer via context; consumed by EdgeLayer.
   const nodeRectsData = new Map<string, NodeRect>();
   const [nodeRectsVersion, setNodeRectsVersion] = createSignal(0);
@@ -456,16 +491,17 @@ export function Canvas(props: CanvasProps) {
   };
   /* eslint-enable solid/reactivity */
 
-  const handleContextMenu = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
+  // Resolve which menu the target under the pointer owns and open it. Position is
+  // the release point. `rawEvent` is handed to the onBackgroundContextMenu escape
+  // hatch, which wants the underlying MouseEvent.
+  const openContextMenuAt = (target: HTMLElement, clientX: number, clientY: number, rawEvent: MouseEvent) => {
     const container = target.closest?.('[data-container-id]');
 
     if (container && props.nodeContextMenu) {
       const nodeId = container.getAttribute('data-container-id')!;
       const schema = props.nodeContextMenu(nodeId);
       if (schema && schema.items.length > 0) {
-        e.preventDefault();
-        setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+        setCtxMenuState({ x: clientX, y: clientY, schema });
         return;
       }
     }
@@ -476,24 +512,29 @@ export function Canvas(props: CanvasProps) {
         const edgeId = edgeEl.getAttribute('data-edge-id')!;
         const schema = props.edgeContextMenu(edgeId);
         if (schema && schema.items.length > 0) {
-          e.preventDefault();
-          setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+          setCtxMenuState({ x: clientX, y: clientY, schema });
           return;
         }
       }
       if (props.backgroundContextMenu) {
         const schema = props.backgroundContextMenu();
         if (schema && schema.items.length > 0) {
-          e.preventDefault();
-          setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+          setCtxMenuState({ x: clientX, y: clientY, schema });
           return;
         }
       }
-      if (props.onBackgroundContextMenu) {
-        e.preventDefault();
-        props.onBackgroundContextMenu(e);
-      }
+      props.onBackgroundContextMenu?.(rawEvent);
     }
+  };
+
+  const handleContextMenu = (e: MouseEvent) => {
+    e.preventDefault(); // never show the native menu; the canvas drives its own
+    if (swallowContextMenu) {
+      swallowContextMenu = false; // trailing native menu from a gesture already resolved on pointerup
+      return;
+    }
+    if (rightGesture) return; // a right-button gesture is in flight; pointerup will decide (Chromium/Linux fires contextmenu on press)
+    openContextMenuAt(e.target as HTMLElement, e.clientX, e.clientY, e); // keyboard menu key, or any non-pointer contextmenu
   };
 
   return (
@@ -503,6 +544,12 @@ export function Canvas(props: CanvasProps) {
         class={props.class}
         style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
         onPointerDown={(e) => {
+          swallowContextMenu = false; // any fresh pointer interaction clears a stale swallow from a prior gesture
+          if (e.button === 2) {
+            rightGesture = { x: e.clientX, y: e.clientY, moved: false };
+            window.addEventListener('pointermove', onRightPointerMove);
+            window.addEventListener('pointerup', onRightPointerUp);
+          }
           if (props.onBackgroundPointerDown) {
             const target = e.target as HTMLElement;
             if (!target.closest?.('[data-no-pan]')) {

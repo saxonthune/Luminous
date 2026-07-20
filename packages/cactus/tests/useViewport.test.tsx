@@ -69,6 +69,21 @@ describe('shouldViewportPan', () => {
     ).toBe(true);
   });
 
+  it('right-drag (button 2) always pans, even off-surface', () => {
+    expect(
+      shouldViewportPan(
+        { type: 'mousedown', button: 2, target: node },
+        { leftDragPan: true }
+      )
+    ).toBe(true);
+    expect(
+      shouldViewportPan(
+        { type: 'mousedown', button: 2, target: panSurface },
+        { leftDragPan: false }
+      )
+    ).toBe(true);
+  });
+
   it('wheel always pans, regardless of target', () => {
     expect(
       shouldViewportPan({ type: 'wheel', target: node }, { leftDragPan: false })

@@ -25,13 +25,14 @@ export interface PanFilterEvent {
 
 /** The viewport pan/zoom gate. Fail-safe by default: a pointer gesture pans
  *  only when it lands on an explicit `[data-pan-surface]` element. Wheel and
- *  middle-drag always pass regardless of target. */
+ *  middle- and right-drag always pass regardless of target. */
 export function shouldViewportPan(
   event: PanFilterEvent,
   opts: { leftDragPan: boolean }
 ): boolean {
   if (event.type === 'wheel') return true;
   if (event.type === 'mousedown' && event.button === 1) return true; // middle-drag always pans
+  if (event.type === 'mousedown' && event.button === 2) return true; // right-drag pans; a right click with no drag falls through to the context menu (Canvas suppresses the menu when the gesture moved)
   const target = event.target as HTMLElement | null;
   const onSurface = !!target?.closest?.('[data-pan-surface]');
   if (!onSurface) return false; // fail safe: not the background → never pan
