@@ -119,7 +119,7 @@
         "text": "The free-text search string.\n\n```shell\n--query <text>\n```",
         "mode": "markdown"
       },
-      "color": "oxide"
+      "color": "accent-7"
     },
     {
       "id": "cli.braincrawl.crossref",
@@ -129,7 +129,7 @@
         "text": "Commands that pull citation data from Crossref. Narrower than openalex/semanticscholar — Crossref is used for reference lookups only, not general search.",
         "mode": "markdown"
       },
-      "color": "deep-moss"
+      "color": "accent-3"
     },
     {
       "id": "cli.braincrawl.crossref.refs",
@@ -325,7 +325,7 @@
       },
       "x": 1929.144824988183,
       "y": 659.5644068556028,
-      "color": "deep-moss",
+      "color": "accent-3",
       "contentHeight": 168.76601631649106,
       "contentWidth": 340.9574747968284
     },
@@ -348,7 +348,7 @@
       },
       "x": 1434.2464218473897,
       "y": -282.4192624854906,
-      "color": "deep-moss"
+      "color": "accent-3"
     },
     {
       "id": "store.l1-library.api",
