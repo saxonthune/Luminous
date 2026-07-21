@@ -169,6 +169,49 @@ export function applyDrop(
 }
 
 /**
+ * Whether an Edge from `source` to `target` may be created: not a self edge,
+ * and not a duplicate of one already in the Document. Core's `addEdge`
+ * treats a duplicate as ok-with-no-change (operations.ts), so recording one
+ * in history would push an inverse that removes the pre-existing edge on
+ * undo — this must be checked before dispatch, not after.
+ */
+export function canConnect(doc: AtlasDocument, source: string, target: string): boolean {
+  if (source === target) return false;
+  return !doc.edges.some((e) => e.from === source && e.to === target);
+}
+
+/**
+ * The `AtlasAction`s for a Ctrl-drop edge completion (R52): a fresh Node
+ * under the pointer, parented by the Container under the pointer (or
+ * top-level when `parentId` is `null`), plus the Edge from `sourceId` into
+ * it. Position math mirrors `endDrag`'s drop-position write above — parent-
+ * relative, via the parent's child-area origin.
+ */
+export function buildConnectDropActions(
+  doc: AtlasDocument,
+  sourceId: string,
+  parentId: string | null,
+  droppedAbs: { x: number; y: number },
+  parentAbs: { x: number; y: number } | undefined,
+): AtlasAction[] {
+  const existingIds = new Set(doc.nodes.map((n) => n.id));
+  const id = uniqueId('new-node', existingIds);
+  const parentNode = parentId !== null ? doc.nodes.find((n) => n.id === parentId) : undefined;
+  const origin = parentAbs ? childAreaOrigin(parentNode) : { x: 0, y: 0 };
+  const x = droppedAbs.x - (parentAbs?.x ?? 0) - origin.x;
+  const y = droppedAbs.y - (parentAbs?.y ?? 0) - origin.y;
+  const addNodeAction: AtlasAction = {
+    type: 'addNode',
+    id,
+    name: 'New Node',
+    ...(parentId !== null ? { parent: parentId } : {}),
+    x,
+    y,
+  };
+  return [addNodeAction, { type: 'addEdge', from: sourceId, to: id }];
+}
+
+/**
  * R6 preview text for a pending drop — what `resolveDrop` would do, phrased
  * for a toast. `null` when the drop is a plain move (no membership change).
  * Deliberately does not predict a refusal (self/descendant): the hit-test

@@ -232,8 +232,11 @@ function mountMarquee(trigger: 'shift-drag' | 'drag' | undefined, nodeRects: Nod
 
 const MARQUEE_NODE: NodeRect = { id: 'a', x: 10, y: 10, width: 50, height: 50 };
 
+type ConnectDropInfo = { source: string; sourceHandle: string | null; clientX: number; clientY: number; ctrlKey: boolean };
+
 function ConnectHarness(props: {
   onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;
+  onConnectDrop?: (info: ConnectDropInfo) => void;
   isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean;
   exposeGesture: (g: () => Gesture) => void;
   exposeBeginConnect: (fn: (sourceId: string, sourceHandle: string | null, clientX: number, clientY: number) => void) => void;
@@ -247,6 +250,8 @@ function ConnectHarness(props: {
       onConnect: (c) => props.onConnect(c),
       // eslint-disable-next-line solid/reactivity -- test harness; props are static
       isValidConnection: props.isValidConnection,
+      // eslint-disable-next-line solid/reactivity -- test harness; props are static
+      onConnectDrop: props.onConnectDrop ? (info) => props.onConnectDrop!(info) : undefined,
     },
   });
   props.exposeGesture(gesture.gesture);
@@ -254,8 +259,12 @@ function ConnectHarness(props: {
   return <div />;
 }
 
-function mountConnect(isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean) {
+function mountConnect(
+  isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean,
+  onConnectDrop?: (info: ConnectDropInfo) => void,
+) {
   const connected: Array<{ source: string; sourceHandle: string | null; target: string; targetHandle: string | null }> = [];
+  const dropped: ConnectDropInfo[] = [];
   let gesture!: () => Gesture;
   let beginConnect!: (sourceId: string, sourceHandle: string | null, clientX: number, clientY: number) => void;
   const host = document.createElement('div');
@@ -264,6 +273,7 @@ function mountConnect(isValidConnection?: (connection: { source: string; sourceH
     () => (
       <ConnectHarness
         onConnect={(c) => connected.push(c)}
+        onConnectDrop={onConnectDrop ? (info) => { dropped.push(info); onConnectDrop(info); } : (info) => dropped.push(info)}
         isValidConnection={isValidConnection}
         exposeGesture={(g) => { gesture = g; }}
         exposeBeginConnect={(fn) => { beginConnect = fn; }}
@@ -271,7 +281,7 @@ function mountConnect(isValidConnection?: (connection: { source: string; sourceH
     ),
     host
   );
-  return { connected, gesture: () => gesture(), beginConnect: (...args: Parameters<typeof beginConnect>) => beginConnect(...args), cleanup };
+  return { connected, dropped, gesture: () => gesture(), beginConnect: (...args: Parameters<typeof beginConnect>) => beginConnect(...args), cleanup };
 }
 
 describe('useGesture connecting', () => {
@@ -299,7 +309,7 @@ describe('useGesture connecting', () => {
     cleanup();
   });
 
-  it('pointerup over a data-connection-target fires onConnect with source/target', () => {
+  it('R47: drag past the threshold then release over a data-connection-target fires onConnect', () => {
     const target = document.createElement('div');
     target.setAttribute('data-connection-target', 'true');
     target.setAttribute('data-node-id', 'node-b');
@@ -312,6 +322,7 @@ describe('useGesture connecting', () => {
 
     const { gesture, connected, beginConnect, cleanup } = mountConnect();
     beginConnect('node-a', 'out', 10, 20);
+    move({ clientX: 40, clientY: 20 });
     up();
     expect(connected).toEqual([{ source: 'node-a', sourceHandle: 'out', target: 'node-b', targetHandle: 'in' }]);
     expect(gesture()).toEqual({ kind: 'idle' });
@@ -319,20 +330,22 @@ describe('useGesture connecting', () => {
     target.remove();
   });
 
-  it('pointerup over empty space does not fire onConnect', () => {
+  it('R47: drag past the threshold then release over empty space does not fire onConnect', () => {
     Object.defineProperty(document, 'elementsFromPoint', {
       value: () => [],
       configurable: true,
     });
 
-    const { connected, beginConnect, cleanup } = mountConnect();
+    const { connected, gesture, beginConnect, cleanup } = mountConnect();
     beginConnect('node-a', 'out', 10, 20);
+    move({ clientX: 40, clientY: 20 });
     up();
     expect(connected).toEqual([]);
+    expect(gesture()).toEqual({ kind: 'idle' });
     cleanup();
   });
 
-  it('isValidConnection returning false suppresses onConnect', () => {
+  it('isValidConnection returning false suppresses onConnect on a drag-release', () => {
     const target = document.createElement('div');
     target.setAttribute('data-connection-target', 'true');
     target.setAttribute('data-node-id', 'node-b');
@@ -344,10 +357,99 @@ describe('useGesture connecting', () => {
 
     const { connected, beginConnect, cleanup } = mountConnect(() => false);
     beginConnect('node-a', 'out', 10, 20);
+    move({ clientX: 40, clientY: 20 });
     up();
     expect(connected).toEqual([]);
     cleanup();
     target.remove();
+  });
+
+  it('R48: a release within the drag threshold arms instead of completing, then a click on a target fires onConnect', () => {
+    const target = document.createElement('div');
+    target.setAttribute('data-connection-target', 'true');
+    target.setAttribute('data-node-id', 'node-b');
+    document.body.appendChild(target);
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [target],
+      configurable: true,
+    });
+
+    const { gesture, connected, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    expect(gesture().kind).toBe('connecting');
+    expect(connected).toEqual([]);
+
+    down(target, { button: 0, clientX: 15, clientY: 22 });
+    expect(connected).toEqual([{ source: 'node-a', sourceHandle: 'out', target: 'node-b', targetHandle: null }]);
+    expect(gesture()).toEqual({ kind: 'idle' });
+    cleanup();
+    target.remove();
+  });
+
+  it('R48: the armed completion swallows the pointerdown so it never reaches the target', () => {
+    const target = document.createElement('div');
+    target.setAttribute('data-connection-target', 'true');
+    target.setAttribute('data-node-id', 'node-b');
+    document.body.appendChild(target);
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [target],
+      configurable: true,
+    });
+    const onTargetPointerDown = vi.fn();
+    target.addEventListener('pointerdown', onTargetPointerDown);
+
+    const { beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    down(target, { button: 0, clientX: 15, clientY: 22 });
+    expect(onTargetPointerDown).not.toHaveBeenCalled();
+    cleanup();
+    target.remove();
+  });
+
+  it('R48: a right-button press while armed is ignored, leaving the gesture connecting', () => {
+    const { gesture, connected, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    window.dispatchEvent(new MouseEvent('pointerdown', { button: 2, clientX: 15, clientY: 22 }));
+    expect(gesture().kind).toBe('connecting');
+    expect(connected).toEqual([]);
+
+    // Clean up the still-armed gesture so its window listener doesn't leak
+    // into later tests.
+    window.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 15, clientY: 22 }));
+    cleanup();
+  });
+
+  it('R52: Ctrl + release reports onConnectDrop instead of completing onConnect, even over a valid target', () => {
+    const target = document.createElement('div');
+    target.setAttribute('data-connection-target', 'true');
+    target.setAttribute('data-node-id', 'node-b');
+    document.body.appendChild(target);
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [target],
+      configurable: true,
+    });
+
+    const { gesture, connected, dropped, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    move({ clientX: 40, clientY: 20 });
+    window.dispatchEvent(new MouseEvent('pointerup', { ctrlKey: true, clientX: 40, clientY: 20 }));
+    expect(connected).toEqual([]);
+    expect(dropped).toEqual([{ source: 'node-a', sourceHandle: 'out', clientX: 40, clientY: 20, ctrlKey: true }]);
+    expect(gesture()).toEqual({ kind: 'idle' });
+    cleanup();
+    target.remove();
+  });
+
+  it('R52: Ctrl + click while armed reports onConnectDrop', () => {
+    const { dropped, beginConnect, cleanup } = mountConnect();
+    beginConnect('node-a', 'out', 10, 20);
+    up();
+    window.dispatchEvent(new MouseEvent('pointerdown', { button: 0, ctrlKey: true, clientX: 15, clientY: 22 }));
+    expect(dropped).toEqual([{ source: 'node-a', sourceHandle: 'out', clientX: 15, clientY: 22, ctrlKey: true }]);
+    cleanup();
   });
 });
 

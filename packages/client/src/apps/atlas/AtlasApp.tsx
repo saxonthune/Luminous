@@ -47,6 +47,16 @@ export function AtlasApp() {
     });
   }
 
+  // R51: same fixed-slot pattern as DRAG_TOAST_ID — the toast's lifetime is
+  // the in-progress Edge preview, not a timer.
+  const EDGE_TOAST_ID = 'atlas-edge-preview';
+  function setEdgeToast(message: string | null) {
+    setToasts((prev) => {
+      const rest = prev.filter((t) => t.id !== EDGE_TOAST_ID);
+      return message ? [...rest, { id: EDGE_TOAST_ID, message }] : rest;
+    });
+  }
+
   function loadDoc(id: string) {
     const source = sources()?.find((s) => s.id === id);
     if (!source) {
@@ -206,6 +216,7 @@ export function AtlasApp() {
               dispatchDoc={dispatchDoc}
               onPendingMembershipChange={setDragToast}
               onDropRefused={(message) => enqueueToast(message)}
+              onEdgePreviewChange={setEdgeToast}
             />
           </Match>
           <Match when={shell().kind === 'error'}>

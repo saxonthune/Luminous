@@ -11,6 +11,8 @@ import {
   resolveDrop,
   applyDrop,
   describePendingDrop,
+  canConnect,
+  buildConnectDropActions,
 } from '../mutations';
 import { projectAtlasNodes } from '../projection.ts';
 
@@ -267,5 +269,66 @@ describe('uniqueId', () => {
 
   it('appends an increasing suffix until free', () => {
     expect(uniqueId('new-node', new Set(['new-node', 'new-node-2']))).toBe('new-node-3');
+  });
+});
+
+describe('canConnect', () => {
+  const d: AtlasDocument = {
+    v: 1,
+    nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
+    edges: [{ from: 'a', to: 'b' }],
+  };
+
+  it('refuses a self edge', () => {
+    expect(canConnect(d, 'a', 'a')).toBe(false);
+  });
+
+  it('refuses an edge that already exists', () => {
+    expect(canConnect(d, 'a', 'b')).toBe(false);
+  });
+
+  it('allows a valid new pair', () => {
+    expect(canConnect(d, 'b', 'a')).toBe(true);
+  });
+});
+
+describe('buildConnectDropActions', () => {
+  it('a root drop places the new Node at the absolute dropped position, no parent', () => {
+    const d = doc([{ id: 'a', name: 'A' }]);
+    const actions = buildConnectDropActions(d, 'a', null, { x: 300, y: 40 }, undefined);
+    expect(actions).toEqual([
+      { type: 'addNode', id: 'new-node', name: 'New Node', x: 300, y: 40 },
+      { type: 'addEdge', from: 'a', to: 'new-node' },
+    ]);
+  });
+
+  it('a Container drop sets the parent and positions relative to the child-area origin', () => {
+    // Same geometry as applyDrop's plain-move case: container at (100, 100),
+    // dropped at (150, 260) absolute -> (32, 80) relative to the child area.
+    const d = doc([
+      { id: 'container', name: 'Container' },
+      { id: 'a', name: 'A', parent: 'container' },
+    ]);
+    const actions = buildConnectDropActions(d, 'a', 'container', { x: 150, y: 260 }, { x: 100, y: 100 });
+    expect(actions).toEqual([
+      { type: 'addNode', id: 'new-node', name: 'New Node', parent: 'container', x: 32, y: 80 },
+      { type: 'addEdge', from: 'a', to: 'new-node' },
+    ]);
+  });
+
+  it('an id collision appends a suffix', () => {
+    const d = doc([
+      { id: 'a', name: 'A' },
+      { id: 'new-node', name: 'Taken' },
+    ]);
+    const actions = buildConnectDropActions(d, 'a', null, { x: 0, y: 0 }, undefined);
+    expect(actions[0]).toMatchObject({ id: 'new-node-2' });
+    expect(actions[1]).toEqual({ type: 'addEdge', from: 'a', to: 'new-node-2' });
+  });
+
+  it('the second action is the Edge from the source into the new Node', () => {
+    const d = doc([{ id: 'source', name: 'Source' }]);
+    const actions = buildConnectDropActions(d, 'source', null, { x: 0, y: 0 }, undefined);
+    expect(actions[1]).toEqual({ type: 'addEdge', from: 'source', to: 'new-node' });
   });
 });

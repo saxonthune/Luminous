@@ -71,6 +71,16 @@ export interface UseGestureOptions {
     screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
     onConnect: (connection: ConnectionPayload) => void;
     isValidConnection?: (connection: ConnectionPayload) => boolean;
+    /** Ctrl/Meta + release (or click) while connecting — reported instead of
+        `onConnect`, so the host can create a new node under the pointer and
+        complete the edge into it (R52). */
+    onConnectDrop?: (info: {
+      source: string;
+      sourceHandle: string | null;
+      clientX: number;
+      clientY: number;
+      ctrlKey: boolean;
+    }) => void;
   };
 }
 
@@ -185,6 +195,9 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
     let latestX = clientX;
     let latestY = clientY;
     let rafId = 0;
+    // Gates only the *first* release — once past threshold, a drag that
+    // returns near its origin still completes on release rather than arming.
+    let movedPastThreshold = false;
 
     const flushPosition = () => {
       rafId = 0;
@@ -198,42 +211,80 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
     const handlePointerMove = (e: PointerEvent) => {
       latestX = e.clientX;
       latestY = e.clientY;
+      if (Math.hypot(e.clientX - clientX, e.clientY - clientY) >= DRAG_THRESHOLD) {
+        movedPastThreshold = true;
+      }
       if (!rafId) {
         rafId = requestAnimationFrame(flushPosition);
       }
     };
 
-    const handlePointerUp = (e: PointerEvent) => {
+    const teardown = () => {
       if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointerdown', handleArmedPointerDown, true);
+    };
 
-      const elements = document.elementsFromPoint(e.clientX, e.clientY);
-      const targetElement = elements.find((el) =>
-        el.hasAttribute('data-connection-target')
-      ) as HTMLElement | undefined;
+    const complete = (e: { clientX: number; clientY: number; ctrlKey: boolean; metaKey: boolean }) => {
+      if ((e.ctrlKey || e.metaKey) && connection.onConnectDrop) {
+        connection.onConnectDrop({
+          source: sourceNodeId,
+          sourceHandle,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          ctrlKey: true,
+        });
+      } else {
+        const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        const targetElement = elements.find((el) =>
+          el.hasAttribute('data-connection-target')
+        ) as HTMLElement | undefined;
 
-      if (targetElement) {
-        const targetNodeId = targetElement.getAttribute('data-node-id');
-        const targetHandleId = targetElement.getAttribute('data-handle-id');
+        if (targetElement) {
+          const targetNodeId = targetElement.getAttribute('data-node-id');
+          const targetHandleId = targetElement.getAttribute('data-handle-id');
 
-        if (targetNodeId) {
-          const payload: ConnectionPayload = {
-            source: sourceNodeId,
-            sourceHandle,
-            target: targetNodeId,
-            targetHandle: targetHandleId ?? null,
-          };
+          if (targetNodeId) {
+            const payload: ConnectionPayload = {
+              source: sourceNodeId,
+              sourceHandle,
+              target: targetNodeId,
+              targetHandle: targetHandleId ?? null,
+            };
 
-          const isValid = connection.isValidConnection ? connection.isValidConnection(payload) : true;
-          if (isValid) {
-            tracedOnConnect!(payload);
+            const isValid = connection.isValidConnection ? connection.isValidConnection(payload) : true;
+            if (isValid) {
+              tracedOnConnect!(payload);
+            }
           }
         }
       }
 
       if (import.meta.env.DEV) connectMark?.end();
       setGesture(IDLE);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
+      teardown();
+    };
+
+    // Armed (click-to-arm, R48): the first release landed within the drag
+    // threshold, so the gesture stays 'connecting' instead of completing.
+    // Capture-phase so the press never reaches a node's own pointerdown
+    // handler (which would start a drag or clear the selection) — see the
+    // task's Do NOT list.
+    const handleArmedPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      e.preventDefault();
+      complete(e);
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (!movedPastThreshold) {
+        window.removeEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointerdown', handleArmedPointerDown, true);
+        return;
+      }
+      complete(e);
     };
 
     window.addEventListener('pointermove', handlePointerMove);

@@ -220,6 +220,12 @@ body {
      deliberately desaturated off the theme surface so a container reads as a
      recessive holder and its colored leaf children stand out against it. */
   --atlas-container-fill: color-mix(in oklch, var(--surface-alt) 90%, gray);
+
+  /* Edge Tab badge (doc01.07.04 R46): the theme's green fill and white glyph.
+     Both --color-token-moss and --on-accent are already redefined per
+     [data-theme] above, so this single mapping swaps with the theme. */
+  --atlas-edge-tab-fill: var(--color-token-moss);
+  --atlas-edge-tab-glyph: var(--on-accent);
 }
 
 /* Atlas color-picker vars must live in a plain :root block, not @theme inline —

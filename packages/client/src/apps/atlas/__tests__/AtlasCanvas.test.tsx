@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render } from 'solid-js/web';
 import type { AtlasDocument } from '@luminous/core/atlas';
 import { projectAtlasNodes } from '../projection.ts';
 import { addDelta, growAncestors, type LayoutDelta } from '../layoutOverride.ts';
+import { AtlasCanvas, type AtlasCanvasProps } from '../AtlasCanvas.tsx';
 
 /**
  * Builds the same delta a live content-resize composes in AtlasNodeLayer
@@ -126,5 +128,62 @@ describe('live content-resize composition — container frame (sizes the contain
     expect(deltas.get('mid')).toMatchObject({ dw: 60 });
     expect(deltas.get('leaf')).toBeUndefined();
     expect(deltas.get('root')?.dw).toBeGreaterThan(0);
+  });
+});
+
+describe('Edge Tab (doc01.07.04 R44-R52)', () => {
+  let container: HTMLDivElement;
+  let dispose: (() => void) | undefined;
+
+  function mountCanvas(doc: AtlasDocument, extra: Partial<AtlasCanvasProps> = {}) {
+    const dispatchDoc = vi.fn();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    dispose = render(() => <AtlasCanvas doc={doc} dispatchDoc={dispatchDoc} {...extra} />, container);
+    return { dispatchDoc };
+  }
+
+  afterEach(() => {
+    dispose?.();
+    container?.parentNode?.removeChild(container);
+  });
+
+  const twoNodes: AtlasDocument = {
+    v: 1,
+    nodes: [
+      { id: 'a', name: 'A', x: 0, y: 0 },
+      { id: 'b', name: 'B', x: 400, y: 0 },
+    ],
+    edges: [],
+  };
+
+  it('R44: renders an Edge Tab for each Node', () => {
+    mountCanvas(twoNodes);
+    expect(container.querySelector('[data-testid="edge-tab-a"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="edge-tab-b"]')).toBeTruthy();
+  });
+
+  it("the tab is marked data-no-pan so a press on it can't start a marquee", () => {
+    mountCanvas(twoNodes);
+    const tab = container.querySelector('[data-testid="edge-tab-a"]')!;
+    expect(tab.getAttribute('data-no-pan')).toBe('true');
+  });
+
+  it('R47/R48/R51: a tab press starts Edge creation, surfaced via the preview toast', () => {
+    const messages: Array<string | null> = [];
+    mountCanvas(twoNodes, { onEdgePreviewChange: (m) => messages.push(m) });
+
+    const tab = container.querySelector('[data-testid="edge-tab-a"]') as HTMLElement;
+    tab.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
+
+    expect(messages.some((m) => m?.includes('Creating an edge from "A"'))).toBe(true);
+  });
+
+  it('the source Node keeps its tab visible (lit) once a connection is armed', () => {
+    mountCanvas(twoNodes);
+    const tabA = container.querySelector('[data-testid="edge-tab-a"]') as HTMLElement;
+    tabA.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
+
+    expect(tabA.style.opacity).toBe('1');
   });
 });

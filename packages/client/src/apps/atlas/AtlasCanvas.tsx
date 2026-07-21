@@ -1,7 +1,15 @@
 import { For, Show, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
 import type { AtlasAction, AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
 import { applyAtlasBatch, invertAtlasBatch } from '@luminous/core/atlas';
-import { Canvas, NodeContainer, useCanvasContext, useGesture, findContainerAt, isOverContainerInterior } from '@luminous/cactus';
+import {
+  Canvas,
+  NodeContainer,
+  ConnectionPreview,
+  useCanvasContext,
+  useGesture,
+  findContainerAt,
+  isOverContainerInterior,
+} from '@luminous/cactus';
 import type { CanvasRef, ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
 import {
   toEdgeDeclarations,
@@ -26,6 +34,8 @@ import {
   selfAndDescendantIds,
   resolveDrop,
   describePendingDrop,
+  canConnect,
+  buildConnectDropActions,
   type NodeEditForm,
 } from './mutations.ts';
 import { AtlasNodeContent } from './AtlasNodeContent.tsx';
@@ -48,6 +58,13 @@ const ATLAS_NODE_MD_STYLES = `
 // EDIT_HEIGHT (v1, no content-driven auto-grow).
 const EDIT_HEIGHT = 220;
 
+// Edge Tab geometry (R44): a small circular badge protruding from the top of
+// a Node's right side. The overlap pulls it a couple px onto the Node so it
+// reads as attached rather than floating.
+const EDGE_TAB_SIZE = 22;
+const EDGE_TAB_OVERLAP = 6;
+const EDGE_TAB_TOP_OFFSET = 8;
+
 export interface AtlasCanvasProps {
   doc: AtlasDocument;
   dispatchDoc: (next: AtlasDocument) => void;
@@ -55,6 +72,9 @@ export interface AtlasCanvasProps {
    * membership, and with `null` once it isn't (including at drag end). */
   onPendingMembershipChange?: (message: string | null) => void;
   onDropRefused?: (message: string) => void;
+  /** R51: fires with a toast message while a preview Edge is drawn, and with
+   * `null` once it isn't (including at completion or cancel). */
+  onEdgePreviewChange?: (message: string | null) => void;
 }
 
 /**
@@ -86,6 +106,7 @@ function AtlasNodeLayer(props: {
   previewContentSize: () => { nodeId: string; width?: number; height?: number } | undefined;
   onResizePreview: (nodeId: string, size: { width?: number; height?: number } | undefined) => void;
   onResizeCommit: (nodeId: string, size: { width?: number; height?: number }) => void;
+  onEdgePreviewChange?: (message: string | null) => void;
 }): JSX.Element {
   const ctx = useCanvasContext();
 
@@ -95,6 +116,20 @@ function AtlasNodeLayer(props: {
       onDragStart: (nodeId) => props.onDragStart(nodeId),
       onDragEnd: (nodeId, dx, dy) => props.onDragEnd(nodeId, dx, dy),
     },
+  });
+
+  // R51: a toast describing the in-progress Edge creation, mirrored from the
+  // connecting gesture's state — null once it isn't connecting.
+  createEffect(() => {
+    const drag = ctx.connectionDrag();
+    if (!drag) {
+      props.onEdgePreviewChange?.(null);
+      return;
+    }
+    const sourceName = props.nodes().find((rn) => rn.node.id === drag.sourceNodeId)?.node.name ?? drag.sourceNodeId;
+    props.onEdgePreviewChange?.(
+      `Creating an edge from "${sourceName}" — release or click a node to connect, Ctrl+click to create a new node`,
+    );
   });
 
   const parentOf = createMemo(() => {
@@ -167,6 +202,12 @@ function AtlasNodeLayer(props: {
       {(rn) => {
         const editing = () => props.editingId() === rn.node.id;
         const color = () => props.effectiveColor(rn.node.id);
+        // R45: the tab shows on hover — enter/leave on the row wrapper use
+        // subtree semantics, so hover holds while the pointer moves from the
+        // Node onto the tab (a sibling inside the same wrapper).
+        const [hovered, setHovered] = createSignal(false);
+        const isEdgeSource = () => ctx.connectionDrag()?.sourceNodeId === rn.node.id;
+        const tabVisible = () => hovered() || isEdgeSource();
         // The container box is color-neutral: a node's color identifies the
         // node itself (its header/leaf fill), never the region its children
         // sit in. So the soft-container tint is a fixed grey regardless of
@@ -191,7 +232,7 @@ function AtlasNodeLayer(props: {
           return p && p.nodeId === rn.node.id ? { width: p.width, height: p.height } : undefined;
         };
         return (
-          <div style={wrapperStyle()}>
+          <div style={wrapperStyle()} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
             <NodeContainer
               nodeId={rn.node.id}
               x={() => rn.x + delta().dx}
@@ -237,6 +278,53 @@ function AtlasNodeLayer(props: {
                 onResizeCommit={(size) => props.onResizeCommit(rn.node.id, size)}
               />
             </NodeContainer>
+            {/* Edge Tab (R44): a sibling of NodeContainer, not a child — the
+                container's root div clips overflow, which would hide a tab
+                protruding past its right edge. */}
+            <div
+              data-testid={`edge-tab-${rn.node.id}`}
+              data-no-pan="true"
+              style={{
+                position: 'absolute',
+                left: `${rn.x + delta().dx + rn.w + delta().dw - EDGE_TAB_OVERLAP}px`,
+                top: `${rn.y + delta().dy + EDGE_TAB_TOP_OFFSET}px`,
+                width: `${EDGE_TAB_SIZE}px`,
+                height: `${EDGE_TAB_SIZE}px`,
+                'z-index': '5',
+                opacity: tabVisible() ? '1' : '0',
+                transition: 'opacity 150ms ease',
+                'pointer-events': tabVisible() ? 'auto' : 'none',
+                cursor: 'pointer',
+              }}
+              on:pointerdown={(e: PointerEvent) => {
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                ctx.startConnection(rn.node.id, null, e.clientX, e.clientY);
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  'border-radius': '9999px',
+                  background: 'var(--atlas-edge-tab-fill)',
+                  color: 'var(--atlas-edge-tab-glyph)',
+                  display: 'flex',
+                  'align-items': 'center',
+                  'justify-content': 'center',
+                  'font-size': '15px',
+                  'line-height': '1',
+                  'font-weight': '600',
+                  'box-shadow': isEdgeSource()
+                    ? '0 0 0 3px var(--atlas-edge-tab-fill)'
+                    : 'var(--cactus-shadow-sm, none)',
+                  transform: isEdgeSource() ? 'scale(1.15)' : 'scale(1)',
+                  transition: 'transform 150ms ease, box-shadow 150ms ease',
+                }}
+              >
+                +
+              </div>
+            </div>
           </div>
         );
       }}
@@ -429,6 +517,23 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     dispatchAction(actions, 'Move Node');
   }
 
+  // R47/R48: a completed connection (drag-release or click-to-arm-then-click)
+  // always targets a Node validated by canConnect via isValidConnection below.
+  function onConnect(c: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) {
+    dispatchAction([{ type: 'addEdge', from: c.source, to: c.target }], 'Add Edge');
+  }
+
+  // R52: Ctrl + release/click completes the Edge into a fresh Node instead —
+  // a plain (non-Ctrl) release/click over the background is just a cancel.
+  function onConnectDrop(info: { source: string; sourceHandle: string | null; clientX: number; clientY: number; ctrlKey: boolean }) {
+    if (!info.ctrlKey || !canvasRef) return;
+    const parentId = findContainerAt(info.clientX, info.clientY);
+    const droppedAbs = canvasRef.screenToCanvas(info.clientX, info.clientY);
+    const parentRn = parentId ? nodes().find((n) => n.node.id === parentId) : undefined;
+    const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : undefined;
+    dispatchAction(buildConnectDropActions(props.doc, info.source, parentId, droppedAbs, parentAbs), 'Add Node');
+  }
+
   function enterEdit(id: string) {
     setEditingId(id);
   }
@@ -606,6 +711,17 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             trigger: 'drag',
             getNodeRects: () => nodes().map((rn) => ({ id: rn.node.id, x: rn.x, y: rn.y, width: rn.w, height: rn.h })),
           }}
+          connectionDrag={{
+            onConnect,
+            onConnectDrop,
+            isValidConnection: (c) => canConnect(props.doc, c.source, c.target),
+          }}
+          renderConnectionPreview={(coords) => (
+            <ConnectionPreview
+              d={`M ${coords.startX} ${coords.startY} L ${coords.currentX} ${coords.currentY}`}
+              stroke="var(--atlas-edge-tab-fill)"
+            />
+          )}
         >
           <AtlasNodeLayer
             nodes={nodes}
@@ -624,6 +740,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
               setPreviewContentSize(size === undefined ? undefined : { nodeId, ...size })
             }
             onResizeCommit={resizeContent}
+            onEdgePreviewChange={props.onEdgePreviewChange}
           />
         </Canvas>
         <Show when={selectedCount() > 1}>

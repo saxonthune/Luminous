@@ -38,6 +38,15 @@ export interface CanvasProps {
   connectionDrag?: {
     onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;
     isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean;
+    /** Ctrl/Meta + release (or click) while connecting — see `useGesture`'s
+        `connection.onConnectDrop` (R52). */
+    onConnectDrop?: (info: {
+      source: string;
+      sourceHandle: string | null;
+      clientX: number;
+      clientY: number;
+      ctrlKey: boolean;
+    }) => void;
   };
   boxSelect?: {
     getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
