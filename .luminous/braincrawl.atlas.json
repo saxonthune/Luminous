@@ -8,8 +8,9 @@
         "text": "Drives desktop research sessions: gathers from providers, pushes into the local store, and hosts the L3 sync verbs (`l3 push` / `l3 pull`).",
         "mode": "markdown"
       },
-      "x": -950.7627502880656,
-      "y": 299.8201302995492
+      "x": -2135.248584059843,
+      "y": 486.23386315383596,
+      "contentHeight": 1033.211140274559
     },
     {
       "id": "cli.braincrawl.openalex",
@@ -19,8 +20,8 @@
         "text": "Commands that pull from the OpenAlex provider — a scholarly metadata source, accessed via its HTTP API.",
         "mode": "markdown"
       },
-      "x": 485.05420090164586,
-      "y": 77.3324332784926,
+      "x": 618.2109187558974,
+      "y": 106.18254036645669,
       "contentHeight": 649.5416815498158,
       "contentWidth": 529.4654188147252
     },
@@ -45,8 +46,8 @@
         "text": "The OpenAlex work id to fetch (e.g. `W2741809807`).\n\n```shell\n--id <openalex-id>\n```",
         "mode": "markdown"
       },
-      "x": -6.66668701171875,
-      "y": 146.16668701171875
+      "x": 65.3149788431756,
+      "y": 152.4501556834466
     },
     {
       "id": "cli.braincrawl.openalex.search",
@@ -56,8 +57,8 @@
         "text": "Search OpenAlex by free-text query, optionally topic-gated.",
         "mode": "markdown"
       },
-      "x": 60.55753906803187,
-      "y": 39.6150692138051,
+      "x": 513.2295243029298,
+      "y": 235.08706283796556,
       "contentHeight": 287.53692739656725,
       "contentWidth": 345.68968808511465
     },
@@ -80,8 +81,9 @@
         "text": "Commands that pull from the Semantic Scholar provider — mirrors the openalex subcommand shape (`get`, `search`, `refs`, `cited-by`).",
         "mode": "markdown"
       },
-      "x": 1101.0956887496625,
-      "y": 198.1685050587106
+      "x": 1604.4084922062057,
+      "y": 370.871351515309,
+      "contentHeight": 450.37727146734943
     },
     {
       "id": "cli.braincrawl.semanticscholar.get",
@@ -91,8 +93,8 @@
         "text": "Fetch one work by its Semantic Scholar id.",
         "mode": "markdown"
       },
-      "x": 2170.6785725390055,
-      "y": 246.18285060726404
+      "x": 700.4702082199188,
+      "y": 63.27925094295938
     },
     {
       "id": "cli.braincrawl.semanticscholar.get.id",
@@ -110,7 +112,9 @@
       "content": {
         "text": "Search Semantic Scholar by free-text query.",
         "mode": "markdown"
-      }
+      },
+      "x": 8.020111231398118,
+      "y": 63.1969641518682
     },
     {
       "id": "cli.braincrawl.semanticscholar.search.query",
@@ -120,7 +124,11 @@
         "text": "The free-text search string.\n\n```shell\n--query <text>\n```",
         "mode": "markdown"
       },
-      "color": "accent-7"
+      "x": -1.019051158766132,
+      "y": 54.4523721030846,
+      "color": "accent-7",
+      "contentHeight": 104.14485372440883,
+      "contentWidth": 205.88760838729314
     },
     {
       "id": "cli.braincrawl.crossref",
@@ -130,24 +138,24 @@
         "text": "Commands that pull citation data from Crossref. Narrower than openalex/semanticscholar — Crossref is used for reference lookups only, not general search.",
         "mode": "markdown"
       },
-      "x": 1086.6666870117188,
-      "y": 53.66665649414057,
+      "x": 1657.9611975858702,
+      "y": 128.84479709763235,
       "color": "accent-3",
-      "contentHeight": 218.3149020678846,
-      "contentWidth": 2947.3852256794994
+      "contentHeight": 215.21766407589033,
+      "contentWidth": 762.8113474097438
     },
     {
       "id": "cli.braincrawl.crossref.refs",
       "name": "refs",
-      "parent": "cli.braincrawl.crossref",
+      "parent": "cli.braincrawl.semanticscholar",
       "content": {
         "text": "Fetch the works a given work cites (backward citations, `refs`).",
         "mode": "markdown"
       },
-      "x": 1166.1808001730572,
-      "y": -5.509525579383055,
-      "contentHeight": 113.37620867890823,
-      "contentWidth": 945.8534410821037
+      "x": 288.95019332296135,
+      "y": 64.57108532538359,
+      "contentHeight": 143.60665337316033,
+      "contentWidth": 370.3827740487544
     },
     {
       "id": "cli.braincrawl.crossref.refs.id",
@@ -157,8 +165,8 @@
         "text": "The work id (DOI) whose references to fetch.\n\n```shell\n--id <doi>\n```",
         "mode": "markdown"
       },
-      "x": 2158.7461981132,
-      "y": -88.15240927012889
+      "x": 32.64379767843354,
+      "y": 33.114934454971035
     },
     {
       "id": "cli.braincrawl.opencitations",
@@ -168,8 +176,8 @@
         "text": "Commands that pull citation data from OpenCitations — same narrow shape as crossref, a second source for the same fetch-citations operation.",
         "mode": "markdown"
       },
-      "x": 147.5191091433536,
-      "y": 493.66522698117717
+      "x": 193.24360791234403,
+      "y": 429.650978938964
     },
     {
       "id": "cli.braincrawl.opencitations.refs",
@@ -197,8 +205,8 @@
         "text": "Report coverage and size counts for the local Catalog.",
         "mode": "markdown"
       },
-      "x": 123.10256704756796,
-      "y": 96.42975002279678
+      "x": 146.21626807852385,
+      "y": 296.553305418764
     },
     {
       "id": "cli.braincrawl.graph",
@@ -208,8 +216,10 @@
         "text": "Traverse the Catalog's citation graph from a starting work — forward (`cited-by`) or backward (`refs`), optionally topic-gated.",
         "mode": "markdown"
       },
-      "x": 89.35754667913386,
-      "y": 24.76051338365727
+      "x": 146.19735945281286,
+      "y": 117.79064216457789,
+      "contentHeight": 134.25530926325763,
+      "contentWidth": 229.37173060938235
     },
     {
       "id": "store.l1-library",
@@ -218,8 +228,10 @@
         "text": "The store of works keyed by a canonical id — a braincrawl-minted UUID, opaque and provider-neutral. Holds each work's artifacts: abstracts, fulltexts, and derived projections.",
         "mode": "markdown"
       },
-      "x": 2166.1530123224684,
-      "y": -480.32499436956516
+      "x": 2555.287857544189,
+      "y": 191.24691307330409,
+      "contentHeight": 225.90194958088142,
+      "contentWidth": 559.5364003035443
     },
     {
       "id": "store.l2-catalog",
@@ -228,8 +240,10 @@
         "text": "The shared index over the Library: every work's metadata, which artifacts are held and where, and the citation edges between works.",
         "mode": "markdown"
       },
-      "x": 842.3367890001216,
-      "y": 800.035269638159
+      "x": 2549.6424244952605,
+      "y": 466.5188504946508,
+      "contentHeight": 441.31038206028006,
+      "contentWidth": 837.1874431762416
     },
     {
       "id": "store.l3-research-collection",
@@ -238,8 +252,10 @@
         "text": "A consumer's own research: Research Documents that point at works by canonical id in the Catalog rather than copying them.",
         "mode": "markdown"
       },
-      "x": 1897.8191556712673,
-      "y": 1130.3880480324192
+      "x": 2562.6511980778214,
+      "y": 935.4023964100966,
+      "contentHeight": 286.88111487953756,
+      "contentWidth": 594.5605090609407
     },
     {
       "id": "catalog.canonical-id",
@@ -249,8 +265,8 @@
         "text": "A work's single, braincrawl-minted identity — a UUID. Every external identifier (DOI, ISBN, OpenAlex id, Semantic Scholar id) maps to exactly one canonical id.",
         "mode": "markdown"
       },
-      "x": 280,
-      "y": 0
+      "x": 468.2420342889868,
+      "y": 59.68651590082473
     },
     {
       "id": "catalog.citation",
@@ -260,8 +276,10 @@
         "text": "The primary edge between catalog entries: one work citing another. Forward traversal is `cited-by`, backward is `refs`.",
         "mode": "markdown"
       },
-      "x": 280,
-      "y": 150
+      "x": 442.5310045918004,
+      "y": 177.54762789691534,
+      "contentHeight": 94.9563341624458,
+      "contentWidth": 245.71116420708825
     },
     {
       "id": "box.openalex",
@@ -270,8 +288,8 @@
         "text": "Scholarly metadata provider. Both agents gather from it directly; whatever they find is pushed into the store their client points at. This is why the two Library+Catalog stores converge without ever syncing with each other.",
         "mode": "markdown"
       },
-      "x": 1127.4541056757778,
-      "y": -397.734119281831
+      "x": 1095.3008328563062,
+      "y": -360.2219758361144
     },
     {
       "id": "box.desktop-cli",
@@ -280,8 +298,10 @@
         "text": "The `braincrawl` CLI: drives desktop research sessions, gathers from OpenAlex, and hosts the sync verbs (`l3 push` / `l3 pull`). Sync is a client operation — the CLI reaches both research-doc stores; the stores never know about each other.",
         "mode": "markdown"
       },
-      "x": 1530.5579331455915,
-      "y": 175.64625555792426
+      "x": 1293.3960107350358,
+      "y": -42.02802131148162,
+      "contentHeight": 148.17963166196105,
+      "contentWidth": 471.97878165110194
     },
     {
       "id": "box.local-store",
@@ -290,8 +310,8 @@
         "text": "Library (L1 blobs) + Catalog (L2 works and citation edges) on the desktop: SQLite plus filesystem blobs behind the native server. Currently holds the accumulated corpus. After migration and cutover it becomes an archive — there is no ongoing L1/L2 sync.\n\n```prose\nHTTP surface: PUT /works, PUT /edges, POST /works/have, POST /graph/neighborhood, GET /stats, GET|PUT /works/{id}/content/{role}. Conformance-tested identical to the Cloudflare store.\n```",
         "mode": "markdown"
       },
-      "x": 3202.5548203495923,
-      "y": -79.37823430697648
+      "x": 1154.1179255809589,
+      "y": 575.722467284287
     },
     {
       "id": "box.research-docs-desktop",
@@ -300,8 +320,10 @@
         "text": "The Research Collection as markdown files in the braincrawl-l3 git repo — one `<slug>.l3.md` per doc, plus `_agent/` context files. Git here is the canonical history. Edited directly by desktop sessions.\n\n```prose\nL3 node grammar: frontmatter (doc, updated), `##` nodes with `^r-` anchors, property and link lines. `_agent/*.md` are opaque markdown.\n```",
         "mode": "markdown"
       },
-      "x": 3176.524364038532,
-      "y": 97.27891058707496
+      "x": 1912.786849182772,
+      "y": -136.04742846740174,
+      "contentHeight": 262.4266833471783,
+      "contentWidth": 334.67629392506717
     },
     {
       "id": "box.cloudflare-store",
@@ -310,8 +332,8 @@
         "text": "Library + Catalog on the worker: D1 (works, edges, artifacts) + R2 (blobs) + KV (id aliases). Empty until the migration replay lands; afterwards the single live corpus both agents write into.\n\n```prose\nSame HTTP surface as the Local store (shared conformance suite). Bearer-token auth; CORS open for the browser client.\n```",
         "mode": "markdown"
       },
-      "x": 3398.626058245037,
-      "y": 236.98285448791933
+      "x": 748.4271542182828,
+      "y": 306.0231152767547
     },
     {
       "id": "box.research-docs-cloudflare",
@@ -320,8 +342,8 @@
         "text": "The worker-held copy of the Research Collection: one R2 object per doc, plus the agent context files (principles, memory). Canonical for phone-made edits between syncs. Every write is normalized server-side.\n\n```prose\nR2 keys l3/<slug>.l3.md and l3-agent/<name>.md. PUT validates the node grammar (400 + warnings on failure), assigns missing ^r- anchors store-globally, stamps updated:, returns the normalized markdown. GET serves raw markdown; /api/l3/graph serves the parsed graph with an ETag.\n```",
         "mode": "markdown"
       },
-      "x": 2704.8062365292662,
-      "y": 570.4467680882263,
+      "x": 1657.353191389943,
+      "y": 403.0859103546993,
       "contentHeight": 230.76038800596154,
       "contentWidth": 294.000598817224
     },
@@ -332,8 +354,8 @@
         "text": "The PWA chat client. A thin client, never a replica: it fetches the doc and page chunks it needs, edits docs via the normalizing PUT, and pushes what it gathers from OpenAlex into the Cloudflare store. Local state is only the conversation (localStorage) and per-session caches.",
         "mode": "markdown"
       },
-      "x": 1929.144824988183,
-      "y": 659.5644068556028,
+      "x": -65.69264457048462,
+      "y": -229.61832287379684,
       "color": "accent-3",
       "contentHeight": 168.76601631649106,
       "contentWidth": 340.9574747968284
@@ -345,8 +367,10 @@
         "text": "The reading agent's loop: fetch the doc and the page chunks it needs, edit via the normalizing PUT, and push what it gathers from providers into the store its client points at. A thin client, never a replica.",
         "mode": "markdown"
       },
-      "x": 627.9416798810244,
-      "y": -299.40674962625945
+      "x": -1333.8738050463353,
+      "y": -265.5049255695826,
+      "contentHeight": 436.1965710814379,
+      "contentWidth": 803.8422596105169
     },
     {
       "id": "box.crossref",
@@ -355,9 +379,11 @@
         "text": "Citation-data provider — reference lookups (`refs`) only, narrower than the search providers. Its contract points toward the center.",
         "mode": "markdown"
       },
-      "x": 1434.2464218473897,
-      "y": -282.4192624854906,
-      "color": "accent-3"
+      "x": 1582.5168203803726,
+      "y": -418.0511044992261,
+      "color": "accent-3",
+      "contentHeight": 141.29662621711194,
+      "contentWidth": 257.08827474859817
     },
     {
       "id": "store.l1-library.api",
@@ -367,8 +393,8 @@
         "text": "`GET|PUT /works/{id}/content/{role}` — fetch or store a work's artifacts (abstract · fulltext · projection).",
         "mode": "markdown"
       },
-      "x": 0,
-      "y": 0
+      "x": 25.105570273000467,
+      "y": 45.5037168305048
     },
     {
       "id": "store.l1-library.artifacts",
@@ -378,8 +404,8 @@
         "text": "Blob rows keyed by (canonical id, role). Roles: abstract · fulltext · projection.",
         "mode": "markdown"
       },
-      "x": 280,
-      "y": 0
+      "x": 281.5691699694562,
+      "y": 42.36552054637974
     },
     {
       "id": "store.l2-catalog.api",
@@ -389,8 +415,8 @@
         "text": "`PUT /works` · `PUT /edges` · `POST /works/have` · `POST /graph/neighborhood` · `GET /stats`.",
         "mode": "markdown"
       },
-      "x": 0,
-      "y": 0
+      "x": 92.7437030045985,
+      "y": 101.92622321858673
     },
     {
       "id": "store.l3-research-collection.api",
@@ -400,8 +426,8 @@
         "text": "`l3 push` / `l3 pull`. PUT validates the node grammar and normalizes; GET serves markdown; `/api/l3/graph` serves the parsed graph.",
         "mode": "markdown"
       },
-      "x": 0,
-      "y": 0
+      "x": 30.25631067148379,
+      "y": 77.10468217773803
     },
     {
       "id": "store.l3-research-collection.doc",
@@ -411,8 +437,8 @@
         "text": "One `<slug>.l3.md`: frontmatter + `##` nodes with `^r-` anchors, property and link lines. Points at works by canonical id.",
         "mode": "markdown"
       },
-      "x": 280,
-      "y": 0
+      "x": 318.0643308896115,
+      "y": 68.32060581859685
     },
     {
       "id": "contract.openalex.http",
@@ -421,8 +447,19 @@
         "text": "The provider contract: `GET /works/{id}` and `GET /works?search=` over HTTPS, JSON. Polite pool via `mailto`; rate-limited. This is the shape both agents gather against.",
         "mode": "markdown"
       },
-      "x": 773.3710570891501,
-      "y": 191.8210157836237
+      "x": 1336.0533314299005,
+      "y": -196.69768109765602
+    },
+    {
+      "id": "new-node",
+      "name": "New Node",
+      "parent": "agentloop",
+      "content": {
+        "text": "foo bar baz",
+        "mode": "code"
+      },
+      "x": 214.2789696751513,
+      "y": 129.4819482973959
     }
   ],
   "edges": [

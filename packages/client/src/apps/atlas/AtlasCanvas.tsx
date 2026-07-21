@@ -167,14 +167,19 @@ function AtlasNodeLayer(props: {
       {(rn) => {
         const editing = () => props.editingId() === rn.node.id;
         const color = () => props.effectiveColor(rn.node.id);
-        // The container-tint override lives on this wrapper, an ancestor of
-        // NodeContainer's own root div — CSS custom properties inherit down
-        // to the soft-container div NodeContainer renders, so this reaches it
-        // with no color-shaped change to cactus (see NodeContainer.tsx:74).
-        const wrapperStyle = (): JSX.CSSProperties => {
-          const token = color();
-          return token ? { '--cactus-container-tint': `var(--color-atlas-${token}-container)` } : {};
-        };
+        // The container box is color-neutral: a node's color identifies the
+        // node itself (its header/leaf fill), never the region its children
+        // sit in. So the soft-container tint is a fixed grey regardless of
+        // this node's color, and the border is the theme's plain border for a
+        // legible boundary. These CSS custom properties inherit down to the
+        // soft-container div NodeContainer renders (see NodeContainer.tsx:73).
+        const wrapperStyle = (): JSX.CSSProperties => ({
+          '--cactus-node-bezel': 'var(--surface)',
+          '--cactus-node-border': 'var(--border)',
+          '--cactus-node-radius': '8px',
+          '--cactus-container-tint': 'var(--atlas-container-fill)',
+          '--cactus-container-border': 'var(--border)',
+        });
         // The row applies the composed override uniformly — nodes() stays
         // reference-stable during a gesture, so <For> never disposes/rebuilds
         // this row (see 1b in the task spec).

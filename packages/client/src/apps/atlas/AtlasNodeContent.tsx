@@ -176,6 +176,21 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
     };
   };
 
+  // A container's title row is a filled, bounded bar so it reads as the node's
+  // identity above its (neutral grey) child region. It carries the node's color
+  // when it has one, else the plain surface — either way a visible bar, unlike a
+  // leaf's title which sits inside the leaf's own colored body.
+  const headerBarStyle = (): JSX.CSSProperties => {
+    const token = props.color();
+    if (token) {
+      return {
+        'background-color': `var(--color-atlas-${token}-container)`,
+        'border-color': `var(--color-atlas-${token})`,
+      };
+    }
+    return { 'background-color': 'var(--surface-alt)', 'border-color': 'var(--border)' };
+  };
+
   return (
     <div
       class={`relative flex h-full w-full flex-col gap-1 overflow-hidden rounded p-2 ${
@@ -192,7 +207,11 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
         when={props.editing()}
         fallback={
           <>
-            <div class="flex items-center justify-between gap-1">
+            <div
+              class="flex items-center justify-between gap-1"
+              classList={{ 'rounded border px-1.5 py-1': props.hasChildren() }}
+              style={props.hasChildren() ? headerBarStyle() : undefined}
+            >
               <div class="truncate text-sm font-semibold text-fg">{props.node()?.name}</div>
               <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
             </div>

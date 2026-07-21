@@ -64,12 +64,34 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         height: `${props.h()}px`,
         overflow: 'hidden',
         'pointer-events': 'auto',
+        // A node is its own stacking context: z-index inside it (bezel, soft
+        // container, content) is private and never leaks to the shared layer,
+        // so cross-node stacking is pure DOM order. Nodes are flat siblings
+        // drawn parents-before-children (projection.ts), which makes every
+        // part of a child — bezel included — paint above its whole container.
+        isolation: 'isolate',
       }}
       on:pointerdown={(e) => props.onPointerDown?.(e)}
       onContextMenu={(e) => props.onContextMenu?.(e)}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
+      {/* Bezel: an opaque fill for the whole node box so no canvas shows
+          through the padding between the node's components. Sits one layer
+          behind the soft-container well (z -2 vs -1), so a container's child
+          region still paints on top of it. Transparent by default — a host
+          opts in by setting --cactus-node-bezel (see AtlasCanvas). */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: '0',
+          'z-index': '-2',
+          background: 'var(--cactus-node-bezel, transparent)',
+          border: '1px solid var(--cactus-node-border, transparent)',
+          'border-radius': 'var(--cactus-node-radius, 0)',
+          'pointer-events': 'none',
+        }}
+      />
       <Show when={props.softContainer?.()}>
         <div
           data-soft-container="true"
@@ -81,7 +103,7 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
             bottom: `${props.containerInset?.().bottom ?? 0}px`,
             'z-index': '-1',
             background: 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
-            border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+            border: '1px solid var(--cactus-container-border, var(--cactus-border-subtle, #f3f4f6))',
             'border-radius': '8px',
             'pointer-events': 'none',
           }}
