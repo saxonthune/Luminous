@@ -126,6 +126,35 @@ explanation, the user bisects it, inserting a Node that carries the explanation
 - **R32.** When the user right-clicks an Edge, the system shall open a context menu
   with a "Bisect" option.
 
+### Edge creation
+
+An **Edge Tab** is the affordance for creating an Edge: a tab protruding from a
+Node, shown on hover. Pressing or clicking it starts Edge creation; while Edge
+creation is in progress, a preview Edge is drawn from the source Node to the
+pointer.
+
+- **R44.** The system shall draw an Edge Tab on each Node, protruding from the top
+  of the Node's right side.
+- **R45.** While the pointer hovers a Node, the system shall show the Node's Edge
+  Tab; while the pointer does not hover the Node, the system shall hide it.
+- **R46.** The Edge Tab shall carry a circular badge in the theme's green, bearing
+  a plus mark in the theme's white.
+- **R47.** When the user presses the left button on an Edge Tab, drags to another
+  Node, and releases on it, the system shall create an Edge from the Edge Tab's
+  Node to the Node under the release.
+- **R48.** When the user clicks an Edge Tab and then clicks another Node, the
+  system shall create an Edge from the Edge Tab's Node to the clicked Node.
+- **R49.** While Edge creation is in progress, the system shall draw a preview
+  Edge from the source Node to the pointer.
+- **R50.** While a preview Edge is drawn, the system shall light up the Edge Tab
+  to indicate the state.
+- **R51.** While a preview Edge is drawn, the system shall display a toast
+  notification (the R6 surface) saying what is happening.
+- **R52.** While a preview Edge is drawn, when the user releases or clicks with
+  Ctrl held, the system shall create a new Node at the pointer and complete the
+  Edge into it — making the new Node a Child of the Container under the pointer,
+  or a top-level Node when the pointer is not over a Container.
+
 ## Input-command bindings
 
 An **input** is an ordered pair — a target and an interaction method (left click,
@@ -171,5 +200,10 @@ draws a selection box.
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
 | Edge | right click | Open the context menu with a "Bisect" option | R32 |
+| Node | hover | Show the Node's Edge Tab | R44, R45 |
+| Edge Tab | left click + drag | Draw a preview Edge; on release over a Node, create an Edge to it | R47, R49, R50, R51 |
+| Edge Tab | left click | Begin Edge creation, drawing a preview Edge from the Node to the pointer | R48, R49, R50, R51 |
+| Node (Edge preview active) | left click | Create an Edge from the source Node to this Node | R48 |
+| Canvas or Container (Edge preview active) | Ctrl + left click or Ctrl + release | Create a new Node under the pointer and complete the Edge into it | R52 |
 | Bisect (context menu) | left click | Bisect the Edge, inserting a new Node between its ends | R31 |
 | Fit control | left click | Move the camera to frame every Node | R22 |
