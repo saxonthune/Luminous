@@ -1,5 +1,5 @@
 import { isAtlasColorToken } from './colors.ts';
-import type { AtlasContent, AtlasDocument, AtlasEdge, AtlasNode } from './types.ts';
+import type { AtlasContent, AtlasDocument, AtlasEdge, AtlasLegend, AtlasNode } from './types.ts';
 
 export type ParseAtlasDocumentResult =
   | { ok: true; doc: AtlasDocument }
@@ -9,7 +9,7 @@ export function emptyAtlasDocument(): AtlasDocument {
   return { v: 1, nodes: [], edges: [] };
 }
 
-const TOP_LEVEL_FIELDS = new Set(['v', 'nodes', 'edges']);
+const TOP_LEVEL_FIELDS = new Set(['v', 'legend', 'nodes', 'edges']);
 const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y', 'color', 'contentHeight', 'contentWidth']);
 const CONTENT_FIELDS = new Set(['text', 'mode']);
 const EDGE_FIELDS = new Set(['from', 'to', 'label']);
@@ -38,6 +38,29 @@ function parseContent(value: unknown, path: string, issues: string[]): AtlasCont
   }
   if (!ok) return undefined;
   return { text: c['text'] as string, mode: c['mode'] as 'markdown' | 'code' };
+}
+
+function parseLegend(value: unknown, issues: string[]): AtlasLegend | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push('legend: must be an object mapping color tokens to labels');
+    return undefined;
+  }
+  const legend: AtlasLegend = {};
+  let ok = true;
+  for (const [key, label] of Object.entries(value as Record<string, unknown>)) {
+    if (!isAtlasColorToken(key)) {
+      issues.push(`legend: unrecognized color token "${key}"`);
+      ok = false;
+      continue;
+    }
+    if (typeof label !== 'string') {
+      issues.push(`legend.${key}: label must be a string`);
+      ok = false;
+      continue;
+    }
+    legend[key] = label;
+  }
+  return ok ? legend : undefined;
 }
 
 function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | undefined {
@@ -176,6 +199,11 @@ export function parseAtlasDocument(text: string): ParseAtlasDocumentResult {
     issues.push('v: must be a number');
   }
 
+  let legend: AtlasLegend | undefined;
+  if (obj['legend'] !== undefined) {
+    legend = parseLegend(obj['legend'], issues);
+  }
+
   const nodes: AtlasNode[] = [];
   if (!Array.isArray(obj['nodes'])) {
     issues.push('nodes: must be an array');
@@ -222,7 +250,9 @@ export function parseAtlasDocument(text: string): ParseAtlasDocumentResult {
     return { ok: false, issues };
   }
 
-  return { ok: true, doc: { v: obj['v'] as number, nodes, edges } };
+  const doc: AtlasDocument = { v: obj['v'] as number, nodes, edges };
+  if (legend !== undefined && Object.keys(legend).length > 0) doc.legend = legend;
+  return { ok: true, doc };
 }
 
 function serializeContent(content: AtlasContent): Record<string, unknown> {
@@ -246,10 +276,9 @@ function serializeEdge(edge: AtlasEdge): Record<string, unknown> {
 }
 
 export function serializeAtlasDocument(doc: AtlasDocument): string {
-  const out = {
-    v: doc.v,
-    nodes: doc.nodes.map(serializeNode),
-    edges: doc.edges.map(serializeEdge),
-  };
+  const out: Record<string, unknown> = { v: doc.v };
+  if (doc.legend !== undefined && Object.keys(doc.legend).length > 0) out['legend'] = doc.legend;
+  out['nodes'] = doc.nodes.map(serializeNode);
+  out['edges'] = doc.edges.map(serializeEdge);
   return JSON.stringify(out, null, 2) + '\n';
 }

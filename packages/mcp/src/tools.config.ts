@@ -528,7 +528,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
   },
   atlas: {
     description:
-      "Author Atlas canvases — .atlas.json documents made of Nodes (with optional Markdown/code Content, nesting via parent, and free x/y placement) connected by directed Edges. Unlike the v3 canvas/node/edge tools, an Atlas document has no pack and node ids are author-supplied, not generated — pick meaningful ids (e.g. 'cli.braincrawl.openalex'). Use `list` to discover documents, `create` to start one, `node/create`/`edge/connect` to build it up, and `edge/bisect` to split an edge by inserting a node in its middle.",
+      "Author Atlas canvases — .atlas.json documents made of Nodes (with optional Markdown/code Content, nesting via parent, and free x/y placement) connected by directed Edges. Unlike the v3 canvas/node/edge tools, an Atlas document has no pack and node ids are author-supplied, not generated — pick meaningful ids (e.g. 'cli.braincrawl.openalex'). Use `list` to discover documents, `create` to start one, `node/create`/`edge/connect` to build it up, `edge/bisect` to split an edge by inserting a node in its middle, and `legend/set` to record what each color means in the document.",
     local: true,
     actions: {
       list: {
@@ -550,7 +550,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         },
       },
       read: {
-        description: "Load the complete atlas document: all Nodes (id, name, parent, content, x, y, color) and all Edges (from, to).",
+        description: "Load the complete atlas document: the Legend (color token -> label), all Nodes (id, name, parent, content, x, y, color), and all Edges (from, to).",
         method: 'GET',
         path: '',
         params: { path: pathParam },
@@ -764,8 +764,21 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           },
         },
       },
+      'legend/set': {
+        description: "Replace the document's Legend — the record mapping color tokens to what each color means in this document (e.g. accent-1: 'user-facing interface'). Whole-record replace: to change one label, read the document and send the merged record. An empty record clears the Legend.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          legend: {
+            type: 'described',
+            innerType: { type: 'object', properties: {} },
+            description: "Record keyed by color token ('accent-1' … 'accent-8'), each value the label saying what that color means. Replaces the whole Legend.",
+          },
+        },
+      },
       batch: {
-        description: "Apply a sequence of atlas actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNode' | 'setNode' | 'removeNode' | 'reparent' | 'addEdge' | 'removeEdge') and that action's own fields.",
+        description: "Apply a sequence of atlas actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNode' | 'setNode' | 'removeNode' | 'reparent' | 'addEdge' | 'removeEdge' | 'setLegend') and that action's own fields.",
         method: 'POST',
         path: '',
         params: {

@@ -392,3 +392,55 @@ describe('serializeAtlasDocument', () => {
     expect(text).not.toContain('"label"');
   });
 });
+
+describe('legend', () => {
+  it('round-trips a legend through serialize/parse', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      legend: { 'accent-1': 'user-facing interface', 'accent-4': 'data store' },
+      nodes: [],
+      edges: [],
+    };
+    const result = parseAtlasDocument(serializeAtlasDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('accepts a document with no legend', () => {
+    const result = parseAtlasDocument(JSON.stringify({ v: 1, nodes: [], edges: [] }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.legend).toBeUndefined();
+  });
+
+  it('parses an empty legend as absent', () => {
+    const result = parseAtlasDocument(JSON.stringify({ v: 1, legend: {}, nodes: [], edges: [] }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.doc.legend).toBeUndefined();
+  });
+
+  it('omits an empty legend from serialization', () => {
+    const doc: AtlasDocument = { v: 1, legend: {}, nodes: [], edges: [] };
+    expect(serializeAtlasDocument(doc)).not.toContain('"legend"');
+  });
+
+  it('rejects a legend that is not an object', () => {
+    const result = parseAtlasDocument(JSON.stringify({ v: 1, legend: [], nodes: [], edges: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('legend: must be an object mapping color tokens to labels');
+  });
+
+  it('rejects a legend keyed by an unrecognized color token', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({ v: 1, legend: { red: 'user-facing interface' }, nodes: [], edges: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('legend: unrecognized color token "red"');
+  });
+
+  it('rejects a legend with a non-string label', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({ v: 1, legend: { 'accent-1': 3 }, nodes: [], edges: [] }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('legend.accent-1: label must be a string');
+  });
+});

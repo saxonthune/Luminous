@@ -165,6 +165,34 @@ pointer.
   Edge into it — making the new Node a Child of the Container under the pointer,
   or a top-level Node when the pointer is not over a Container.
 
+## Legend
+
+A **Legend** assigns a **Label** to a Color Token, recording what each Color
+means in this Document (e.g. red = user-facing interface, blue = data store).
+The Legend is part of the Document, so an agent reads the same meanings the
+user sees. The Legend opens in a floating panel — not a blocking modal — so the
+user reads the Legend and the canvas together.
+
+- **R57.** The system shall display an info control in the Atlas view.
+- **R58.** When the user activates the info control, the system shall open the
+  Legend panel, and the system shall allow the user to close it.
+- **R59.** While the Legend panel is open, the system shall keep the canvas
+  visible and interactive alongside the panel, and shall not blur or cover the
+  canvas.
+- **R60.** The Legend panel shall display every Color Token, drawing a Swatch
+  of the Color beside its Label.
+- **R66.** When a Color has no Label, the Legend panel shall show the Color
+  with a clear indication that no Label is set.
+- **R61.** The system shall store the Legend in the Document.
+- **R62.** The Legend panel shall offer an edit control.
+- **R63.** When the user activates the edit control, the system shall enter
+  edit mode, offering a text input for every Color Token's Label, with a Save
+  control and a Cancel control.
+- **R64.** When the user activates the Save control, the system shall save the
+  Labels to the Document and leave edit mode.
+- **R65.** When the user activates the Cancel control, the system shall discard
+  the edits and leave edit mode.
+
 ## Input-command bindings
 
 An **input** is an ordered pair — a target and an interaction method (left click,
@@ -218,3 +246,8 @@ draws a selection box.
 | Canvas or Container (Edge preview active) | Ctrl + left click or Ctrl + release | Create a new Node under the pointer and complete the Edge into it | R52 |
 | Bisect (context menu) | left click | Bisect the Edge, inserting a new Node between its ends | R31 |
 | Fit control | left click | Move the camera to frame every Node | R22 |
+| Info control | left click | Open the Legend panel | R57, R58 |
+| Legend close control | left click | Close the Legend panel | R58 |
+| Legend edit control | left click | Enter Legend edit mode, turning Labels into inputs | R62, R63 |
+| Legend Save control | left click | Save the Labels to the Document and leave edit mode | R64 |
+| Legend Cancel control | left click | Discard the Label edits and leave edit mode | R65 |

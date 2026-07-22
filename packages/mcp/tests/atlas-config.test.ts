@@ -22,6 +22,7 @@ describe('atlas tool group config', () => {
         'edge/connect',
         'edge/disconnect',
         'edge/bisect',
+        'legend/set',
         'batch',
       ].sort(),
     )

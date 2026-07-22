@@ -109,6 +109,18 @@ describe('invertAtlasAction', () => {
     const action: AtlasAction = { type: 'removeEdge', from: 'a', to: 'b' };
     expect(invertAtlasAction(before, action)).toEqual([{ type: 'addEdge', from: 'a', to: 'b' }]);
   });
+
+  it('inverts setLegend into a setLegend carrying the prior legend', () => {
+    const before: AtlasDocument = { v: 1, legend: { 'accent-1': 'old' }, nodes: [], edges: [] };
+    const action: AtlasAction = { type: 'setLegend', legend: { 'accent-2': 'new' } };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setLegend', legend: { 'accent-1': 'old' } }]);
+  });
+
+  it('inverts setLegend on a document with no legend into a clearing setLegend', () => {
+    const before = doc([]);
+    const action: AtlasAction = { type: 'setLegend', legend: { 'accent-1': 'new' } };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setLegend', legend: {} }]);
+  });
 });
 
 describe('invertAtlasBatch', () => {
@@ -216,6 +228,16 @@ describe('invertAtlasBatch', () => {
     expect([...restored.doc.nodes].sort((a, b) => a.id.localeCompare(b.id))).toEqual(
       [...before.nodes].sort((a, b) => a.id.localeCompare(b.id)),
     );
+  });
+
+  it('round-trips a setLegend from an unlabeled document', () => {
+    const before = doc([]);
+    roundTrips(before, [{ type: 'setLegend', legend: { 'accent-1': 'user-facing interface' } }]);
+  });
+
+  it('round-trips a setLegend that replaces an existing legend', () => {
+    const before: AtlasDocument = { v: 1, legend: { 'accent-1': 'old', 'accent-3': 'kept' }, nodes: [], edges: [] };
+    roundTrips(before, [{ type: 'setLegend', legend: { 'accent-2': 'new' } }]);
   });
 
   it('inverts a bisect batch back to the original single edge, with the new node gone', () => {

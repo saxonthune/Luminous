@@ -12,6 +12,7 @@ import {
   edgeConnect,
   edgeDisconnect,
   edgeBisect,
+  legendSet,
   applyBatch,
 } from '../src/atlas-tools.js'
 
@@ -252,6 +253,30 @@ describe('edgeBisect', () => {
     ])
     const writeCalls = fetchMock.mock.calls.filter((c) => String(c[0]).endsWith('/api/document/write'))
     expect(writeCalls).toHaveLength(1)
+  })
+})
+
+describe('legendSet', () => {
+  it('replaces the whole legend and writes once', async () => {
+    const doc = { ...emptyDoc(), legend: { 'accent-1': 'old' } }
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => doc }),
+      [`POST ${SERVER}/api/document/write`]: () => ({ ok: true, json: async () => ({ ok: true }) }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await legendSet(SERVER, PATH, { 'accent-2': 'data store' })
+    expect(result.legend).toEqual({ 'accent-2': 'data store' })
+    const writeCalls = fetchMock.mock.calls.filter((c) => String(c[0]).endsWith('/api/document/write'))
+    expect(writeCalls).toHaveLength(1)
+  })
+
+  it('rejects an unrecognized color token and writes nothing', async () => {
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => emptyDoc() }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(legendSet(SERVER, PATH, { red: 'nope' } as never)).rejects.toThrow(/color token/)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
 

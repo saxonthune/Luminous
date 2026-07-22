@@ -1,5 +1,6 @@
 export type {
   AtlasDocument,
+  AtlasLegend,
   AtlasNode,
   AtlasContent,
   AtlasContentMode,
@@ -11,6 +12,7 @@ export type {
   ReparentAction,
   AddEdgeAction,
   RemoveEdgeAction,
+  SetLegendAction,
 } from './types.ts';
 export {
   emptyAtlasDocument,
@@ -27,6 +29,7 @@ export {
   reparent,
   addEdge,
   removeEdge,
+  setLegend,
   buildBisectActions,
   applyAtlasBatch,
   isAncestor,

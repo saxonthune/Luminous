@@ -1,5 +1,6 @@
+import { isAtlasColorToken } from './colors.ts';
 import type { AtlasColorToken } from './colors.ts';
-import type { AtlasAction, AtlasContent, AtlasDocument, AtlasEdge, AtlasNode } from './types.ts';
+import type { AtlasAction, AtlasContent, AtlasDocument, AtlasEdge, AtlasLegend, AtlasNode } from './types.ts';
 
 export type AtlasResult = { ok: true; doc: AtlasDocument } | { ok: false; error: string };
 
@@ -210,6 +211,27 @@ export function addEdge(doc: AtlasDocument, from: string, to: string): AtlasResu
   return { ok: true, doc: { ...doc, edges: [...doc.edges, edge] } };
 }
 
+/** Replaces the whole legend (doc01.07.04 R61/R64). An empty record clears
+ * it — the field is dropped rather than stored empty. */
+export function setLegend(doc: AtlasDocument, legend: AtlasLegend): AtlasResult {
+  const entries = Object.entries(legend);
+  for (const [key, label] of entries) {
+    if (!isAtlasColorToken(key)) {
+      return { ok: false, error: `legend: unrecognized color token "${key}"` };
+    }
+    if (typeof label !== 'string') {
+      return { ok: false, error: `legend.${key}: label must be a string` };
+    }
+  }
+  const next = { ...doc };
+  if (entries.length === 0) {
+    delete next.legend;
+  } else {
+    next.legend = { ...legend };
+  }
+  return { ok: true, doc: next };
+}
+
 export function removeEdge(doc: AtlasDocument, from: string, to: string): AtlasResult {
   if (!doc.nodes.some(n => n.id === from)) {
     return { ok: false, error: `node "${from}" does not exist` };
@@ -290,6 +312,9 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
         break;
       case 'removeEdge':
         result = removeEdge(current, action.from, action.to);
+        break;
+      case 'setLegend':
+        result = setLegend(current, action.legend);
         break;
     }
     if (!result.ok) {

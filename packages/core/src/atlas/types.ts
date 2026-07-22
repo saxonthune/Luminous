@@ -2,9 +2,14 @@ import type { AtlasColorToken } from './colors.ts';
 
 export interface AtlasDocument {
   v: number;
+  /** What each color means in this document (doc01.07.04 R61). Sparse: an
+   * unlabeled token has no entry. */
+  legend?: AtlasLegend;
   nodes: AtlasNode[];
   edges: AtlasEdge[];
 }
+
+export type AtlasLegend = Partial<Record<AtlasColorToken, string>>;
 
 export interface AtlasNode {
   id: string;
@@ -81,10 +86,18 @@ export interface RemoveEdgeAction {
   to: string;
 }
 
+/** Replaces the whole legend — the panel saves its full state atomically, and
+ * whole-record replace is self-inverting for undo. `{}` clears it. */
+export interface SetLegendAction {
+  type: 'setLegend';
+  legend: AtlasLegend;
+}
+
 export type AtlasAction =
   | AddNodeAction
   | SetNodeAction
   | RemoveNodeAction
   | ReparentAction
   | AddEdgeAction
-  | RemoveEdgeAction;
+  | RemoveEdgeAction
+  | SetLegendAction;

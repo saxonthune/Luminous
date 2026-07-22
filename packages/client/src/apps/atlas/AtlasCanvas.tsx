@@ -20,6 +20,7 @@ import {
 } from './mutations.ts';
 import { chordHeld, chordKeys } from './inputBindings.ts';
 import { AtlasNodeLayer } from './AtlasNodeLayer.tsx';
+import { LegendOverlay } from './LegendOverlay.tsx';
 import { nodeContextMenu, backgroundContextMenu, buildChrome, type AtlasMenuDeps } from './menus.tsx';
 import { buildArrangeAsColumnActions, sameParent } from './arrange.ts';
 import { useAtlasHistory } from './history.ts';
@@ -386,6 +387,10 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             dropAddsEdge={(source, parentId) => connectDropAddsEdge(props.doc, source, parentId)}
           />
         </Canvas>
+        <LegendOverlay
+          legend={() => props.doc.legend}
+          onSave={(legend) => dispatchAction([{ type: 'setLegend', legend }], 'Edit Legend')}
+        />
         <Show when={selectedCount() > 1}>
           <div
             data-testid="selection-count"

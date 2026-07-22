@@ -8,6 +8,7 @@ import {
   reparent,
   addEdge,
   removeEdge,
+  setLegend,
   buildBisectActions,
   applyAtlasBatch,
 } from '@luminous/core/atlas'
@@ -16,6 +17,7 @@ import type {
   AtlasColorToken,
   AtlasContent,
   AtlasDocument,
+  AtlasLegend,
 } from '@luminous/core/atlas'
 
 export async function loadAtlas(serverUrl: string, path: string): Promise<AtlasDocument> {
@@ -169,6 +171,20 @@ export async function edgeBisect(
   const doc = await loadAtlas(serverUrl, path)
   const actions = buildBisectActions(doc, edge, newNode)
   const result = applyAtlasBatch(doc, actions)
+  if (!result.ok) {
+    throw new Error(result.error)
+  }
+  await writeAtlas(serverUrl, path, result.doc)
+  return result.doc
+}
+
+export async function legendSet(
+  serverUrl: string,
+  path: string,
+  legend: AtlasLegend,
+): Promise<AtlasDocument> {
+  const doc = await loadAtlas(serverUrl, path)
+  const result = setLegend(doc, legend)
   if (!result.ok) {
     throw new Error(result.error)
   }

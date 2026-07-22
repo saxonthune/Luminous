@@ -7,6 +7,7 @@ import {
   removeEdge,
   removeNode,
   reparent,
+  setLegend,
   setNode,
 } from '../../src/atlas/operations.ts';
 import { emptyAtlasDocument } from '../../src/atlas/document.ts';
@@ -501,5 +502,34 @@ describe('applyAtlasBatch', () => {
     ]);
     expect(result).toEqual({ ok: false, error: 'parent "missing" does not exist' });
     expect(original).toEqual({ v: 1, nodes: [], edges: [] });
+  });
+
+  it('applies a setLegend action', () => {
+    const result = applyAtlasBatch(emptyAtlasDocument(), [
+      { type: 'setLegend', legend: { 'accent-1': 'user-facing interface' } },
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      doc: { v: 1, legend: { 'accent-1': 'user-facing interface' }, nodes: [], edges: [] },
+    });
+  });
+});
+
+describe('setLegend', () => {
+  it('replaces the whole legend', () => {
+    const doc: AtlasDocument = { v: 1, legend: { 'accent-1': 'old', 'accent-2': 'kept?' }, nodes: [], edges: [] };
+    const result = setLegend(doc, { 'accent-1': 'new' });
+    expect(result).toEqual({ ok: true, doc: { v: 1, legend: { 'accent-1': 'new' }, nodes: [], edges: [] } });
+  });
+
+  it('clears the legend on an empty record, dropping the field', () => {
+    const doc: AtlasDocument = { v: 1, legend: { 'accent-1': 'old' }, nodes: [], edges: [] };
+    const result = setLegend(doc, {});
+    expect(result).toEqual({ ok: true, doc: { v: 1, nodes: [], edges: [] } });
+  });
+
+  it('refuses an unrecognized color token', () => {
+    const result = setLegend(emptyAtlasDocument(), { red: 'nope' } as never);
+    expect(result).toEqual({ ok: false, error: 'legend: unrecognized color token "red"' });
   });
 });
