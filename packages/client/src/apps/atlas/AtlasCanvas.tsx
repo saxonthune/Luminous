@@ -38,6 +38,7 @@ import {
   buildConnectDropActions,
   type NodeEditForm,
 } from './mutations.ts';
+import { chordHeld, chordKeys, describeChord } from './inputBindings.ts';
 import { AtlasNodeContent } from './AtlasNodeContent.tsx';
 import { ColorSwatchGrid } from './ColorSwatchGrid.tsx';
 import { buildArrangeAsColumnActions, sameParent } from './arrange.ts';
@@ -50,6 +51,8 @@ const ATLAS_NODE_MD_STYLES = `
 .atlas-node-md ul { margin: 0 0 .35rem; padding-left: 1rem; list-style: disc; }
 .atlas-node-md li { margin: .1rem 0; }
 .atlas-node-md code { font-family: ui-monospace, monospace; background: var(--cactus-surface-alt, #f3f4f6); padding: .05rem .25rem; border-radius: 3px; font-size: .9em; }
+.atlas-node-md pre { margin: 0 0 .35rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--cactus-surface-alt, #f3f4f6); padding: .25rem .35rem; border-radius: 3px; }
+.atlas-node-md pre code { background: none; padding: 0; }
 .atlas-node-md strong { font-weight: 600; }
 .atlas-node-md > :last-child { margin-bottom: 0; }
 `;
@@ -135,12 +138,15 @@ function AtlasNodeLayer(props: {
     const source = nameOf(drag.sourceNodeId);
     if (ctx.ctrlHeld()) {
       // Mirrors onConnectDrop: the new Node's parent is the container under
-      // the pointer, top-level when there is none.
+      // the pointer, top-level when there is none. A drop inside the source
+      // itself adds no edge (R55) — the message drops the edge clause to match.
       const parentId = findContainerAt(drag.currentScreenX, drag.currentScreenY);
       props.onEdgePreviewChange?.(
-        parentId
-          ? `Creating new node in "${nameOf(parentId)}" with edge from "${source}"`
-          : `Creating new node with edge from "${source}"`,
+        parentId === drag.sourceNodeId
+          ? `Creating new node in "${nameOf(parentId)}"`
+          : parentId
+            ? `Creating new node in "${nameOf(parentId)}" with edge from "${source}"`
+            : `Creating new node with edge from "${source}"`,
       );
       return;
     }
@@ -155,7 +161,7 @@ function AtlasNodeLayer(props: {
       targetId !== null && props.connectValid(drag.sourceNodeId, targetId)
         ? `Creating new edge from "${source}" to "${nameOf(targetId)}"`
         : `Creating new edge from "${source}"`;
-    props.onEdgePreviewChange?.(`${base} (hint: hold ctrl to add a new node)`);
+    props.onEdgePreviewChange?.(`${base} (hint: hold ${describeChord('edge.connectToNewNode')} to add a new node)`);
   });
 
   const parentOf = createMemo(() => {
@@ -455,14 +461,14 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   const [ctrlHeld, setCtrlHeld] = createSignal(false);
   let ctrlTrackingActive = false;
   function beginCtrlTracking(e: PointerEvent) {
-    setCtrlHeld(e.ctrlKey || e.metaKey);
+    setCtrlHeld(chordHeld('container.keepMembership', e));
     if (ctrlTrackingActive) return;
     ctrlTrackingActive = true;
     const handleKeyDown = (ke: KeyboardEvent) => {
-      if (ke.key === 'Control' || ke.key === 'Meta') setCtrlHeld(true);
+      if (chordKeys('container.keepMembership').includes(ke.key)) setCtrlHeld(true);
     };
     const handleKeyUp = (ke: KeyboardEvent) => {
-      if (ke.key === 'Control' || ke.key === 'Meta') setCtrlHeld(false);
+      if (chordKeys('container.keepMembership').includes(ke.key)) setCtrlHeld(false);
     };
     const handlePointerUp = () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -552,7 +558,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   // R52: Ctrl + release/click completes the Edge into a fresh Node instead —
   // a plain (non-Ctrl) release/click over the background is just a cancel.
   function onConnectDrop(info: { source: string; sourceHandle: string | null; clientX: number; clientY: number; ctrlKey: boolean }) {
-    if (!info.ctrlKey || !canvasRef) return;
+    if (!chordHeld('edge.connectToNewNode', info) || !canvasRef) return;
     const parentId = findContainerAt(info.clientX, info.clientY);
     const droppedAbs = canvasRef.screenToCanvas(info.clientX, info.clientY);
     const parentRn = parentId ? nodes().find((n) => n.node.id === parentId) : undefined;
