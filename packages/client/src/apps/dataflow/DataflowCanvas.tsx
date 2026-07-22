@@ -37,6 +37,8 @@ const BOX_MD_STYLES = `
 .dataflow-box-md ul { margin: 0 0 .35rem; padding-left: 1rem; list-style: disc; }
 .dataflow-box-md li { margin: .1rem 0; }
 .dataflow-box-md code { font-family: ui-monospace, monospace; background: var(--cactus-surface-alt, #f3f4f6); padding: .05rem .25rem; border-radius: 3px; font-size: .9em; }
+.dataflow-box-md pre { margin: 0 0 .35rem; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--cactus-surface-alt, #f3f4f6); padding: .25rem .35rem; border-radius: 3px; }
+.dataflow-box-md pre code { background: none; padding: 0; }
 .dataflow-box-md strong { font-weight: 600; }
 .dataflow-box-md > :last-child { margin-bottom: 0; }
 `;

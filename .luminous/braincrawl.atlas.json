@@ -460,6 +460,18 @@
       },
       "x": 214.2789696751513,
       "y": 129.4819482973959
+    },
+    {
+      "id": "new-node-2",
+      "name": "New Node",
+      "x": -440.4440253793086,
+      "y": 82.23091444138004
+    },
+    {
+      "id": "new-node-3",
+      "name": "New Node",
+      "x": -406.37553023233033,
+      "y": -248.76429005964522
     }
   ],
   "edges": [
@@ -554,6 +566,14 @@
     {
       "from": "contract.openalex.http",
       "to": "box.desktop-cli"
+    },
+    {
+      "from": "agentloop",
+      "to": "new-node-2"
+    },
+    {
+      "from": "agentloop",
+      "to": "new-node-3"
     }
   ]
 }
