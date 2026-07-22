@@ -1,8 +1,24 @@
 import { createEffect, createSignal, For, on, Show, type JSX } from 'solid-js';
 import { marked } from 'marked';
-import type { AtlasColorToken, AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
+import type { AtlasColorToken, AtlasContentMode, AtlasData, AtlasDataSource, AtlasNode, ResolvedContent } from '@luminous/core/atlas';
+import { resolveContent } from '@luminous/core/atlas';
 import type { NodeEditForm } from './mutations.ts';
 import { containerHeaderHeight, MIN_CONTENT_HEIGHT, MIN_CONTENT_WIDTH } from './projection.ts';
+
+/** Escapes the three markup-significant characters filled text can carry out
+ * of a source file — a string literal or comment may embed `<script>` or the
+ * like, and unlike authored Content (deliberately unescaped, see the
+ * innerHTML below) this text was never written by the person looking at it. */
+function escapeFilledText(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** The R78 hover/edit-mode label: the key plus its source path and line range. */
+function describeSource(key: string, source: AtlasDataSource | undefined): string {
+  if (!source) return `Filled from "${key}"`;
+  const lines = source.lines ? `:${source.lines[0]}-${source.lines[1]}` : '';
+  return `Filled from "${key}" — ${source.path}${lines}`;
+}
 
 /** Mirrors cactus's `ResizeDirection` shape (`useGesture.ts`) — the domain
  * only ever drags right/bottom (the Do NOT list defers origin-shifting
@@ -15,6 +31,10 @@ export interface ContentResizeDirection {
 
 export interface AtlasNodeContentProps {
   node: () => AtlasNode | undefined;
+  /** The Atlas Data File resolved for the open Document, if one exists —
+   * `resolveContent` draws from this to fill a Node whose Content names a
+   * key, else the authored text renders unchanged. */
+  data: () => AtlasData | undefined;
   /** Whether this Node has children — a container's own content is clamped
    * to the header band so it never bleeds behind the child area (a leaf
    * fills its whole box). */
@@ -101,6 +121,36 @@ function ModeSwitcher(props: { mode: AtlasContentMode | undefined; onChange: (mo
   );
 }
 
+/** Renders resolved Content per its Mode — shared by the read view and the
+ * filled-Content edit view, so the two never draw Filled markdown
+ * differently. Filled markdown is escaped before `marked.parse` (R76); code
+ * mode never reaches `innerHTML`, so it needs no escaping either way. */
+function ResolvedBody(props: { resolved: ResolvedContent }): JSX.Element {
+  return (
+    <Show
+      when={props.resolved.mode === 'code'}
+      fallback={
+        <div
+          class="atlas-node-md text-xs text-fg-muted"
+          // SECURITY: marked does not sanitize HTML; atlas documents are
+          // author-controlled workspace files, same trust class as graph data
+          // (see InfoModal.tsx). Filled text is escaped above since it comes
+          // from an extracted source file, not the person looking at it.
+          // eslint-disable-next-line solid/no-innerhtml
+          innerHTML={marked.parse(
+            props.resolved.filled ? escapeFilledText(props.resolved.text) : props.resolved.text,
+            { async: false },
+          ) as string}
+        />
+      }
+    >
+      <pre class="whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
+        {props.resolved.text}
+      </pre>
+    </Show>
+  );
+}
+
 /** Renders a Node's interior: a read view (name, switcher, Content drawn per
  * Mode) or, while editing, a name input and a raw text area. Double-click
  * enters edit mode; Ctrl+Enter or blurring the whole form commits; Escape
@@ -124,6 +174,12 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
   function commit() {
     props.onCommit({ name: name(), text: text() });
   }
+
+  // The resolved read view: a Node with no Content resolves to `undefined`
+  // and falls to the "+ Add content" branch below; one with Content but no
+  // `from` (or a `from` missing from `data`) resolves to its own authored
+  // text unchanged. `mode` always comes from the authored Content.
+  const resolved = () => resolveContent(props.node()?.content, props.data());
 
   // Drags a Node frame's right edge, bottom edge, or corner grip, per `dir`.
   // Raw pointer events, not cactus's useGesture drag — this is the Node's
@@ -235,7 +291,25 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
                 ...colorStyle(),
                 ...(props.hasChildren() ? { 'max-height': `${containerHeaderHeight(props.node())}px` } : {}),
               }}
+              title={resolved()?.filled ? describeSource(resolved()!.key!, resolved()!.source) : undefined}
             >
+              {/* R76/R77: a quiet, persistent marker so a Filled or
+                  missing-key Node is told apart from an authored one without
+                  selecting it — the badge, not a border or tint, so it
+                  doesn't compete with the Node's Color on a dense canvas. */}
+              <Show when={resolved()?.filled}>
+                <div class="pointer-events-none absolute right-1 top-1 z-10 rounded bg-surface/80 px-1 text-[9px] font-medium uppercase tracking-wide text-fg-subtle">
+                  filled
+                </div>
+              </Show>
+              <Show when={resolved()?.missingKey}>
+                <div
+                  class="pointer-events-none absolute right-1 top-1 z-10 rounded bg-surface/80 px-1 text-[9px] font-medium uppercase tracking-wide"
+                  style={{ color: 'var(--danger, #dc2626)' }}
+                >
+                  missing key
+                </div>
+              </Show>
               <div
                 class="h-full overflow-auto p-1 pb-3"
                 style={{ 'overscroll-behavior': 'contain' }}
@@ -243,25 +317,7 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
                   if (shouldConsumeWheel(e.currentTarget, e.deltaY)) e.stopPropagation();
                 }}
               >
-                <Show when={props.node()?.content?.mode === 'markdown' ? props.node()?.content : undefined}>
-                  {(content) => (
-                    // SECURITY: marked does not sanitize HTML; atlas documents are
-                    // author-controlled workspace files, same trust class as graph data
-                    // (see InfoModal.tsx).
-                    <div
-                      class="atlas-node-md text-xs text-fg-muted"
-                      // eslint-disable-next-line solid/no-innerhtml
-                      innerHTML={marked.parse(content().text, { async: false }) as string}
-                    />
-                  )}
-                </Show>
-                <Show when={props.node()?.content?.mode === 'code' ? props.node()?.content : undefined}>
-                  {(content) => (
-                    <pre class="whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
-                      {content().text}
-                    </pre>
-                  )}
-                </Show>
+                <Show when={resolved()}>{(content) => <ResolvedBody resolved={content()} />}</Show>
                 <Show when={!props.node()?.content}>
                   <button
                     type="button"
@@ -375,11 +431,33 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
             />
             <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
           </div>
-          <textarea
-            class="flex-1 resize-none rounded border border-border-subtle bg-surface px-1 py-0.5 font-mono text-xs text-fg-muted"
-            value={text()}
-            onInput={(e) => setText(e.currentTarget.value)}
-          />
+          {/* R78: Filled Content refuses edits — the Name (above) and Mode
+              stay editable since both are authored, but the Content itself
+              is read-only here, with the key and source shown instead of a
+              text area. A missing key still draws the editable fallback
+              textarea below, exactly as an unfilled Node does, since that
+              text is what a commit would actually change. */}
+          <Show
+            when={resolved()?.filled ? resolved() : undefined}
+            fallback={
+              <textarea
+                class="flex-1 resize-none rounded border border-border-subtle bg-surface px-1 py-0.5 font-mono text-xs text-fg-muted"
+                value={text()}
+                onInput={(e) => setText(e.currentTarget.value)}
+              />
+            }
+          >
+            {(content) => (
+              <div class="flex flex-1 min-h-0 flex-col gap-1">
+                <div class="truncate text-[10px] text-fg-subtle" title={describeSource(content().key!, content().source)}>
+                  {describeSource(content().key!, content().source)}
+                </div>
+                <div class="min-h-0 flex-1 overflow-auto rounded border border-border-subtle bg-surface p-1">
+                  <ResolvedBody resolved={content()} />
+                </div>
+              </div>
+            )}
+          </Show>
         </form>
       </Show>
     </div>

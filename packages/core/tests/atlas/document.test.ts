@@ -222,6 +222,28 @@ describe('parseAtlasDocument', () => {
     expect(result).toEqual({ ok: true, doc });
   });
 
+  it('round-trips a "from" key through serialize/parse', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: 'fallback', mode: 'markdown', from: 'route.list' } }],
+      edges: [],
+    };
+    const result = parseAtlasDocument(serializeAtlasDocument(doc));
+    expect(result).toEqual({ ok: true, doc });
+  });
+
+  it('rejects a non-string "from"', () => {
+    const result = parseAtlasDocument(
+      JSON.stringify({
+        v: 1,
+        nodes: [{ id: 'a', name: 'A', content: { text: 'x', mode: 'markdown', from: 5 } }],
+        edges: [],
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues).toContain('nodes[0].content.from: must be a string');
+  });
+
   it('round-trips a parent and an edge through serialize/parse', () => {
     const doc: AtlasDocument = {
       v: 1,

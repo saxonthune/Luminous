@@ -550,7 +550,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         },
       },
       read: {
-        description: "Load the complete atlas document: the Legend (color token -> label), all Nodes (id, name, parent, content, x, y, color), and all Edges (from, to).",
+        description: "Load the atlas document plus `filledSlots`: every Node whose Content names a Data File key (id, from, filled). A Node in `filledSlots` draws Data File text, not its authored `content.text` — never overwrite one via `node/set` with plain Content, since a script owns that slot and the write would be silently shadowed the next time the Data File is applied.",
         method: 'GET',
         path: '',
         params: { path: pathParam },
@@ -613,10 +613,10 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             type: 'described',
             innerType: {
               type: 'object',
-              properties: { text: 'string', mode: 'string' },
+              properties: { text: 'string', mode: 'string', from: 'string' },
               required: ['text', 'mode'],
             },
-            description: "New content for the node: { text, mode }, where mode is 'markdown' or 'code'.",
+            description: "New content for the node: { text, mode, from? }, where mode is 'markdown' or 'code'. `from` names the Data File key that fills this Content, with `text` as the fallback drawn when that key is absent. Omitting `from` leaves the node's existing key untouched, it is not cleared by omission.",
           },
           'x?': {
             type: 'described',
@@ -778,7 +778,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         },
       },
       batch: {
-        description: "Apply a sequence of atlas actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNode' | 'setNode' | 'removeNode' | 'reparent' | 'addEdge' | 'removeEdge' | 'setLegend') and that action's own fields.",
+        description: "Apply a sequence of atlas actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNode' | 'setNode' | 'removeNode' | 'reparent' | 'addEdge' | 'removeEdge' | 'setLegend') and that action's own fields. An `addNode` action carries `color` directly, but not `content` — give a new node Content by following its `addNode` with a `setNode` action for the same id (mirrors `edge/bisect`'s newNode).",
         method: 'POST',
         path: '',
         params: {

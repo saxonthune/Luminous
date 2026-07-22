@@ -110,13 +110,40 @@ describe('createAtlas', () => {
 })
 
 describe('readAtlas', () => {
-  it('returns the parsed document', async () => {
+  it('returns the parsed document, with no filled slots when the sidecar 404s', async () => {
     const fetchMock = mockFetch({
       [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => docWithTwoNodes() }),
+      [`GET ${SERVER}/api/atlasdata/`]: () => ({ ok: false, status: 404 }),
     })
     vi.stubGlobal('fetch', fetchMock)
-    const doc = await readAtlas(SERVER, PATH)
-    expect(doc.nodes.map((n) => n.id)).toEqual(['a', 'b'])
+    const result = await readAtlas(SERVER, PATH)
+    expect(result.document.nodes.map((n) => n.id)).toEqual(['a', 'b'])
+    expect(result.filledSlots).toEqual([])
+  })
+
+  it('reports a filled slot as filled and a slot naming an absent key as unfilled', async () => {
+    const doc = {
+      v: 1,
+      nodes: [
+        { id: 'a', name: 'A', content: { text: 'fallback', mode: 'markdown', from: 'cli.build' } },
+        { id: 'b', name: 'B', content: { text: 'fallback', mode: 'markdown', from: 'cli.missing' } },
+        { id: 'c', name: 'C' },
+      ],
+      edges: [],
+    }
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => doc }),
+      [`GET ${SERVER}/api/atlasdata/`]: () => ({
+        ok: true,
+        json: async () => ({ v: 1, entries: { 'cli.build': { text: 'sidecar text' } } }),
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await readAtlas(SERVER, PATH)
+    expect(result.filledSlots).toEqual([
+      { id: 'a', from: 'cli.build', filled: true },
+      { id: 'b', from: 'cli.missing', filled: false },
+    ])
   })
 })
 

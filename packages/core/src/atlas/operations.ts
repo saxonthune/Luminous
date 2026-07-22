@@ -45,7 +45,17 @@ export function setNode(
     if (patch.content === undefined) {
       delete node.content;
     } else {
-      node.content = patch.content;
+      // A patch that doesn't mention `from` must not silently unlink the Node
+      // from its Data File key (doc "Atlas Data File" phase) — both client
+      // patch builders (mutations.ts) build a fresh `content` object without
+      // ever setting `from`, so this is the only place that can preserve it.
+      const nextContent: AtlasContent = { text: patch.content.text, mode: patch.content.mode };
+      if ('from' in patch.content) {
+        if (patch.content.from !== undefined) nextContent.from = patch.content.from;
+      } else if (node.content?.from !== undefined) {
+        nextContent.from = node.content.from;
+      }
+      node.content = nextContent;
     }
   }
   if ('x' in patch) {
@@ -279,6 +289,7 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
           parent: action.parent,
           x: action.x,
           y: action.y,
+          color: action.color,
         });
         break;
       case 'setNode': {

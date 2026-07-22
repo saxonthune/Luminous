@@ -1,6 +1,6 @@
 import { createSignal, createEffect, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import type { AtlasDocument } from '@luminous/core/atlas';
+import type { AtlasData, AtlasDocument } from '@luminous/core/atlas';
 import { parseAtlasDocument, serializeAtlasDocument } from '@luminous/core/atlas';
 import { DocumentPicker } from '../../DocumentPicker';
 import { ToastTray, type Toast } from '../../ToastTray';
@@ -8,6 +8,7 @@ import { fetchServerSources, writeDocument, type CanvasSource } from '../../sour
 import { readParam, writeParam } from '../../urlState';
 import { watchDocuments } from '../../ws/watchClient';
 import { AtlasCanvas } from './AtlasCanvas.tsx';
+import { atlasDataPathFor, loadAtlasData } from './dataLoader.ts';
 
 type AtlasAppState =
   | { kind: 'booting' }
@@ -23,6 +24,7 @@ export function AtlasApp() {
   const [sources, setSources] = createSignal<CanvasSource[] | null>(null);
   const [sourceId, setSourceId] = createSignal<string | null>(null);
   const [doc, setDoc] = createSignal<AtlasDocument | null>(null);
+  const [data, setData] = createSignal<AtlasData | undefined>(undefined);
   const [toasts, setToasts] = createSignal<Toast[]>([]);
   let ownWritesInFlight = 0;
 
@@ -76,6 +78,7 @@ export function AtlasApp() {
         }
         setDoc(result.doc);
         setShell({ kind: 'mounted' });
+        loadAtlasData(id).then(setData);
       })
       .catch((e: unknown) => handleDocFailed(source.label, e instanceof Error ? e.message : String(e)));
   }
@@ -105,6 +108,7 @@ export function AtlasApp() {
   function onSelect(source: CanvasSource) {
     setSourceId(source.id);
     setDoc(null);
+    setData(undefined);
     writeParam('src', source.id);
     setShell({ kind: 'loadingDoc' });
     loadDoc(source.id);
@@ -112,6 +116,7 @@ export function AtlasApp() {
 
   function onBack() {
     setDoc(null);
+    setData(undefined);
     setSourceId(null);
     writeParam('src', null);
     setShell({ kind: 'picker' });
@@ -154,7 +159,12 @@ export function AtlasApp() {
     boot();
     // eslint-disable-next-line solid/reactivity -- WS callback, not a render path; sourceId() read is intentionally untracked
     const dispose = watchDocuments((path) => {
-      if (path !== sourceId()) return;
+      const id = sourceId();
+      if (id && path === atlasDataPathFor(id)) {
+        loadAtlasData(id).then(setData);
+        return;
+      }
+      if (path !== id) return;
       if (ownWritesInFlight > 0) {
         ownWritesInFlight -= 1;
         return;
@@ -213,6 +223,7 @@ export function AtlasApp() {
           <Match when={shell().kind === 'mounted' && doc()}>
             <AtlasCanvas
               doc={doc()!}
+              data={data()}
               dispatchDoc={dispatchDoc}
               onPendingMembershipChange={setDragToast}
               onDropRefused={(message) => enqueueToast(message)}

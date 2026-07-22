@@ -10,6 +10,7 @@ import {
   isAtlasPath,
   applyAction,
   applyBatch,
+  readAtlasDataFile,
 } from '../src/store.js'
 
 let tmpDir: string
@@ -44,6 +45,31 @@ describe('scanDocuments', () => {
 
     const atlasMeta = docs.find((d) => d.name === 'system')
     expect(atlasMeta?.path).toBe('root/system.atlas.json')
+  })
+
+  it('does not list a .atlasdata.json sidecar (R81)', async () => {
+    await writeFile(join(tmpDir, 'system.atlas.json'), JSON.stringify({ v: 1, nodes: [], edges: [] }))
+    await writeFile(join(tmpDir, 'system.atlasdata.json'), JSON.stringify({ v: 1, entries: {} }))
+
+    const root = { name: 'root', dir: tmpDir }
+    const docs = await scanDocuments([root])
+
+    const names = docs.map((d) => d.name).sort()
+    expect(names).toEqual(['system'])
+  })
+})
+
+describe('readAtlasDataFile', () => {
+  it('serves an existing sidecar as raw text', async () => {
+    const content = { v: 1, entries: { hello: { text: 'world' } } }
+    await writeFile(join(tmpDir, 'system.atlasdata.json'), JSON.stringify(content))
+
+    const raw = await readAtlasDataFile('system.atlasdata.json')
+    expect(JSON.parse(raw)).toEqual(content)
+  })
+
+  it('throws when the sidecar is missing', async () => {
+    await expect(readAtlasDataFile('does-not-exist.atlasdata.json')).rejects.toThrow()
   })
 })
 

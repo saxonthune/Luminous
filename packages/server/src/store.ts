@@ -14,6 +14,7 @@ const recentWrites = new Map<string, number>()
 
 const DATAFLOW_SUFFIX = ".dataflow.json"
 const ATLAS_SUFFIX = ".atlas.json"
+const ATLASDATA_SUFFIX = ".atlasdata.json"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
@@ -313,6 +314,17 @@ export async function readPackFile(relativePath: string): Promise<string> {
   return readFile(absPath, "utf-8")
 }
 
+/**
+ * Read an Atlas Data File (*.atlasdata.json) as raw text. Throws if the file
+ * does not exist. Path is resolved through the same root-namespace logic as
+ * documents. Script-owned and read-only here — no write counterpart.
+ */
+export async function readAtlasDataFile(relativePath: string): Promise<string> {
+  const absPath = resolveDocPath(relativePath)
+  await stat(absPath) // throws ENOENT if missing
+  return readFile(absPath, "utf-8")
+}
+
 export function watchDocuments(
   watchRoots: { name: string; dir: string }[],
   onChange: (relativePath: string) => void
@@ -325,7 +337,8 @@ export function watchDocuments(
         if (
           !normalized.endsWith(".graph.json") &&
           !normalized.endsWith(DATAFLOW_SUFFIX) &&
-          !normalized.endsWith(ATLAS_SUFFIX)
+          !normalized.endsWith(ATLAS_SUFFIX) &&
+          !normalized.endsWith(ATLASDATA_SUFFIX)
         ) {
           return
         }

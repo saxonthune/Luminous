@@ -4,9 +4,18 @@
 // to the Document as an ordinary undoable setNode; ancestors then grow
 // through the existing shrink-wrap chain (projection.ts).
 import { marked } from 'marked';
-import type { AtlasContent, AtlasNode } from '@luminous/core/atlas';
+import type { AtlasContentMode, AtlasNode } from '@luminous/core/atlas';
 import { MIN_CONTENT_HEIGHT, MIN_CONTENT_WIDTH } from './projection.ts';
 import type { ContentResizeDirection } from './AtlasNodeContent.tsx';
+
+/** The shape `measureContentFit` needs — the text a Node draws (Filled or
+ * authored, per `resolveContent`) plus its Mode. Callers pass a resolved
+ * Content's `{ text, mode }`, not the authored `AtlasContent` directly, so a
+ * Filled Node fits to what it actually shows (R82). */
+export interface FitContentInput {
+  text: string;
+  mode: AtlasContentMode;
+}
 
 /** Ceilings on a fitted size — a long unbroken code line widens the Node to
  * readable, not to absurd, and a giant block scrolls past the height cap. */
@@ -47,7 +56,7 @@ function clamp(v: number, min: number, max: number): number {
  * Returns `null` when there is nothing to measure or no layout engine is
  * available (jsdom reports all-zero rects) — callers then skip the fit.
  */
-export function measureContentFit(content: AtlasContent | undefined): FitSize | null {
+export function measureContentFit(content: FitContentInput | undefined): FitSize | null {
   if (content === undefined || typeof document === 'undefined') return null;
 
   const host = document.createElement('div');

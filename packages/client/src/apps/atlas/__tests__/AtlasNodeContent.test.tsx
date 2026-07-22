@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from 'solid-js/web';
-import type { AtlasNode } from '@luminous/core/atlas';
+import type { AtlasData, AtlasNode } from '@luminous/core/atlas';
 import { AtlasNodeContent, shouldConsumeWheel, type AtlasNodeContentProps } from '../AtlasNodeContent';
 
 let container: HTMLDivElement;
@@ -26,6 +26,7 @@ function mount(overrides: Partial<AtlasNodeContentProps> = {}) {
 
   const props: AtlasNodeContentProps = {
     node: () => baseNode(),
+    data: () => undefined,
     hasChildren: () => false,
     color: () => undefined,
     selected: () => false,
@@ -116,6 +117,65 @@ describe('AtlasNodeContent interactions', () => {
     grip.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
 
     expect(onFitContent).toHaveBeenCalledWith({ horizontal: true, vertical: false });
+  });
+});
+
+describe('Filled Content (R75-R78)', () => {
+  const filledData: AtlasData = {
+    v: 1,
+    entries: {
+      'cli.build': { text: 'Sidecar text', source: { path: 'src/cli.ts', lines: [10, 12] } },
+    },
+  };
+
+  it('R75/R76: renders the sidecar text and marks it as filled', () => {
+    mount({
+      node: () => baseNode({ content: { text: 'authored fallback', mode: 'markdown', from: 'cli.build' } }),
+      data: () => filledData,
+    });
+    expect(container.textContent).toContain('Sidecar text');
+    expect(container.textContent).not.toContain('authored fallback');
+    expect(container.textContent).toContain('filled');
+  });
+
+  it('R77: a missing key renders the authored fallback and marks it as such', () => {
+    mount({
+      node: () => baseNode({ content: { text: 'authored fallback', mode: 'markdown', from: 'cli.missing' } }),
+      data: () => filledData,
+    });
+    expect(container.textContent).toContain('authored fallback');
+    expect(container.textContent).toContain('missing key');
+  });
+
+  it('R78: a filled Node\'s edit mode drops the content textarea but keeps the name input', () => {
+    mount({
+      node: () => baseNode({ content: { text: 'authored fallback', mode: 'markdown', from: 'cli.build' } }),
+      data: () => filledData,
+      editing: () => true,
+    });
+    expect(container.querySelector('textarea')).toBeNull();
+    expect(container.querySelector('input')).not.toBeNull();
+    expect(container.textContent).toContain('Sidecar text');
+    expect(container.textContent).toContain('cli.build');
+    expect(container.textContent).toContain('src/cli.ts');
+  });
+
+  it('a Node without a "from" still shows the plain textarea in edit mode', () => {
+    mount({ node: () => baseNode(), editing: () => true });
+    expect(container.querySelector('textarea')).not.toBeNull();
+  });
+
+  it('escapes markup carried in filled text before markdown rendering', () => {
+    const markupData: AtlasData = {
+      v: 1,
+      entries: { 'cli.build': { text: '<img src=x onerror=alert(1)>' } },
+    };
+    mount({
+      node: () => baseNode({ content: { text: 'fallback', mode: 'markdown', from: 'cli.build' } }),
+      data: () => markupData,
+    });
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.textContent).toContain('<img src=x onerror=alert(1)>');
   });
 });
 

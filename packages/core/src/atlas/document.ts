@@ -11,7 +11,7 @@ export function emptyAtlasDocument(): AtlasDocument {
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'legend', 'nodes', 'edges']);
 const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y', 'color', 'contentHeight', 'contentWidth']);
-const CONTENT_FIELDS = new Set(['text', 'mode']);
+const CONTENT_FIELDS = new Set(['text', 'mode', 'from']);
 const EDGE_FIELDS = new Set(['from', 'to', 'label']);
 
 function unknownFieldIssues(obj: Record<string, unknown>, allowed: Set<string>, path: string): string[] {
@@ -36,8 +36,14 @@ function parseContent(value: unknown, path: string, issues: string[]): AtlasCont
     issues.push(`${path}.mode: must be "markdown" or "code"`);
     ok = false;
   }
+  if (c['from'] !== undefined && typeof c['from'] !== 'string') {
+    issues.push(`${path}.from: must be a string`);
+    ok = false;
+  }
   if (!ok) return undefined;
-  return { text: c['text'] as string, mode: c['mode'] as 'markdown' | 'code' };
+  const content: AtlasContent = { text: c['text'] as string, mode: c['mode'] as 'markdown' | 'code' };
+  if (c['from'] !== undefined) content.from = c['from'] as string;
+  return content;
 }
 
 function parseLegend(value: unknown, issues: string[]): AtlasLegend | undefined {
@@ -256,7 +262,9 @@ export function parseAtlasDocument(text: string): ParseAtlasDocumentResult {
 }
 
 function serializeContent(content: AtlasContent): Record<string, unknown> {
-  return { text: content.text, mode: content.mode };
+  const out: Record<string, unknown> = { text: content.text, mode: content.mode };
+  if (content.from !== undefined) out['from'] = content.from;
+  return out;
 }
 
 function serializeNode(node: AtlasNode): Record<string, unknown> {

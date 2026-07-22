@@ -1,6 +1,6 @@
 import { Show, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
-import type { AtlasAction, AtlasColorToken, AtlasContentMode, AtlasDocument } from '@luminous/core/atlas';
-import { applyAtlasBatch, invertAtlasBatch } from '@luminous/core/atlas';
+import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, AtlasData, AtlasDocument } from '@luminous/core/atlas';
+import { applyAtlasBatch, invertAtlasBatch, resolveContent } from '@luminous/core/atlas';
 import { Canvas, ConnectionPreview, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef } from '@luminous/cactus';
 import { toEdgeDeclarations, projectAtlasNodes, childAreaOrigin } from './projection.ts';
@@ -43,6 +43,9 @@ const ATLAS_NODE_MD_STYLES = `
 
 export interface AtlasCanvasProps {
   doc: AtlasDocument;
+  /** The Atlas Data File resolved for this Document, if one exists —
+   * `undefined` is the normal case for most Atlas documents. */
+  data?: AtlasData;
   dispatchDoc: (next: AtlasDocument) => void;
   /** R6: fires with a preview message while a drag is about to change Container
    * membership, and with `null` once it isn't (including at drag end). */
@@ -115,6 +118,15 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     }
     history.clear();
   }));
+
+  // R80: a Data File change discards the undo history — the client never
+  // writes this file, so every change is external and needs no echo guard
+  // (unlike props.doc above). `on`'s `defer: true` opts out of running on
+  // the initial mount, else opening a Document with a sidecar already
+  // loaded would clear an empty history for no reason.
+  createEffect(on(() => props.data, () => {
+    history.clear();
+  }, { defer: true }));
 
   // Color preview: a local-only signal, scoped to the node being previewed so
   // one node's hover can never tint another. Never passed to dispatchDoc.
@@ -302,7 +314,10 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     if (hasChildren(nodeId) || node.content === undefined) {
       patch = buildClearSizePatch(dir);
     } else {
-      const fit = measureContentFit(node.content);
+      // R82: fit to the text the Node draws — resolveContent's Filled text
+      // when a key fills it, else the authored text unchanged.
+      const resolved = resolveContent(node.content, props.data);
+      const fit = resolved ? measureContentFit(resolved) : null;
       if (!fit) return;
       patch = buildFitPatch(dir, fit);
     }
@@ -319,7 +334,14 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     // never overridden. Containers are child-sized, so they never auto-fit.
     let sizePatch: SizePatch = {};
     if (!hasChildren(id)) {
-      const fit = measureContentFit(patch.content);
+      // Mirrors core's setNode: the patch never mentions `from`, so the
+      // Node's existing key (if any) survives this commit — measure what the
+      // Node will actually draw after it, not just the freshly typed text.
+      const finalContent: AtlasContent = node.content?.from !== undefined
+        ? { ...patch.content, from: node.content.from }
+        : patch.content;
+      const resolved = resolveContent(finalContent, props.data);
+      const fit = resolved ? measureContentFit(resolved) : null;
       if (fit) sizePatch = buildAutoFitPatch(node, fit);
     }
     dispatchAction([{ type: 'setNode', id, ...patch, ...sizePatch }], 'Edit Node');
@@ -435,6 +457,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         >
           <AtlasNodeLayer
             nodes={nodes}
+            data={() => props.data}
             editingId={editingId}
             onEnterEdit={setEditingId}
             onCommit={commitEdit}

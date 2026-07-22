@@ -11,11 +11,14 @@ import {
   setLegend,
   buildBisectActions,
   applyAtlasBatch,
+  parseAtlasData,
+  resolveContent,
 } from '@luminous/core/atlas'
 import type {
   AtlasAction,
   AtlasColorToken,
   AtlasContent,
+  AtlasData,
   AtlasDocument,
   AtlasLegend,
 } from '@luminous/core/atlas'
@@ -66,8 +69,59 @@ export async function createAtlas(serverUrl: string, path: string): Promise<Atla
   return doc
 }
 
-export async function readAtlas(serverUrl: string, path: string): Promise<AtlasDocument> {
-  return loadAtlas(serverUrl, path)
+const ATLAS_DOC_SUFFIX = '.atlas.json'
+const ATLAS_DATA_SUFFIX = '.atlasdata.json'
+
+function atlasDataPathFor(path: string): string {
+  return path.endsWith(ATLAS_DOC_SUFFIX)
+    ? path.slice(0, -ATLAS_DOC_SUFFIX.length) + ATLAS_DATA_SUFFIX
+    : path + ATLAS_DATA_SUFFIX
+}
+
+/** Loads the Data File sidecar for an atlas Document, if one exists.
+ * Mirrors the client's `dataLoader.ts`: a missing or unparsable sidecar is
+ * the normal case for most Atlas documents, not an error. */
+async function loadAtlasDataFile(serverUrl: string, path: string): Promise<AtlasData | undefined> {
+  const dataPath = atlasDataPathFor(path)
+  let res: Response
+  try {
+    res = await fetch(`${serverUrl}/api/atlasdata/${encodeURIComponent(dataPath)}`)
+  } catch {
+    return undefined
+  }
+  if (!res.ok) return undefined
+  const text = JSON.stringify(await res.json())
+  const parsed = parseAtlasData(text)
+  return parsed.ok ? parsed.data : undefined
+}
+
+export interface AtlasFilledSlot {
+  id: string
+  from: string
+  filled: boolean
+}
+
+export interface AtlasReadResult {
+  document: AtlasDocument
+  /** Every Node whose Content names a Data File key, `filled` reporting
+   * whether that key currently resolves — so an agent reading the Atlas
+   * knows not to paste contract text into a slot a script owns (doc "Atlas
+   * Data File" phase), rather than only discovering that by trial and error
+   * against `node/set`. */
+  filledSlots: AtlasFilledSlot[]
+}
+
+export async function readAtlas(serverUrl: string, path: string): Promise<AtlasReadResult> {
+  const document = await loadAtlas(serverUrl, path)
+  const data = await loadAtlasDataFile(serverUrl, path)
+  const filledSlots: AtlasFilledSlot[] = []
+  for (const node of document.nodes) {
+    const from = node.content?.from
+    if (from === undefined) continue
+    const resolved = resolveContent(node.content, data)
+    filledSlots.push({ id: node.id, from, filled: resolved?.filled ?? false })
+  }
+  return { document, filledSlots }
 }
 
 export async function nodeCreate(

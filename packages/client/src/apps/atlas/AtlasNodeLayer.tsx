@@ -1,5 +1,5 @@
 import { For, createMemo, createEffect, createSignal, type JSX } from 'solid-js';
-import type { AtlasColorToken, AtlasContentMode } from '@luminous/core/atlas';
+import type { AtlasColorToken, AtlasContentMode, AtlasData } from '@luminous/core/atlas';
 import { NodeContainer, useCanvasContext, useGesture, findContainerAt, isOverContainerInterior } from '@luminous/cactus';
 import { containerHeaderHeight, CONTAINER_BEZEL, type AtlasRenderNode } from './projection.ts';
 import { addDelta, growAncestors, shiftSubtree, type LayoutDelta } from './layoutOverride.ts';
@@ -20,6 +20,8 @@ const EDGE_TAB_TOP_OFFSET = 8;
 
 export interface AtlasNodeLayerProps {
   nodes: () => AtlasRenderNode[];
+  /** The Atlas Data File resolved for the open Document, if one exists. */
+  data: () => AtlasData | undefined;
   editingId: () => string | null;
   onEnterEdit: (id: string) => void;
   onCommit: (id: string, form: NodeEditForm) => void;
@@ -246,6 +248,7 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
             >
               <AtlasNodeContent
                 node={() => rn.node}
+                data={props.data}
                 hasChildren={() => rn.hasChildren}
                 color={color}
                 selected={() => ctx.isSelected(rn.node.id)}

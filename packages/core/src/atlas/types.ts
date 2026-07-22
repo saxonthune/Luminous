@@ -35,6 +35,9 @@ export type AtlasContentMode = 'markdown' | 'code';
 export interface AtlasContent {
   text: string;
   mode: AtlasContentMode;
+  /** The Data File key that fills this Content; `text` is the fallback when the
+   * key is absent (doc "Atlas Data File" phase). */
+  from?: string;
 }
 
 export interface AtlasEdge {
@@ -49,6 +52,7 @@ export interface AddNodeAction {
   parent?: string;
   x?: number;
   y?: number;
+  color?: AtlasColorToken;
 }
 
 export interface SetNodeAction {

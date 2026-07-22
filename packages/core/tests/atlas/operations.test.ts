@@ -87,6 +87,32 @@ describe('setNode', () => {
     if (result.ok) expect(result.doc.nodes[0].content).toEqual({ text: 'hi', mode: 'markdown' });
   });
 
+  it('preserves an existing "from" when a content patch does not mention it', () => {
+    const withFrom: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown', from: 'cli.build' } }],
+      edges: [],
+    };
+    const result = setNode(withFrom, 'a', { content: { text: 'bye', mode: 'code' } });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.doc.nodes[0].content).toEqual({ text: 'bye', mode: 'code', from: 'cli.build' });
+    }
+  });
+
+  it('clears "from" when a content patch sets it to undefined explicitly', () => {
+    const withFrom: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown', from: 'cli.build' } }],
+      edges: [],
+    };
+    const result = setNode(withFrom, 'a', { content: { text: 'hi', mode: 'markdown', from: undefined } });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.doc.nodes[0].content).toEqual({ text: 'hi', mode: 'markdown' });
+    }
+  });
+
   it('errors when the node does not exist', () => {
     const result = setNode(base, 'missing', { name: 'X' });
     expect(result).toEqual({ ok: false, error: 'node "missing" does not exist' });

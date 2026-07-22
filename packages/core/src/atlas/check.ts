@@ -1,3 +1,4 @@
+import type { AtlasData } from './data.ts';
 import type { AtlasDocument } from './types.ts';
 import { edgeAllowed } from './operations.ts';
 
@@ -6,7 +7,7 @@ export interface AtlasCheckIssue {
   message: string;
 }
 
-export function checkAtlasDocument(doc: AtlasDocument): AtlasCheckIssue[] {
+export function checkAtlasDocument(doc: AtlasDocument, data?: AtlasData): AtlasCheckIssue[] {
   const issues: AtlasCheckIssue[] = [];
 
   const siblingsByParent = new Map<string | undefined, string[]>();
@@ -38,6 +39,29 @@ export function checkAtlasDocument(doc: AtlasDocument): AtlasCheckIssue[] {
         severity: 'warning',
         message: `edge between "${edge.from}" and "${edge.to}": one contains the other, which containment already relates`,
       });
+    }
+  }
+
+  if (data !== undefined) {
+    const usedKeys = new Set<string>();
+    for (const node of doc.nodes) {
+      const key = node.content?.from;
+      if (key === undefined) continue;
+      usedKeys.add(key);
+      if (data.entries[key] === undefined) {
+        issues.push({
+          severity: 'warning',
+          message: `node "${node.id}" content names key "${key}", which the data file does not provide`,
+        });
+      }
+    }
+    for (const key of Object.keys(data.entries)) {
+      if (!usedKeys.has(key)) {
+        issues.push({
+          severity: 'warning',
+          message: `data file entry "${key}" is not named by any node's content`,
+        });
+      }
     }
   }
 

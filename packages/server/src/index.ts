@@ -13,6 +13,7 @@ import {
   watchDocuments,
   createDocument,
   readPackFile,
+  readAtlasDataFile,
   getRawDocument,
   writeRawDocument,
   isDataflowPath,
@@ -370,6 +371,24 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       res.end(content)
     } catch {
       sendJson(res, 404, { error: "pack not found" })
+    }
+    return
+  }
+
+  // GET /api/atlasdata/:path — serve a *.atlasdata.json sidecar as raw JSON
+  if (url.startsWith("/api/atlasdata/") && req.method === "GET") {
+    const dataPath = decodeURIComponent(url.slice("/api/atlasdata/".length))
+    if (!dataPath || hasTraversal(dataPath)) {
+      sendJson(res, 400, { error: "invalid path" })
+      return
+    }
+    try {
+      const content = await readAtlasDataFile(dataPath)
+      setCorsHeaders(res)
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(content)
+    } catch {
+      sendJson(res, 404, { error: "atlas data not found" })
     }
     return
   }

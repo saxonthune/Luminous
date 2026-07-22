@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { checkAtlasDocument } from '../../src/atlas/check.ts';
+import type { AtlasData } from '../../src/atlas/data.ts';
 import type { AtlasDocument } from '../../src/atlas/types.ts';
 
 describe('checkAtlasDocument', () => {
@@ -46,5 +47,44 @@ describe('checkAtlasDocument', () => {
     expect(checkAtlasDocument(doc)).toEqual([
       { severity: 'error', message: 'edge references unknown node id "missing"' },
     ]);
+  });
+
+  it('does not check the data file when omitted', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: 'x', mode: 'markdown', from: 'missing.key' } }],
+      edges: [],
+    };
+    expect(checkAtlasDocument(doc)).toEqual([]);
+  });
+
+  it('warns on a node content key the data file does not provide', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: 'x', mode: 'markdown', from: 'missing.key' } }],
+      edges: [],
+    };
+    const data: AtlasData = { v: 1, entries: {} };
+    expect(checkAtlasDocument(doc, data)).toEqual([
+      { severity: 'warning', message: 'node "a" content names key "missing.key", which the data file does not provide' },
+    ]);
+  });
+
+  it('warns on a data file entry no node names', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [{ id: 'a', name: 'A' }], edges: [] };
+    const data: AtlasData = { v: 1, entries: { 'orphan.key': { text: 'unused' } } };
+    expect(checkAtlasDocument(doc, data)).toEqual([
+      { severity: 'warning', message: 'data file entry "orphan.key" is not named by any node\'s content' },
+    ]);
+  });
+
+  it('does not warn when every key is provided and used', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A', content: { text: 'x', mode: 'markdown', from: 'route.list' } }],
+      edges: [],
+    };
+    const data: AtlasData = { v: 1, entries: { 'route.list': { text: 'GET /a' } } };
+    expect(checkAtlasDocument(doc, data)).toEqual([]);
   });
 });
