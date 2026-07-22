@@ -122,15 +122,17 @@ An arrange command lets the user set several Nodes' positions at once.
 
 An Edge connects one Node to another and carries no label. Where an Edge needs
 explanation, the user bisects it, inserting a Node that carries the explanation
-(doc01.07.03, Bisection). Containment, not an Edge, expresses the parent-child
-relation: a Node and its parent are never also connected by an Edge (R55, R56).
+(doc01.07.03, Bisection). Containment, not an Edge, expresses that one Node
+holds another: a Node and any of its ancestors are never also connected by an
+Edge (R55, R56). Siblings, and any pair where neither contains the other, may
+be connected.
 
 - **R31.** The system shall allow the user to bisect an Edge, inserting a new Node
   between the Edge's two ends so that `A → B` becomes `A → N → B`.
-- **R55.** The system shall not create an Edge between a Node and the Node's
-  parent.
-- **R56.** When adding a Node to a Container makes two Nodes parent and child,
-  the system shall remove any Edge between them.
+- **R55.** The system shall not create an Edge between a Node and any of the
+  Node's ancestors.
+- **R56.** When adding a Node to a Container makes one Node an ancestor of
+  another, the system shall remove any Edge between them.
 - **R32.** When the user right-clicks an Edge, the system shall open a context menu
   with a "Bisect" option.
 

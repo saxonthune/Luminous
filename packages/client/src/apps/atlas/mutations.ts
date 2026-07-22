@@ -1,5 +1,5 @@
 import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, AtlasDocument, AtlasNode } from '@luminous/core/atlas';
-import { reparent, setNode, type AtlasResult } from '@luminous/core/atlas';
+import { edgeAllowed, isAncestor, reparent, setNode, type AtlasResult } from '@luminous/core/atlas';
 import { childAreaOrigin } from './projection.ts';
 
 /** Raw values collected from the Node edit form. */
@@ -177,12 +177,21 @@ export function applyDrop(
  */
 export function canConnect(doc: AtlasDocument, source: string, target: string): boolean {
   if (source === target) return false;
-  // R55: containment already relates a parent and its child — core's addEdge
-  // refuses the pair, so the UI must not offer it.
-  const sourceNode = doc.nodes.find((n) => n.id === source);
-  const targetNode = doc.nodes.find((n) => n.id === target);
-  if (sourceNode?.parent === target || targetNode?.parent === source) return false;
+  // R55: no edge within an ancestor chain — core's addEdge refuses the pair
+  // (edgeAllowed is the one rule function), so the UI must not offer it.
+  if (!edgeAllowed(doc, source, target)) return false;
   return !doc.edges.some((e) => e.from === source && e.to === target);
+}
+
+/**
+ * Whether a Ctrl-drop into `parentId` completes the Edge into the new Node.
+ * A drop inside the source's own subtree makes the new Node the source's
+ * descendant — containment carries the relation, so no edge (R55). The toast
+ * and `buildConnectDropActions` both read this, so they cannot disagree.
+ */
+export function connectDropAddsEdge(doc: AtlasDocument, sourceId: string, parentId: string | null): boolean {
+  if (parentId === null) return true;
+  return parentId !== sourceId && !isAncestor(doc, sourceId, parentId);
 }
 
 /**
@@ -213,9 +222,7 @@ export function buildConnectDropActions(
     x,
     y,
   };
-  // Dropping inside the source itself makes the new Node the source's child —
-  // containment carries the relation, so no edge is added (R55).
-  if (parentId === sourceId) return [addNodeAction];
+  if (!connectDropAddsEdge(doc, sourceId, parentId)) return [addNodeAction];
   return [addNodeAction, { type: 'addEdge', from: sourceId, to: id }];
 }
 

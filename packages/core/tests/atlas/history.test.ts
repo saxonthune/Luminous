@@ -122,6 +122,19 @@ describe('invertAtlasBatch', () => {
     roundTrips(before, [{ type: 'reparent', id: 'b', parent: 'a' }]);
   });
 
+  it('round-trips a deep-strip reparent: subtree-to-ancestor edges come back on undo', () => {
+    const before = doc(
+      [
+        { id: 'outer', name: 'Outer' },
+        { id: 'inner', name: 'Inner', parent: 'outer' },
+        { id: 'sub', name: 'Sub' },
+        { id: 'leaf', name: 'Leaf', parent: 'sub' },
+      ],
+      [{ from: 'leaf', to: 'outer' }],
+    );
+    roundTrips(before, [{ type: 'reparent', id: 'sub', parent: 'inner' }]);
+  });
+
   it('round-trips a single reparent', () => {
     const before = doc([
       { id: 'p1', name: 'P1' },

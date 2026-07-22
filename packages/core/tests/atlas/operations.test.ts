@@ -297,6 +297,27 @@ describe('reparent', () => {
     expect(result.ok && result.doc.edges).toEqual([{ from: 'b', to: 'c' }]);
   });
 
+  it('R56: strips every pair the move relates — moved subtree against the new ancestor chain', () => {
+    // Moving `sub` (with child `leaf`) into `inner` (inside `outer`) strips
+    // the leaf-to-outer edge too; the sibling edge survives.
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'outer', name: 'Outer' },
+        { id: 'inner', name: 'Inner', parent: 'outer' },
+        { id: 'sub', name: 'Sub' },
+        { id: 'leaf', name: 'Leaf', parent: 'sub' },
+        { id: 'peer', name: 'Peer' },
+      ],
+      edges: [
+        { from: 'leaf', to: 'outer' },
+        { from: 'sub', to: 'peer' },
+      ],
+    };
+    const result = reparent(doc, 'sub', 'inner');
+    expect(result.ok && result.doc.edges).toEqual([{ from: 'sub', to: 'peer' }]);
+  });
+
   it('R56: ungrouping strips nothing', () => {
     const doc: AtlasDocument = {
       v: 1,
@@ -340,25 +361,31 @@ describe('addEdge', () => {
     };
     expect(addEdge(nested, 'a', 'b')).toEqual({
       ok: false,
-      error: 'no edge between "a" and "b": they are parent and child',
+      error: 'no edge between "a" and "b": one contains the other',
     });
     expect(addEdge(nested, 'b', 'a')).toEqual({
       ok: false,
-      error: 'no edge between "b" and "a": they are parent and child',
+      error: 'no edge between "b" and "a": one contains the other',
     });
   });
 
-  it('R55: a grandparent edge is still allowed (only the direct pair is refused)', () => {
+  it('R55: refuses an edge anywhere in the ancestor chain; uncles and siblings are fine', () => {
     const nested: AtlasDocument = {
       v: 1,
       nodes: [
         { id: 'a', name: 'A' },
         { id: 'b', name: 'B', parent: 'a' },
         { id: 'c', name: 'C', parent: 'b' },
+        { id: 'uncle', name: 'Uncle', parent: 'a' },
+        { id: 'root2', name: 'Root2' },
       ],
       edges: [],
     };
-    expect(addEdge(nested, 'a', 'c').ok).toBe(true);
+    expect(addEdge(nested, 'a', 'c').ok).toBe(false);
+    expect(addEdge(nested, 'c', 'a').ok).toBe(false);
+    expect(addEdge(nested, 'uncle', 'c').ok).toBe(true);
+    expect(addEdge(nested, 'b', 'uncle').ok).toBe(true);
+    expect(addEdge(nested, 'root2', 'c').ok).toBe(true);
   });
 });
 

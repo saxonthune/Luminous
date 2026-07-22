@@ -12,6 +12,7 @@ import {
   applyDrop,
   describePendingDrop,
   canConnect,
+  connectDropAddsEdge,
   buildConnectDropActions,
 } from '../mutations';
 import { projectAtlasNodes } from '../projection.ts';
@@ -299,6 +300,44 @@ describe('canConnect', () => {
     };
     expect(canConnect(nested, 'p', 'k')).toBe(false);
     expect(canConnect(nested, 'k', 'p')).toBe(false);
+  });
+
+  it('R55: refuses any ancestor-chain pair; an uncle is fine', () => {
+    const nested: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'a', name: 'A' },
+        { id: 'b', name: 'B', parent: 'a' },
+        { id: 'c', name: 'C', parent: 'b' },
+        { id: 'uncle', name: 'U', parent: 'a' },
+      ],
+      edges: [],
+    };
+    expect(canConnect(nested, 'a', 'c')).toBe(false);
+    expect(canConnect(nested, 'c', 'a')).toBe(false);
+    expect(canConnect(nested, 'uncle', 'c')).toBe(true);
+  });
+});
+
+describe('connectDropAddsEdge', () => {
+  const nested: AtlasDocument = {
+    v: 1,
+    nodes: [
+      { id: 'source', name: 'Source' },
+      { id: 'inner', name: 'Inner', parent: 'source' },
+      { id: 'peer', name: 'Peer' },
+    ],
+    edges: [],
+  };
+
+  it('adds the edge for a top-level or unrelated-container drop', () => {
+    expect(connectDropAddsEdge(nested, 'source', null)).toBe(true);
+    expect(connectDropAddsEdge(nested, 'source', 'peer')).toBe(true);
+  });
+
+  it('R55: no edge when dropping into the source itself or its subtree', () => {
+    expect(connectDropAddsEdge(nested, 'source', 'source')).toBe(false);
+    expect(connectDropAddsEdge(nested, 'source', 'inner')).toBe(false);
   });
 });
 

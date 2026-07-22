@@ -29,6 +29,8 @@ export {
   removeEdge,
   buildBisectActions,
   applyAtlasBatch,
+  isAncestor,
+  edgeAllowed,
 } from './operations.ts';
 export type { AtlasResult } from './operations.ts';
 export { checkAtlasDocument } from './check.ts';

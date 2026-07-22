@@ -159,30 +159,49 @@ export function reparent(doc: AtlasDocument, id: string, parent: string | undefi
     }
     return next;
   });
-  // Invariant: no edge between a node and its parent (see addEdge). Grouping
-  // under a node the edge pointed at strips that edge — the containment now
-  // carries the relation. Ungrouping strips nothing: the pair stops being
-  // parent-child, so an edge between them becomes legal again (but is gone).
-  const edges =
-    parent === undefined
-      ? doc.edges
-      : doc.edges.filter(e => !(e.from === id && e.to === parent) && !(e.from === parent && e.to === id));
-  return { ok: true, doc: { ...doc, nodes, edges } };
+  // Invariant: no edge within an ancestor chain (see edgeAllowed). Edges are
+  // re-filtered against the moved tree, which strips exactly the pairs this
+  // move made violating — the whole subtree against the new ancestor chain,
+  // since the invariant held before the move. Ungrouping strips nothing: pairs
+  // only stop being related.
+  const next = { ...doc, nodes };
+  const edges = parent === undefined ? doc.edges : doc.edges.filter(e => edgeAllowed(next, e.from, e.to));
+  return { ok: true, doc: { ...next, edges } };
+}
+
+/** Whether `ancestorId` contains `nodeId`, directly or through any chain of
+ * parents. A node is not its own ancestor. */
+export function isAncestor(doc: AtlasDocument, ancestorId: string, nodeId: string): boolean {
+  const parentOf = new Map(doc.nodes.map(n => [n.id, n.parent]));
+  const visited = new Set<string>();
+  let current = parentOf.get(nodeId);
+  while (current !== undefined && !visited.has(current)) {
+    if (current === ancestorId) return true;
+    visited.add(current);
+    current = parentOf.get(current);
+  }
+  return false;
+}
+
+/** The one containment rule for edges (doc01.07.04 R55): an edge may not
+ * connect a node to any of its ancestors or descendants — containment already
+ * relates them. Siblings, uncles, and any other pair are fine. Every path
+ * that creates or keeps edges routes through this: `addEdge` refuses a
+ * violating pair, `reparent` strips pairs its move makes violating, and
+ * `checkAtlasDocument` flags violations in documents written elsewhere. */
+export function edgeAllowed(doc: AtlasDocument, from: string, to: string): boolean {
+  return !isAncestor(doc, from, to) && !isAncestor(doc, to, from);
 }
 
 export function addEdge(doc: AtlasDocument, from: string, to: string): AtlasResult {
-  const fromNode = doc.nodes.find(n => n.id === from);
-  const toNode = doc.nodes.find(n => n.id === to);
-  if (!fromNode) {
+  if (!doc.nodes.some(n => n.id === from)) {
     return { ok: false, error: `node "${from}" does not exist` };
   }
-  if (!toNode) {
+  if (!doc.nodes.some(n => n.id === to)) {
     return { ok: false, error: `node "${to}" does not exist` };
   }
-  // Invariant: containment, not an edge, expresses the parent-child relation
-  // (doc01.07.04 R55). `reparent` maintains the same invariant by stripping.
-  if (fromNode.parent === to || toNode.parent === from) {
-    return { ok: false, error: `no edge between "${from}" and "${to}": they are parent and child` };
+  if (!edgeAllowed(doc, from, to)) {
+    return { ok: false, error: `no edge between "${from}" and "${to}": one contains the other` };
   }
   if (doc.edges.some(e => e.from === from && e.to === to)) {
     return { ok: true, doc };
