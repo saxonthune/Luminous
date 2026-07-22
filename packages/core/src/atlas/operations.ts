@@ -159,15 +159,30 @@ export function reparent(doc: AtlasDocument, id: string, parent: string | undefi
     }
     return next;
   });
-  return { ok: true, doc: { ...doc, nodes } };
+  // Invariant: no edge between a node and its parent (see addEdge). Grouping
+  // under a node the edge pointed at strips that edge — the containment now
+  // carries the relation. Ungrouping strips nothing: the pair stops being
+  // parent-child, so an edge between them becomes legal again (but is gone).
+  const edges =
+    parent === undefined
+      ? doc.edges
+      : doc.edges.filter(e => !(e.from === id && e.to === parent) && !(e.from === parent && e.to === id));
+  return { ok: true, doc: { ...doc, nodes, edges } };
 }
 
 export function addEdge(doc: AtlasDocument, from: string, to: string): AtlasResult {
-  if (!doc.nodes.some(n => n.id === from)) {
+  const fromNode = doc.nodes.find(n => n.id === from);
+  const toNode = doc.nodes.find(n => n.id === to);
+  if (!fromNode) {
     return { ok: false, error: `node "${from}" does not exist` };
   }
-  if (!doc.nodes.some(n => n.id === to)) {
+  if (!toNode) {
     return { ok: false, error: `node "${to}" does not exist` };
+  }
+  // Invariant: containment, not an edge, expresses the parent-child relation
+  // (doc01.07.04 R55). `reparent` maintains the same invariant by stripping.
+  if (fromNode.parent === to || toNode.parent === from) {
+    return { ok: false, error: `no edge between "${from}" and "${to}": they are parent and child` };
   }
   if (doc.edges.some(e => e.from === from && e.to === to)) {
     return { ok: true, doc };

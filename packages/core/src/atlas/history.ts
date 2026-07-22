@@ -83,7 +83,18 @@ export function invertAtlasAction(before: AtlasDocument, action: AtlasAction): A
       const node = before.nodes.find((n) => n.id === action.id);
       const inverse: ReparentAction = { type: 'reparent', id: action.id };
       if (node?.parent !== undefined) inverse.parent = node.parent;
-      return [inverse];
+      // Reparenting under `action.parent` strips any edge between the two
+      // (operations.ts): restore those after the reparent-back — after,
+      // because addEdge refuses while the pair is still parent-child.
+      const stripped =
+        action.parent === undefined
+          ? []
+          : before.edges.filter(
+              (e) =>
+                (e.from === action.id && e.to === action.parent) ||
+                (e.from === action.parent && e.to === action.id),
+            );
+      return [inverse, ...stripped.map((e): AtlasAction => ({ type: 'addEdge', from: e.from, to: e.to }))];
     }
     case 'setNode':
       return invertSetNode(before, action);

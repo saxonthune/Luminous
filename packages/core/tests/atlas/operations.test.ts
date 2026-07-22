@@ -282,6 +282,30 @@ describe('reparent', () => {
     const result = reparent(doc, 'a', 'c');
     expect(result).toEqual({ ok: false, error: 'reparenting "a" to "c" would create a cycle' });
   });
+
+  it('R56: strips edges between the node and its new parent, both directions', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }],
+      edges: [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'a' },
+        { from: 'b', to: 'c' },
+      ],
+    };
+    const result = reparent(doc, 'b', 'a');
+    expect(result.ok && result.doc.edges).toEqual([{ from: 'b', to: 'c' }]);
+  });
+
+  it('R56: ungrouping strips nothing', () => {
+    const doc: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B', parent: 'a' }, { id: 'c', name: 'C' }],
+      edges: [{ from: 'b', to: 'c' }],
+    };
+    const result = reparent(doc, 'b', undefined);
+    expect(result.ok && result.doc.edges).toEqual([{ from: 'b', to: 'c' }]);
+  });
 });
 
 describe('addEdge', () => {
@@ -306,6 +330,35 @@ describe('addEdge', () => {
   it('errors when "to" does not exist', () => {
     const result = addEdge(base, 'a', 'missing');
     expect(result).toEqual({ ok: false, error: 'node "missing" does not exist' });
+  });
+
+  it('R55: refuses an edge between a parent and its child, both directions', () => {
+    const nested: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B', parent: 'a' }],
+      edges: [],
+    };
+    expect(addEdge(nested, 'a', 'b')).toEqual({
+      ok: false,
+      error: 'no edge between "a" and "b": they are parent and child',
+    });
+    expect(addEdge(nested, 'b', 'a')).toEqual({
+      ok: false,
+      error: 'no edge between "b" and "a": they are parent and child',
+    });
+  });
+
+  it('R55: a grandparent edge is still allowed (only the direct pair is refused)', () => {
+    const nested: AtlasDocument = {
+      v: 1,
+      nodes: [
+        { id: 'a', name: 'A' },
+        { id: 'b', name: 'B', parent: 'a' },
+        { id: 'c', name: 'C', parent: 'b' },
+      ],
+      edges: [],
+    };
+    expect(addEdge(nested, 'a', 'c').ok).toBe(true);
   });
 });
 

@@ -290,6 +290,16 @@ describe('canConnect', () => {
   it('allows a valid new pair', () => {
     expect(canConnect(d, 'b', 'a')).toBe(true);
   });
+
+  it('R55: refuses a parent-child pair in either direction', () => {
+    const nested: AtlasDocument = {
+      v: 1,
+      nodes: [{ id: 'p', name: 'P' }, { id: 'k', name: 'K', parent: 'p' }],
+      edges: [],
+    };
+    expect(canConnect(nested, 'p', 'k')).toBe(false);
+    expect(canConnect(nested, 'k', 'p')).toBe(false);
+  });
 });
 
 describe('buildConnectDropActions', () => {
@@ -330,5 +340,13 @@ describe('buildConnectDropActions', () => {
     const d = doc([{ id: 'source', name: 'Source' }]);
     const actions = buildConnectDropActions(d, 'source', null, { x: 0, y: 0 }, undefined);
     expect(actions[1]).toEqual({ type: 'addEdge', from: 'source', to: 'new-node' });
+  });
+
+  it('R55: a drop inside the source itself adds the child Node with no edge', () => {
+    const d = doc([{ id: 'source', name: 'Source' }]);
+    const actions = buildConnectDropActions(d, 'source', 'source', { x: 150, y: 260 }, { x: 100, y: 100 });
+    expect(actions).toEqual([
+      { type: 'addNode', id: 'new-node', name: 'New Node', parent: 'source', x: 32, y: 80 },
+    ]);
   });
 });

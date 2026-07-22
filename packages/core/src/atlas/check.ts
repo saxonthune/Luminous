@@ -25,12 +25,19 @@ export function checkAtlasDocument(doc: AtlasDocument): AtlasCheckIssue[] {
   }
 
   const nodeIds = new Set(doc.nodes.map(n => n.id));
+  const parentOf = new Map(doc.nodes.map(n => [n.id, n.parent]));
   for (const edge of doc.edges) {
     if (!nodeIds.has(edge.from)) {
       issues.push({ severity: 'error', message: `edge references unknown node id "${edge.from}"` });
     }
     if (!nodeIds.has(edge.to)) {
       issues.push({ severity: 'error', message: `edge references unknown node id "${edge.to}"` });
+    }
+    if (parentOf.get(edge.from) === edge.to || parentOf.get(edge.to) === edge.from) {
+      issues.push({
+        severity: 'warning',
+        message: `edge between "${edge.from}" and "${edge.to}": they are parent and child, which containment already relates`,
+      });
     }
   }
 

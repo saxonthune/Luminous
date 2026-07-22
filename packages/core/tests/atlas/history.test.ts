@@ -33,6 +33,14 @@ describe('invertAtlasAction', () => {
     expect(invertAtlasAction(before, action)).toEqual([{ type: 'reparent', id: 'a', parent: 'p1' }]);
   });
 
+  it('inverts a grouping reparent into a reparent-back plus the stripped edges', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'b', to: 'a' }]);
+    expect(invertAtlasAction(before, { type: 'reparent', id: 'b', parent: 'a' })).toEqual([
+      { type: 'reparent', id: 'b' },
+      { type: 'addEdge', from: 'b', to: 'a' },
+    ]);
+  });
+
   it('inverts reparent back to root (no prior parent)', () => {
     const before = doc([
       { id: 'p', name: 'P' },
@@ -107,6 +115,11 @@ describe('invertAtlasBatch', () => {
   it('round-trips a single addNode', () => {
     const before = doc([]);
     roundTrips(before, [{ type: 'addNode', id: 'a', name: 'A', x: 1, y: 2 }]);
+  });
+
+  it('round-trips a reparent that strips a parent-child edge, restoring the edge on undo', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    roundTrips(before, [{ type: 'reparent', id: 'b', parent: 'a' }]);
   });
 
   it('round-trips a single reparent', () => {

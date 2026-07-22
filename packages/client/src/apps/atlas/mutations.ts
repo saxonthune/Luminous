@@ -177,6 +177,11 @@ export function applyDrop(
  */
 export function canConnect(doc: AtlasDocument, source: string, target: string): boolean {
   if (source === target) return false;
+  // R55: containment already relates a parent and its child — core's addEdge
+  // refuses the pair, so the UI must not offer it.
+  const sourceNode = doc.nodes.find((n) => n.id === source);
+  const targetNode = doc.nodes.find((n) => n.id === target);
+  if (sourceNode?.parent === target || targetNode?.parent === source) return false;
   return !doc.edges.some((e) => e.from === source && e.to === target);
 }
 
@@ -208,6 +213,9 @@ export function buildConnectDropActions(
     x,
     y,
   };
+  // Dropping inside the source itself makes the new Node the source's child —
+  // containment carries the relation, so no edge is added (R55).
+  if (parentId === sourceId) return [addNodeAction];
   return [addNodeAction, { type: 'addEdge', from: sourceId, to: id }];
 }
 
