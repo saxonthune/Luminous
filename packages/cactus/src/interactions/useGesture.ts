@@ -1,6 +1,6 @@
 import { createSignal, createSelector, onMount, onCleanup } from 'solid-js';
 import type { Transform } from './useViewport.js';
-import { rectsIntersect, type NodeRect } from './useBoxSelect.js';
+import { rectsIntersect, rectContainsRect, type NodeRect } from './useBoxSelect.js';
 import { traceCallback, markInteraction } from '../perf.js';
 import { isOverContainerInterior } from '../geometry/containment.js';
 
@@ -352,15 +352,21 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
         if (trigger === 'shift-drag' && !e.shiftKey) return;
 
         const target = e.target as HTMLElement;
-        if (target.closest?.('[data-no-pan]')) return;
         // A press inside some node's own box bails out, UNLESS it lands on
         // that node's `[data-soft-container]` interior (Atlas's container
         // body) — a container-interior press marquees instead of moving the
-        // node. Dataflow's boxes have no soft-container interior, so
+        // node. This must be decided before the `[data-no-pan]` bail:
+        // NodeContainer's root div carries data-no-pan itself, so checking
+        // no-pan first would swallow every node press, interior included.
+        // Dataflow's boxes have no soft-container interior, so
         // isOverContainerInterior is always false for them and this collapses
         // to the old "any node press bails" behavior.
         const nodeEl = target.closest?.('[data-container-id]');
-        if (nodeEl && !isOverContainerInterior(nodeEl, e.clientX, e.clientY)) return;
+        if (nodeEl) {
+          if (!isOverContainerInterior(nodeEl, e.clientX, e.clientY)) return;
+        } else if (target.closest?.('[data-no-pan]')) {
+          return;
+        }
 
         e.preventDefault();
         e.stopPropagation();
@@ -394,9 +400,12 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
             height: rect.height / t.k,
           };
 
+          // A node whose box contains the whole marquee is not a hit — a
+          // marquee drawn inside a container selects the container's
+          // contents, never the container itself.
           const nodeRects = boxSelect.getNodeRects();
           const hits = nodeRects
-            .filter((nr) => rectsIntersect(canvasRect, nr))
+            .filter((nr) => rectsIntersect(canvasRect, nr) && !rectContainsRect(nr, canvasRect))
             .map((nr) => nr.id);
           boxSelect.onBoxSelectHits?.(hits);
         };

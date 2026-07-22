@@ -1,4 +1,5 @@
 import { createSignal } from 'solid-js';
+import { DRAG_THRESHOLD } from './useGesture.js';
 
 export interface UseSelectionOptions {
   onSelectionChange?: (selectedIds: string[]) => void;
@@ -41,6 +42,25 @@ export function useSelection(options: UseSelectionOptions): UseSelectionResult {
       } else {
         setSelectedIds([...selectedIds(), nodeId]);
       }
+    } else if (selectedIds().includes(nodeId)) {
+      // A plain press on a selected node keeps the selection, so a drag
+      // moves the whole selection; it collapses to just this node only
+      // when the press ends without becoming a drag.
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const teardown = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      const onMove = (e: PointerEvent) => {
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) >= DRAG_THRESHOLD) teardown();
+      };
+      const onUp = () => {
+        setSelectedIds([nodeId]);
+        teardown();
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
     } else {
       setSelectedIds([nodeId]);
     }

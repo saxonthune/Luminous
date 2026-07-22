@@ -94,9 +94,11 @@ export function useBoxSelect(options: UseBoxSelectOptions): UseBoxSelectResult {
           height: rect.height / t.k,
         };
 
+        // Same containment rule as useGesture's marquee: a node whose box
+        // contains the whole marquee is not a hit.
         const nodeRects = options.getNodeRects();
         const hits = nodeRects
-          .filter((nr) => rectsIntersect(canvasRect, nr))
+          .filter((nr) => rectsIntersect(canvasRect, nr) && !rectContainsRect(nr, canvasRect))
           .map((nr) => nr.id);
 
         if (options.onBoxSelectHits) {
@@ -127,6 +129,19 @@ export function useBoxSelect(options: UseBoxSelectOptions): UseBoxSelectResult {
   });
 
   return { selectedIds, clearSelection, selectionRect };
+}
+
+/** Whether `outer` fully contains `inner`. */
+export function rectContainsRect(
+  outer: { x: number; y: number; width: number; height: number },
+  inner: { x: number; y: number; width: number; height: number }
+): boolean {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.width <= outer.x + outer.width &&
+    inner.y + inner.height <= outer.y + outer.height
+  );
 }
 
 export function rectsIntersect(

@@ -10,6 +10,7 @@ import {
   buildColorPatch,
   uniqueId,
   buildDuplicateActions,
+  selectionRoots,
   selfAndDescendantIds,
   resolveDrop,
   describePendingDrop,
@@ -19,6 +20,8 @@ import {
   type NodeEditForm,
 } from './mutations.ts';
 import { chordHeld, chordKeys } from './inputBindings.ts';
+import { measureContentFit, buildFitPatch, buildClearSizePatch, buildAutoFitPatch, type SizePatch } from './fitContent.ts';
+import type { ContentResizeDirection } from './AtlasNodeContent.tsx';
 import { AtlasNodeLayer } from './AtlasNodeLayer.tsx';
 import { LegendOverlay } from './LegendOverlay.tsx';
 import { nodeContextMenu, backgroundContextMenu, buildChrome, type AtlasMenuDeps } from './menus.tsx';
@@ -171,17 +174,41 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   let lastHit: string | null = null;
   let dragPointerMove: ((e: PointerEvent) => void) | null = null;
 
+  // The Nodes moving together in the current drag (R69/R70): the selection's
+  // Roots — selected Nodes with no selected ancestor — when the pressed Node
+  // belongs to the selection and the Roots share one Parent (the same rule
+  // R29 uses to enable arrange); otherwise just the pressed Node. Filtering
+  // to Roots is what lets a marquee that swept a Container and its Children
+  // still drag as a group: the Children travel inside their Root's subtree,
+  // and moving them separately would shift them twice. A signal so
+  // AtlasNodeLayer's live preview reads it.
+  const [dragGroup, setDragGroup] = createSignal<string[]>([]);
+  function resolveDragGroup(nodeId: string): string[] {
+    const sel = canvasRef?.getSelectedIds() ?? [];
+    if (!sel.includes(nodeId)) return [nodeId];
+    const roots = selectionRoots(props.doc, [...sel]);
+    if (roots.length === 0 || !sameParent(props.doc, roots)) return [nodeId];
+    // The pressed Node is either a Root or inside one's subtree — either way
+    // the Roots are the unit that moves.
+    return roots;
+  }
+
   function beginDrag(nodeId: string) {
     const rn = nodes().find((n) => n.node.id === nodeId);
     if (!rn) return;
     lastHit = null;
-    const exclude = selfAndDescendantIds(props.doc, nodeId);
+    const group = resolveDragGroup(nodeId);
+    setDragGroup(group);
+    const exclude = new Set<string>();
+    for (const id of group) {
+      for (const descId of selfAndDescendantIds(props.doc, id)) exclude.add(descId);
+    }
     // eslint-disable-next-line solid/reactivity -- pointermove callback, not a render path; props.doc is read fresh on each invocation
     dragPointerMove = (e: PointerEvent) => {
       lastHit = findContainerAt(e.clientX, e.clientY, exclude);
       // R5: Ctrl held means the Node stays a member of its current
       // Container — no membership change is pending, so the toast is silent.
-      props.onPendingMembershipChange?.(ctrlHeld() ? null : describePendingDrop(props.doc, nodeId, lastHit));
+      props.onPendingMembershipChange?.(ctrlHeld() ? null : describePendingDrop(props.doc, group, lastHit));
     };
     window.addEventListener('pointermove', dragPointerMove);
   }
@@ -200,36 +227,46 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     const hitContainerId = lastHit;
     lastHit = null;
 
-    const rn = nodes().find((n) => n.node.id === nodeId);
-    if (!rn) return;
+    // The pressed Node may itself be absent from the group: dragging a
+    // selected Child whose Container is a Root moves the Roots, and the
+    // Child travels inside its Root's subtree.
+    const group = dragGroup().length > 0 ? dragGroup() : [nodeId];
+    setDragGroup([]);
 
-    // R5: Ctrl held keeps the Node in its current Container — skip the
+    // R5: Ctrl held keeps each Node in its current Container — skip the
     // reparent entirely (hitContainerId is ignored) and persist position
     // relative to that same parent. Shrink-wrap then makes the expansion
     // permanent since the Node's committed position now sits at its dragged
     // spot inside the unchanged parent.
     const ctrl = ctrlHeld();
-    const newParentId = ctrl ? rn.node.parent : (hitContainerId ?? undefined);
-    const parentRn = newParentId ? nodes().find((n) => n.node.id === newParentId) : undefined;
-    const droppedAbs = { x: rn.x + dx, y: rn.y + dy };
-    const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : undefined;
-
     const actions: AtlasAction[] = [];
-    if (!ctrl) {
-      const outcome = resolveDrop(props.doc, nodeId, hitContainerId);
-      if (outcome.changed && !outcome.result.ok) {
-        props.onDropRefused?.(outcome.result.error);
-        return;
+    for (const id of group) {
+      const rn = nodes().find((n) => n.node.id === id);
+      if (!rn) continue;
+
+      const newParentId = ctrl ? rn.node.parent : (hitContainerId ?? undefined);
+      const parentRn = newParentId ? nodes().find((n) => n.node.id === newParentId) : undefined;
+      const droppedAbs = { x: rn.x + dx, y: rn.y + dy };
+      const parentAbs = parentRn ? { x: parentRn.x, y: parentRn.y } : undefined;
+
+      if (!ctrl) {
+        // R70: a drop refused for any member refuses the whole group — no
+        // actions are dispatched and every Node snaps back together.
+        const outcome = resolveDrop(props.doc, id, hitContainerId);
+        if (outcome.changed && !outcome.result.ok) {
+          props.onDropRefused?.(outcome.result.error);
+          return;
+        }
+        if (outcome.changed) actions.push({ type: 'reparent', id, parent: newParentId });
       }
-      if (outcome.changed) actions.push({ type: 'reparent', id: nodeId, parent: newParentId });
+      // A dropped Node's stored position is relative to its parent's child-area
+      // origin, not the parent's top-left corner — must match applyDrop's inverse.
+      const origin = parentAbs ? childAreaOrigin(parentRn?.node) : { x: 0, y: 0 };
+      const relX = droppedAbs.x - (parentAbs?.x ?? 0) - origin.x;
+      const relY = droppedAbs.y - (parentAbs?.y ?? 0) - origin.y;
+      actions.push({ type: 'setNode', id, x: relX, y: relY });
     }
-    // A dropped Node's stored position is relative to its parent's child-area
-    // origin, not the parent's top-left corner — must match applyDrop's inverse.
-    const origin = parentAbs ? childAreaOrigin(parentRn?.node) : { x: 0, y: 0 };
-    const relX = droppedAbs.x - (parentAbs?.x ?? 0) - origin.x;
-    const relY = droppedAbs.y - (parentAbs?.y ?? 0) - origin.y;
-    actions.push({ type: 'setNode', id: nodeId, x: relX, y: relY });
-    dispatchAction(actions, 'Move Node');
+    dispatchAction(actions, group.length > 1 ? 'Move Nodes' : 'Move Node');
   }
 
   // R47/R48: a completed connection (drag-release or click-to-arm-then-click)
@@ -249,12 +286,43 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     dispatchAction(buildConnectDropActions(props.doc, info.source, parentId, droppedAbs, parentAbs), 'Add Node');
   }
 
+  function hasChildren(nodeId: string): boolean {
+    return props.doc.nodes.some((n) => n.parent === nodeId);
+  }
+
+  /** The fit-to-content command (R72/R73), fired by a resize grip's double
+   * click: a leaf with Content is measured and sized to it on the grip's
+   * axes; a Container (whose content is its children) and a contentless leaf
+   * instead drop their stored size on those axes, returning to the computed
+   * size. One undoable setNode either way — never a continuous constraint. */
+  function fitNodeToContent(nodeId: string, dir: ContentResizeDirection) {
+    const node = nodesById().get(nodeId);
+    if (!node) return;
+    let patch: SizePatch;
+    if (hasChildren(nodeId) || node.content === undefined) {
+      patch = buildClearSizePatch(dir);
+    } else {
+      const fit = measureContentFit(node.content);
+      if (!fit) return;
+      patch = buildFitPatch(dir, fit);
+    }
+    dispatchAction([{ type: 'setNode', id: nodeId, ...patch }], 'Fit Node');
+  }
+
   function commitEdit(id: string, form: NodeEditForm) {
     const node = nodesById().get(id);
     setEditingId(null);
     if (!node) return;
     const patch = buildContentEditPatch(form, node.name, node.content?.mode);
-    dispatchAction([{ type: 'setNode', id, ...patch }], 'Edit Node');
+    // R74: a leaf still auto-sized on an axis (no stored size) adopts the
+    // fitted size of the new Content in the same action; a user-set axis is
+    // never overridden. Containers are child-sized, so they never auto-fit.
+    let sizePatch: SizePatch = {};
+    if (!hasChildren(id)) {
+      const fit = measureContentFit(patch.content);
+      if (fit) sizePatch = buildAutoFitPatch(node, fit);
+    }
+    dispatchAction([{ type: 'setNode', id, ...patch, ...sizePatch }], 'Edit Node');
   }
 
   function changeMode(id: string, mode: AtlasContentMode) {
@@ -374,6 +442,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             onModeChange={changeMode}
             onDragStart={beginDrag}
             onDragEnd={endDrag}
+            dragGroup={dragGroup}
             ctrlHeld={ctrlHeld}
             onPressStart={beginCtrlTracking}
             effectiveColor={effectiveColor}
@@ -382,6 +451,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
               setPreviewContentSize(size === undefined ? undefined : { nodeId, ...size })
             }
             onResizeCommit={resizeContent}
+            onFitContent={fitNodeToContent}
             onEdgePreviewChange={props.onEdgePreviewChange}
             connectValid={(source, target) => canConnect(props.doc, source, target)}
             dropAddsEdge={(source, parentId) => connectDropAddsEdge(props.doc, source, parentId)}

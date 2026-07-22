@@ -614,13 +614,15 @@ describe('useGesture marquee', () => {
   }
 
   /** A node div shaped like NodeContainer.tsx's output: an outer
-   * data-container-id div wrapping a data-soft-container interior. */
+   * data-container-id div (which also carries data-no-pan, like the real
+   * NodeContainer root) wrapping a data-soft-container interior. */
   function appendContainerNode(
     parent: HTMLElement,
     interiorRect: { left: number; top: number; width: number; height: number },
   ): HTMLElement {
     const node = document.createElement('div');
     node.setAttribute('data-container-id', 'container-a');
+    node.setAttribute('data-no-pan', 'true');
     const interior = document.createElement('div');
     interior.setAttribute('data-soft-container', 'true');
     node.appendChild(interior);
@@ -634,9 +636,11 @@ describe('useGesture marquee', () => {
     const node = appendContainerNode(el, { left: 0, top: 0, width: 100, height: 100 });
     // The interior press target is the outer node div itself — the interior
     // element is pointer-events:none in NodeContainer.tsx, so it never
-    // receives the native hit-test (see NodeContainer.tsx).
+    // receives the native hit-test (see NodeContainer.tsx). The drag reaches
+    // (70,70) so the marquee rect extends past MARQUEE_NODE's box — a rect
+    // fully inside a node's box would not hit it (the containment rule).
     down(node, { button: 0, clientX: 40, clientY: 40 });
-    move({ clientX: 30, clientY: 30 });
+    move({ clientX: 70, clientY: 70 });
     up();
     expect(hits).toEqual([['a']]);
     cleanup();
@@ -650,6 +654,19 @@ describe('useGesture marquee', () => {
     move({ clientX: 30, clientY: 30 });
     up();
     expect(hits).toEqual([]);
+    cleanup();
+  });
+
+  it('a node whose box contains the whole marquee is not a hit', () => {
+    // A container spanning 0..200 both ways; the marquee (0,0)-(30,30) sits
+    // entirely inside it, so the container is skipped while the small node
+    // it covers is selected.
+    const containerRect: NodeRect = { id: 'big', x: 0, y: 0, width: 200, height: 200 };
+    const { hits, el, cleanup } = mountMarquee('drag', [containerRect, MARQUEE_NODE]);
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    move({ clientX: 30, clientY: 30 });
+    up();
+    expect(hits).toEqual([['a']]);
     cleanup();
   });
 

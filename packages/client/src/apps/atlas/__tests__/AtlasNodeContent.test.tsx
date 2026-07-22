@@ -22,6 +22,7 @@ function mount(overrides: Partial<AtlasNodeContentProps> = {}) {
   const onModeChange = vi.fn();
   const onResizePreview = vi.fn();
   const onResizeCommit = vi.fn();
+  const onFitContent = vi.fn();
 
   const props: AtlasNodeContentProps = {
     node: () => baseNode(),
@@ -38,6 +39,7 @@ function mount(overrides: Partial<AtlasNodeContentProps> = {}) {
     zoomScale: () => 1,
     onResizePreview,
     onResizeCommit,
+    onFitContent,
     ...overrides,
   };
 
@@ -45,7 +47,7 @@ function mount(overrides: Partial<AtlasNodeContentProps> = {}) {
   document.body.appendChild(container);
   dispose = render(() => <AtlasNodeContent {...props} />, container);
 
-  return { onEnterEdit, onCommit, onCancel, onModeChange, onResizePreview, onResizeCommit };
+  return { onEnterEdit, onCommit, onCancel, onModeChange, onResizePreview, onResizeCommit, onFitContent };
 }
 
 afterEach(() => {
@@ -96,6 +98,24 @@ describe('AtlasNodeContent interactions', () => {
     expect(onResizePreview).toHaveBeenCalledWith({ width: 310, height: 170 });
 
     window.dispatchEvent(new MouseEvent('pointerup', {}));
+  });
+
+  it('R72: double clicking the corner grip fires the fit command with both axes, without entering edit mode', () => {
+    const { onFitContent, onEnterEdit } = mount();
+    const handles = container.querySelectorAll('[data-no-pan="true"]');
+    const corner = handles[handles.length - 1] as HTMLElement;
+    corner.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(onFitContent).toHaveBeenCalledWith({ horizontal: true, vertical: true });
+    expect(onEnterEdit).not.toHaveBeenCalled();
+  });
+
+  it('R72: double clicking the width grip fires the fit command on the horizontal axis only', () => {
+    const { onFitContent } = mount();
+    const grip = container.querySelector('.cursor-col-resize') as HTMLElement;
+    grip.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(onFitContent).toHaveBeenCalledWith({ horizontal: true, vertical: false });
   });
 });
 

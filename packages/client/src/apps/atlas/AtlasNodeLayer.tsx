@@ -27,6 +27,10 @@ export interface AtlasNodeLayerProps {
   onModeChange: (id: string, mode: AtlasContentMode) => void;
   onDragStart: (nodeId: string) => void;
   onDragEnd: (nodeId: string, dx: number, dy: number) => void;
+  /** The Nodes moving together in the current drag (doc01.07.04 R69) — the
+   * pressed Node plus, when the selection shares one Parent, the rest of
+   * the selection. Empty outside a drag. */
+  dragGroup: () => string[];
   /** Whether Ctrl/Meta is currently held during an active drag — see
    * `beginCtrlTracking` on AtlasCanvas. */
   ctrlHeld: () => boolean;
@@ -42,6 +46,9 @@ export interface AtlasNodeLayerProps {
   previewContentSize: () => { nodeId: string; width?: number; height?: number } | undefined;
   onResizePreview: (nodeId: string, size: { width?: number; height?: number } | undefined) => void;
   onResizeCommit: (nodeId: string, size: { width?: number; height?: number }) => void;
+  /** A resize grip's double click (R72/R73) — fit the Node to its Content on
+   * the grip's axes. */
+  onFitContent: (nodeId: string, dir: { horizontal: boolean; vertical: boolean }) => void;
   onEdgePreviewChange?: (message: string | null) => void;
   /** Whether completing the in-progress Edge into `target` would create it —
    * `canConnect` against the live Document, which this layer doesn't hold. */
@@ -127,11 +134,15 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
   const layoutDeltas = createMemo(() => {
     const map = new Map<string, LayoutDelta>();
 
-    // Move (R-drag): the dragged Node and its whole subtree translate live.
+    // Move (R-drag): each dragged Node and its whole subtree translate live —
+    // the selection's Roots when the pressed Node belongs to the selection
+    // (it may be a descendant of a Root rather than in the group itself),
+    // else the pressed Node alone (R69).
     const g = gesture.gesture();
     if (g.kind === 'draggingNode') {
       const { dx, dy } = gesture.dragDelta();
-      shiftSubtree(map, g.nodeId, childrenOf(), dx, dy, { includeRoot: true });
+      const group = props.dragGroup().length > 0 ? props.dragGroup() : [g.nodeId];
+      for (const id of group) shiftSubtree(map, id, childrenOf(), dx, dy, { includeRoot: true });
       // Ctrl-expand (R5): each ancestor on the dragged Node's path also grows
       // live to contain its dragged position — composes with the shift above.
       if (props.ctrlHeld()) {
@@ -248,6 +259,7 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
                 zoomScale={() => ctx.transform().k}
                 onResizePreview={(size) => props.onResizePreview(rn.node.id, size)}
                 onResizeCommit={(size) => props.onResizeCommit(rn.node.id, size)}
+                onFitContent={(dir) => props.onFitContent(rn.node.id, dir)}
               />
             </NodeContainer>
             {/* Edge Tab (R44): a sibling of NodeContainer, not a child — the

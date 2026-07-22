@@ -7,6 +7,7 @@ import {
   buildColorPatch,
   uniqueId,
   duplicateNode,
+  selectionRoots,
   selfAndDescendantIds,
   resolveDrop,
   applyDrop,
@@ -234,6 +235,35 @@ describe('applyDrop', () => {
   });
 });
 
+describe('selectionRoots', () => {
+  const d = doc([
+    { id: 'a', name: 'A' },
+    { id: 'b', name: 'B' },
+    { id: 'b1', name: 'B1', parent: 'b' },
+    { id: 'b1x', name: 'B1X', parent: 'b1' },
+    { id: 'c', name: 'C' },
+    { id: 'c1', name: 'C1', parent: 'c' },
+  ]);
+
+  it('a flat selection is all roots', () => {
+    expect(selectionRoots(d, ['a', 'b', 'c'])).toEqual(['a', 'b', 'c']);
+  });
+
+  it('drops a selected descendant of a selected Node, at any depth', () => {
+    expect(selectionRoots(d, ['b', 'b1', 'b1x'])).toEqual(['b']);
+  });
+
+  it('keeps a Child whose ancestors are not selected', () => {
+    expect(selectionRoots(d, ['a', 'c1'])).toEqual(['a', 'c1']);
+  });
+
+  it('a marquee sweep over a Container and its Children reduces to same-parent roots', () => {
+    // The R69 happy case behind the roots rule: {a, b, b1, b1x} mixes
+    // depths, but its roots {a, b} share the top-level parent.
+    expect(selectionRoots(d, ['a', 'b', 'b1', 'b1x'])).toEqual(['a', 'b']);
+  });
+});
+
 describe('describePendingDrop', () => {
   const d = doc([
     { id: 'container', name: 'Container' },
@@ -243,23 +273,33 @@ describe('describePendingDrop', () => {
   ]);
 
   it('is null when the hit target equals the current parent', () => {
-    expect(describePendingDrop(d, 'a', 'container')).toBeNull();
+    expect(describePendingDrop(d, ['a'], 'container')).toBeNull();
   });
 
   it('is null for a root Node hovering the background', () => {
-    expect(describePendingDrop(d, 'root', null)).toBeNull();
+    expect(describePendingDrop(d, ['root'], null)).toBeNull();
   });
 
   it('describes adding a root Node to a Container', () => {
-    expect(describePendingDrop(d, 'root', 'container')).toContain('Add');
+    expect(describePendingDrop(d, ['root'], 'container')).toContain('Add');
   });
 
   it('describes removing a Node from its Container', () => {
-    expect(describePendingDrop(d, 'a', null)).toContain('Remove');
+    expect(describePendingDrop(d, ['a'], null)).toContain('Remove');
   });
 
   it('describes moving between two Containers', () => {
-    expect(describePendingDrop(d, 'a', 'other')).toContain('Move');
+    expect(describePendingDrop(d, ['a'], 'other')).toContain('Move');
+  });
+
+  it('describes a group drag by its Node count', () => {
+    const group = doc([
+      { id: 'container', name: 'Container' },
+      { id: 'other', name: 'Other' },
+      { id: 'a', name: 'A', parent: 'container' },
+      { id: 'b', name: 'B', parent: 'container' },
+    ]);
+    expect(describePendingDrop(group, ['a', 'b'], 'other')).toBe('Move 2 Nodes from "Container" to "Other"');
   });
 });
 

@@ -64,23 +64,58 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
 
 ## Selection
 
+A selection's **Roots** are the selected Nodes that have no selected ancestor.
+A selection box swept over a Container usually also covers its Children, so a
+selection often mixes depths; the Roots are the unit that commands act on —
+a selected descendant is carried by its Root's subtree.
+
 - **R33.** The system shall allow the user to select Nodes by dragging a selection
   box over them.
 - **R34.** The system shall begin a selection box when the user presses the left
   button on the canvas background or on a Container's interior.
 - **R35.** When the user presses the left button on the canvas background and
   releases without dragging, the system shall clear the selection.
+- **R67.** When the user presses the left button on a selected Node, the system
+  shall keep the selection, so that a drag moves the selection together; when
+  that press ends without a drag, the system shall select only that Node.
+- **R68.** The system shall not select a Node whose box contains the whole
+  selection box, so that a selection box drawn inside a Container selects the
+  Container's Children and not the Container.
 
 ## Moving and resizing
 
 - **R36.** The system shall move a Node when the user drags the Node's header or
   frame, and shall not move a Node when the user drags a Container's interior. A
   leaf Node has no Container, so the user may move it by dragging anywhere on it.
+- **R69.** When the user drags a selected Node and the selection's Roots all
+  share the same Parent, the system shall move every Root by the drag's
+  offset. Moving the Roots, not every selected Node, is what keeps a group
+  drag well-formed: a selected descendant travels inside its Root's subtree
+  (moving it separately would shift it twice), no moved Node is another's
+  ancestor, and one membership resolution (the shared Parent, R29's arrange
+  rule) serves the whole group.
+- **R70.** When a drag moves several Nodes (R69), the system shall apply the
+  membership change (R4) and the position write to every moved Node together,
+  and shall refuse the whole drop when it is refused for any moved Node.
+- **R71.** When the selection's Roots do not all share the same Parent, a
+  drag shall move only the dragged Node.
 - **R37.** The system shall allow the user to resize a Node from its frame.
 - **R38.** The system shall not allow the user to resize a Node smaller than the
   extent of its Children.
 - **R39.** The system shall allow a Container to be sized larger than the extent of
   its Children.
+- **R72.** When the user double clicks a resize grip on a leaf Node that has
+  Content, the system shall size the Node on that grip's axes to fit its
+  Content without scrolling, within fixed bounds, and shall grow the Node's
+  ancestors to accommodate it. The fit is a one-shot command, not a standing
+  constraint, and it overrides a user-set size on those axes.
+- **R73.** When the user double clicks a resize grip on a Container or on a
+  leaf Node without Content, the system shall discard the Node's stored size
+  on that grip's axes, returning the Node to its computed size — a Container
+  shrink-wraps its Children, a contentless leaf takes the default size.
+- **R74.** When the user commits a Content edit on a leaf Node, the system
+  shall set each axis with no user-set size to the fitted size of the new
+  Content, and shall never change an axis the user has set.
 
 ## UI chrome
 
@@ -193,6 +228,34 @@ user reads the Legend and the canvas together.
 - **R65.** When the user activates the Cancel control, the system shall discard
   the edits and leave edit mode.
 
+## Data File
+
+A **Data File** is a sidecar beside the Document — `<name>.atlasdata.json` next to
+`<name>.atlas.json` — holding a map from key to text. A Node's Content may name a
+key. When the Data File provides that key, the Node draws the Data File's text and
+the Content is **Filled**; otherwise the Node draws its own authored text, which
+stands as the fallback. A script writes the Data File, extracting text from the
+source a repository already holds, so Filled Content tracks that source. The
+Document stays authored: a script fills Content and never adds, removes, or moves
+a Node.
+
+- **R75.** When a Node's Content names a key that the Data File provides, the
+  system shall draw the Data File's text; when it does not, the system shall draw
+  the Node's authored text.
+- **R76.** The system shall draw Filled Content differently from authored Content,
+  so the user tells generated text from written text without selecting the Node.
+- **R77.** When a Node's Content names a key the Data File does not provide, the
+  system shall indicate that the Node is drawing its authored fallback.
+- **R78.** The system shall not allow the user to edit Filled Content, and shall
+  show the key that fills it and the source the key was extracted from. A Node's
+  Name and Mode stay editable, because both are authored.
+- **R79.** When the Data File changes, the system shall redraw every Node whose
+  Content is Filled, and shall not move the camera (R23).
+- **R80.** When the Data File changes, the system shall discard the undo history.
+- **R81.** The system shall not offer the Data File in the file selector.
+- **R82.** When the system fits a Node to its Content (R72, R74), it shall fit to
+  the text the Node draws, Filled or authored.
+
 ## Input-command bindings
 
 An **input** is an ordered pair — a target and an interaction method (left click,
@@ -217,17 +280,23 @@ draws a selection box.
 | Target | Interaction | Action | Req |
 |---|---|---|---|
 | Node header or frame | left click + drag | Move the Node and persist its position | R1, R24, R25, R36 |
+| Selected Node (Roots share one Parent) | left click + drag | Move every Root of the selection by the drag's offset, as one drop | R69, R70 |
+| Selected Node (Roots at mixed Parents) | left click + drag | Move only the dragged Node | R71 |
+| Selected Node | left click | Collapse the selection to that Node | R67 |
 | Node frame | left click + drag | Resize the Node | R37, R38, R39 |
-| Canvas background | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34 |
-| Container interior | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34 |
+| Resize grip (edge or corner) | double left click | Fit the Node to its Content on that grip's axes; a Container or contentless leaf returns to its computed size | R72, R73 |
+| Canvas background | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34, R68 |
+| Container interior | left click + drag | Draw a selection box, selecting the Nodes it covers | R33, R34, R68 |
 | Canvas background | left click | Clear the selection | R35 |
 | Canvas or Node | middle click + drag | Pan the camera | R41 |
 | Canvas or Node | right click + drag | Pan the camera | R43 |
 | Node | drag into a Container | Add the Node to the Container | R4 |
 | Node | drag out of a Container | Remove the Node from the Container | R4 |
 | Node | Ctrl + drag out of a Container | Expand the Container's boundary to contain the Node being moved | R5 |
-| Node | double left click | Enter edit mode: name input, Content as a raw text area | R7, R8 |
-| Node in edit mode | Ctrl+Enter, or blur | Commit the edits to the Document | R7 |
+| Node with authored Content | double left click | Enter edit mode: name input, Content as a raw text area | R7, R8 |
+| Node with Filled Content | double left click | Enter edit mode with the Name editable and the Content read-only, showing the key that fills it and that key's source | R78 |
+| Node with Filled Content | hover | Show the key that fills the Content and the source it was extracted from | R78 |
+| Node in edit mode | Ctrl+Enter, or blur | Commit the edits to the Document; axes with no user-set size adopt the fitted size of the new Content | R7, R74 |
 | Node in edit mode | Esc | Cancel the edits | R7 |
 | Node switcher | left click | Switch the Node's Content Mode between markdown and code | R10 |
 | Node | right click | Open the context menu | R15 |

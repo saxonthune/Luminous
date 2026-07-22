@@ -47,6 +47,10 @@ export interface AtlasNodeContentProps {
   onResizePreview: (size: { width?: number; height?: number } | undefined) => void;
   /** Fires once, on release, with the final size to persist. */
   onResizeCommit: (size: { width?: number; height?: number }) => void;
+  /** Fires on a resize grip's double click (R72/R73) with that grip's axes —
+   * the fit-to-content command. The host decides what "fit" means (measure a
+   * leaf's Content, clear a Container's stored floors). */
+  onFitContent: (dir: ContentResizeDirection) => void;
 }
 
 const MODES: Array<{ value: AtlasContentMode; label: string }> = [
@@ -284,7 +288,10 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
                   class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
                   data-no-pan="true"
                   on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
-                  onDblClick={(e) => e.stopPropagation()}
+                  onDblClick={(e) => {
+                    e.stopPropagation();
+                    props.onFitContent({ horizontal: false, vertical: true });
+                  }}
                 >
                   <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
                 </div>
@@ -298,7 +305,10 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
               class="absolute inset-y-0 right-0 flex w-3 cursor-col-resize items-center justify-end"
               data-no-pan="true"
               on:pointerdown={(e) => beginResize(e, { horizontal: true, vertical: false })}
-              onDblClick={(e) => e.stopPropagation()}
+              onDblClick={(e) => {
+                e.stopPropagation();
+                props.onFitContent({ horizontal: true, vertical: false });
+              }}
             >
               <div class="mr-0.5 h-8 w-1 rounded-full bg-border-subtle" />
             </div>
@@ -311,7 +321,10 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
                 class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
                 data-no-pan="true"
                 on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
-                onDblClick={(e) => e.stopPropagation()}
+                onDblClick={(e) => {
+                  e.stopPropagation();
+                  props.onFitContent({ horizontal: false, vertical: true });
+                }}
               >
                 <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
               </div>
@@ -322,7 +335,10 @@ export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
               class="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
               data-no-pan="true"
               on:pointerdown={(e) => beginResize(e, { horizontal: true, vertical: true })}
-              onDblClick={(e) => e.stopPropagation()}
+              onDblClick={(e) => {
+                e.stopPropagation();
+                props.onFitContent({ horizontal: true, vertical: true });
+              }}
             >
               <div class="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full bg-border-subtle" />
             </div>

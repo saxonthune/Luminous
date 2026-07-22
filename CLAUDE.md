@@ -104,6 +104,14 @@ The `.rhidoc/` directory contains structured specifications managed by the `rhid
 - **After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md
 - Run `rhidoc ai-skill` for the full CLI reference with examples
 
+### Atlas UI requirements (doc01.07.04)
+
+When working on Atlas, always consult `.rhidoc/01-product/07-atlas/04-ui-requirements.md`
+first — it is the controlled list of UI requirements (R-numbers) and the input-command
+bindings table. A change that adds or alters UI behavior updates that doc in the same
+change: new behavior gets the next unused R-number (identifiers are never reused), and
+the bindings table stays in sync.
+
 ### Pack/graph schema changes (Canvas)
 
 When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.

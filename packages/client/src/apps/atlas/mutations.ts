@@ -98,6 +98,24 @@ export function buildDuplicateActions(doc: AtlasDocument, id: string): AtlasActi
   return actions;
 }
 
+/**
+ * The selection's Roots: the ids in `ids` that have no ancestor also in
+ * `ids`. A drag moves the Roots — a selected descendant travels with its
+ * Root's subtree, so moving it separately would shift it twice (R69).
+ */
+export function selectionRoots(doc: AtlasDocument, ids: string[]): string[] {
+  const byId = new Map(doc.nodes.map((n) => [n.id, n]));
+  const idSet = new Set(ids);
+  return ids.filter((id) => {
+    let parent = byId.get(id)?.parent;
+    while (parent !== undefined) {
+      if (idSet.has(parent)) return false;
+      parent = byId.get(parent)?.parent;
+    }
+    return true;
+  });
+}
+
 /** Every node reachable from `id` by following child -> parent links, plus `id` itself. */
 export function selfAndDescendantIds(doc: AtlasDocument, id: string): Set<string> {
   const children = new Map<string, string[]>();
@@ -233,18 +251,23 @@ export function buildConnectDropActions(
  * excludes the dragged Node's own subtree, so a drag rarely resolves there,
  * and if it does, the drop attempt itself is the source of truth.
  */
-export function describePendingDrop(doc: AtlasDocument, nodeId: string, hitContainerId: string | null): string | null {
-  const node = doc.nodes.find((n) => n.id === nodeId);
-  if (!node) return null;
+export function describePendingDrop(doc: AtlasDocument, nodeIds: string[], hitContainerId: string | null): string | null {
+  const moving = nodeIds
+    .map((id) => doc.nodes.find((n) => n.id === id))
+    .filter((n): n is AtlasNode => n !== undefined);
+  if (moving.length === 0) return null;
   const targetParent = hitContainerId ?? undefined;
-  const currentParent = node.parent;
+  // A group drag is same-parent by construction (doc01.07.04 R69), so the
+  // first node's parent stands for the whole group.
+  const currentParent = moving[0].parent;
   if (targetParent === currentParent) return null;
   const nameOf = (id: string) => doc.nodes.find((n) => n.id === id)?.name ?? id;
+  const subject = moving.length === 1 ? `"${moving[0].name}"` : `${moving.length} Nodes`;
   if (targetParent && currentParent) {
-    return `Move "${node.name}" from "${nameOf(currentParent)}" to "${nameOf(targetParent)}"`;
+    return `Move ${subject} from "${nameOf(currentParent)}" to "${nameOf(targetParent)}"`;
   }
   if (targetParent) {
-    return `Add "${node.name}" to "${nameOf(targetParent)}"`;
+    return `Add ${subject} to "${nameOf(targetParent)}"`;
   }
-  return `Remove "${node.name}" from "${nameOf(currentParent!)}"`;
+  return `Remove ${subject} from "${nameOf(currentParent!)}"`;
 }
