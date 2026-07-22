@@ -58,6 +58,9 @@ Node, Container, Child, Parent — are the glossary terms (doc01.07.03).
 - **R42.** The system shall draw a space for Content on every Node, including a
   Node that has no Content, and shall allow the user to add Content to a Node that
   has none.
+- **R53.** The context menu shall offer a Delete option.
+- **R54.** When the user selects Delete, the system shall remove the Node, the
+  Node's descendants, and every Edge that touches a removed Node.
 
 ## Selection
 
@@ -199,6 +202,7 @@ draws a selection box.
 | Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
+| Delete (context menu) | left click | Remove the Node, its descendants, and their Edges | R53, R54 |
 | Edge | right click | Open the context menu with a "Bisect" option | R32 |
 | Node | hover | Show the Node's Edge Tab | R44, R45 |
 | Edge Tab | left click + drag | Draw a preview Edge; on release over a Node, create an Edge to it | R47, R49, R50, R51 |

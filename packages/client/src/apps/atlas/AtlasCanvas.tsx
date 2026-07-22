@@ -107,6 +107,9 @@ function AtlasNodeLayer(props: {
   onResizePreview: (nodeId: string, size: { width?: number; height?: number } | undefined) => void;
   onResizeCommit: (nodeId: string, size: { width?: number; height?: number }) => void;
   onEdgePreviewChange?: (message: string | null) => void;
+  /** Whether completing the in-progress Edge into `target` would create it —
+   * `canConnect` against the live Document, which this layer doesn't hold. */
+  connectValid: (source: string, target: string) => boolean;
 }): JSX.Element {
   const ctx = useCanvasContext();
 
@@ -118,18 +121,41 @@ function AtlasNodeLayer(props: {
     },
   });
 
-  // R51: a toast describing the in-progress Edge creation, mirrored from the
-  // connecting gesture's state — null once it isn't connecting.
+  // R51: a toast that says what completing the gesture right now would do —
+  // recomputed as the pointer moves (drag state carries the screen position)
+  // and as Ctrl toggles. It states the pending outcome, never instructions;
+  // the one allowed extra is the Ctrl hint parenthetical, gone while held.
   createEffect(() => {
     const drag = ctx.connectionDrag();
     if (!drag) {
       props.onEdgePreviewChange?.(null);
       return;
     }
-    const sourceName = props.nodes().find((rn) => rn.node.id === drag.sourceNodeId)?.node.name ?? drag.sourceNodeId;
-    props.onEdgePreviewChange?.(
-      `Creating an edge from "${sourceName}" — release or click a node to connect, Ctrl+click to create a new node`,
-    );
+    const nameOf = (id: string) => props.nodes().find((rn) => rn.node.id === id)?.node.name ?? id;
+    const source = nameOf(drag.sourceNodeId);
+    if (ctx.ctrlHeld()) {
+      // Mirrors onConnectDrop: the new Node's parent is the container under
+      // the pointer, top-level when there is none.
+      const parentId = findContainerAt(drag.currentScreenX, drag.currentScreenY);
+      props.onEdgePreviewChange?.(
+        parentId
+          ? `Creating new node in "${nameOf(parentId)}" with edge from "${source}"`
+          : `Creating new node with edge from "${source}"`,
+      );
+      return;
+    }
+    // Mirrors the gesture's completion hit-test (useGesture.ts): the Node
+    // under the pointer, counted only when the Edge would actually be created.
+    const targetId =
+      document
+        .elementsFromPoint(drag.currentScreenX, drag.currentScreenY)
+        .find((el) => el.hasAttribute('data-connection-target'))
+        ?.getAttribute('data-node-id') ?? null;
+    const base =
+      targetId !== null && props.connectValid(drag.sourceNodeId, targetId)
+        ? `Creating new edge from "${source}" to "${nameOf(targetId)}"`
+        : `Creating new edge from "${source}"`;
+    props.onEdgePreviewChange?.(`${base} (hint: hold ctrl to add a new node)`);
   });
 
   const parentOf = createMemo(() => {
@@ -625,6 +651,12 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         },
       );
     }
+    // R53: Delete sits last, below a divider, so the destructive action never
+    // neighbors the common ones.
+    items.push(
+      { type: 'divider' },
+      { type: 'action', action: { id: 'node.delete', label: 'Delete', payload: { id: nodeId } } },
+    );
     return { id: `node-menu-${nodeId}`, items };
   }
 
@@ -692,6 +724,13 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         dispatchAction(buildArrangeAsColumnActions(props.doc, ids), 'Arrange as Column');
         break;
       }
+      case 'node.delete': {
+        // R54: core's removeNode cascades to descendants and touching Edges;
+        // the recorded inverse rebuilds all of it (history.ts invertRemoveNode).
+        const { id: nodeId } = payload as { id: string };
+        dispatchAction([{ type: 'removeNode', id: nodeId }], 'Delete Node');
+        break;
+      }
     }
   }
 
@@ -741,6 +780,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             }
             onResizeCommit={resizeContent}
             onEdgePreviewChange={props.onEdgePreviewChange}
+            connectValid={(source, target) => canConnect(props.doc, source, target)}
           />
         </Canvas>
         <Show when={selectedCount() > 1}>

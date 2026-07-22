@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render } from 'solid-js/web';
 import type { AtlasDocument } from '@luminous/core/atlas';
 import { projectAtlasNodes } from '../projection.ts';
@@ -135,6 +135,15 @@ describe('Edge Tab (doc01.07.04 R44-R52)', () => {
   let container: HTMLDivElement;
   let dispose: (() => void) | undefined;
 
+  // jsdom does not implement elementsFromPoint (the toast effect's target
+  // hit-test); stub an empty hit list, overridden per test where needed.
+  beforeEach(() => {
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [],
+      configurable: true,
+    });
+  });
+
   function mountCanvas(doc: AtlasDocument, extra: Partial<AtlasCanvasProps> = {}) {
     const dispatchDoc = vi.fn();
     container = document.createElement('div');
@@ -176,7 +185,35 @@ describe('Edge Tab (doc01.07.04 R44-R52)', () => {
     const tab = container.querySelector('[data-testid="edge-tab-a"]') as HTMLElement;
     tab.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
 
-    expect(messages.some((m) => m?.includes('Creating an edge from "A"'))).toBe(true);
+    expect(messages.at(-1)).toBe('Creating new edge from "A" (hint: hold ctrl to add a new node)');
+  });
+
+  it('R51: the toast names the destination while the pointer is over a valid target', () => {
+    const messages: Array<string | null> = [];
+    mountCanvas(twoNodes, { onEdgePreviewChange: (m) => messages.push(m) });
+    const nodeB = container.querySelector('[data-node-id="b"]') as HTMLElement;
+    Object.defineProperty(document, 'elementsFromPoint', {
+      value: () => [nodeB],
+      configurable: true,
+    });
+
+    const tab = container.querySelector('[data-testid="edge-tab-a"]') as HTMLElement;
+    tab.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
+
+    expect(messages.at(-1)).toBe('Creating new edge from "A" to "B" (hint: hold ctrl to add a new node)');
+  });
+
+  it('R51/R52: holding Ctrl switches the toast to the pending new-node outcome, without the hint', () => {
+    const messages: Array<string | null> = [];
+    mountCanvas(twoNodes, { onEdgePreviewChange: (m) => messages.push(m) });
+
+    const tab = container.querySelector('[data-testid="edge-tab-a"]') as HTMLElement;
+    tab.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 10, clientY: 10 }));
+    // Dispatched on body, not window — jsdom would otherwise make `window`
+    // itself the target, which the hotkey handler can't read a tagName from.
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Control', ctrlKey: true, bubbles: true }));
+
+    expect(messages.at(-1)).toBe('Creating new node with edge from "A"');
   });
 
   it('the source Node keeps its tab visible (lit) once a connection is armed', () => {
