@@ -1,5 +1,5 @@
 import { Show, createMemo, createEffect, createSignal, on, type JSX } from 'solid-js';
-import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, AtlasData, AtlasDocument } from '@luminous/core/atlas';
+import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, AtlasData, AtlasDocument, AtlasPorts } from '@luminous/core/atlas';
 import { applyAtlasBatch, invertAtlasBatch, resolveContent } from '@luminous/core/atlas';
 import { Canvas, ConnectionPreview, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef } from '@luminous/cactus';
@@ -11,6 +11,7 @@ import {
   uniqueId,
   buildDuplicateActions,
   selectionRoots,
+  selectionSubtreeIds,
   selfAndDescendantIds,
   resolveDrop,
   describePendingDrop,
@@ -150,9 +151,34 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     dispatchAction([action], 'Resize Content');
   }
 
+  const [previewPorts, setPreviewPorts] = createSignal<{ nodeId: string; ports: AtlasPorts } | undefined>();
+  const projectedDoc = createMemo<AtlasDocument>(() => {
+    const preview = previewPorts();
+    if (!preview) return props.doc;
+    return { ...props.doc, nodes: props.doc.nodes.map((node) => node.id === preview.nodeId ? { ...node, ports: preview.ports } : node) };
+  });
   const nodes = createMemo(() => projectAtlasNodes(props.doc));
   const nodesById = createMemo(() => new Map(props.doc.nodes.map((n) => [n.id, n])));
-  const edges = createMemo(() => toEdgeDeclarations(props.doc));
+  const edges = createMemo(() => toEdgeDeclarations(projectedDoc()));
+  const usedPorts = createMemo(() => {
+    const parentOf = new Map(props.doc.nodes.map((node) => [node.id, node.parent]));
+    const ancestors = (id: string) => { const out: string[] = []; let p = parentOf.get(id); while (p) { out.push(p); p = parentOf.get(p); } return out; };
+    const used = new Set<string>();
+    for (const edge of props.doc.edges) {
+      const source = ancestors(edge.from);
+      const target = ancestors(edge.to);
+      const common = source.find((id) => target.includes(id));
+      for (const id of common ? source.slice(0, source.indexOf(common)) : source) used.add(`${id}:exit`);
+      const entries = common ? target.slice(0, target.indexOf(common)) : target;
+      for (const id of entries) used.add(`${id}:entry`);
+    }
+    return used;
+  });
+
+  function commitPorts(nodeId: string, ports: AtlasPorts): void {
+    setPreviewPorts(undefined);
+    dispatchAction([{ type: 'setNode', id: nodeId, ports }], 'Move Port');
+  }
 
   // R5: whether Ctrl/Meta is held during the current drag. Ctrl can be
   // pressed/released mid-drag with no pointer event, so it's tracked via
@@ -195,6 +221,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   // and moving them separately would shift them twice. A signal so
   // AtlasNodeLayer's live preview reads it.
   const [dragGroup, setDragGroup] = createSignal<string[]>([]);
+  const [edgeRoutingFrozen, setEdgeRoutingFrozen] = createSignal(false);
   function resolveDragGroup(nodeId: string): string[] {
     const sel = canvasRef?.getSelectedIds() ?? [];
     if (!sel.includes(nodeId)) return [nodeId];
@@ -208,6 +235,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
   function beginDrag(nodeId: string) {
     const rn = nodes().find((n) => n.node.id === nodeId);
     if (!rn) return;
+    setEdgeRoutingFrozen(true);
     lastHit = null;
     const group = resolveDragGroup(nodeId);
     setDragGroup(group);
@@ -267,6 +295,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         const outcome = resolveDrop(props.doc, id, hitContainerId);
         if (outcome.changed && !outcome.result.ok) {
           props.onDropRefused?.(outcome.result.error);
+          setEdgeRoutingFrozen(false);
           return;
         }
         if (outcome.changed) actions.push({ type: 'reparent', id, parent: newParentId });
@@ -279,6 +308,7 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
       actions.push({ type: 'setNode', id, x: relX, y: relY });
     }
     dispatchAction(actions, group.length > 1 ? 'Move Nodes' : 'Move Node');
+    setEdgeRoutingFrozen(false);
   }
 
   // R47/R48: a completed connection (drag-release or click-to-arm-then-click)
@@ -439,6 +469,8 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         <Canvas
           ref={(r) => { canvasRef = r; }}
           edges={edges()}
+          edgeEmphasisNodeIds={(ids) => selectionSubtreeIds(props.doc, ids)}
+          freezeEdgeRouting={edgeRoutingFrozen}
           chrome={buildChrome(history)}
           nodeContextMenu={(nodeId) => nodeContextMenu(menuDeps, nodeId)}
           backgroundContextMenu={backgroundContextMenu}
@@ -483,6 +515,11 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
             onEdgePreviewChange={props.onEdgePreviewChange}
             connectValid={(source, target) => canConnect(props.doc, source, target)}
             dropAddsEdge={(source, parentId) => connectDropAddsEdge(props.doc, source, parentId)}
+            onPortPreview={(nodeId, ports) => setPreviewPorts({ nodeId, ports })}
+            onPortCommit={commitPorts}
+            onPortCancel={() => setPreviewPorts(undefined)}
+            portUsed={(nodeId, kind) => usedPorts().has(`${nodeId}:${kind}`)}
+            previewPorts={previewPorts}
           />
         </Canvas>
         <LegendOverlay

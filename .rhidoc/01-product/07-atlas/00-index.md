@@ -16,5 +16,6 @@ deps: []
 | doc01.07.03 | Glossary | doc | The Atlas controlled vocabulary — the terms Atlas docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, atlas |
 | doc01.07.04 | UI requirements | doc | Atlas's UI capabilities as a controlled, EARS-like list of shall-statements, plus the input-command bindings table mapping each (target, interaction) pair to its command | atlas, ui, requirements |
 | doc01.07.05 | Allen relations | doc | Neutral reference on Allen's interval algebra — the thirteen relations, their symbols and inverses — and Rectangle Algebra, which applies them per axis to axis-aligned boxes | reference, allen, rectangle-algebra, spatial, relations |
+| doc01.07.06 | Edge ports | doc | Ports on Container boundaries guide an Edge through shared inside and outside face anchors | atlas, edges, ports, routing, containment, ui |
 
-Topics: allen, apps, atlas, braincrawl, case-study, cli, dataflow, glossary, interfaces, rectangle-algebra, reference, relations, requirements, spatial, ui, vocabulary
+Topics: allen, apps, atlas, braincrawl, case-study, cli, containment, dataflow, edges, glossary, interfaces, ports, rectangle-algebra, reference, relations, requirements, routing, spatial, ui, vocabulary

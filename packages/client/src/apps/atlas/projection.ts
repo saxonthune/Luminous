@@ -1,6 +1,6 @@
-import type { AtlasDocument, AtlasEdge, AtlasNode } from '@luminous/core/atlas';
+import type { AtlasDocument, AtlasEdge, AtlasNode, AtlasPortPosition } from '@luminous/core/atlas';
 import type { EdgeDeclaration, EdgeRoute, RegisteredNodeRect, RoutePoint } from '@luminous/cactus';
-import { resolveAbsolutePositionByParentOf } from '@luminous/cactus';
+import { boundaryPoint, resolveAbsolutePositionByParentOf } from '@luminous/cactus';
 import { layoutAtlas } from './layout.ts';
 
 export const NODE_WIDTH = 220;
@@ -53,6 +53,22 @@ export function childArea(rn: { x: number; y: number; w: number; h: number; node
   };
 }
 
+/** The perimeter halfway across the bezel between a Container's inset box
+ * and its Node frame. Ports clasp this centerline rather than sitting on the
+ * inner edge of the bezel. */
+export function containerBezelCenter(
+  rn: { x: number; y: number; w: number; h: number; node?: AtlasNode },
+): { x: number; y: number; w: number; h: number } {
+  const area = childArea(rn);
+  const halfBezel = CONTAINER_BEZEL / 2;
+  return {
+    x: area.x - halfBezel,
+    y: area.y - halfBezel,
+    w: area.w + 2 * halfBezel,
+    h: area.h + 2 * halfBezel,
+  };
+}
+
 /** A container's shrink-wrapped size given its children's bounding-box extent
  * `(maxX, maxY)` in its own child-area frame — the formula `sizeOf` (below)
  * and `growAncestors` (`layoutOverride.ts`) both need single-sourced, since a
@@ -75,16 +91,49 @@ function edgeId(edge: AtlasEdge, i: number): string {
 }
 
 export function toEdgeDeclarations(doc: AtlasDocument): EdgeDeclaration[] {
+  const routeEdge = createAtlasEdgeRouter(doc);
   return doc.edges.map((edge, i) => ({
     id: edgeId(edge, i),
     sourceId: edge.from,
     targetId: edge.to,
     styling: { arrowHead: true, dash: 'solid' },
-    routeBuilder: (rects) => projectAtlasEdgeRoute(doc, edge, rects),
+    routeBuilder: (rects) => routeEdge(edge, rects),
   }));
 }
 
 const ROUTE_EPSILON = 0.0001;
+export const ATLAS_PORT_LENGTH = 48;
+export const ATLAS_PORT_THICKNESS = 16;
+export const DEFAULT_ENTRY_PORT: AtlasPortPosition = { side: 'left', offset: 0.5 };
+export const DEFAULT_EXIT_PORT: AtlasPortPosition = { side: 'right', offset: 0.5 };
+
+export function atlasPortDimensions(position: AtlasPortPosition): { width: number; height: number } {
+  return position.side === 'top' || position.side === 'bottom'
+    ? { width: ATLAS_PORT_LENGTH, height: ATLAS_PORT_THICKNESS }
+    : { width: ATLAS_PORT_THICKNESS, height: ATLAS_PORT_LENGTH };
+}
+
+export function atlasPortPoint(
+  rn: { x: number; y: number; w: number; h: number; node?: AtlasNode },
+  position: AtlasPortPosition,
+): RoutePoint {
+  const size = atlasPortDimensions(position);
+  return boundaryPoint(containerBezelCenter(rn), position, size.width, size.height);
+}
+
+export function atlasPortAnchors(
+  rn: { x: number; y: number; w: number; h: number; node?: AtlasNode },
+  position: AtlasPortPosition,
+): { inside: RoutePoint; outside: RoutePoint } {
+  const point = atlasPortPoint(rn, position);
+  const half = ATLAS_PORT_THICKNESS / 2;
+  switch (position.side) {
+    case 'top': return { inside: { x: point.x, y: point.y + half }, outside: { x: point.x, y: point.y - half } };
+    case 'right': return { inside: { x: point.x - half, y: point.y }, outside: { x: point.x + half, y: point.y } };
+    case 'bottom': return { inside: { x: point.x, y: point.y - half }, outside: { x: point.x, y: point.y + half } };
+    case 'left': return { inside: { x: point.x + half, y: point.y }, outside: { x: point.x - half, y: point.y } };
+  }
+}
 
 function center(rect: RegisteredNodeRect): RoutePoint {
   return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
@@ -97,28 +146,6 @@ function exitRect(from: RoutePoint, toward: RoutePoint, rect: RegisteredNodeRect
   const ty = dy === 0 ? Infinity : rect.h / 2 / Math.abs(dy);
   const t = Math.min(tx, ty);
   return { x: from.x + dx * t, y: from.y + dy * t };
-}
-
-function lineRectIntersections(from: RoutePoint, to: RoutePoint, rect: { x: number; y: number; w: number; h: number }): Array<{ t: number; point: RoutePoint }> {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const hits: Array<{ t: number; point: RoutePoint }> = [];
-  const add = (t: number) => {
-    if (t < -ROUTE_EPSILON || t > 1 + ROUTE_EPSILON) return;
-    const point = { x: from.x + dx * t, y: from.y + dy * t };
-    if (point.x < rect.x - ROUTE_EPSILON || point.x > rect.x + rect.w + ROUTE_EPSILON) return;
-    if (point.y < rect.y - ROUTE_EPSILON || point.y > rect.y + rect.h + ROUTE_EPSILON) return;
-    if (!hits.some((hit) => Math.abs(hit.t - t) < ROUTE_EPSILON)) hits.push({ t, point });
-  };
-  if (dx !== 0) {
-    add((rect.x - from.x) / dx);
-    add((rect.x + rect.w - from.x) / dx);
-  }
-  if (dy !== 0) {
-    add((rect.y - from.y) / dy);
-    add((rect.y + rect.h - from.y) / dy);
-  }
-  return hits.sort((a, b) => a.t - b.t);
 }
 
 function containsPoint(rect: { x: number; y: number; w: number; h: number }, point: RoutePoint): boolean {
@@ -143,24 +170,40 @@ export function projectAtlasEdgeRoute(
   edge: AtlasEdge,
   rects: ReadonlyMap<string, RegisteredNodeRect>,
 ): EdgeRoute | null {
-  const sourceRect = rects.get(edge.from);
-  const targetRect = rects.get(edge.to);
-  if (!sourceRect || !targetRect) return null;
+  return createAtlasEdgeRouter(doc)(edge, rects);
+}
 
+/** Build the document-side routing index once. The returned function remains
+ * geometry-only: changing rects does not rebuild Atlas ancestry or container
+ * membership for every Edge. */
+function createAtlasEdgeRouter(doc: AtlasDocument) {
   const nodeById = new Map(doc.nodes.map((node) => [node.id, node]));
-  const sourceNode = nodeById.get(edge.from);
-  const targetNode = nodeById.get(edge.to);
-  if (!sourceNode || !targetNode) return null;
   const parentOf = new Map(doc.nodes.flatMap((node) => node.parent ? [[node.id, node.parent] as const] : []));
+  const ancestorCache = new Map<string, string[]>();
   const ancestors = (id: string): string[] => {
+    const cached = ancestorCache.get(id);
+    if (cached) return cached;
     const result: string[] = [];
     let current = parentOf.get(id);
     while (current) {
       result.push(current);
       current = parentOf.get(current);
     }
+    ancestorCache.set(id, result);
     return result;
   };
+  for (const node of doc.nodes) ancestors(node.id);
+  const containerIds = [...new Set(parentOf.values())];
+  const depthById = new Map(doc.nodes.map((node) => [node.id, ancestors(node.id).length]));
+
+  return (edge: AtlasEdge, rects: ReadonlyMap<string, RegisteredNodeRect>): EdgeRoute | null => {
+  const sourceRect = rects.get(edge.from);
+  const targetRect = rects.get(edge.to);
+  if (!sourceRect || !targetRect) return null;
+
+  const sourceNode = nodeById.get(edge.from);
+  const targetNode = nodeById.get(edge.to);
+  if (!sourceNode || !targetNode) return null;
   const sourceAncestors = ancestors(edge.from);
   const targetAncestors = ancestors(edge.to);
   const targetAncestorSet = new Set(targetAncestors);
@@ -174,31 +217,31 @@ export function projectAtlasEdgeRoute(
   const sourceCenter = center(sourceRect);
   const targetCenter = center(targetRect);
   if (sourceCenter.x === targetCenter.x && sourceCenter.y === targetCenter.y) return null;
-  const points: RoutePoint[] = [exitRect(sourceCenter, targetCenter, sourceRect)];
-
+  const sourcePorts: RoutePoint[] = [];
   for (const id of sourceContainers) {
     const rect = rects.get(id);
     const node = nodeById.get(id);
     if (!rect || !node) return null;
-    const intersection = lineRectIntersections(sourceCenter, targetCenter, childArea({ ...rect, node })).find((hit) => hit.t > ROUTE_EPSILON);
-    if (!intersection) return null;
-    points.push(intersection.point);
+    const anchors = atlasPortAnchors({ ...rect, node }, node.ports?.exit ?? DEFAULT_EXIT_PORT);
+    sourcePorts.push(anchors.inside, anchors.outside);
   }
+  const destinationPorts: RoutePoint[] = [];
   for (const id of destinationContainers) {
     const rect = rects.get(id);
     const node = nodeById.get(id);
     if (!rect || !node) return null;
-    const intersections = lineRectIntersections(sourceCenter, targetCenter, childArea({ ...rect, node }));
-    const intersection = intersections.find((hit) => hit.t < 1 - ROUTE_EPSILON);
-    if (!intersection) return null;
-    points.push(intersection.point);
+    const anchors = atlasPortAnchors({ ...rect, node }, node.ports?.entry ?? DEFAULT_ENTRY_PORT);
+    destinationPorts.push(anchors.outside, anchors.inside);
   }
-  points.push(exitRect(targetCenter, sourceCenter, targetRect));
+  const crossingPoints = [...sourcePorts, ...destinationPorts];
+  const points: RoutePoint[] = [
+    exitRect(sourceCenter, crossingPoints[0] ?? targetCenter, sourceRect),
+    ...crossingPoints,
+    exitRect(targetCenter, crossingPoints[crossingPoints.length - 1] ?? sourceCenter, targetRect),
+  ];
 
   const routePoints = withoutDuplicatePoints(points);
   if (routePoints.length < 2) return null;
-  const containerIds = doc.nodes.filter((node) => doc.nodes.some((child) => child.parent === node.id)).map((node) => node.id);
-  const depthOf = (id: string) => ancestors(id).length;
   const segmentLayers = routePoints.slice(1).map((end, index) => {
     const start = routePoints[index];
     const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
@@ -207,11 +250,12 @@ export function projectAtlasEdgeRoute(
       const rect = rects.get(id);
       const node = nodeById.get(id);
       if (rect && node && containsPoint(childArea({ ...rect, node }), midpoint)
-        && (scope === undefined || depthOf(id) > depthOf(scope))) scope = id;
+        && (scope === undefined || (depthById.get(id) ?? 0) > (depthById.get(scope) ?? 0))) scope = id;
     }
-    return scope === undefined ? -1 : 2 * depthOf(scope) + 1;
+    return scope === undefined ? -1 : 2 * (depthById.get(scope) ?? 0) + 1;
   });
   return { points: routePoints, segmentLayers };
+  };
 }
 
 export interface AtlasRenderNode {

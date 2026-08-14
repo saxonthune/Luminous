@@ -1,7 +1,7 @@
 import { For, createMemo, createEffect, createSignal, type JSX } from 'solid-js';
-import type { AtlasColorToken, AtlasContentMode, AtlasData } from '@luminous/core/atlas';
-import { NodeContainer, useCanvasContext, useGesture, findContainerAt, isOverContainerInterior } from '@luminous/cactus';
-import { containerHeaderHeight, CONTAINER_BEZEL, type AtlasRenderNode } from './projection.ts';
+import type { AtlasColorToken, AtlasContentMode, AtlasData, AtlasPorts, AtlasPortPosition } from '@luminous/core/atlas';
+import { BoundaryHandle, NodeContainer, useCanvasContext, useGesture, findContainerAt, isOverContainerInterior } from '@luminous/cactus';
+import { atlasPortDimensions, containerBezelCenter, containerHeaderHeight, CONTAINER_BEZEL, DEFAULT_ENTRY_PORT, DEFAULT_EXIT_PORT, type AtlasRenderNode } from './projection.ts';
 import { addDelta, growAncestors, shiftSubtree, type LayoutDelta } from './layoutOverride.ts';
 import type { NodeEditForm } from './mutations.ts';
 import { describeChord } from './inputBindings.ts';
@@ -58,6 +58,11 @@ export interface AtlasNodeLayerProps {
   /** Whether a Ctrl-drop into `parentId` completes the Edge into the new
    * Node — `connectDropAddsEdge` against the live Document (R55). */
   dropAddsEdge: (source: string, parentId: string | null) => boolean;
+  onPortPreview: (nodeId: string, ports: AtlasPorts) => void;
+  onPortCommit: (nodeId: string, ports: AtlasPorts) => void;
+  onPortCancel: () => void;
+  portUsed: (nodeId: string, kind: 'entry' | 'exit') => boolean;
+  previewPorts: () => { nodeId: string; ports: AtlasPorts } | undefined;
 }
 
 /**
@@ -191,6 +196,8 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
         // subtree semantics, so hover holds while the pointer moves from the
         // Node onto the tab (a sibling inside the same wrapper).
         const [hovered, setHovered] = createSignal(false);
+        const [hoveredPort, setHoveredPort] = createSignal<'entry' | 'exit' | null>(null);
+        const [draggedPort, setDraggedPort] = createSignal<'entry' | 'exit' | null>(null);
         const isEdgeSource = () => ctx.connectionDrag()?.sourceNodeId === rn.node.id;
         const tabVisible = () => hovered() || isEdgeSource();
         // The container box is color-neutral: a node's color identifies the
@@ -210,6 +217,25 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
         // reference-stable during a gesture, so <For> never disposes/rebuilds
         // this row (see 1b in the task spec).
         const delta = () => layoutDeltas().get(rn.node.id) ?? ZERO_DELTA;
+        const portRect = () => containerBezelCenter({ x: rn.x + delta().dx, y: rn.y + delta().dy, w: rn.w + delta().dw, h: rn.h + delta().dh, node: rn.node });
+        const portPosition = (kind: 'entry' | 'exit'): AtlasPortPosition => {
+          const preview = props.previewPorts();
+          return (preview?.nodeId === rn.node.id ? preview.ports[kind] : rn.node.ports?.[kind])
+            ?? (kind === 'entry' ? DEFAULT_ENTRY_PORT : DEFAULT_EXIT_PORT);
+        };
+        const updatePort = (kind: 'entry' | 'exit', position: AtlasPortPosition, commit: boolean) => {
+          const preview = props.previewPorts();
+          const base = preview?.nodeId === rn.node.id ? preview.ports : rn.node.ports;
+          const ports = { ...base, [kind]: position };
+          if (commit) { setDraggedPort(null); props.onPortCommit(rn.node.id, ports); }
+          else { setDraggedPort(kind); props.onPortPreview(rn.node.id, ports); }
+        };
+        const portOpacity = (kind: 'entry' | 'exit') => props.portUsed(rn.node.id, kind) || hoveredPort() === kind || draggedPort() === kind ? 1 : 0.35;
+        const glyphRotation = (kind: 'entry' | 'exit') => {
+          const side = portPosition(kind).side;
+          const inward = { top: 90, right: 180, bottom: -90, left: 0 }[side];
+          return inward + (kind === 'exit' ? 180 : 0);
+        };
         // Passed to AtlasNodeContent for its own edit-mode UI — geometry
         // (the box growing/shifting) is handled by `delta` above instead.
         const resizePreview = () => {
@@ -313,6 +339,43 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
                 +
               </div>
             </div>
+            <For each={rn.hasChildren ? (['entry', 'exit'] as const) : []}>
+              {(kind) => (
+                <BoundaryHandle
+                  rect={portRect}
+                  position={() => portPosition(kind)}
+                  width={() => atlasPortDimensions(portPosition(kind)).width}
+                  height={() => atlasPortDimensions(portPosition(kind)).height}
+                  onPreview={(position) => updatePort(kind, position, false)}
+                  onCommit={(position) => updatePort(kind, position, true)}
+                  onCancel={() => {
+                    setDraggedPort(null);
+                    props.onPortCancel();
+                  }}
+                  style={{
+                    'z-index': `${2 * rn.depth + 2}`,
+                    'border-radius': '9999px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    opacity: `${portOpacity(kind)}`,
+                    cursor: 'grab',
+                    display: 'flex',
+                    'align-items': 'center',
+                    'justify-content': 'center',
+                    color: 'var(--fg-muted)',
+                    transition: 'opacity 120ms ease',
+                  }}
+                >
+                  <span
+                    data-atlas-port={kind}
+                    data-node-id={rn.node.id}
+                    onPointerEnter={() => setHoveredPort(kind)}
+                    onPointerLeave={() => setHoveredPort(null)}
+                    style={{ display: 'block', 'font-size': '8px', 'line-height': '1', transform: `rotate(${glyphRotation(kind)}deg)` }}
+                  >›</span>
+                </BoundaryHandle>
+              )}
+            </For>
           </div>
         );
       }}

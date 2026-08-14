@@ -27,6 +27,19 @@ export function checkAtlasDocument(doc: AtlasDocument, data?: AtlasData): AtlasC
   }
 
   const nodeIds = new Set(doc.nodes.map(n => n.id));
+  const containerIds = new Set(doc.nodes.flatMap((node) => node.parent === undefined ? [] : [node.parent]));
+  for (const node of doc.nodes) {
+    if (node.ports !== undefined && !containerIds.has(node.id)) {
+      issues.push({ severity: 'error', message: `node "${node.id}" is not a Container and cannot store Ports` });
+    }
+    for (const [kind, position] of Object.entries(node.ports ?? {})) {
+      if ((kind !== 'entry' && kind !== 'exit') || !position
+        || !['top', 'right', 'bottom', 'left'].includes(position.side)
+        || !Number.isFinite(position.offset) || position.offset < 0 || position.offset > 1) {
+        issues.push({ severity: 'error', message: `node "${node.id}" has an invalid ${kind} Port position` });
+      }
+    }
+  }
   for (const edge of doc.edges) {
     if (!nodeIds.has(edge.from)) {
       issues.push({ severity: 'error', message: `edge references unknown node id "${edge.from}"` });

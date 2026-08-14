@@ -121,6 +121,33 @@ describe('readAtlas', () => {
     expect(result.filledSlots).toEqual([])
   })
 
+  it('preserves Container Port positions', async () => {
+    const doc = {
+      v: 1,
+      nodes: [
+        {
+          id: 'container',
+          name: 'Container',
+          ports: {
+            entry: { side: 'top', offset: 0.25 },
+            exit: { side: 'bottom', offset: 0.75 },
+          },
+        },
+        { id: 'child', name: 'Child', parent: 'container' },
+      ],
+      edges: [],
+    }
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => doc }),
+      [`GET ${SERVER}/api/atlasdata/`]: () => ({ ok: false, status: 404 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await readAtlas(SERVER, PATH)
+
+    expect(result.document.nodes[0]?.ports).toEqual(doc.nodes[0]?.ports)
+  })
+
   it('reports a filled slot as filled and a slot naming an absent key as unfilled', async () => {
     const doc = {
       v: 1,

@@ -473,6 +473,30 @@ describe('buildBisectActions', () => {
   });
 });
 
+describe('Container Ports', () => {
+  const containerDoc: AtlasDocument = { v: 1, nodes: [
+    { id: 'box', name: 'Box' }, { id: 'child', name: 'Child', parent: 'box' },
+  ], edges: [] };
+
+  it('sets, replaces, and clears the whole Ports record', () => {
+    const set = applyAtlasBatch(containerDoc, [{ type: 'setNode', id: 'box', ports: { entry: { side: 'top', offset: 0.25 } } }]);
+    expect(set.ok && set.doc.nodes[0].ports).toEqual({ entry: { side: 'top', offset: 0.25 } });
+    if (!set.ok) return;
+    const clear = applyAtlasBatch(set.doc, [{ type: 'setNode', id: 'box', ports: undefined }]);
+    expect(clear.ok && clear.doc.nodes[0]).not.toHaveProperty('ports');
+  });
+
+  it('removes dormant placements when reparent or removal takes the last Child', () => {
+    const withPorts: AtlasDocument = { ...containerDoc, nodes: [
+      { ...containerDoc.nodes[0], ports: { exit: { side: 'right', offset: 0.5 } } }, containerDoc.nodes[1],
+    ] };
+    const moved = applyAtlasBatch(withPorts, [{ type: 'reparent', id: 'child' }]);
+    expect(moved.ok && moved.doc.nodes[0]).not.toHaveProperty('ports');
+    const removed = applyAtlasBatch(withPorts, [{ type: 'removeNode', id: 'child' }]);
+    expect(removed.ok && removed.doc.nodes[0]).not.toHaveProperty('ports');
+  });
+});
+
 describe('applyAtlasBatch', () => {
   it('applies actions in order', () => {
     const result = applyAtlasBatch(emptyAtlasDocument(), [

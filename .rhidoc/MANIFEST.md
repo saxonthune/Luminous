@@ -85,9 +85,10 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.07.00 | `07-atlas/00-index.md` |  |  | — | — | — |
 | doc01.07.01 | `07-atlas/01-idea.md` | A canvas app holding a dense visual representation of a whole piece of software — interface inventories plus the dataflow behind each entry — comprehensible to a human, readable and editable by an agent | atlas, apps, dataflow, interfaces | doc01.04, doc01.05.01 | doc01.07.02, doc01.07.03, doc01.07.04 | — |
 | doc01.07.02 | `07-atlas/02-braincrawl-case.md` | The motivating case — braincrawl is drawn as the first Atlas canvas, a rough-draft proof of concept, because it already carries every input Atlas needs and its own specs already name the smells an Atlas should show | atlas, case-study, braincrawl, cli, dataflow | doc01.07.01 | — | — |
-| doc01.07.03 | `07-atlas/03-glossary.md` | The Atlas controlled vocabulary — the terms Atlas docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, atlas | doc01.07.01 | doc01.07.04 | — |
-| doc01.07.04 | `07-atlas/04-ui-requirements.md` | Atlas's UI capabilities as a controlled, EARS-like list of shall-statements, plus the input-command bindings table mapping each (target, interaction) pair to its command | atlas, ui, requirements | doc01.07.01, doc01.07.03 | — | — |
+| doc01.07.03 | `07-atlas/03-glossary.md` | The Atlas controlled vocabulary — the terms Atlas docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, atlas | doc01.07.01 | doc01.07.04, doc01.07.06 | — |
+| doc01.07.04 | `07-atlas/04-ui-requirements.md` | Atlas's UI capabilities as a controlled, EARS-like list of shall-statements, plus the input-command bindings table mapping each (target, interaction) pair to its command | atlas, ui, requirements | doc01.07.01, doc01.07.03 | doc01.07.06 | — |
 | doc01.07.05 | `07-atlas/05-allen-relations.md` | Neutral reference on Allen's interval algebra — the thirteen relations, their symbols and inverses — and Rectangle Algebra, which applies them per axis to axis-aligned boxes | reference, allen, rectangle-algebra, spatial, relations | — | — | — |
+| doc01.07.06 | `07-atlas/06-edge-ports.md` | Ports on Container boundaries guide an Edge through shared inside and outside face anchors | atlas, edges, ports, routing, containment, ui | doc01.07.03, doc01.07.04, doc02.05.01 | — | — |
 
 ### Canvas
 
@@ -127,7 +128,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc02.05.00 | `05-cactus/00-index.md` |  |  | — | — | — |
-| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc01.06.01.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.06.02, doc02.08, doc03.03 | — |
+| doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc01.06.01.01, doc01.07.06, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.06.02, doc02.08, doc03.03 | — |
 | doc02.05.02 | `05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc02.05.01 | — | — |
 | doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | doc02.05.04, doc02.05.06 | — |
 | doc02.05.04 | `05-cactus/04-layout-engine-contract.md` | The LayoutEngine interface and mental model — how the domain layer produces constraints and cactus suggests positions | cactus, layout, architecture | doc02.05.01, doc02.05.03 | — | — |
@@ -202,7 +203,7 @@ Quick lookup for file-path→doc mapping:
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc02.21.03 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
-| `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04 |
+| `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04, doc01.07.06 |
 | `background` | doc01.02 |
 | `bevy` | doc03.03 |
 | `blender` | doc01.06.01.10 |
@@ -227,6 +228,7 @@ Quick lookup for file-path→doc mapping:
 | `component-tree` | doc02.19 |
 | `components` | doc02.05.02, doc02.13 |
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
+| `containment` | doc01.07.06 |
 | `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21.01 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
@@ -247,7 +249,7 @@ Quick lookup for file-path→doc mapping:
 | `dogfooding` | doc01.03.02, doc03.06, doc03.08 |
 | `dsl` | doc03.05 |
 | `ecs` | doc03.01, doc03.03 |
-| `edges` | doc02.08 |
+| `edges` | doc01.07.06, doc02.08 |
 | `engine` | doc02.05.01 |
 | `examples` | doc02.10.01, doc02.10.02, doc02.10.03, doc02.18 |
 | `facts` | doc00.05 |
@@ -303,6 +305,7 @@ Quick lookup for file-path→doc mapping:
 | `pipelines` | doc03.04 |
 | `plain-language` | doc00.04 |
 | `platform` | doc01.04, doc02.22.01 |
+| `ports` | doc01.07.06 |
 | `primitives` | doc02.09, doc02.16 |
 | `prior-art` | doc01.06.01.01, doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
 | `product` | doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
@@ -324,6 +327,7 @@ Quick lookup for file-path→doc mapping:
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
+| `routing` | doc01.07.06 |
 | `rtp` | doc02.10.03 |
 | `scene-graph` | doc01.06.01.04, doc01.06.01.08 |
 | `schema` | doc02.06.02, doc02.14, doc02.21.01, doc03.03 |
@@ -348,7 +352,7 @@ Quick lookup for file-path→doc mapping:
 | `tools` | doc02.04, doc02.15, doc02.21.02 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
-| `ui` | doc01.05.04, doc01.07.04, doc02.12, doc02.22.01 |
+| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc02.12, doc02.22.01 |
 | `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `unreal` | doc01.06.01.09 |

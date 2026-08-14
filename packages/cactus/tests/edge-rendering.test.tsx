@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from 'solid-js/web';
+import { createSignal } from 'solid-js';
 import { Canvas } from '../src/Canvas';
 import type { CanvasRef } from '../src/Canvas';
 import { NodeContainer } from '../src/NodeContainer';
@@ -39,6 +40,35 @@ function getEdgeLayers(container: HTMLElement): { lines: Element | null; labels:
 }
 
 describe('Canvas edge rendering', () => {
+  it('uses the host projection of selected IDs for edge emphasis', () => {
+    let canvasRef: CanvasRef | undefined;
+    const edges: EdgeDeclaration[] = [
+      { id: 'child-edge', sourceId: 'child', targetId: 'other' },
+      { id: 'unrelated-edge', sourceId: 'x', targetId: 'y' },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas
+        ref={(ref) => { canvasRef = ref; }}
+        edges={edges}
+        edgeEmphasisNodeIds={(selected) => selected.includes('parent') ? [...selected, 'child'] : selected}
+      >
+        <NodeContainer nodeId="parent" x={() => 0} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="child" x={() => 100} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="other" x={() => 200} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="x" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="y" x={() => 200} y={() => 100} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    canvasRef!.setSelectedIds(['parent']);
+    const routes = container.querySelectorAll('[data-cactus-edge-layer-lines] polyline');
+    expect(routes[0].getAttribute('opacity')).toBe('1');
+    expect(routes[1].getAttribute('opacity')).toBe('0.15');
+
+    cleanup();
+  });
+
   it('renders an SVG line between two nodes', () => {
     const edges: EdgeDeclaration[] = [
       {
@@ -305,6 +335,36 @@ describe('Canvas edge rendering', () => {
     const band = container.querySelector('[data-cactus-edge-route-band="-1"]') as SVGElement;
     expect(band.style.overflow).toBe('visible');
     expect(band.querySelector('line[data-edge-id="offscreen-route"]')).not.toBeNull();
+    cleanup();
+  });
+
+  it('computes shared route geometry once and holds it fixed while routing is frozen', () => {
+    const [x, setX] = createSignal(0);
+    const [frozen, setFrozen] = createSignal(false);
+    let routeCalls = 0;
+    const edges: EdgeDeclaration[] = [{
+      id: 'shared-route', sourceId: 'node-a', targetId: 'node-b',
+      routeBuilder: () => {
+        routeCalls++;
+        return {
+          points: [{ x: x() + 60, y: 20 }, { x: 130, y: 20 }, { x: 200, y: 20 }],
+          segmentLayers: [1, 3],
+        };
+      },
+    }];
+    const { cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges} freezeEdgeRouting={frozen}>
+        <NodeContainer nodeId="node-a" x={x} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 0} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    expect(routeCalls).toBe(1);
+    setFrozen(true);
+    setX(50);
+    expect(routeCalls).toBe(1);
+    setFrozen(false);
+    expect(routeCalls).toBe(2);
     cleanup();
   });
 

@@ -145,6 +145,17 @@ export function selfAndDescendantIds(doc: AtlasDocument, id: string): Set<string
   return result;
 }
 
+/** Every selected Node and every descendant of each selection, at any depth.
+ * This is a visual/command projection only: descendants are not themselves
+ * added to the canvas selection. */
+export function selectionSubtreeIds(doc: AtlasDocument, ids: ReadonlyArray<string>): string[] {
+  const result = new Set<string>();
+  for (const id of ids) {
+    for (const subtreeId of selfAndDescendantIds(doc, id)) result.add(subtreeId);
+  }
+  return [...result];
+}
+
 /**
  * The pure drop decision behind a Node drag: given the deepest Container id
  * under the pointer (or `null` for the background), does dropping here write

@@ -156,6 +156,15 @@ describe('invertAtlasBatch', () => {
     roundTrips(before, [{ type: 'reparent', id: 'a', parent: 'p2' }]);
   });
 
+  it('round-trips cleanup of the old Container Ports on reparent and removal', () => {
+    const before = doc([
+      { id: 'box', name: 'Box', ports: { exit: { side: 'bottom', offset: 0.75 } } },
+      { id: 'child', name: 'Child', parent: 'box' },
+    ]);
+    roundTrips(before, [{ type: 'reparent', id: 'child' }]);
+    roundTrips(before, [{ type: 'removeNode', id: 'child' }]);
+  });
+
   it('round-trips setNode fields, including field-deletion (content, color, x/y, contentHeight)', () => {
     const before = doc([
       { id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown' }, color: 'accent-8', x: 1, y: 2, contentHeight: 100 },

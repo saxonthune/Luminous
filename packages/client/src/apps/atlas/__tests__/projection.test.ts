@@ -350,19 +350,21 @@ describe('projectAtlasEdgeRoute', () => {
   it('routes from a contained source through its Container boundary', () => {
     const routed = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A', parent: 'box' }, { id: 'b', name: 'B' }], 'a', 'b');
     const route = projectAtlasEdgeRoute(routed, routed.edges[0], new Map([['box', rect(0, 0, 400, 300)], ['a', rect(40, 100)], ['b', rect(500, 100)]]));
-    expect(route?.points).toEqual([{ x: 100, y: 120 }, { x: 392, y: 120 }, { x: 500, y: 120 }]);
-    expect(route?.segmentLayers).toEqual([1, -1]);
+    expect(route?.points.slice(1, 3)).toEqual([{ x: 388, y: 186 }, { x: 404, y: 186 }]);
+    expect(route?.segmentLayers).toEqual([1, -1, -1]);
   });
 
   it('routes into a nested target and across two separate Containers', () => {
     const nested = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A' }, { id: 'b', name: 'B', parent: 'box' }], 'a', 'b');
     const nestedRoute = projectAtlasEdgeRoute(nested, nested.edges[0], new Map([['box', rect(300, 0, 400, 300)], ['a', rect(0, 100)], ['b', rect(400, 100)]]));
-    expect(nestedRoute?.points).toEqual([{ x: 60, y: 120 }, { x: 308, y: 120 }, { x: 400, y: 120 }]);
+    expect(nestedRoute?.points.slice(1, 3)).toEqual([{ x: 296, y: 186 }, { x: 312, y: 186 }]);
 
     const separate = routeDoc([{ id: 'left', name: 'Left' }, { id: 'right', name: 'Right' }, { id: 'a', name: 'A', parent: 'left' }, { id: 'b', name: 'B', parent: 'right' }], 'a', 'b');
     const separateRoute = projectAtlasEdgeRoute(separate, separate.edges[0], new Map([['left', rect(0, 0, 300, 300)], ['right', rect(500, 0, 300, 300)], ['a', rect(40, 100)], ['b', rect(600, 100)]]));
-    expect(separateRoute?.points).toEqual([{ x: 100, y: 120 }, { x: 292, y: 120 }, { x: 508, y: 120 }, { x: 600, y: 120 }]);
-    expect(separateRoute?.segmentLayers).toEqual([1, -1, 1]);
+    expect(separateRoute?.points.slice(1, 5)).toEqual([
+      { x: 288, y: 186 }, { x: 304, y: 186 }, { x: 496, y: 186 }, { x: 512, y: 186 },
+    ]);
+    expect(separateRoute?.segmentLayers).toEqual([1, -1, -1, -1, 1]);
   });
 
   it('uses the shared parent’s band between sibling Containers and deeper bands for nested containment', () => {
@@ -373,17 +375,31 @@ describe('projectAtlasEdgeRoute', () => {
     const route = projectAtlasEdgeRoute(sibling, sibling.edges[0], new Map([
       ['root', rect(0, 0, 900, 500)], ['left', rect(40, 100, 300, 300)], ['right', rect(500, 100, 300, 300)], ['a', rect(80, 200)], ['b', rect(600, 200)],
     ]));
-    expect(route?.segmentLayers).toEqual([3, 1, 3]);
+    expect(route?.segmentLayers).toEqual([3, 1, 1, 1, 3]);
 
     const deep = routeDoc([{ id: 'root', name: 'Root' }, { id: 'inner', name: 'Inner', parent: 'root' }, { id: 'a', name: 'A', parent: 'inner' }, { id: 'b', name: 'B' }], 'a', 'b');
     const first = projectAtlasEdgeRoute(deep, deep.edges[0], new Map([['root', rect(0, 0, 600, 500)], ['inner', rect(40, 100, 400, 300)], ['a', rect(80, 200)], ['b', rect(800, 200)]]));
     const second = projectAtlasEdgeRoute(deep, deep.edges[0], new Map([['root', rect(0, 0, 600, 500)], ['inner', rect(40, 100, 400, 300)], ['a', rect(80, 200)], ['b', rect(800, 200)]]));
     expect(first).toEqual(second);
-    expect(first?.segmentLayers).toEqual([3, 1, -1]);
+    expect(first?.segmentLayers).toEqual([3, 1, 1, -1, -1]);
   });
 
   it('falls back when a required Container rectangle is unavailable', () => {
     const routed = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A', parent: 'box' }, { id: 'b', name: 'B' }], 'a', 'b');
     expect(projectAtlasEdgeRoute(routed, routed.edges[0], new Map([['a', rect(40, 100)], ['b', rect(500, 100)]]))).toBeNull();
+  });
+
+  it('uses stored shared Port centers and clamps pills away from corners', () => {
+    const routed = routeDoc([
+      { id: 'box', name: 'Box', ports: { exit: { side: 'top', offset: 0 } } },
+      { id: 'a', name: 'A', parent: 'box' },
+      { id: 'b', name: 'B' },
+      { id: 'c', name: 'C', parent: 'box' },
+    ], 'a', 'b');
+    const rects = new Map([['box', rect(0, 0, 400, 300)], ['a', rect(40, 100)], ['b', rect(500, 100)], ['c', rect(80, 160)] ]);
+    const first = projectAtlasEdgeRoute(routed, routed.edges[0], rects);
+    const second = projectAtlasEdgeRoute({ ...routed, edges: [{ from: 'c', to: 'b' }] }, { from: 'c', to: 'b' }, rects);
+    expect(first?.points.slice(1, 3)).toEqual([{ x: 28, y: 84 }, { x: 28, y: 68 }]);
+    expect(second?.points[1]).toEqual(first?.points[1]);
   });
 });

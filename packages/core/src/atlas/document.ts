@@ -1,5 +1,5 @@
 import { isAtlasColorToken } from './colors.ts';
-import type { AtlasContent, AtlasDocument, AtlasEdge, AtlasLegend, AtlasNode } from './types.ts';
+import type { AtlasContent, AtlasDocument, AtlasEdge, AtlasLegend, AtlasNode, AtlasPortPosition, AtlasPorts } from './types.ts';
 
 export type ParseAtlasDocumentResult =
   | { ok: true; doc: AtlasDocument }
@@ -10,8 +10,10 @@ export function emptyAtlasDocument(): AtlasDocument {
 }
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'legend', 'nodes', 'edges']);
-const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y', 'color', 'contentHeight', 'contentWidth']);
+const NODE_FIELDS = new Set(['id', 'name', 'parent', 'content', 'x', 'y', 'color', 'contentHeight', 'contentWidth', 'ports']);
 const CONTENT_FIELDS = new Set(['text', 'mode', 'from']);
+const PORTS_FIELDS = new Set(['entry', 'exit']);
+const PORT_POSITION_FIELDS = new Set(['side', 'offset']);
 const EDGE_FIELDS = new Set(['from', 'to', 'label']);
 
 function unknownFieldIssues(obj: Record<string, unknown>, allowed: Set<string>, path: string): string[] {
@@ -44,6 +46,45 @@ function parseContent(value: unknown, path: string, issues: string[]): AtlasCont
   const content: AtlasContent = { text: c['text'] as string, mode: c['mode'] as 'markdown' | 'code' };
   if (c['from'] !== undefined) content.from = c['from'] as string;
   return content;
+}
+
+function parsePortPosition(value: unknown, path: string, issues: string[]): AtlasPortPosition | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push(`${path}: must be an object`);
+    return undefined;
+  }
+  const p = value as Record<string, unknown>;
+  issues.push(...unknownFieldIssues(p, PORT_POSITION_FIELDS, path));
+  const side = p['side'];
+  const offset = p['offset'];
+  let ok = true;
+  if (side !== 'top' && side !== 'right' && side !== 'bottom' && side !== 'left') {
+    issues.push(`${path}.side: must be "top", "right", "bottom", or "left"`);
+    ok = false;
+  }
+  if (!(typeof offset === 'number' && Number.isFinite(offset) && offset >= 0 && offset <= 1)) {
+    issues.push(`${path}.offset: must be a finite number from 0 through 1`);
+    ok = false;
+  }
+  return ok ? { side: side as AtlasPortPosition['side'], offset: offset as number } : undefined;
+}
+
+function parsePorts(value: unknown, path: string, issues: string[]): AtlasPorts | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push(`${path}: must be an object`);
+    return undefined;
+  }
+  const p = value as Record<string, unknown>;
+  issues.push(...unknownFieldIssues(p, PORTS_FIELDS, path));
+  const ports: AtlasPorts = {};
+  let ok = true;
+  for (const kind of ['entry', 'exit'] as const) {
+    if (p[kind] === undefined) continue;
+    const position = parsePortPosition(p[kind], `${path}.${kind}`, issues);
+    if (position === undefined) ok = false;
+    else ports[kind] = position;
+  }
+  return ok ? ports : undefined;
 }
 
 function parseLegend(value: unknown, issues: string[]): AtlasLegend | undefined {
@@ -94,6 +135,11 @@ function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | 
     content = parseContent(n['content'], `${path}.content`, issues);
     if (content === undefined) ok = false;
   }
+  let ports: AtlasPorts | undefined;
+  if (n['ports'] !== undefined) {
+    ports = parsePorts(n['ports'], `${path}.ports`, issues);
+    if (ports === undefined) ok = false;
+  }
   if ((n['x'] !== undefined) !== (n['y'] !== undefined)) {
     issues.push(`${path}: "x" and "y" must appear together`);
     ok = false;
@@ -133,6 +179,7 @@ function parseNode(value: unknown, path: string, issues: string[]): AtlasNode | 
   if (n['color'] !== undefined) node.color = n['color'] as AtlasNode['color'];
   if (n['contentHeight'] !== undefined) node.contentHeight = n['contentHeight'] as number;
   if (n['contentWidth'] !== undefined) node.contentWidth = n['contentWidth'] as number;
+  if (ports !== undefined) node.ports = ports;
   return node;
 }
 
@@ -231,6 +278,13 @@ export function parseAtlasDocument(text: string): ParseAtlasDocumentResult {
       }
     });
 
+    const parentIds = new Set(nodes.flatMap((node) => node.parent === undefined ? [] : [node.parent]));
+    nodes.forEach((node, i) => {
+      if (node.ports !== undefined && !parentIds.has(node.id)) {
+        issues.push(`nodes[${i}].ports: only a Container may store Ports`);
+      }
+    });
+
     issues.push(...parentCycleIssues(nodes));
   }
 
@@ -276,6 +330,7 @@ function serializeNode(node: AtlasNode): Record<string, unknown> {
   if (node.color !== undefined) out['color'] = node.color;
   if (node.contentHeight !== undefined) out['contentHeight'] = node.contentHeight;
   if (node.contentWidth !== undefined) out['contentWidth'] = node.contentWidth;
+  if (node.ports !== undefined) out['ports'] = node.ports;
   return out;
 }
 

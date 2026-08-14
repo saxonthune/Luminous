@@ -1,8 +1,7 @@
 import { createMemo, createSignal, For, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
-import { routeEdges, type EdgeGeometry, type NodeRect } from './edgeRouting.js';
-import { useCanvasContext } from './CanvasContext.js';
+import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
 
 export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
 
@@ -20,7 +19,10 @@ const DIMMED_OPACITY = 0.15;
 
 interface EdgeLayerProps {
   edges: EdgeDeclaration[];
-  getNodeRects: () => ReadonlyMap<string, NodeRect>;
+  routes: () => ReadonlyMap<string, EdgeGeometry>;
+  emphasisNodeIds: () => ReadonlyArray<string>;
+  /** Required only by the label layer for label/node collision checks. */
+  getNodeRects?: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
   /** Draw only segments assigned to this visual band. Labels span the whole route. */
   routeBand?: number;
@@ -107,7 +109,6 @@ function chooseLabelAnchor(
 }
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
-  const { selectedIds } = useCanvasContext();
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
 
   // Counter-scale label text so on-screen size stays readable across zoom levels.
@@ -118,7 +119,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   });
   const labelHaloWidth = createMemo(() => labelFontSize() * 0.35);
 
-  const routed = createMemo(() => routeEdges(props.edges, props.getNodeRects()));
+  const routed = () => props.routes();
 
   const visibleEdges = createMemo(() => {
     const vp = props.viewport?.();
@@ -140,7 +141,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   // nodes. Outer memo so per-edge rendering and the revealed-popover see the
   // same chosen position.
   const labelAnchors = createMemo(() => {
-    const rects = props.getNodeRects();
+    const rects = props.getNodeRects?.() ?? new Map<string, NodeRect>();
     const r = routed();
     const fs = LABEL_ANCHOR_REF_FS;
     const map = new Map<string, { x: number; y: number }>();
@@ -190,7 +191,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
             };
           });
 
-          const emphasis = createMemo(() => edgeEmphasis(edge, selectedIds()));
+          const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
           const opacity = createMemo(() => (emphasis() === 'dimmed' ? DIMMED_OPACITY : 1));
 
           const dash = edge.styling?.dash;

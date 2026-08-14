@@ -224,3 +224,42 @@ describe('Edge Tab (doc01.07.04 R44-R52)', () => {
     expect(tabA.style.opacity).toBe('1');
   });
 });
+
+describe('Container Ports', () => {
+  let container: HTMLDivElement;
+  let dispose: (() => void) | undefined;
+
+  afterEach(() => {
+    dispose?.();
+    container.parentNode?.removeChild(container);
+  });
+
+  function mount(doc: AtlasDocument) {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    dispose = render(() => <AtlasCanvas doc={doc} dispatchDoc={vi.fn()} />, container);
+  }
+
+  it('renders one Entry and Exit Port only for Containers', () => {
+    mount({ v: 1, nodes: [
+      { id: 'box', name: 'Box' }, { id: 'leaf', name: 'Leaf', parent: 'box' }, { id: 'other', name: 'Other' },
+    ], edges: [] });
+    expect(container.querySelectorAll('[data-atlas-port="entry"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-atlas-port="exit"]')).toHaveLength(1);
+    expect(container.querySelector('[data-atlas-port="entry"][data-node-id="box"]')).toBeTruthy();
+    expect(container.querySelector('[data-atlas-port][data-node-id="leaf"]')).toBeNull();
+  });
+
+  it('keeps unused Ports faint, strengthens used Ports, and isolates pointer gestures', () => {
+    mount({ v: 1, nodes: [
+      { id: 'box', name: 'Box' }, { id: 'leaf', name: 'Leaf', parent: 'box' }, { id: 'other', name: 'Other' },
+    ], edges: [{ from: 'leaf', to: 'other' }] });
+    const entry = container.querySelector('[data-atlas-port="entry"]')!.parentElement!;
+    const exit = container.querySelector('[data-atlas-port="exit"]')!.parentElement!;
+    expect(entry.style.opacity).toBe('0.35');
+    expect(exit.style.opacity).toBe('1');
+    expect(exit.getAttribute('data-no-pan')).toBe('true');
+    expect(exit.style.width).toBe('16px');
+    expect(exit.style.height).toBe('48px');
+  });
+});

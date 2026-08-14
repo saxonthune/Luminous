@@ -176,6 +176,31 @@ be connected.
 - **R84.** When an Edge crosses containment, the system shall draw one continuous
   route through the relevant Container boundaries without adding derived Nodes or
   Edges to the Document.
+- **R85.** While the user drags a Node, the system shall keep authored Edge
+  routes fixed; when the drag ends, the system shall redraw those routes from
+  the Nodes' resulting positions.
+- **R86.** When an Edge crosses a Container boundary, the system shall draw its
+  contained segment to the Port's inside face and its external segment from the
+  Port's outside face, as specified by doc01.07.06.
+- **R87.** The system shall allow the user to drag an Entry Port or Exit Port
+  around its Container's perimeter.
+- **R88.** When the user finishes dragging an Entry Port or Exit Port, the
+  system shall save its side and normalized offset to the Document.
+- **R89.** The system shall keep a Container's Entry Port and Exit Port visible,
+  draw unused Ports faintly, and strengthen a Port while it is used, hovered,
+  or dragged.
+- **R90.** The system shall draw an inward chevron on an Entry Port and an
+  outward chevron on an Exit Port.
+- **R91.** When a Node's last Child leaves or is removed, the system shall
+  remove the Node's stored Port positions.
+- **R92.** The system shall draw each Port longer than it is thick, wide enough
+  across the boundary to clasp the Container border, and orient its long axis
+  along its Container side.
+- **R93.** The system shall align the center of each Port to the center of its
+  Container's bezel.
+- **R94.** When a Node is selected, the system shall strengthen every Edge
+  incident to that Node or any of its descendants, at any depth, and shall not
+  add those descendants to the selection.
 
 ### Edge creation
 
@@ -315,6 +340,7 @@ draws a selection box.
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
 | Delete (context menu) | left click | Remove the Node, its descendants, and their Edges | R53, R54 |
 | Edge | right click | Open the context menu with a "Bisect" option | R32 |
+| Port | left click + drag | Move the Port around its Container boundary and persist its placement | R87, R88 |
 | Node | hover | Show the Node's Edge Tab | R44, R45 |
 | Edge Tab | left click + drag | Draw a preview Edge; on release over a Node, create an Edge to it | R47, R49, R50, R51 |
 | Edge Tab | left click | Begin Edge creation, drawing a preview Edge from the Node to the pointer | R48, R49, R50, R51 |

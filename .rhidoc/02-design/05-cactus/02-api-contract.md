@@ -58,6 +58,7 @@ interface CanvasProps {
     getNodeRects: () => NodeRect[]
   }
   edges?: EdgeDeclaration[]
+  freezeEdgeRouting?: () => boolean
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element
   onBackgroundPointerDown?: (event: PointerEvent) => void
@@ -288,7 +289,7 @@ x1 = src.x + src.w / 2     x2 = tgt.x + tgt.w / 2
 y1 = src.y + src.h / 2     y2 = tgt.y + tgt.h / 2
 ```
 
-where `src`/`tgt` come from `ctx.getNodeRects()`. A `routeBuilder` receives the same rect map and returns an ordered point list, or `null` to use that direct route. Each segment may name a visual band. Cactus renders route bands as separate SVG layers, preserves the declared Edge id for every segment's hit target, attaches the arrowhead to the final segment, and finds a label midpoint across the total route length. Endpoints and derived Routes recompute reactively whenever a `NodeContainer` re-registers its rect.
+where `src`/`tgt` come from `ctx.getNodeRects()`. A `routeBuilder` receives the same rect map and returns an ordered point list, or `null` to use that direct route. Each segment may name a visual band. Cactus computes one shared geometry map for the line bands and label layer, renders route bands as separate overflow-visible SVG layers, preserves the declared Edge id for every segment's hit target, attaches the arrowhead to the final segment, and finds a label midpoint across the total route length. Endpoints and derived Routes recompute reactively whenever a `NodeContainer` re-registers its rect. While `freezeEdgeRouting?.()` is true, cactus retains the last geometry map and catches up when the accessor becomes false.
 
 The host owns the route projection: containment, ports, collision policy, and domain geometry remain outside cactus. Cactus owns only generic route rendering, hit-testing, labels, and visual stacking.
 

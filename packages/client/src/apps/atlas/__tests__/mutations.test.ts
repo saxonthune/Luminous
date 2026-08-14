@@ -8,6 +8,7 @@ import {
   uniqueId,
   duplicateNode,
   selectionRoots,
+  selectionSubtreeIds,
   selfAndDescendantIds,
   resolveDrop,
   applyDrop,
@@ -261,6 +262,24 @@ describe('selectionRoots', () => {
     // The R69 happy case behind the roots rule: {a, b, b1, b1x} mixes
     // depths, but its roots {a, b} share the top-level parent.
     expect(selectionRoots(d, ['a', 'b', 'b1', 'b1x'])).toEqual(['a', 'b']);
+  });
+});
+
+describe('selectionSubtreeIds', () => {
+  const d = doc([
+    { id: 'a', name: 'A' },
+    { id: 'a1', name: 'A1', parent: 'a' },
+    { id: 'a1x', name: 'A1x', parent: 'a1' },
+    { id: 'b', name: 'B' },
+  ]);
+
+  it('includes each selection and all of its descendants at any depth', () => {
+    expect(new Set(selectionSubtreeIds(d, ['a']))).toEqual(new Set(['a', 'a1', 'a1x']));
+    expect(new Set(selectionSubtreeIds(d, ['a1', 'b']))).toEqual(new Set(['a1', 'a1x', 'b']));
+  });
+
+  it('keeps an empty selection empty', () => {
+    expect(selectionSubtreeIds(d, [])).toEqual([]);
   });
 });
 

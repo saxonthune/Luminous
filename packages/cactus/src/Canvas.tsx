@@ -8,7 +8,7 @@ import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
 import { EdgeLayer } from './EdgeLayer.js';
-import { routeEdges } from './edgeRouting.js';
+import { routeEdges, type EdgeGeometry } from './edgeRouting.js';
 import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
 import { computeBounds } from './geometry/geometry.js';
 import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
@@ -57,6 +57,13 @@ export interface CanvasProps {
   };
   /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
   edges?: EdgeDeclaration[];
+  /** Maps the current selection to the node IDs whose incident Edges should be
+   * emphasized. Hosts can project domain relationships such as containment;
+   * by default only the literally selected node IDs are used. */
+  edgeEmphasisNodeIds?: (selectedIds: ReadonlyArray<string>) => ReadonlyArray<string>;
+  /** Keep the last computed Edge geometry while true. Nodes may continue to
+   * move; routing catches up once this becomes false. */
+  freezeEdgeRouting?: () => boolean;
   /** Clusters to draw as a tinted underlay behind their member nodes. */
   clusters?: ClusterDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
@@ -386,9 +393,14 @@ export function Canvas(props: CanvasProps) {
   // A route band is a generic visual ordering number. Hosts assign its meaning
   // (for example, Atlas containment depth); cactus only renders each band as a
   // separate sibling layer so host nodes can interleave with routes.
+  const routedEdges = createMemo<ReadonlyMap<string, EdgeGeometry>>((previous) => {
+    if (props.freezeEdgeRouting?.()) return previous;
+    return routeEdges(props.edges ?? [], getNodeRects());
+  }, new Map());
+
   const edgeRouteBands = createMemo(() => {
     const bands = new Set<number>();
-    for (const geometry of routeEdges(props.edges ?? [], getNodeRects()).values()) {
+    for (const geometry of routedEdges().values()) {
       for (const band of geometry.segmentLayers) bands.add(band);
     }
     return [...bands].sort((a, b) => a - b);
@@ -413,6 +425,9 @@ export function Canvas(props: CanvasProps) {
 
   const selection = useSelection({ onSelectionChange: (ids) => props.onSelectionChange?.(ids) });
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
+  const edgeEmphasisNodeIds = createMemo(() =>
+    props.edgeEmphasisNodeIds?.(selectedIds()) ?? selectedIds(),
+  );
 
   const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
 
@@ -635,7 +650,8 @@ export function Canvas(props: CanvasProps) {
                   >
                     <EdgeLayer
                       edges={props.edges!}
-                      getNodeRects={getNodeRects}
+                      routes={routedEdges}
+                      emphasisNodeIds={edgeEmphasisNodeIds}
                       layer="lines"
                       routeBand={band}
                       zoom={() => transform().k}
@@ -667,7 +683,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
+              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>

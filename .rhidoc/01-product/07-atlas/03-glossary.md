@@ -54,6 +54,12 @@ by being capitalized in a requirement. Two kinds are kept out:
 - **Edge** — a connection from one Node to another. An Edge carries no label; it
   only connects. `edge(Node, Node)`
 
+- **Port** — the point where an Edge route crosses a Container boundary.
+  - Each Entry Port is a Port that an Edge uses to enter a Container.
+  - Each Exit Port is a Port that an Edge uses to leave a Container.
+  - Every Container has one Entry Port and one Exit Port.
+  - One or more Edges may use the same Port.
+
 - **Bisection** — splitting an Edge by inserting a Node between its two ends. The
   Edge `A → B` becomes `A → N → B`, and the new Node N carries the explanation as
   its Content. This is why an Edge carries no label: where an Edge needs

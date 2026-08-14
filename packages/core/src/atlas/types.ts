@@ -11,6 +11,18 @@ export interface AtlasDocument {
 
 export type AtlasLegend = Partial<Record<AtlasColorToken, string>>;
 
+export type AtlasPortSide = 'top' | 'right' | 'bottom' | 'left';
+
+export interface AtlasPortPosition {
+  side: AtlasPortSide;
+  offset: number;
+}
+
+export interface AtlasPorts {
+  entry?: AtlasPortPosition;
+  exit?: AtlasPortPosition;
+}
+
 export interface AtlasNode {
   id: string;
   name: string;
@@ -28,6 +40,8 @@ export interface AtlasNode {
    * floor (still clamped up to children extent). Absent falls back to the
    * fixed constant. */
   contentWidth?: number;
+  /** Authored placements for the two shared Container boundary Ports. */
+  ports?: AtlasPorts;
 }
 
 export type AtlasContentMode = 'markdown' | 'code';
@@ -65,6 +79,9 @@ export interface SetNodeAction {
   color?: AtlasColorToken;
   contentHeight?: number;
   contentWidth?: number;
+  /** Whole-record replacement. Omission leaves Ports unchanged; explicit
+   * undefined removes all stored placements. */
+  ports?: AtlasPorts;
 }
 
 export interface RemoveNodeAction {

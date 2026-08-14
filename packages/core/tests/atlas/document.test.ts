@@ -57,6 +57,26 @@ describe('parseAtlasDocument', () => {
     expect(result).toEqual({ ok: true, doc });
   });
 
+  it('round-trips valid Container Ports', () => {
+    const doc: AtlasDocument = { v: 1, nodes: [
+      { id: 'box', name: 'Box', ports: { entry: { side: 'top', offset: 0 }, exit: { side: 'bottom', offset: 1 } } },
+      { id: 'child', name: 'Child', parent: 'box' },
+    ], edges: [] };
+    expect(parseAtlasDocument(serializeAtlasDocument(doc))).toEqual({ ok: true, doc });
+  });
+
+  it('rejects invalid Port sides, offsets, and Ports on leaves', () => {
+    for (const ports of [
+      { entry: { side: 'diagonal', offset: 0.5 } },
+      { entry: { side: 'left', offset: -0.1 } },
+      { exit: { side: 'right', offset: 1.1 } },
+    ]) {
+      expect(parseAtlasDocument(JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', ports }], edges: [] })).ok).toBe(false);
+    }
+    const leaf = parseAtlasDocument(JSON.stringify({ v: 1, nodes: [{ id: 'a', name: 'A', ports: {} }], edges: [] }));
+    expect(leaf).toEqual({ ok: false, issues: ['nodes[0].ports: only a Container may store Ports'] });
+  });
+
   it('rejects invalid JSON', () => {
     const result = parseAtlasDocument('{not json');
     expect(result.ok).toBe(false);

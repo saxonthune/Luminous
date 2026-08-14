@@ -1,6 +1,6 @@
 import { isAtlasColorToken } from './colors.ts';
 import type { AtlasColorToken } from './colors.ts';
-import type { AtlasAction, AtlasContent, AtlasDocument, AtlasEdge, AtlasLegend, AtlasNode } from './types.ts';
+import type { AtlasAction, AtlasContent, AtlasDocument, AtlasEdge, AtlasLegend, AtlasNode, AtlasPorts } from './types.ts';
 
 export type AtlasResult = { ok: true; doc: AtlasDocument } | { ok: false; error: string };
 
@@ -33,6 +33,7 @@ export function setNode(
     color?: AtlasColorToken;
     contentHeight?: number;
     contentWidth?: number;
+    ports?: AtlasPorts;
   },
 ): AtlasResult {
   const index = doc.nodes.findIndex(n => n.id === id);
@@ -93,6 +94,23 @@ export function setNode(
       node.contentWidth = patch.contentWidth;
     }
   }
+  if ('ports' in patch) {
+    if (patch.ports === undefined) {
+      delete node.ports;
+    } else {
+      if (!doc.nodes.some((candidate) => candidate.parent === id)) {
+        return { ok: false, error: `node "${id}" is not a Container and cannot store Ports` };
+      }
+      for (const [kind, position] of Object.entries(patch.ports)) {
+        if (kind !== 'entry' && kind !== 'exit') return { ok: false, error: `ports: unrecognized Port "${kind}"` };
+        if (!position || !['top', 'right', 'bottom', 'left'].includes(position.side)
+          || !Number.isFinite(position.offset) || position.offset < 0 || position.offset > 1) {
+          return { ok: false, error: `ports.${kind}: invalid Port position` };
+        }
+      }
+      node.ports = { ...patch.ports };
+    }
+  }
   const nodes = [...doc.nodes];
   nodes[index] = node;
   return { ok: true, doc: { ...doc, nodes } };
@@ -127,11 +145,13 @@ export function removeNode(doc: AtlasDocument, id: string): AtlasResult {
     return { ok: false, error: `node "${id}" does not exist` };
   }
   const removed = new Set([id, ...descendantIds(doc, id)]);
+  const remaining = doc.nodes.filter(n => !removed.has(n.id));
+  const containers = new Set(remaining.flatMap((n) => n.parent === undefined ? [] : [n.parent]));
   return {
     ok: true,
     doc: {
       ...doc,
-      nodes: doc.nodes.filter(n => !removed.has(n.id)),
+      nodes: remaining.map((n) => n.ports !== undefined && !containers.has(n.id) ? (() => { const next = { ...n }; delete next.ports; return next; })() : n),
       edges: doc.edges.filter(e => !removed.has(e.from) && !removed.has(e.to)),
     },
   };
@@ -176,6 +196,8 @@ export function reparent(doc: AtlasDocument, id: string, parent: string | undefi
   // since the invariant held before the move. Ungrouping strips nothing: pairs
   // only stop being related.
   const next = { ...doc, nodes };
+  const containers = new Set(nodes.flatMap((n) => n.parent === undefined ? [] : [n.parent]));
+  next.nodes = nodes.map((n) => n.ports !== undefined && !containers.has(n.id) ? (() => { const clean = { ...n }; delete clean.ports; return clean; })() : n);
   const edges = parent === undefined ? doc.edges : doc.edges.filter(e => edgeAllowed(next, e.from, e.to));
   return { ok: true, doc: { ...next, edges } };
 }
@@ -301,6 +323,7 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
           color?: AtlasColorToken;
           contentHeight?: number;
           contentWidth?: number;
+          ports?: AtlasPorts;
         } = {};
         if (action.name !== undefined) patch.name = action.name;
         if ('content' in action) patch.content = action.content;
@@ -309,6 +332,7 @@ export function applyAtlasBatch(doc: AtlasDocument, actions: AtlasAction[]): Atl
         if ('color' in action) patch.color = action.color;
         if ('contentHeight' in action) patch.contentHeight = action.contentHeight;
         if ('contentWidth' in action) patch.contentWidth = action.contentWidth;
+        if ('ports' in action) patch.ports = action.ports;
         result = setNode(current, action.id, patch);
         break;
       }

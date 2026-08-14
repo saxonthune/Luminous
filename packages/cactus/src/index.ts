@@ -21,6 +21,8 @@ export type { NodeBodyProps } from './NodeBody.js';
 export { NodeHeader } from './NodeHeader.js';
 export type { NodeHeaderProps } from './NodeHeader.js';
 export { ResizeHandle } from './ResizeHandle.js';
+export { BoundaryHandle, boundaryPoint, projectToBoundary } from './BoundaryHandle.js';
+export type { BoundaryHandleProps, BoundaryPosition, BoundaryRect, BoundarySide } from './BoundaryHandle.js';
 export type { ResizeHandleProps } from './ResizeHandle.js';
 export { DotGrid } from './DotGrid.js';
 export { CrossGrid, type CrossGridProps } from './CrossGrid.js';

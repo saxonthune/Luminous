@@ -20,7 +20,7 @@ Cactus is "domain-agnostic" in a precise sense: it has no opinion about a "node 
 
 **Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label?, routeBuilder? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it receives. Direction is a visual hint (arrowhead on target) not a semantic constraint.
 
-**Routes.** A Route is transient geometry for one Edge. A host may derive a Route from registered node rectangles and return ordered points with one visual band per segment. Cactus draws those segments, keeps their hit targets under the Edge's original id, places the arrowhead on the final segment, and places labels by the full Route length. A host assigns the meaning of a visual band; cactus only orders bands with Nodes that supply a matching `visualBand`.
+**Routes.** A Route is transient geometry for one Edge. A host may derive a Route from registered node rectangles and return ordered points with one visual band per segment. Cactus computes the geometry once for all visual layers, draws those segments, keeps their hit targets under the Edge's original id, places the arrowhead on the final segment, and places labels by the full Route length. A host assigns the meaning of a visual band; cactus only orders bands with Nodes that supply a matching `visualBand`. A host may temporarily freeze that shared geometry during an interaction and let it catch up afterward.
 
 **Hit-testing and styling.** Cactus uses DOM data attributes (see [DOM Attribute Conventions](#dom-attribute-conventions)). Hosts and pack renderers may stamp additional attributes for CSS targeting; cactus only reads the ones it owns.
 
