@@ -26,7 +26,8 @@ import type { ContentResizeDirection } from './AtlasNodeContent.tsx';
 import { AtlasNodeLayer } from './AtlasNodeLayer.tsx';
 import { LegendOverlay } from './LegendOverlay.tsx';
 import { nodeContextMenu, backgroundContextMenu, buildChrome, type AtlasMenuDeps } from './menus.tsx';
-import { buildArrangeAsColumnActions, sameParent } from './arrange.ts';
+import { buildArrangeAsColumnActions, buildArrangeAsRowActions, buildRemoveOverlapActions, sameParent } from './arrange.ts';
+import { buildGrowOnlyActions, sizeTouchedIds } from './growOnly.ts';
 import { useAtlasHistory } from './history.ts';
 
 // Scoped styling for the rendered markdown Content — mirrors dataflow's
@@ -81,9 +82,21 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
       props.onDropRefused?.(result.error);
       return;
     }
-    history.record({ label, do: actions, undo: invertAtlasBatch(before, actions) });
+    // R95: a Container only ever grows — a batch that would shrink one gets
+    // the size floor appended, so undo removes floor and cause together.
+    let doc = result.doc;
+    let recorded = actions;
+    const floors = buildGrowOnlyActions(before, doc, sizeTouchedIds(actions));
+    if (floors.length > 0) {
+      const floored = applyAtlasBatch(doc, floors);
+      if (floored.ok) {
+        doc = floored.doc;
+        recorded = [...actions, ...floors];
+      }
+    }
+    history.record({ label, do: recorded, undo: invertAtlasBatch(before, recorded) });
     isEcho = true;
-    props.dispatchDoc(result.doc);
+    props.dispatchDoc(doc);
   }
 
   /** Applies `actions` (from undo/redo) without recording a new entry. */
@@ -450,6 +463,17 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         const { ids } = payload as { ids: string[] };
         if (!sameParent(props.doc, ids)) break;
         dispatchAction(buildArrangeAsColumnActions(props.doc, ids), 'Arrange as Column');
+        break;
+      }
+      case 'arrange.row': {
+        const { ids } = payload as { ids: string[] };
+        if (!sameParent(props.doc, ids)) break;
+        dispatchAction(buildArrangeAsRowActions(props.doc, ids), 'Arrange as Row');
+        break;
+      }
+      case 'overlap.remove': {
+        const { parent } = payload as { parent?: string };
+        dispatchAction(buildRemoveOverlapActions(props.doc, parent), 'Remove Overlap');
         break;
       }
       case 'node.delete': {

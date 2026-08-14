@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { AtlasDocument } from '@luminous/core/atlas';
-import { arrangeAsColumn, sameParent } from '../arrange.ts';
+import { arrangeAsColumn, arrangeAsRow, removeOverlap, buildRemoveOverlapActions, sameParent } from '../arrange.ts';
 
 const GAP = 24;
 const HEIGHT = 72;
@@ -91,6 +91,35 @@ describe('arrangeAsColumn', () => {
     expect(arrangeAsColumn(d, ['a'])).toBe(d);
   });
 
+  it('lines the selection up horizontally at a shared y, ordered by current x, with the expected gap (row)', () => {
+    const d = doc([
+      { id: 'a', name: 'A', x: 300, y: 0 },
+      { id: 'b', name: 'B', x: 0, y: 0 },
+      { id: 'c', name: 'C', x: 150, y: 0 },
+    ]);
+    const result = arrangeAsRow(d, ['a', 'b', 'c']);
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+
+    // Ordered by original x: b (0), c (150), a (300).
+    expect(byId.get('b')).toMatchObject({ x: 0, y: 0 });
+    expect(byId.get('c')).toMatchObject({ x: WIDTH + GAP, y: 0 });
+    expect(byId.get('a')).toMatchObject({ x: 2 * (WIDTH + GAP), y: 0 });
+  });
+
+  it('shifts a row down past a non-selected sibling occupying the anchor slot', () => {
+    const d = doc([
+      { id: 'd', name: 'D', x: 0, y: 0 },
+      { id: 'a', name: 'A', x: 300, y: 0 },
+      { id: 'b', name: 'B', x: 0, y: 0 },
+    ]);
+    const result = arrangeAsRow(d, ['a', 'b']);
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+
+    expect(byId.get('b')?.y).toBe(HEIGHT + GAP);
+    expect(byId.get('a')?.y).toBe(HEIGHT + GAP);
+    expect(byId.get('d')).toMatchObject({ x: 0, y: 0 });
+  });
+
   it('anchors a column inside its container\'s child area, below the header', () => {
     const d = doc([
       { id: 'container', name: 'Container', x: 300, y: 300 },
@@ -103,5 +132,60 @@ describe('arrangeAsColumn', () => {
     // anchor here means the column sits below the header, not over it.
     expect(byId.get('b')!.y).toBeGreaterThanOrEqual(0);
     expect(byId.get('a')!.y).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('removeOverlap', () => {
+  it('pushes an overlapping top-level pair apart along the axis of least penetration, out to a gap', () => {
+    const d = doc([
+      { id: 'a', name: 'A', x: 0, y: 0 },
+      { id: 'b', name: 'B', x: 100, y: 0 },
+    ]);
+    const result = removeOverlap(d, undefined);
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+
+    // Vertical penetration (72) beats horizontal (120), so the pair splits
+    // on y, half each way, ending 12px apart.
+    expect(byId.get('a')).toMatchObject({ x: 0, y: -42 });
+    expect(byId.get('b')).toMatchObject({ x: 100, y: 42 });
+  });
+
+  it('leaves a non-overlapping set untouched', () => {
+    const d = doc([
+      { id: 'a', name: 'A', x: 0, y: 0 },
+      { id: 'b', name: 'B', x: 0, y: 200 },
+    ]);
+    expect(removeOverlap(d, undefined)).toBe(d);
+    expect(buildRemoveOverlapActions(d, undefined)).toEqual([]);
+  });
+
+  it('keeps separated Children inside the child area — a push past the top edge shifts the set back in', () => {
+    const d = doc([
+      { id: 'p', name: 'P' },
+      { id: 'a', name: 'A', parent: 'p', x: 0, y: 0 },
+      { id: 'b', name: 'B', parent: 'p', x: 0, y: 10 },
+    ]);
+    const result = removeOverlap(d, 'p');
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+
+    expect(byId.get('a')!.y).toBeGreaterThanOrEqual(0);
+    expect(byId.get('b')!.y).toBeGreaterThanOrEqual(0);
+    // Still separated by the gap after the shift.
+    expect(byId.get('b')!.y! - byId.get('a')!.y!).toBe(HEIGHT + 12);
+  });
+
+  it('does not touch Children of other Containers or deeper descendants', () => {
+    const d = doc([
+      { id: 'p', name: 'P' },
+      { id: 'q', name: 'Q' },
+      { id: 'a', name: 'A', parent: 'p', x: 0, y: 0 },
+      { id: 'b', name: 'B', parent: 'p', x: 10, y: 10 },
+      { id: 'c', name: 'C', parent: 'q', x: 0, y: 0 },
+      { id: 'd', name: 'D', parent: 'q', x: 10, y: 10 },
+    ]);
+    const result = removeOverlap(d, 'p');
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+    expect(byId.get('c')).toMatchObject({ x: 0, y: 0 });
+    expect(byId.get('d')).toMatchObject({ x: 10, y: 10 });
   });
 });

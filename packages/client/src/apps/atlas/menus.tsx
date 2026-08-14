@@ -26,6 +26,13 @@ export function nodeContextMenu(deps: AtlasMenuDeps, nodeId: string): MenuSchema
           action: { id: 'selection.selectChildren', label: 'Select all children', payload: { ids: childIds } },
         }] as MenuItem[])
       : []),
+    // R97: only a Container with 2+ Children can hold a sibling overlap.
+    ...(childIds.length >= 2
+      ? ([{
+          type: 'action',
+          action: { id: 'overlap.remove', label: 'Remove Overlap', payload: { parent: nodeId } },
+        }] as MenuItem[])
+      : []),
     { type: 'divider' },
     {
       type: 'submenu',
@@ -64,6 +71,15 @@ export function nodeContextMenu(deps: AtlasMenuDeps, nodeId: string): MenuSchema
               payload: { ids: [...selectedIds] },
             },
           },
+          {
+            type: 'action',
+            action: {
+              id: 'arrange.row',
+              label: 'Row',
+              enabled: sameParent(deps.doc(), [...selectedIds]),
+              payload: { ids: [...selectedIds] },
+            },
+          },
         ],
       },
     );
@@ -80,7 +96,10 @@ export function nodeContextMenu(deps: AtlasMenuDeps, nodeId: string): MenuSchema
 export function backgroundContextMenu(): MenuSchema {
   return {
     id: 'background-menu',
-    items: [{ type: 'action', action: { id: 'node.add', label: 'Add Node', payload: {} } }],
+    items: [
+      { type: 'action', action: { id: 'node.add', label: 'Add Node', payload: {} } },
+      { type: 'action', action: { id: 'overlap.remove', label: 'Remove Overlap', payload: {} } },
+    ],
   };
 }
 

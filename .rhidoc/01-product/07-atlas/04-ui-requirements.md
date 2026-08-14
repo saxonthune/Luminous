@@ -107,6 +107,10 @@ a selected descendant is carried by its Root's subtree.
   extent of its Children.
 - **R39.** The system shall allow a Container to be sized larger than the extent of
   its Children.
+- **R95.** When a change makes a Container's computed size smaller — a Child moves
+  inward, shrinks, or leaves — the system shall keep the Container's current size,
+  so a Container only ever grows to wrap its Children. Discarding the stored size
+  (R73) remains the way back to the computed size.
 - **R72.** When the user double clicks a resize grip on a leaf Node that has
   Content, the system shall size the Node on that grip's axes to fit its
   Content without scrolling, within fixed bounds, and shall grow the Node's
@@ -155,6 +159,14 @@ An arrange command lets the user set several Nodes' positions at once.
   shall disable the arrange command.
 - **R30.** When the system arranges Nodes within a Container, it shall place them
   without overlapping other Nodes in the Container.
+- **R96.** The "Arrange as" submenu (R28) shall offer "Row", arranging the
+  selection into a horizontal row the way Column arranges a vertical column.
+- **R97.** The context menu for a Container with two or more Children, and the
+  canvas background context menu, shall offer a "Remove Overlap" option.
+- **R98.** When the user selects Remove Overlap, the system shall move overlapping
+  sibling Nodes — the Container's Children, or the top-level Nodes for the
+  background — apart until no two overlap, shall grow the Container when the
+  spaced Nodes need more area, and shall leave a set with no overlaps unchanged.
 
 ## Edges
 
@@ -335,6 +347,8 @@ draws a selection box.
 | Node selection (2+) | right click | Open the context menu with an "Arrange as" submenu | R15, R28 |
 | Select all children (context menu) | left click | Replace the selection with the Node's Children at depth 1 | R83 |
 | Arrange as ▸ Column | left click | Arrange the selected Nodes as a column, without overlapping other Nodes in the Container | R27, R28, R30 |
+| Arrange as ▸ Row | left click | Arrange the selected Nodes as a row, without overlapping other Nodes in the Container | R27, R30, R96 |
+| Remove Overlap (context menu) | left click | Push overlapping sibling Nodes apart until none overlap, growing the Container when needed | R97, R98 |
 | Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |
 | Swatch | left click | Set the Node's Color to that Swatch's Color | R19 |
