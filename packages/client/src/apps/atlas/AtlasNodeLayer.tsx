@@ -224,6 +224,7 @@ export function AtlasNodeLayer(props: AtlasNodeLayerProps): JSX.Element {
               y={() => rn.y + delta().dy}
               w={() => rn.w + delta().dw}
               h={() => (editing() ? EDIT_HEIGHT : rn.h + delta().dh)}
+              visualBand={() => 2 * rn.depth}
               softContainer={() => rn.hasChildren}
               containerInset={() => ({
                 top: containerHeaderHeight(rn.node),

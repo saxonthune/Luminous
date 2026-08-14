@@ -44,7 +44,7 @@ export { useNodeLinks } from './interactions/useNodeLinks.js';
 export type { Transform } from './interactions/useViewport.js';
 export type { CanvasProps, CanvasRef, ConnectionPreviewCoords } from './Canvas.js';
 export type { CanvasContextValue, NodeRect } from './CanvasContext.js';
-export type { EdgeDeclaration, EdgeStyling, ClusterDeclaration } from './types.js';
+export type { EdgeDeclaration, EdgeStyling, ClusterDeclaration, EdgeRoute, RoutePoint, RegisteredNodeRect } from './types.js';
 export type { Rect, ComputeBoundsOptions } from './geometry/containment.js';
 export type { Position, Size, NodeGeometry, OrganizerLayoutConfig, OrganizerFitResult } from './geometry/geometry.js';
 export { DEFAULT_ORGANIZER_LAYOUT, toRelativePosition } from './geometry/geometry.js';

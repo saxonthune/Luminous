@@ -1,5 +1,5 @@
 ---
-skill: luminous-pipeline
+name: luminous-pipeline
 description: |
   Teaches an agent to author a Luminous graph.json + pack.json pair for any repo.
   Covers the graph v3 format, pack.json shape, primitive vocabulary, co-location rule,

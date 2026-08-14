@@ -1,5 +1,5 @@
 import type { AtlasDocument, AtlasEdge, AtlasNode } from '@luminous/core/atlas';
-import type { EdgeDeclaration } from '@luminous/cactus';
+import type { EdgeDeclaration, EdgeRoute, RegisteredNodeRect, RoutePoint } from '@luminous/cactus';
 import { resolveAbsolutePositionByParentOf } from '@luminous/cactus';
 import { layoutAtlas } from './layout.ts';
 
@@ -80,7 +80,138 @@ export function toEdgeDeclarations(doc: AtlasDocument): EdgeDeclaration[] {
     sourceId: edge.from,
     targetId: edge.to,
     styling: { arrowHead: true, dash: 'solid' },
+    routeBuilder: (rects) => projectAtlasEdgeRoute(doc, edge, rects),
   }));
+}
+
+const ROUTE_EPSILON = 0.0001;
+
+function center(rect: RegisteredNodeRect): RoutePoint {
+  return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+}
+
+function exitRect(from: RoutePoint, toward: RoutePoint, rect: RegisteredNodeRect): RoutePoint {
+  const dx = toward.x - from.x;
+  const dy = toward.y - from.y;
+  const tx = dx === 0 ? Infinity : rect.w / 2 / Math.abs(dx);
+  const ty = dy === 0 ? Infinity : rect.h / 2 / Math.abs(dy);
+  const t = Math.min(tx, ty);
+  return { x: from.x + dx * t, y: from.y + dy * t };
+}
+
+function lineRectIntersections(from: RoutePoint, to: RoutePoint, rect: { x: number; y: number; w: number; h: number }): Array<{ t: number; point: RoutePoint }> {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const hits: Array<{ t: number; point: RoutePoint }> = [];
+  const add = (t: number) => {
+    if (t < -ROUTE_EPSILON || t > 1 + ROUTE_EPSILON) return;
+    const point = { x: from.x + dx * t, y: from.y + dy * t };
+    if (point.x < rect.x - ROUTE_EPSILON || point.x > rect.x + rect.w + ROUTE_EPSILON) return;
+    if (point.y < rect.y - ROUTE_EPSILON || point.y > rect.y + rect.h + ROUTE_EPSILON) return;
+    if (!hits.some((hit) => Math.abs(hit.t - t) < ROUTE_EPSILON)) hits.push({ t, point });
+  };
+  if (dx !== 0) {
+    add((rect.x - from.x) / dx);
+    add((rect.x + rect.w - from.x) / dx);
+  }
+  if (dy !== 0) {
+    add((rect.y - from.y) / dy);
+    add((rect.y + rect.h - from.y) / dy);
+  }
+  return hits.sort((a, b) => a.t - b.t);
+}
+
+function containsPoint(rect: { x: number; y: number; w: number; h: number }, point: RoutePoint): boolean {
+  return point.x >= rect.x - ROUTE_EPSILON && point.x <= rect.x + rect.w + ROUTE_EPSILON
+    && point.y >= rect.y - ROUTE_EPSILON && point.y <= rect.y + rect.h + ROUTE_EPSILON;
+}
+
+function withoutDuplicatePoints(points: RoutePoint[]): RoutePoint[] {
+  return points.filter((point, index) => {
+    const previous = points[index - 1];
+    return !previous || Math.hypot(point.x - previous.x, point.y - previous.y) > ROUTE_EPSILON;
+  });
+}
+
+/**
+ * Projects one Atlas Edge across the visible containment boxes. The Document
+ * remains unchanged: these points are derived from current registered rects.
+ * A null result asks cactus to retain its bundled direct-route fallback.
+ */
+export function projectAtlasEdgeRoute(
+  doc: AtlasDocument,
+  edge: AtlasEdge,
+  rects: ReadonlyMap<string, RegisteredNodeRect>,
+): EdgeRoute | null {
+  const sourceRect = rects.get(edge.from);
+  const targetRect = rects.get(edge.to);
+  if (!sourceRect || !targetRect) return null;
+
+  const nodeById = new Map(doc.nodes.map((node) => [node.id, node]));
+  const sourceNode = nodeById.get(edge.from);
+  const targetNode = nodeById.get(edge.to);
+  if (!sourceNode || !targetNode) return null;
+  const parentOf = new Map(doc.nodes.flatMap((node) => node.parent ? [[node.id, node.parent] as const] : []));
+  const ancestors = (id: string): string[] => {
+    const result: string[] = [];
+    let current = parentOf.get(id);
+    while (current) {
+      result.push(current);
+      current = parentOf.get(current);
+    }
+    return result;
+  };
+  const sourceAncestors = ancestors(edge.from);
+  const targetAncestors = ancestors(edge.to);
+  const targetAncestorSet = new Set(targetAncestors);
+  const lca = sourceAncestors.find((id) => targetAncestorSet.has(id));
+  const sourceContainers = lca ? sourceAncestors.slice(0, sourceAncestors.indexOf(lca)) : sourceAncestors;
+  const destinationContainers = lca
+    ? targetAncestors.slice(0, targetAncestors.indexOf(lca)).reverse()
+    : [...targetAncestors].reverse();
+  if (sourceContainers.length === 0 && destinationContainers.length === 0) return null;
+
+  const sourceCenter = center(sourceRect);
+  const targetCenter = center(targetRect);
+  if (sourceCenter.x === targetCenter.x && sourceCenter.y === targetCenter.y) return null;
+  const points: RoutePoint[] = [exitRect(sourceCenter, targetCenter, sourceRect)];
+
+  for (const id of sourceContainers) {
+    const rect = rects.get(id);
+    const node = nodeById.get(id);
+    if (!rect || !node) return null;
+    const intersection = lineRectIntersections(sourceCenter, targetCenter, childArea({ ...rect, node })).find((hit) => hit.t > ROUTE_EPSILON);
+    if (!intersection) return null;
+    points.push(intersection.point);
+  }
+  for (const id of destinationContainers) {
+    const rect = rects.get(id);
+    const node = nodeById.get(id);
+    if (!rect || !node) return null;
+    const intersections = lineRectIntersections(sourceCenter, targetCenter, childArea({ ...rect, node }));
+    const intersection = intersections.find((hit) => hit.t < 1 - ROUTE_EPSILON);
+    if (!intersection) return null;
+    points.push(intersection.point);
+  }
+  points.push(exitRect(targetCenter, sourceCenter, targetRect));
+
+  const routePoints = withoutDuplicatePoints(points);
+  if (routePoints.length < 2) return null;
+  const containerIds = doc.nodes.filter((node) => doc.nodes.some((child) => child.parent === node.id)).map((node) => node.id);
+  const depthOf = (id: string) => ancestors(id).length;
+  const segmentLayers = routePoints.slice(1).map((end, index) => {
+    const start = routePoints[index];
+    const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    let scope: string | undefined;
+    for (const id of containerIds) {
+      const rect = rects.get(id);
+      const node = nodeById.get(id);
+      if (rect && node && containsPoint(childArea({ ...rect, node }), midpoint)
+        && (scope === undefined || depthOf(id) > depthOf(scope))) scope = id;
+    }
+    return scope === undefined ? -1 : 2 * depthOf(scope) + 1;
+  });
+  return { points: routePoints, segmentLayers };
 }
 
 export interface AtlasRenderNode {
@@ -90,6 +221,7 @@ export interface AtlasRenderNode {
   w: number;
   h: number;
   hasChildren: boolean;
+  depth: number;
 }
 
 /**
@@ -207,6 +339,7 @@ export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
       w: size.w,
       h: size.h,
       hasChildren: (childrenOf.get(node.id) ?? []).length > 0,
+      depth: depthOf(node.id),
     };
   });
 }

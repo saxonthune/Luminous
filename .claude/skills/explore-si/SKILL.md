@@ -1,5 +1,5 @@
 ---
-skill: explore-si
+name: explore-si
 description: |
   Self-improving Explore. Runs a broad read-only fan-out search like Explore mode,
   then identifies where missing, stale, or confusing docs slowed the search down,

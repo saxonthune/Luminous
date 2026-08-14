@@ -12,3 +12,16 @@ test('atlas app boots: fixture document renders nodes', async ({ page }) => {
   await page.getByRole('button', { name: 'sample' }).click()
   await expect(page.locator('[data-container-id]').first()).toBeVisible()
 })
+
+test('atlas draws a containment route without deriving a second semantic edge', async ({ page }) => {
+  await page.goto('/?app=atlas')
+  await page.getByRole('button', { name: 'sample' }).click()
+
+  // The fixture has one authored Edge. Its crossing is split only in the
+  // rendered route: every hit segment still names that single semantic edge.
+  const routeBand = page.locator('[data-cactus-edge-route-band]')
+  await expect(routeBand.first()).toBeVisible()
+  const segments = page.locator('line[data-edge-id]')
+  await expect(segments.first()).toBeVisible()
+  expect(await segments.evaluateAll((els) => new Set(els.map((el) => el.getAttribute('data-edge-id'))).size)).toBe(1)
+})

@@ -140,6 +140,12 @@ to see all recipes. Common ones: `just build`, `just test`, `just typecheck`,
 
 Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
 
+### E2E tests
+
+The user runs E2E tests manually. Agents shall not run Playwright or other E2E
+tests unless the user explicitly asks for an E2E test run in the current request.
+Use focused unit, integration, type, or build checks for routine verification.
+
 ## Type Checking
 
 Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).

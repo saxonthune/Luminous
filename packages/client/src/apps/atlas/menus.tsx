@@ -2,6 +2,7 @@ import type { AtlasColorToken, AtlasDocument } from '@luminous/core/atlas';
 import type { ChromeSchema, MenuSchema, MenuItem } from '@luminous/cactus';
 import { ColorSwatchGrid } from './ColorSwatchGrid.tsx';
 import { sameParent } from './arrange.ts';
+import { childrenOf } from './mutations.ts';
 
 /** What the menu builders read from AtlasCanvas — accessors, so each open
  * menu sees the live Document and selection. */
@@ -14,9 +15,17 @@ export interface AtlasMenuDeps {
 }
 
 export function nodeContextMenu(deps: AtlasMenuDeps, nodeId: string): MenuSchema {
+  // R83: a leaf Node has no Children, so the item is hidden rather than disabled.
+  const childIds = childrenOf(deps.doc(), nodeId);
   const items: MenuItem[] = [
     { type: 'action', action: { id: 'node.duplicate', label: 'Duplicate', payload: { id: nodeId } } },
     { type: 'action', action: { id: 'node.add', label: 'Add Node', payload: { parent: nodeId } } },
+    ...(childIds.length > 0
+      ? ([{
+          type: 'action',
+          action: { id: 'selection.selectChildren', label: 'Select all children', payload: { ids: childIds } },
+        }] as MenuItem[])
+      : []),
     { type: 'divider' },
     {
       type: 'submenu',

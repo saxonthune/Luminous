@@ -411,6 +411,11 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
         dispatchAction([action], 'Add Node');
         break;
       }
+      case 'selection.selectChildren': {
+        const { ids } = payload as { ids: string[] };
+        canvasRef?.setSelectedIds(ids);
+        break;
+      }
       case 'arrange.column': {
         const { ids } = payload as { ids: string[] };
         if (!sameParent(props.doc, ids)) break;

@@ -258,6 +258,56 @@ describe('Canvas edge rendering', () => {
     cleanup();
   });
 
+  it('renders a multi-segment route in its declared bands and keeps every hit target on the semantic edge', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1', sourceId: 'node-a', targetId: 'node-b', styling: { arrowHead: true },
+        routeBuilder: () => ({
+          points: [{ x: 60, y: 20 }, { x: 130, y: 20 }, { x: 130, y: 120 }, { x: 200, y: 120 }],
+          segmentLayers: [1, 3, 3],
+        }),
+      },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 0} y={() => 0} w={() => 60} h={() => 40} visualBand={() => 0} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 100} w={() => 60} h={() => 40} visualBand={() => 4} />
+      </Canvas>
+    ));
+
+    expect(container.querySelector('[data-cactus-edge-route-band="1"]')).not.toBeNull();
+    expect(container.querySelector('[data-cactus-edge-route-band="3"]')).not.toBeNull();
+    const hits = container.querySelectorAll('line[data-edge-id="e1"]');
+    expect(hits).toHaveLength(3);
+    expect([...hits].every((line) => line.getAttribute('data-edge-id') === 'e1')).toBe(true);
+    const arrow = container.querySelector('[data-cactus-edge-route-band="3"] path');
+    expect(arrow?.getAttribute('d')).toContain('M 200 120');
+    cleanup();
+  });
+
+  it('does not clip route bands to the screen-sized canvas wrapper', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'offscreen-route', sourceId: 'node-a', targetId: 'node-b',
+        routeBuilder: () => ({
+          points: [{ x: -6000, y: 1200 }, { x: 8000, y: 1200 }],
+          segmentLayers: [-1],
+        }),
+      },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => -6060} y={() => 1180} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 8000} y={() => 1180} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const band = container.querySelector('[data-cactus-edge-route-band="-1"]') as SVGElement;
+    expect(band.style.overflow).toBe('visible');
+    expect(band.querySelector('line[data-edge-id="offscreen-route"]')).not.toBeNull();
+    cleanup();
+  });
+
   it('exposes getSelectedIds on CanvasRef, empty when nothing is selected', () => {
     let ref: CanvasRef | undefined;
 

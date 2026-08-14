@@ -3,6 +3,7 @@ import type { AtlasDocument } from '@luminous/core/atlas';
 import { layoutAtlas } from '../layout.ts';
 import {
   toEdgeDeclarations,
+  projectAtlasEdgeRoute,
   projectAtlasNodes,
   nodePositionOf,
   childAreaOrigin,
@@ -13,6 +14,7 @@ import {
   CONTAINER_PADDING,
   NODE_WIDTH,
 } from '../projection.ts';
+import type { RegisteredNodeRect } from '@luminous/cactus';
 
 const doc: AtlasDocument = {
   v: 1,
@@ -328,3 +330,60 @@ describe('toEdgeDeclarations', () => {
   });
 });
 
+function rect(x: number, y: number, w = 60, h = 40): RegisteredNodeRect {
+  return { x, y, w, h };
+}
+
+function routeDoc(nodes: AtlasDocument['nodes'], from: string, to: string): AtlasDocument {
+  return { v: 1, nodes, edges: [{ from, to }] };
+}
+
+describe('projectAtlasEdgeRoute', () => {
+  it('keeps flat and same-container edges on cactus’s direct bundled route', () => {
+    const flat = routeDoc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], 'a', 'b');
+    expect(projectAtlasEdgeRoute(flat, flat.edges[0], new Map([['a', rect(0, 0)], ['b', rect(200, 0)]]))).toBeNull();
+
+    const shared = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A', parent: 'box' }, { id: 'b', name: 'B', parent: 'box' }], 'a', 'b');
+    expect(projectAtlasEdgeRoute(shared, shared.edges[0], new Map([['box', rect(0, 0, 400, 300)], ['a', rect(40, 100)], ['b', rect(250, 100)]]))).toBeNull();
+  });
+
+  it('routes from a contained source through its Container boundary', () => {
+    const routed = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A', parent: 'box' }, { id: 'b', name: 'B' }], 'a', 'b');
+    const route = projectAtlasEdgeRoute(routed, routed.edges[0], new Map([['box', rect(0, 0, 400, 300)], ['a', rect(40, 100)], ['b', rect(500, 100)]]));
+    expect(route?.points).toEqual([{ x: 100, y: 120 }, { x: 392, y: 120 }, { x: 500, y: 120 }]);
+    expect(route?.segmentLayers).toEqual([1, -1]);
+  });
+
+  it('routes into a nested target and across two separate Containers', () => {
+    const nested = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A' }, { id: 'b', name: 'B', parent: 'box' }], 'a', 'b');
+    const nestedRoute = projectAtlasEdgeRoute(nested, nested.edges[0], new Map([['box', rect(300, 0, 400, 300)], ['a', rect(0, 100)], ['b', rect(400, 100)]]));
+    expect(nestedRoute?.points).toEqual([{ x: 60, y: 120 }, { x: 308, y: 120 }, { x: 400, y: 120 }]);
+
+    const separate = routeDoc([{ id: 'left', name: 'Left' }, { id: 'right', name: 'Right' }, { id: 'a', name: 'A', parent: 'left' }, { id: 'b', name: 'B', parent: 'right' }], 'a', 'b');
+    const separateRoute = projectAtlasEdgeRoute(separate, separate.edges[0], new Map([['left', rect(0, 0, 300, 300)], ['right', rect(500, 0, 300, 300)], ['a', rect(40, 100)], ['b', rect(600, 100)]]));
+    expect(separateRoute?.points).toEqual([{ x: 100, y: 120 }, { x: 292, y: 120 }, { x: 508, y: 120 }, { x: 600, y: 120 }]);
+    expect(separateRoute?.segmentLayers).toEqual([1, -1, 1]);
+  });
+
+  it('uses the shared parent’s band between sibling Containers and deeper bands for nested containment', () => {
+    const sibling = routeDoc([
+      { id: 'root', name: 'Root' }, { id: 'left', name: 'Left', parent: 'root' }, { id: 'right', name: 'Right', parent: 'root' },
+      { id: 'a', name: 'A', parent: 'left' }, { id: 'b', name: 'B', parent: 'right' },
+    ], 'a', 'b');
+    const route = projectAtlasEdgeRoute(sibling, sibling.edges[0], new Map([
+      ['root', rect(0, 0, 900, 500)], ['left', rect(40, 100, 300, 300)], ['right', rect(500, 100, 300, 300)], ['a', rect(80, 200)], ['b', rect(600, 200)],
+    ]));
+    expect(route?.segmentLayers).toEqual([3, 1, 3]);
+
+    const deep = routeDoc([{ id: 'root', name: 'Root' }, { id: 'inner', name: 'Inner', parent: 'root' }, { id: 'a', name: 'A', parent: 'inner' }, { id: 'b', name: 'B' }], 'a', 'b');
+    const first = projectAtlasEdgeRoute(deep, deep.edges[0], new Map([['root', rect(0, 0, 600, 500)], ['inner', rect(40, 100, 400, 300)], ['a', rect(80, 200)], ['b', rect(800, 200)]]));
+    const second = projectAtlasEdgeRoute(deep, deep.edges[0], new Map([['root', rect(0, 0, 600, 500)], ['inner', rect(40, 100, 400, 300)], ['a', rect(80, 200)], ['b', rect(800, 200)]]));
+    expect(first).toEqual(second);
+    expect(first?.segmentLayers).toEqual([3, 1, -1]);
+  });
+
+  it('falls back when a required Container rectangle is unavailable', () => {
+    const routed = routeDoc([{ id: 'box', name: 'Box' }, { id: 'a', name: 'A', parent: 'box' }, { id: 'b', name: 'B' }], 'a', 'b');
+    expect(projectAtlasEdgeRoute(routed, routed.edges[0], new Map([['a', rect(40, 100)], ['b', rect(500, 100)]]))).toBeNull();
+  });
+});

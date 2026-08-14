@@ -1,5 +1,5 @@
 ---
-skill: luminous-dataflow
+name: luminous-dataflow
 description: |
   Teaches an agent to author a *.dataflow.json Document for any repo — a dataflow
   design of Boxes and Flows viewable in Luminous's Dataflow Designer. Covers the

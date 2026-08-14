@@ -99,13 +99,14 @@ interface NodeContainerProps {
   y: () => number
   w: () => number              // applied as min-width
   h: () => number              // applied as min-height
+  visualBand?: () => number    // optional route-band ordering number
   onPointerDown?: (e: PointerEvent) => void
   onContextMenu?: (e: MouseEvent) => void
   children?: JSX.Element
 }
 ```
 
-Sizing model: `w` and `h` are **floors**, rendered as `min-width: ${w}px` and `min-height: ${h}px`. The node's div grows in both axes to fit content, so the border always encloses what is rendered inside. A `ResizeObserver` on the container updates the registered rect with the measured size after first layout, so edges and other consumers of `getNodeRects()` see the actual rendered dimensions rather than the layout hint. Layout algorithms should still pass measured leaf sizes via their `sizeOf` parameter so parent packing is accurate, but the visible border is no longer at risk of clipping content.
+Sizing model: `w` and `h` are **floors**, rendered as `min-width: ${w}px` and `min-height: ${h}px`. The node's div grows in both axes to fit content, so the border always encloses what is rendered inside. A `ResizeObserver` on the container updates the registered rect with the measured size after first layout, so edges and other consumers of `getNodeRects()` see the actual rendered dimensions rather than the layout hint. Layout algorithms should still pass measured leaf sizes via their `sizeOf` parameter so parent packing is accurate, but the visible border is no longer at risk of clipping content. `visualBand` lets a host place a Node between route bands; cactus assigns no domain meaning to the number.
 
 ### NodeShell
 
@@ -253,10 +254,21 @@ Declarative edge passed via `<Canvas edges={...}>`. Cactus owns geometry; the ho
 ```typescript
 interface EdgeDeclaration {
   id: string
-  sourceId: string         // must match a registered NodeContainer nodeId
+  sourceId: string
   targetId: string
   styling?: EdgeStyling
-  label?: () => JSX.Element  // rendered as <text> at the line midpoint
+  label?: () => JSX.Element
+  routeBuilder?: (nodeRects: ReadonlyMap<string, RegisteredNodeRect>) => EdgeRoute | null
+}
+
+interface EdgeRoute {
+  points: RoutePoint[]
+  segmentLayers?: number[]
+}
+
+interface RoutePoint {
+  x: number
+  y: number
 }
 
 interface EdgeStyling {
@@ -269,14 +281,16 @@ interface EdgeStyling {
 
 ### Edge geometry
 
-Edges currently render as **straight lines from source-node-center to target-node-center**. Endpoints are computed inside `EdgeLayer` as:
+Without a `routeBuilder`, cactus renders a straight route between the source and target borders. It bundles parallel direct routes and calculates their labels from the direct route length.
 
 ```
 x1 = src.x + src.w / 2     x2 = tgt.x + tgt.w / 2
 y1 = src.y + src.h / 2     y2 = tgt.y + tgt.h / 2
 ```
 
-where `src`/`tgt` come from `ctx.getNodeRects()`. The visual consequence is that lines cross into the node's interior rather than terminating at its border — arrowheads land on the centerpoint, not on the edge of the box. Edge-intersection routing, curves, and container-avoidance are not implemented (see `TODO(routing)` in `EdgeLayer.tsx`). Endpoints recompute reactively whenever any `NodeContainer` re-registers its rect.
+where `src`/`tgt` come from `ctx.getNodeRects()`. A `routeBuilder` receives the same rect map and returns an ordered point list, or `null` to use that direct route. Each segment may name a visual band. Cactus renders route bands as separate SVG layers, preserves the declared Edge id for every segment's hit target, attaches the arrowhead to the final segment, and finds a label midpoint across the total route length. Endpoints and derived Routes recompute reactively whenever a `NodeContainer` re-registers its rect.
+
+The host owns the route projection: containment, ports, collision policy, and domain geometry remain outside cactus. Cactus owns only generic route rendering, hit-testing, labels, and visual stacking.
 
 ## Hooks
 

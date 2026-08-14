@@ -81,6 +81,9 @@ a selected descendant is carried by its Root's subtree.
 - **R68.** The system shall not select a Node whose box contains the whole
   selection box, so that a selection box drawn inside a Container selects the
   Container's Children and not the Container.
+- **R83.** When a Node has Children, the context menu shall offer a "Select all
+  children" option, which replaces the selection with that Node's Children at
+  depth 1 — the Children themselves, not their descendants and not the Node.
 
 ## Moving and resizing
 
@@ -170,6 +173,9 @@ be connected.
   another, the system shall remove any Edge between them.
 - **R32.** When the user right-clicks an Edge, the system shall open a context menu
   with a "Bisect" option.
+- **R84.** When an Edge crosses containment, the system shall draw one continuous
+  route through the relevant Container boundaries without adding derived Nodes or
+  Edges to the Document.
 
 ### Edge creation
 
@@ -302,6 +308,7 @@ draws a selection box.
 | Node | right click | Open the context menu | R15 |
 | Container | right click | Open the context menu | R15 |
 | Node selection (2+) | right click | Open the context menu with an "Arrange as" submenu | R15, R28 |
+| Select all children (context menu) | left click | Replace the selection with the Node's Children at depth 1 | R83 |
 | Arrange as ▸ Column | left click | Arrange the selected Nodes as a column, without overlapping other Nodes in the Container | R27, R28, R30 |
 | Context menu Color option | hover | Open the Swatch submenu | R16, R17 |
 | Swatch | hover | Draw the Node in that Swatch's Color, discarding it on leave | R18 |

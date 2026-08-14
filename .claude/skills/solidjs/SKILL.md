@@ -1,5 +1,5 @@
 ---
-skill: solidjs
+name: solidjs
 description: |
   Solid.js framework reference: mental models, API, patterns, antipatterns, and React migration guidance.
   Use when writing, reviewing, or migrating to Solid.js code. Triggers on tasks involving Solid components,

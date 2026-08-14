@@ -1,5 +1,23 @@
 import type { JSX } from 'solid-js';
 
+export interface RegisteredNodeRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface RoutePoint {
+  x: number;
+  y: number;
+}
+
+export interface EdgeRoute {
+  points: RoutePoint[];
+  /** One visual band for each segment. Missing values use band 0. */
+  segmentLayers?: number[];
+}
+
 /**
  * A declared edge for cactus to draw. Cactus computes geometry; the host
  * declares connectivity and optional styling hints. Domain-agnostic — no
@@ -14,6 +32,8 @@ export interface EdgeDeclaration {
   labelText?: string;
   /** Optional Solid component rendered at the path midpoint. */
   label?: () => JSX.Element;
+  /** Optional host-owned route projection. Return null to use cactus's direct route. */
+  routeBuilder?: (nodeRects: ReadonlyMap<string, RegisteredNodeRect>) => EdgeRoute | null;
 }
 
 export interface EdgeStyling {

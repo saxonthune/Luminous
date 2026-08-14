@@ -9,6 +9,8 @@ export interface NodeContainerProps {
   y: () => number;
   w: () => number;
   h: () => number;
+  /** Generic scene ordering number. Hosts may interleave nodes with route bands. */
+  visualBand?: () => number;
   softContainer?: () => boolean;
   /** Inset of the soft-container box from this Node's own edges (top/left/
    * right/bottom, in px) — when absent, the box fills the Node at `inset:0`
@@ -63,6 +65,7 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         width: `${props.w()}px`,
         height: `${props.h()}px`,
         overflow: 'hidden',
+        'z-index': props.visualBand?.(),
         'pointer-events': 'auto',
         // A node is its own stacking context: z-index inside it (bezel, soft
         // container, content) is private and never leaks to the shared layer,

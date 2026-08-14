@@ -1,3 +1,8 @@
+---
+name: rhidoc-cli
+description: Structural operations and authoring workflows for .rhidoc workspaces using the rhidoc CLI.
+---
+
 # rhidoc-cli
 
 Reference for the `rhidoc` CLI — structural operations on `.rhidoc/` workspaces.
@@ -773,4 +778,3 @@ Side effects:
   the directory. Use `--keep-index` to preserve the index as a sibling file.
 - **Rename a slug**: `rhidoc rename <target> new-slug` renames on disk. Then use
   `rhidoc rewrite old-ref=new-ref` to update references if needed (rename does not rewrite refs).
-

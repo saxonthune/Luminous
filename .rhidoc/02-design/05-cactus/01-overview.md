@@ -18,7 +18,9 @@ Cactus is "domain-agnostic" in a precise sense: it has no opinion about a "node 
 
 **Nodes.** `<NodeContainer nodeId x y w h>{ children }</NodeContainer>` — `nodeId` is an opaque string, `x/y/w/h` are signal accessors in canvas coordinates, `children` is opaque JSX that cactus never inspects. Containment, schemas, content, titles, and any domain-specific fields live entirely above this boundary — the host computes geometry from whatever data model it owns and passes the result through props.
 
-**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it's given. Direction is a visual hint (arrowhead on target) not a semantic constraint.
+**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label?, routeBuilder? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it receives. Direction is a visual hint (arrowhead on target) not a semantic constraint.
+
+**Routes.** A Route is transient geometry for one Edge. A host may derive a Route from registered node rectangles and return ordered points with one visual band per segment. Cactus draws those segments, keeps their hit targets under the Edge's original id, places the arrowhead on the final segment, and places labels by the full Route length. A host assigns the meaning of a visual band; cactus only orders bands with Nodes that supply a matching `visualBand`.
 
 **Hit-testing and styling.** Cactus uses DOM data attributes (see [DOM Attribute Conventions](#dom-attribute-conventions)). Hosts and pack renderers may stamp additional attributes for CSS targeting; cactus only reads the ones it owns.
 
@@ -44,15 +46,13 @@ The canvas renders four DOM layers, stacked with absolute positioning:
 ├─────────────────────────────────────────┤
 │  3. Connection preview SVG              │  Container-local coords
 ├─────────────────────────────────────────┤
-│  2. Edge SVG layer                      │  Canvas coords (via SVG transform)
-├─────────────────────────────────────────┤
-│  1. Node layer (transformed div)        │  Canvas coords (via CSS transform)
+│  2. Route bands and Nodes                │  Canvas coords (shared CSS transform)
 ├─────────────────────────────────────────┤
 │  0. Background (DotGrid / custom)       │  Pattern coords (zoom-aware)
 └─────────────────────────────────────────┘
 ```
 
-Layers 1 and 2 share the same `translate(x, y) scale(k)` transform, keeping nodes and edges aligned. The connection preview uses container-local pixel coordinates because it mixes a zoom-stable anchor (start point, derived from canvas coords) with a raw cursor position (current point, in screen coords).
+Route bands and Nodes share the same `translate(x, y) scale(k)` transform, keeping nodes and edges aligned. Cactus orders route bands as siblings of Nodes, so a host can draw a route above a container shell and below its children. The connection preview uses container-local pixel coordinates because it mixes a zoom-stable anchor (start point, derived from canvas coords) with a raw cursor position (current point, in screen coords).
 
 ## Coordinate Systems
 
@@ -121,7 +121,7 @@ A typical domain integration (like `client`'s `PgCanvasView`) looks like:
 1. **Wrap content in `<Canvas>`** — provides viewport, context, and structural layers. Pass `edges`, optional `chrome`/`onAction`, and `connectionDrag.onConnect`.
 2. **Compute layout above cactus** — the host runs a layout algorithm (`gridLayout`, `elkLayout`, etc.) that produces `positions` and `sizes` maps, then resolves absolute canvas coordinates by walking the containment tree.
 3. **Render each node inside a `<NodeContainer>`** — pass `x/y/w/h` as signal accessors derived from the layout (plus any drag overrides). Place the consumer's renderer as `children` — it is opaque to cactus.
-4. **Declare edges** — build `EdgeDeclaration[]` from the host's edge model and pass via the `edges` prop. Cactus draws straight lines (see [Edge geometry](02-api-contract.md#edge-geometry)).
+4. **Declare edges** — build `EdgeDeclaration[]` from the host's edge model and pass via the `edges` prop. Cactus draws the direct route unless the host derives a Route from registered rectangles (see [Edge geometry](02-api-contract.md#edge-geometry)).
 5. **Wire interactions outside Canvas** — call `useNodeDrag` / `useNodeResize` in the host component, pass `zoomScale: () => ctx.transform().k` so deltas are zoom-corrected, and in callbacks update the host's reactive position store. That store feeds the accessors passed to `NodeContainer`, closing the loop.
 6. **Use `ConnectionHandle`** on nodes that participate in edge creation — source handles call `ctx.startConnection`; target handles set `data-connection-target` so the connection-drop hit-test can find them.
 

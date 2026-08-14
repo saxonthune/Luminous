@@ -116,6 +116,11 @@ export function selectionRoots(doc: AtlasDocument, ids: string[]): string[] {
   });
 }
 
+/** The Children of `id` — depth 1 only, in Document order. */
+export function childrenOf(doc: AtlasDocument, id: string): string[] {
+  return doc.nodes.filter((n) => n.parent === id).map((n) => n.id);
+}
+
 /** Every node reachable from `id` by following child -> parent links, plus `id` itself. */
 export function selfAndDescendantIds(doc: AtlasDocument, id: string): Set<string> {
   const children = new Map<string, string[]>();

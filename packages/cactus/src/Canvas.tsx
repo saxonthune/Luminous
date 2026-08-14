@@ -8,6 +8,7 @@ import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
 import { EdgeLayer } from './EdgeLayer.js';
+import { routeEdges } from './edgeRouting.js';
 import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
 import { computeBounds } from './geometry/geometry.js';
 import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
@@ -92,6 +93,7 @@ export interface CanvasRef {
   zoomOut: () => void;
   clearSelection: () => void;
   getSelectedIds: () => ReadonlyArray<string>;
+  setSelectedIds: (ids: string[]) => void;
 }
 
 /** Pointer must travel this far (screen px) before a label drag starts, so a
@@ -381,6 +383,17 @@ export function Canvas(props: CanvasProps) {
     return { x: -t.x / t.k, y: -t.y / t.k, w: el.clientWidth / t.k, h: el.clientHeight / t.k };
   };
 
+  // A route band is a generic visual ordering number. Hosts assign its meaning
+  // (for example, Atlas containment depth); cactus only renders each band as a
+  // separate sibling layer so host nodes can interleave with routes.
+  const edgeRouteBands = createMemo(() => {
+    const bands = new Set<number>();
+    for (const geometry of routeEdges(props.edges ?? [], getNodeRects()).values()) {
+      for (const band of geometry.segmentLayers) bands.add(band);
+    }
+    return [...bands].sort((a, b) => a - b);
+  });
+
   // Header-height registry — populated by <NodeHeader> via context; consumed by layout.
   const headerHeightsData = new Map<string, number>();
   const [headerHeightsVersion, setHeaderHeightsVersion] = createSignal(0);
@@ -474,6 +487,7 @@ export function Canvas(props: CanvasProps) {
     zoomOut,
     clearSelection,
     getSelectedIds: () => selectedIds(),
+    setSelectedIds,
   });
 
   const contextValue: CanvasContextValue = {
@@ -594,14 +608,6 @@ export function Canvas(props: CanvasProps) {
           </div>
         </Show>
 
-        <Show when={(props.edges?.length ?? 0) > 0}>
-          <svg data-cactus-edge-layer-lines width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
-            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="lines" zoom={() => transform().k} viewport={edgeViewport} />
-            </g>
-          </svg>
-        </Show>
-
         <div
           style={{
             transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
@@ -611,6 +617,35 @@ export function Canvas(props: CanvasProps) {
             "pointer-events": 'none',
           }}
         >
+          <Show when={(props.edges?.length ?? 0) > 0}>
+            <div data-cactus-edge-layer-lines>
+              <For each={edgeRouteBands()}>
+                {(band) => (
+                  <svg
+                    data-cactus-edge-route-band={band}
+                    width="100%"
+                    height="100%"
+                    style={{
+                      position: 'absolute',
+                      inset: '0',
+                      overflow: 'visible',
+                      'pointer-events': 'none',
+                      'z-index': `${band}`,
+                    }}
+                  >
+                    <EdgeLayer
+                      edges={props.edges!}
+                      getNodeRects={getNodeRects}
+                      layer="lines"
+                      routeBand={band}
+                      zoom={() => transform().k}
+                      viewport={edgeViewport}
+                    />
+                  </svg>
+                )}
+              </For>
+            </div>
+          </Show>
           {props.children}
         </div>
 
