@@ -189,8 +189,8 @@
         "text": "Scholarly metadata provider — the broadest source: entity get, search, filter, autocomplete, and citations in both directions.",
         "mode": "markdown"
       },
-      "x": 25,
-      "y": 60,
+      "x": 32.5,
+      "y": 94.16667175292969,
       "contentHeight": 94,
       "contentWidth": 560
     },
@@ -512,8 +512,8 @@
         "text": "The one HTTP surface both store implementations serve, held identical by the shared conformance suite (`crates/conformance`). Bearer-token auth on the worker.\n\n```\nPUT  /works                          upsert works + aliases → canonical ids\nPUT  /edges                          upsert citation edges\nPOST /works/have                     presence check by alias\nPOST /graph/neighborhood             bounded BFS from seed ids\nGET  /stats                          aggregate counts\nGET|PUT /works/{id}/content/{role}   artifact bytes by role\nPOST /jobs                           enqueue background fetch\nGET  /health                         liveness probe (unauthenticated)\n```",
         "mode": "markdown"
       },
-      "x": -391.32975748264596,
-      "y": 1130.1968787063429,
+      "x": 507.77632275367904,
+      "y": 1170.6967437186686,
       "color": "accent-6",
       "contentHeight": 236,
       "contentWidth": 560
@@ -525,8 +525,8 @@
         "text": "L1 seam: versioned artifact descriptors per (canonical id, role). Async, `Result<_, DomainError>`.\n\n```rust\ncurrent_artifact(id, role) -> Option<Artifact>\nnext_version(id, role) -> u32\nrecord(&Artifact)\n```\n\nimpls: `SqliteStore` (native) · `D1Store` (worker)",
         "mode": "markdown"
       },
-      "x": 1494,
-      "y": 608,
+      "x": 2227.0546165829687,
+      "y": 936.0521102337303,
       "color": "accent-8",
       "contentHeight": 241.1804319491779,
       "contentWidth": 351.45766185799187
@@ -538,8 +538,8 @@
         "text": "Opaque key → bytes with mime; knows nothing of kind or version. Async, `Result<_, DomainError>`.\n\n```rust\nput(key, bytes, mime)\nget(key) -> Option<StoredBlob>\ndelete(key)\n```\n\nimpls: `FsBlobStore` (native) · `R2BlobStore` (worker) · `MemBlobStore` (test)",
         "mode": "markdown"
       },
-      "x": 1880.951097289578,
-      "y": 684.304870694617,
+      "x": 2614.005713872547,
+      "y": 1012.3569809283473,
       "color": "accent-8",
       "contentHeight": 211.45953705271856,
       "contentWidth": 301.1608304256402
@@ -551,8 +551,8 @@
         "text": "L2 seam, the richest trait — the queryable graph facts. All methods async, returning `Result<_, DomainError>`.\n\n```rust\n// identity\nget_alias(alias) -> Option<CanonicalId>\nget_or_create_alias(alias, candidate) -> CanonicalId  // UNIQUE(ns,value); returns the winner\nresolve_live(id) -> CanonicalId   // follow merged_into chain, path-compressed\nmerge(survivor, loser)            // repoint everything, tombstone the loser\n// metadata (Option A: provider assertions verbatim, merged at read time)\ncreate_node(id, kind, created_at)\nupsert_node_assertion(id, source, attrs, fetched_at)\nread_node(id) -> Option<(kind, [(source, attrs, fetched_at)], [alias])>\n// citation graph\nput_edge(src, dst, relation, source, attrs?, fetched_at)\nread_edges(id, dir, cursor?, limit) -> ([EdgeView], next_cursor?)\n// queries\npresent_aliases([alias]) -> [alias]   // backs 'have'\nstats() -> GraphStats\n```\n\nimpls: `SqliteStore` (native) · `D1Store` (worker)",
         "mode": "markdown"
       },
-      "x": 1534.1747783898347,
-      "y": 957.1988536514899,
+      "x": 2267.2293949728037,
+      "y": 1285.2509638852202,
       "color": "accent-8",
       "contentHeight": 213.74574524637694,
       "contentWidth": 312.5919969798656
@@ -564,8 +564,8 @@
         "text": "Projection cache mapping (namespace, value) → canonical id. Async, `Result<_, DomainError>`.\n\n```rust\nresolve(namespace, value) -> Option<CanonicalId>\nremember(canonical, namespace, value)\n```\n\nimpls: `MemResolver` (native) · `KvResolver` (worker KV)",
         "mode": "markdown"
       },
-      "x": 1528.3713206469545,
-      "y": 1215.141055477395,
+      "x": 2261.425937229923,
+      "y": 1543.1931657111254,
       "color": "accent-8",
       "contentHeight": 208.03024569321985,
       "contentWidth": 305.7333305369126
@@ -577,8 +577,8 @@
         "text": "The worker's L3 surface: PUT validates the node grammar, normalizes, assigns missing `^r-` anchors, stamps `updated:`; GET serves raw markdown; `/api/l3/graph` serves the parsed graph with an ETag.",
         "mode": "markdown"
       },
-      "x": -459.60324609172994,
-      "y": 1769.0561473678101,
+      "x": 819.8387720347124,
+      "y": 2109.250502879789,
       "color": "accent-6",
       "contentHeight": 206.88716252737947,
       "contentWidth": 316.02133020134204
@@ -602,8 +602,8 @@
         "text": "The platform-agnostic use-case layer (`crates/core/src/usecases.rs`, doc02.01.03) — one struct assembled from seven seams; each deployment is this struct with different parts.\n\n```rust\nStore<M, B, P, R, C, Clk, Id>\n  M:   MetadataStore     B: BlobStore      P: ArtifactStore\n  R:   IdResolver        C: Coordinator    // with_lock(key) -> LockGuard\n  Clk: Clock             Id: IdGen\n```\n\nOwns the domain policy no trait signature shows:\n\n```\nlock key    highest-priority alias namespace:\n            doi > pmid > pmcid > openalex > semantic_scholar > arxiv\nread merge  newest fetched_at wins per field; tie-break = lexicographically\n            smallest source; provenance map records each winner\nnew work    unknown alias -> mint GUID (IdGen), remember (IdResolver)\n```",
         "mode": "markdown"
       },
-      "x": 741.4864234681967,
-      "y": 1039.2376384128756,
+      "x": 1474.5410400511655,
+      "y": 1367.2897486466059,
       "color": "accent-4",
       "contentHeight": 288,
       "contentWidth": 560
@@ -615,8 +615,8 @@
         "text": "Per-work single-writer seam — only `usecases::Store` takes it, wrapping every write. Async, `Result<_, DomainError>`.\n\n```rust\nwith_lock(key) -> LockGuard   // dropping the guard releases\n```\n\nLock key = the work's highest-priority alias (policy owned by `usecases::Store`).\n\nimpls: `LocalCoordinator` (native, in-process) · `DoCoordinator` (worker, Durable Object)",
         "mode": "markdown"
       },
-      "x": 503.68420208009326,
-      "y": 736.8683911972118,
+      "x": 1236.738818663062,
+      "y": 1064.9205014309423,
       "color": "accent-8",
       "contentHeight": 218.33334350585946,
       "contentWidth": 563.3333740234375
@@ -638,8 +638,8 @@
       "id": "cli.braincrawl.parse",
       "name": "parse (clap)",
       "parent": "flow.command-execution",
-      "x": 680,
-      "y": 380
+      "x": 471.3106222831841,
+      "y": 252.90338089894612
     },
     {
       "id": "cli.braincrawl.provider-cmd",
@@ -990,29 +990,37 @@
       "id": "cli.braincrawl.argv",
       "name": "argv",
       "parent": "flow.command-execution",
-      "x": 40,
-      "y": 380
+      "x": 195.340299465307,
+      "y": 251.33438331523462
     },
     {
       "id": "cli.braincrawl.openalex-cmd",
       "name": "OpenalexCmd::Search",
       "parent": "flow.command-execution",
-      "x": 1320,
-      "y": 100
+      "content": {
+        "text": "",
+        "mode": "markdown"
+      },
+      "x": 877.5155593695383,
+      "y": 114.12184018212656,
+      "contentHeight": 71.15099733963793,
+      "contentWidth": 250.4376134445431
     },
     {
       "id": "cli.braincrawl.to-provider-cmd",
       "name": "OpenalexCmd → ProviderCmd",
       "parent": "flow.command-execution",
-      "x": 1960,
-      "y": 100
+      "x": 1219.1349400353479,
+      "y": 191.10097236316915,
+      "contentHeight": 70.85610962379326,
+      "contentWidth": 220
     },
     {
       "id": "cli.braincrawl.run-provider",
       "name": "run_provider",
       "parent": "flow.command-execution",
-      "x": 2600,
-      "y": 380
+      "x": 611.2029528932821,
+      "y": 440.26651985965464
     },
     {
       "id": "impl.openalex-provider",
@@ -1058,8 +1066,8 @@
       "id": "effect.cli-stdout",
       "name": "stdout",
       "parent": "flow.command-execution",
-      "x": 3240,
-      "y": 380
+      "x": 1268.4220261295445,
+      "y": 352.01906510788945
     },
     {
       "id": "module.openalex-adapter",
@@ -1160,15 +1168,15 @@
       "id": "cli.braincrawl.alias",
       "name": "alias (helper)",
       "parent": "flow.command-execution",
-      "x": 1960,
-      "y": 620
+      "x": 1168.2256568205191,
+      "y": 488.7074366124916
     },
     {
       "id": "cli.braincrawl.resolve-doi",
       "name": "resolve_doi",
       "parent": "flow.command-execution",
-      "x": 1320,
-      "y": 620
+      "x": 876.6652300306989,
+      "y": 249.98186940956975
     },
     {
       "id": "impl.crossref-provider",
@@ -1181,7 +1189,11 @@
     {
       "id": "flow.command-execution",
       "name": "Command execution",
-      "color": "accent-7"
+      "x": -1545.3133792863466,
+      "y": 952.7583523185182,
+      "color": "accent-7",
+      "contentHeight": 780,
+      "contentWidth": 1591.690554005931
     }
   ],
   "edges": [
