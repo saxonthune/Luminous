@@ -201,8 +201,8 @@
         "text": "The PWA chat client. A thin client, never a replica: it fetches the doc and page chunks it needs, edits docs via the normalizing PUT, and pushes what it gathers from OpenAlex into the Cloudflare store. Local state is only the conversation (localStorage) and per-session caches.",
         "mode": "markdown"
       },
-      "x": -2490.4255052136446,
-      "y": 133.3090712587631,
+      "x": -4285.508411935726,
+      "y": -753.4704810352189,
       "color": "accent-3",
       "contentHeight": 168.76601631649106,
       "contentWidth": 340.9574747968284
@@ -264,7 +264,7 @@
         },
         "exit": {
           "side": "right",
-          "offset": 0.4895966156288584
+          "offset": 0.5208807653647904
         }
       }
     },
@@ -628,8 +628,8 @@
         "text": "Resolved once at startup; precedence env > `~/.config/braincrawl/config.toml` > default. `server_url` is the switch deciding which store every command talks to.\n\n```toml\nserver_url = \"http://127.0.0.1:8787\"  # the store switch\nopenalex_api_key = \"…\"               # optional\nsemanticscholar_api_key = \"…\"        # optional\nauth_token = \"…\"                     # bearer token for the worker store\nunpaywall_email = \"…\"                # fetch-content URL resolution\ncrossref_mailto = \"…\"                # crossref polite pool\nl3_repo = \"~/…/braincrawl-l3\"        # L3 root; default ~/.local/share/braincrawl/l3\n```\n\nEvery field is env-overridable (`BRAINCRAWL_*`).",
         "mode": "markdown"
       },
-      "x": -3413.0853119671306,
-      "y": 279.7498061646749,
+      "x": -4679.367561922376,
+      "y": 344.1295738714013,
       "color": "accent-6",
       "contentHeight": 258,
       "contentWidth": 560
@@ -637,15 +637,9 @@
     {
       "id": "cli.braincrawl.parse",
       "name": "parse (clap)",
-      "content": {
-        "text": "**Clap boundary.** `Cli::parse()` reads the process argument vector and produces the typed command tree. It may print usage/help and terminate on parse failure, so it is not literally pure; the testable form is conceptually `argv → Result<Cli, clap::Error>`.\n\n```rust\nCli { global: GlobalArgs, namespace: Namespace }\nNamespace::Openalex(OpenalexArgs {\n  cmd: OpenalexCmd::Search { entity, query }\n})\nGlobalArgs → OutputOpts\n```\n\nOnly after parsing does `run()` resolve `Config` and match on `cli.namespace`.",
-        "mode": "markdown"
-      },
-      "x": -1606.5922084921194,
-      "y": 1352.8689580997484,
-      "color": "accent-4",
-      "contentHeight": 172,
-      "contentWidth": 560
+      "parent": "flow.command-execution",
+      "x": 680,
+      "y": 380
     },
     {
       "id": "cli.braincrawl.provider-cmd",
@@ -666,14 +660,9 @@
       "name": "Provider (trait)",
       "parent": "module.provider-protocol",
       "content": {
-        "text": "**Dispatch contract, not an executing process.** `run_provider` holds `&dyn Provider`; calling `p.dispatch(cmd, opts)` dynamically selects the concrete implementation, here `OpenAlexProvider::dispatch`.\n\n```rust\ntrait Provider {\n  fn dispatch(&self, cmd: ProviderCmd, opts: &OutputOpts)\n    -> Result<(Envelope, Emission), ProviderError>;\n}\n```\n\nImplementations: `OpenAlexProvider`, `ArxivProvider`, `SemanticScholarProvider`. Crossref and OpenCitations bypass this trait with hand-written paths in `main.rs`.",
+        "text": "**Dispatch contract, not an executing process.** `run_provider` holds `&dyn Provider`; calling `p.dispatch(cmd, opts)` dynamically selects the concrete implementation, here `OpenAlexProvider::dispatch`.\n\n```rust\ntrait Provider {\n  fn dispatch(&self, cmd: ProviderCmd, opts: &OutputOpts)\n    -> Result<(Envelope, Emission), ProviderError>;\n}\n```\n\nImplementations: `OpenAlexProvider`, `ArxivProvider`, `SemanticScholarProvider`, `CrossrefProvider`. OpenCitations still runs a hand-written path in `main.rs`.",
         "mode": "markdown"
-      },
-      "x": 25,
-      "y": 410,
-      "color": "accent-8",
-      "contentHeight": 247,
-      "contentWidth": 560
+      }
     },
     {
       "id": "cli.braincrawl.catalog",
@@ -958,8 +947,8 @@
         "text": "",
         "mode": "markdown"
       },
-      "x": -6578.5162913926715,
-      "y": 1545.1954760564965,
+      "x": -6034.040916857986,
+      "y": 931.6800131187196,
       "color": "accent-6",
       "contentHeight": 527.2159269777726,
       "contentWidth": 393.08181326073526
@@ -998,66 +987,32 @@
       "y": 294.16235694462625
     },
     {
-      "id": "new-node",
-      "name": "New Node"
-    },
-    {
-      "id": "new-node-2",
-      "name": "New Node"
-    },
-    {
-      "id": "new-node-3",
-      "name": "New Node"
-    },
-    {
       "id": "cli.braincrawl.argv",
       "name": "argv",
-      "content": {
-        "text": "OS argument vector\n\nbraincrawl openalex search works \"graph neural networks\"\n\nInput to Clap. This is process input, not yet a Rust command value.",
-        "mode": "code"
-      },
-      "x": -1565.378988538247,
-      "y": 1689.1991964502138,
-      "color": "accent-6"
+      "parent": "flow.command-execution",
+      "x": 40,
+      "y": 380
     },
     {
       "id": "cli.braincrawl.openalex-cmd",
       "name": "OpenalexCmd::Search",
-      "content": {
-        "text": "OpenalexCmd::Search {\n  entity: String,\n  query: String,\n}\n\nA typed enum value selected from Cli.namespace. No network request has happened.",
-        "mode": "code"
-      },
-      "x": -1766.9254448604227,
-      "y": 747.3320873707509,
-      "color": "accent-6",
-      "contentHeight": 160,
-      "contentWidth": 514
+      "parent": "flow.command-execution",
+      "x": 1320,
+      "y": 100
     },
     {
       "id": "cli.braincrawl.to-provider-cmd",
       "name": "OpenalexCmd → ProviderCmd",
-      "content": {
-        "text": "match oa.cmd {\n  OpenalexCmd::Search { entity, query } =>\n    ProviderCmd::Search { entity: Some(entity), query },\n  // other OpenAlex verbs\n}\n\nLocal enum-to-enum transformation; no network, store, or stdout effect.",
-        "mode": "code"
-      },
-      "x": -1394.409724377741,
-      "y": 456.2881376468056,
-      "color": "accent-4",
-      "contentHeight": 175,
-      "contentWidth": 460
+      "parent": "flow.command-execution",
+      "x": 1960,
+      "y": 100
     },
     {
       "id": "cli.braincrawl.run-provider",
       "name": "run_provider",
-      "content": {
-        "text": "fn run_provider(\n  p: &dyn Provider,\n  cmd: ProviderCmd,\n  store: &StoreClient,\n  opts: &OutputOpts,\n) -> Result<()>\n\nCalls p.dispatch; then renders its Envelope and, unless --skip-push, pushes its Emission.",
-        "mode": "code"
-      },
-      "x": -1118.064043049894,
-      "y": 894.846448585384,
-      "color": "accent-4",
-      "contentHeight": 205,
-      "contentWidth": 560
+      "parent": "flow.command-execution",
+      "x": 2600,
+      "y": 380
     },
     {
       "id": "impl.openalex-provider",
@@ -1102,15 +1057,9 @@
     {
       "id": "effect.cli-stdout",
       "name": "stdout",
-      "content": {
-        "text": "**Output effect.** `render(&envelope, opts)` writes the display Envelope to stdout, or `--emission` writes the store-ready Emission instead.",
-        "mode": "markdown"
-      },
-      "x": -411.03017819880995,
-      "y": 947.696901500674,
-      "color": "accent-6",
-      "contentHeight": 94,
-      "contentWidth": 560
+      "parent": "flow.command-execution",
+      "x": 3240,
+      "y": 380
     },
     {
       "id": "module.openalex-adapter",
@@ -1210,16 +1159,16 @@
     {
       "id": "cli.braincrawl.alias",
       "name": "alias (helper)",
-      "x": -1776.498821468768,
-      "y": 1114.8094392122546,
-      "color": "accent-4"
+      "parent": "flow.command-execution",
+      "x": 1960,
+      "y": 620
     },
     {
       "id": "cli.braincrawl.resolve-doi",
       "name": "resolve_doi",
-      "x": -1420,
-      "y": 1080,
-      "color": "accent-4"
+      "parent": "flow.command-execution",
+      "x": 1320,
+      "y": 620
     },
     {
       "id": "impl.crossref-provider",
@@ -1228,6 +1177,11 @@
       "x": 25,
       "y": 340,
       "color": "accent-8"
+    },
+    {
+      "id": "flow.command-execution",
+      "name": "Command execution",
+      "color": "accent-7"
     }
   ],
   "edges": [
