@@ -15,6 +15,11 @@ describe('atlas tool group config', () => {
         'list',
         'create',
         'read',
+        'node/get',
+        'node/search',
+        'node/children',
+        'edge/list',
+        'neighborhood',
         'node/create',
         'node/set',
         'node/reparent',
@@ -64,5 +69,35 @@ describe('atlas tool group config', () => {
     expect(Object.keys(group.actions['edge/bisect'].params)).toEqual(
       expect.arrayContaining(['path', 'from', 'to', 'id']),
     )
+  })
+
+  it('node/get takes path and id', () => {
+    expect(Object.keys(group.actions['node/get'].params)).toEqual(['path', 'id'])
+  })
+
+  it('node/search takes path and text', () => {
+    expect(Object.keys(group.actions['node/search'].params)).toEqual(['path', 'text'])
+  })
+
+  it('node/children takes path, id, and an optional depth', () => {
+    expect(Object.keys(group.actions['node/children'].params)).toEqual(['path', 'id', 'depth?'])
+  })
+
+  it('edge/list takes path and optional endpoint filters', () => {
+    expect(Object.keys(group.actions['edge/list'].params)).toEqual(['path', 'from?', 'to?'])
+  })
+
+  it('neighborhood takes path, id, and optional direction/depth', () => {
+    expect(Object.keys(group.actions['neighborhood'].params)).toEqual(['path', 'id', 'direction?', 'depth?'])
+  })
+
+  it('neighborhood direction is an enum of out/in/both', () => {
+    const direction = group.actions['neighborhood'].params['direction?']
+    expect(typeof direction).toBe('object')
+    if (typeof direction === 'object' && direction.type === 'described') {
+      expect(direction.innerType).toEqual({ type: 'enum', values: ['out', 'in', 'both'] })
+    } else {
+      throw new Error('expected direction? to be a described param')
+    }
   })
 })

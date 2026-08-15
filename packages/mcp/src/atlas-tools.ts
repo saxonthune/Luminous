@@ -20,7 +20,9 @@ import type {
   AtlasContent,
   AtlasData,
   AtlasDocument,
+  AtlasEdge,
   AtlasLegend,
+  AtlasNode,
 } from '@luminous/core/atlas'
 
 export async function loadAtlas(serverUrl: string, path: string): Promise<AtlasDocument> {
@@ -265,4 +267,136 @@ export async function applyBatch(
   }
   await writeAtlas(serverUrl, path, result.doc)
   return result.doc
+}
+
+function assertValidAtlasDepth(depth: number): void {
+  if (!Number.isInteger(depth) || depth < 0) {
+    throw new Error(`depth must be a non-negative integer, got ${depth}`)
+  }
+}
+
+export async function getAtlasNode(serverUrl: string, path: string, id: string): Promise<AtlasNode> {
+  const doc = await loadAtlas(serverUrl, path)
+  const node = doc.nodes.find((n) => n.id === id)
+  if (!node) {
+    throw new Error(`Node '${id}' not found in atlas document '${path}'`)
+  }
+  return node
+}
+
+export async function searchAtlasNodes(serverUrl: string, path: string, text: string): Promise<{ nodes: AtlasNode[] }> {
+  const doc = await loadAtlas(serverUrl, path)
+  const needle = text.toLowerCase()
+  const nodes = doc.nodes.filter(
+    (n) =>
+      n.id.toLowerCase().includes(needle) ||
+      n.name.toLowerCase().includes(needle) ||
+      (n.content?.text.toLowerCase().includes(needle) ?? false) ||
+      (n.content?.from?.toLowerCase().includes(needle) ?? false),
+  )
+  return { nodes }
+}
+
+export async function listAtlasChildren(
+  serverUrl: string,
+  path: string,
+  id: string,
+  depth = 1,
+): Promise<{ nodes: AtlasNode[] }> {
+  const doc = await loadAtlas(serverUrl, path)
+  assertValidAtlasDepth(depth)
+  if (!doc.nodes.some((n) => n.id === id)) {
+    throw new Error(`Node '${id}' not found in atlas document '${path}'`)
+  }
+  if (depth === 0) {
+    return { nodes: [] }
+  }
+
+  const childrenOf = new Map<string, string[]>()
+  for (const node of doc.nodes) {
+    if (node.parent === undefined) continue
+    const list = childrenOf.get(node.parent) ?? []
+    list.push(node.id)
+    childrenOf.set(node.parent, list)
+  }
+
+  const included = new Set<string>()
+  let frontier = [id]
+  for (let step = 0; step < depth && frontier.length > 0; step++) {
+    const next: string[] = []
+    for (const parentId of frontier) {
+      for (const childId of childrenOf.get(parentId) ?? []) {
+        if (!included.has(childId)) {
+          included.add(childId)
+          next.push(childId)
+        }
+      }
+    }
+    frontier = next
+  }
+
+  return { nodes: doc.nodes.filter((n) => included.has(n.id)) }
+}
+
+export async function listAtlasEdges(
+  serverUrl: string,
+  path: string,
+  from?: string,
+  to?: string,
+): Promise<{ edges: AtlasEdge[] }> {
+  const doc = await loadAtlas(serverUrl, path)
+  const edges = doc.edges.filter((e) => (from === undefined || e.from === from) && (to === undefined || e.to === to))
+  return { edges }
+}
+
+const ATLAS_NEIGHBORHOOD_DIRECTIONS = ['out', 'in', 'both'] as const
+export type AtlasNeighborhoodDirection = (typeof ATLAS_NEIGHBORHOOD_DIRECTIONS)[number]
+
+function edgeKey(edge: AtlasEdge): string {
+  return `${edge.from} ${edge.to}`
+}
+
+export async function atlasNeighborhood(
+  serverUrl: string,
+  path: string,
+  id: string,
+  direction: AtlasNeighborhoodDirection = 'both',
+  depth = 1,
+): Promise<{ nodes: AtlasNode[]; edges: AtlasEdge[] }> {
+  const doc = await loadAtlas(serverUrl, path)
+  if (!(ATLAS_NEIGHBORHOOD_DIRECTIONS as readonly string[]).includes(direction)) {
+    throw new Error(`direction must be one of 'out', 'in', 'both', got '${direction}'`)
+  }
+  assertValidAtlasDepth(depth)
+  if (!doc.nodes.some((n) => n.id === id)) {
+    throw new Error(`Node '${id}' not found in atlas document '${path}'`)
+  }
+
+  const visited = new Set<string>([id])
+  const edgeKeys = new Set<string>()
+  const queue: Array<{ id: string; depth: number }> = [{ id, depth: 0 }]
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const current = queue[cursor]
+    if (current.depth >= depth) continue
+    for (const edge of doc.edges) {
+      let neighbor: string | undefined
+      if ((direction === 'out' || direction === 'both') && edge.from === current.id) {
+        neighbor = edge.to
+      } else if ((direction === 'in' || direction === 'both') && edge.to === current.id) {
+        neighbor = edge.from
+      } else {
+        continue
+      }
+      edgeKeys.add(edgeKey(edge))
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor)
+        queue.push({ id: neighbor, depth: current.depth + 1 })
+      }
+    }
+  }
+
+  return {
+    nodes: doc.nodes.filter((n) => visited.has(n.id)),
+    edges: doc.edges.filter((e) => edgeKeys.has(edgeKey(e))),
+  }
 }

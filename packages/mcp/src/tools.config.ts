@@ -528,7 +528,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
   },
   atlas: {
     description:
-      "Author Atlas canvases — .atlas.json documents made of Nodes (with optional Markdown/code Content, nesting via parent, and free x/y placement) connected by directed Edges. Unlike the v3 canvas/node/edge tools, an Atlas document has no pack and node ids are author-supplied, not generated — pick meaningful ids (e.g. 'cli.braincrawl.openalex'). Use `list` to discover documents, `create` to start one, `node/create`/`edge/connect` to build it up, `edge/bisect` to split an edge by inserting a node in its middle, and `legend/set` to record what each color means in the document.",
+      "Author Atlas canvases — .atlas.json documents made of Nodes (with optional Markdown/code Content, nesting via parent, and free x/y placement) connected by directed Edges. Unlike the v3 canvas/node/edge tools, an Atlas document has no pack and node ids are author-supplied, not generated — pick meaningful ids (e.g. 'cli.braincrawl.openalex'). Use `list` to discover documents, `create` to start one, `node/create`/`edge/connect` to build it up, `edge/bisect` to split an edge by inserting a node in its middle, and `legend/set` to record what each color means in the document. Use the focused-read actions — `node/get`, `node/search`, `node/children`, `edge/list`, `neighborhood` — to pull a bounded slice of a Document without loading the whole thing via `read`.",
     local: true,
     actions: {
       list: {
@@ -554,6 +554,91 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         method: 'GET',
         path: '',
         params: { path: pathParam },
+      },
+      'node/get': {
+        description: "Fetch a single Node by its exact id, with its complete authored fields. Throws if the id does not exist.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Node to fetch.",
+          },
+        },
+      },
+      'node/search': {
+        description: "Search Nodes by a case-insensitive literal substring (not a regular expression) against id, name, content.text, and content.from. Returns each matching Node once, in Document order, even when several fields match.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          text: {
+            type: 'described',
+            innerType: 'string',
+            description: "Literal substring to search for, matched case-insensitively against id, name, content.text, and content.from.",
+          },
+        },
+      },
+      'node/children': {
+        description: "List the Nodes nested under a Node through the Parent/Child containment tree, in Document order. Never includes the starting Node itself.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Node whose descendants to list. Must already exist.",
+          },
+          'depth?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Non-negative integer: how many Parent/Child steps to descend. 0 returns no Nodes, 1 (the default) returns direct Children, larger values add further descendants.",
+          },
+        },
+      },
+      'edge/list': {
+        description: "List Edges, in Document order, optionally filtered by an exact endpoint match. Supplying both from and to requires both to match. With neither, returns every Edge.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          'from?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Only return Edges whose source Node id exactly matches this value.",
+          },
+          'to?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Only return Edges whose target Node id exactly matches this value.",
+          },
+        },
+      },
+      neighborhood: {
+        description: "Return the Nodes and Edges within a bounded number of Edge hops of a center Node, expanding in a given direction. Includes the center Node at depth 0. Depth 0 returns the center Node and no Edges.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the center Node. Must already exist.",
+          },
+          'direction?': {
+            type: 'described',
+            innerType: { type: 'enum', values: ['out', 'in', 'both'] },
+            description: "Which Edges to follow while expanding: 'out' follows from -> to, 'in' follows to <- from, 'both' follows either endpoint. Defaults to 'both'.",
+          },
+          'depth?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Non-negative integer: how many Edge hops to expand from the center. Defaults to 1.",
+          },
+        },
       },
       'node/create': {
         description: "Add a new Node to the document with an explicit, author-chosen id — ids are meaningful (e.g. 'cli.braincrawl.openalex'), never generated. Fails if the id already exists or the parent does not exist.",

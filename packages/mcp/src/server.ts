@@ -31,7 +31,13 @@ import {
   edgeBisect,
   legendSet,
   applyBatch,
+  getAtlasNode,
+  searchAtlasNodes,
+  listAtlasChildren,
+  listAtlasEdges,
+  atlasNeighborhood,
 } from './atlas-tools.js'
+import type { AtlasNeighborhoodDirection } from './atlas-tools.js'
 import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasLegend } from '@luminous/core/atlas'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
@@ -184,7 +190,7 @@ All mutations go through the same API that the browser canvas uses — there is 
 
 Prefer the batch tool for multi-step operations. Batch executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/legend/set/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges, plus a Legend recording what each color means; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated).`
+Tool groups: pack (describe — inspect kind catalog), canvas (list/read/create documents), node (add/setProps/setTags/delete), edge (add/setProps/setTags/remove), batch (atomic multi-action sequences), query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/get/node/search/node/children/edge/list/neighborhood/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/legend/set/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges, plus a Legend recording what each color means; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated; node/get/node/search/node/children/edge/list/neighborhood are focused, read-only queries that skip loading the whole Document).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
@@ -373,6 +379,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       to?: string
       legend?: AtlasLegend
       actions?: AtlasAction[]
+      text?: string
+      depth?: number
+      direction?: AtlasNeighborhoodDirection
     }
     try {
       let result: unknown
@@ -384,6 +393,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } else if (a.action === 'read') {
         if (!a.path) throw new Error("'path' is required for atlas/read")
         result = await readAtlas(serverUrl, a.path)
+      } else if (a.action === 'node/get') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/get")
+        if (!a.id) throw new Error("'id' is required for atlas/node/get")
+        result = await getAtlasNode(serverUrl, a.path, a.id)
+      } else if (a.action === 'node/search') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/search")
+        if (!a.text) throw new Error("'text' is required for atlas/node/search")
+        result = await searchAtlasNodes(serverUrl, a.path, a.text)
+      } else if (a.action === 'node/children') {
+        if (!a.path) throw new Error("'path' is required for atlas/node/children")
+        if (!a.id) throw new Error("'id' is required for atlas/node/children")
+        result = await listAtlasChildren(serverUrl, a.path, a.id, a.depth)
+      } else if (a.action === 'edge/list') {
+        if (!a.path) throw new Error("'path' is required for atlas/edge/list")
+        result = await listAtlasEdges(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'neighborhood') {
+        if (!a.path) throw new Error("'path' is required for atlas/neighborhood")
+        if (!a.id) throw new Error("'id' is required for atlas/neighborhood")
+        result = await atlasNeighborhood(serverUrl, a.path, a.id, a.direction, a.depth)
       } else if (a.action === 'node/create') {
         if (!a.path) throw new Error("'path' is required for atlas/node/create")
         if (!a.id) throw new Error("'id' is required for atlas/node/create")
