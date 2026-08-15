@@ -35,9 +35,9 @@ const pathParam: ParamType = {
 }
 
 export const toolConfig: Record<string, ToolGroupConfig> = {
-  pack: {
+  'canvas-pack': {
     description:
-      "Inspect the pack declared by a canvas. Returns all node and edge kinds with their labels and props JSON Schemas — use this before node/add or edge/add to discover valid kinds and required props.",
+      "Inspect the pack declared by a canvas. Returns all node and edge kinds with their labels and props JSON Schemas — use this before canvas-node add or canvas-edge add to discover valid kinds and required props.",
     actions: {
       describe: {
         description:
@@ -96,7 +96,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
     },
   },
 
-  node: {
+  'canvas-node': {
     description:
       "Nodes are the content elements of a v3 canvas. Each node has a `kind` (a dot-namespaced string defined by a pack, e.g. `prim.box`), `props` (kind-specific key-value data), and `tags` (free-form string labels). Layout is computed by the viewer — nodes have no position in the file.",
     actions: {
@@ -109,7 +109,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           kind: {
             type: 'described',
             innerType: 'string',
-            description: "Node kind defined by the canvas's pack, e.g. 'prim.box'. Use pack/describe to see all available kinds and their props schemas.",
+            description: "Node kind defined by the canvas's pack, e.g. 'prim.box'. Use canvas-pack describe to see all available kinds and their props schemas.",
           },
           'props?': {
             type: 'described',
@@ -171,7 +171,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
     },
   },
 
-  edge: {
+  'canvas-edge': {
     description:
       "Edges are directed connections between nodes in a v3 canvas. Each edge has a `kind` (pack-defined, e.g. `prim.arrow`), a `from` node ID, a `to` node ID, `props`, and `tags`. Endpoints must reference existing nodes — the server validates this on `add`.",
     actions: {
@@ -184,7 +184,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           kind: {
             type: 'described',
             innerType: 'string',
-            description: "Edge kind defined by the canvas's pack, e.g. 'prim.arrow'. Use pack/describe to see all available kinds and their props schemas.",
+            description: "Edge kind defined by the canvas's pack, e.g. 'prim.arrow'. Use canvas-pack describe to see all available kinds and their props schemas.",
           },
           from: {
             type: 'described',
@@ -256,7 +256,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
     },
   },
 
-  view: {
+  'canvas-view': {
     description:
       "Inspect the views defined by a canvas's pack and project the canvas through a view. `list` shows all views with their role maps (what each view shows, hides, or nests). `project` evaluates the view and returns the visible structure — which nodes are spatial vs latent, which edges are arrows vs summary chips, and the containment tree — the same partition the browser canvas renders. Returns structure only (no pixel positions or live viewport state).",
     local: true,
@@ -280,14 +280,14 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             type: 'described',
             innerType: 'string',
             description:
-              "ID of the view to project through. Omit to use the canvas's defaultView. Use view/list to see available view IDs.",
+              "ID of the view to project through. Omit to use the canvas's defaultView. Use canvas-view list to see available view IDs.",
           },
         },
       },
     },
   },
 
-  query: {
+  'canvas-query': {
     description:
       "Query a canvas graph without loading it entirely into context. Fetch a single node by ID, filter nodes or edges with the GraphQuery grammar, or pull a node's neighborhood. Runs locally — does not write to the canvas.",
     local: true,
@@ -881,6 +881,6 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
 
 export const batchToolConfig: BatchToolConfig = {
   description:
-    "Apply multiple v3 actions atomically in a single request. Actions execute in order; if any action fails the entire batch fails (fail-fast, no rollback, no partial save). Use `ref` on an add action to name it, then reference its generated ID in later actions via '$ref:<name>' as a string parameter value. Supports all node and edge actions. Example: add a node with ref 'n1', then add an edge using '$ref:n1' as the from ID.",
+    "Apply multiple v3 actions atomically in a single request, against a Canvas `.graph.json` document only — never atlas or dataflow documents, which have their own batch actions. Actions execute in order; if any action fails the entire batch fails (fail-fast, no rollback, no partial save). Use `ref` on an add action to name it, then reference its generated ID in later actions via '$ref:<name>' as a string parameter value. Supports all canvas-node and canvas-edge actions. Example: add a node with ref 'n1', then add an edge using '$ref:n1' as the from ID.",
   path: '/api/action/batch',
 }

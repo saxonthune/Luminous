@@ -38,7 +38,7 @@ Four tools, aligned to concepts (doc02.02). Each tool groups related actions beh
 |------|---------|---------|
 | `canvas` | Workspace + Document | `list`, `read` |
 | `note` | Note | `create`, `update`, `delete` |
-| `edge` | Edge | `connect`, `disconnect`, `relabel` |
+| `canvas-edge` | Edge | `connect`, `disconnect`, `relabel` |
 | `structure` | Nesting + Canvas | `nest`, `unnest`, `move`, `resize` |
 
 This gives LLMs a clear first-level routing decision (which concept?) then a scoped action choice within each tool. Parameters are specific to each action, not a union of all possible params.
@@ -79,7 +79,7 @@ A typical interaction:
 2. `canvas({ action: "read", path: "app.canvas.json" })` — load full document state
 3. Reason about the design
 4. `note({ action: "create", path: "app.canvas.json", title: "Authentication", body: "Login flow needed..." })` — add a note
-5. `edge({ action: "connect", path: "app.canvas.json", fromId: "...", toId: "...", label: "requires" })` — connect it
+5. `canvas-edge({ action: "connect", path: "app.canvas.json", fromId: "...", toId: "...", label: "requires" })` — connect it
 
 The server must be running — same as for a human using the browser. `just dev` starts both server and client.
 

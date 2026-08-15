@@ -487,4 +487,4 @@ A pack is never required for a graph to open. If a kind has no `render` in the p
 - **Per-domain pipelines** (Solid analysis, Rust analysis, React analysis) — those are separate efforts.
 - **Custom primitives** — the escape hatch for specialized renderers (live charts, embedded sub-canvases). This skill covers only the built-in vocabulary.
 - **Product code changes** — a pipeline writes `.graph.json` and `.pack.json` into the target repo. Luminous itself is unchanged.
-- **MCP tools for pipeline work** — `node/add` via MCP uses random UUIDs and is designed for interactive canvas building, not pipelines. Use direct file writes for pipeline output.
+- **MCP tools for pipeline work** — `canvas-node` add via MCP uses random UUIDs and is designed for interactive canvas building, not pipelines. Use direct file writes for pipeline output.
