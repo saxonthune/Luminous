@@ -219,6 +219,41 @@ describe('nodeSet / nodeReparent / nodeDelete', () => {
     expect(doc.nodes.find((n) => n.id === 'a')!.content).toEqual({ text: 'hello', mode: 'markdown' })
   })
 
+  it('nodeSet preserves fields omitted by an MCP request', async () => {
+    const stored = {
+      ...docWithTwoNodes(),
+      nodes: [
+        { id: 'container', name: 'Container' },
+        { id: 'a', name: 'A', parent: 'container', x: 12, y: 34, color: 'accent-2' as const },
+      ],
+    }
+    const fetchMock = mockFetch({
+      [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => stored }),
+      [`POST ${SERVER}/api/document/write`]: () => ({ ok: true, json: async () => ({ ok: true }) }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const doc = await nodeSet(SERVER, PATH, 'a', {
+      name: undefined,
+      content: { text: 'hello', mode: 'markdown' },
+      x: undefined,
+      y: undefined,
+      color: undefined,
+      contentHeight: undefined,
+      contentWidth: undefined,
+    })
+
+    expect(doc.nodes.find((n) => n.id === 'a')).toEqual({
+      id: 'a',
+      name: 'A',
+      parent: 'container',
+      x: 12,
+      y: 34,
+      color: 'accent-2',
+      content: { text: 'hello', mode: 'markdown' },
+    })
+  })
+
   it('nodeReparent moves a node under another', async () => {
     const fetchMock = mockFetch({
       [`GET ${SERVER}/api/document/`]: () => ({ ok: true, json: async () => docWithTwoNodes() }),

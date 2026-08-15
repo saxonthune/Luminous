@@ -5,6 +5,7 @@ import {
   toEdgeDeclarations,
   projectAtlasEdgeRoute,
   projectAtlasNodes,
+  findContainerAtPoint,
   nodePositionOf,
   childAreaOrigin,
   childArea,
@@ -13,6 +14,7 @@ import {
   CONTAINER_BEZEL,
   CONTAINER_PADDING,
   NODE_WIDTH,
+  type AtlasRenderNode,
 } from '../projection.ts';
 import type { RegisteredNodeRect } from '@luminous/cactus';
 
@@ -401,5 +403,40 @@ describe('projectAtlasEdgeRoute', () => {
     const second = projectAtlasEdgeRoute({ ...routed, edges: [{ from: 'c', to: 'b' }] }, { from: 'c', to: 'b' }, rects);
     expect(first?.points.slice(1, 3)).toEqual([{ x: 28, y: 84 }, { x: 28, y: 68 }]);
     expect(second?.points[1]).toEqual(first?.points[1]);
+  });
+});
+
+describe('findContainerAtPoint', () => {
+  const rn = (id: string, x: number, y: number, w: number, h: number, depth: number): AtlasRenderNode => ({
+    node: { id, name: id },
+    x, y, w, h,
+    hasChildren: depth < 1,
+    depth,
+  });
+
+  it('returns null over empty canvas', () => {
+    expect(findContainerAtPoint([rn('a', 0, 0, 100, 100, 0)], 500, 500)).toBeNull();
+  });
+
+  it('picks the deepest node when boxes nest', () => {
+    const nodes = [rn('outer', 0, 0, 400, 300, 0), rn('inner', 50, 50, 100, 100, 1)];
+    expect(findContainerAtPoint(nodes, 60, 60)).toBe('inner');
+    expect(findContainerAtPoint(nodes, 300, 200)).toBe('outer');
+  });
+
+  it('skips excluded ids and falls through to the box beneath', () => {
+    const nodes = [rn('outer', 0, 0, 400, 300, 0), rn('inner', 50, 50, 100, 100, 1)];
+    expect(findContainerAtPoint(nodes, 60, 60, new Set(['inner']))).toBe('outer');
+  });
+
+  it('breaks a same-depth overlap toward the later-projected node (paint order)', () => {
+    const nodes = [rn('a', 0, 0, 100, 100, 0), rn('b', 50, 0, 100, 100, 0)];
+    expect(findContainerAtPoint(nodes, 75, 50)).toBe('b');
+  });
+
+  it('treats box edges as inside, matching the rendered hit area', () => {
+    const nodes = [rn('a', 0, 0, 100, 100, 0)];
+    expect(findContainerAtPoint(nodes, 100, 100)).toBe('a');
+    expect(findContainerAtPoint(nodes, 0, 0)).toBe('a');
   });
 });

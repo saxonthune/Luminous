@@ -66,6 +66,20 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
   let container: HTMLDivElement | undefined;
   let zoomBehavior: ZoomBehavior<HTMLDivElement, unknown> | null = null;
 
+  // d3-zoom emits per pointer event; propagating each one repaints the whole
+  // canvas more often than the display can show. Coalesce to one signal set
+  // per animation frame — the transform signal lags d3's internal transform
+  // by at most a frame, which nothing observes across.
+  let pendingTransform: Transform | null = null;
+  let transformRafId = 0;
+  const flushTransform = () => {
+    transformRafId = 0;
+    if (pendingTransform) {
+      setTransform(pendingTransform);
+      pendingTransform = null;
+    }
+  };
+
   const setContainerRef = (el: HTMLDivElement) => {
     container = el;
 
@@ -73,11 +87,12 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
       .scaleExtent([minZoom, maxZoom])
       .filter((event) => shouldViewportPan(event, { leftDragPan }))
       .on('zoom', (event) => {
-        setTransform({
+        pendingTransform = {
           x: event.transform.x,
           y: event.transform.y,
           k: event.transform.k,
-        });
+        };
+        if (!transformRafId) transformRafId = requestAnimationFrame(flushTransform);
       });
 
     zoomBehavior = zb;
@@ -85,6 +100,7 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
   };
 
   onCleanup(() => {
+    if (transformRafId) cancelAnimationFrame(transformRafId);
     if (container) select(container).on('.zoom', null);
   });
 

@@ -3,7 +3,7 @@ import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasContentMode, Atla
 import { applyAtlasBatch, invertAtlasBatch, resolveContent } from '@luminous/core/atlas';
 import { Canvas, ConnectionPreview, findContainerAt } from '@luminous/cactus';
 import type { CanvasRef } from '@luminous/cactus';
-import { toEdgeDeclarations, projectAtlasNodes, childAreaOrigin } from './projection.ts';
+import { toEdgeDeclarations, projectAtlasNodes, childAreaOrigin, findContainerAtPoint } from './projection.ts';
 import {
   buildContentEditPatch,
   buildModePatch,
@@ -256,9 +256,14 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
     for (const id of group) {
       for (const descId of selfAndDescendantIds(props.doc, id)) exclude.add(descId);
     }
+    // Camera sampled once: screenToCanvas reads the container's bounding rect
+    // (a forced layout flush once the drag's style writes land), and the
+    // camera cannot move during a node drag (doc01.07.04 R23).
+    const k = canvasRef?.getTransform().k ?? 1;
+    const origin = canvasRef?.screenToCanvas(0, 0) ?? { x: 0, y: 0 };
     // eslint-disable-next-line solid/reactivity -- pointermove callback, not a render path; props.doc is read fresh on each invocation
     dragPointerMove = (e: PointerEvent) => {
-      lastHit = findContainerAt(e.clientX, e.clientY, exclude);
+      lastHit = findContainerAtPoint(nodes(), origin.x + e.clientX / k, origin.y + e.clientY / k, exclude);
       // R5: Ctrl held means the Node stays a member of its current
       // Container — no membership change is pending, so the toast is silent.
       props.onPendingMembershipChange?.(ctrlHeld() ? null : describePendingDrop(props.doc, group, lastHit));

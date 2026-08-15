@@ -153,7 +153,14 @@ export async function nodeSet(
   },
 ): Promise<AtlasDocument> {
   const doc = await loadAtlas(serverUrl, path)
-  const result = setNode(doc, id, patch)
+  // The MCP dispatcher materializes every optional argument as a key whose
+  // value is undefined. Core's setNode intentionally treats a present
+  // undefined key as a request to clear that field, so strip those synthetic
+  // keys here and preserve fields the MCP caller omitted.
+  const providedPatch = Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  ) as typeof patch
+  const result = setNode(doc, id, providedPatch)
   if (!result.ok) {
     throw new Error(result.error)
   }

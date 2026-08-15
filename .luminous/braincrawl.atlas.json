@@ -190,7 +190,9 @@
         "mode": "markdown"
       },
       "x": 25,
-      "y": 60
+      "y": 60,
+      "contentHeight": 94,
+      "contentWidth": 560
     },
     {
       "id": "box.reading-agent",
@@ -199,8 +201,8 @@
         "text": "The PWA chat client. A thin client, never a replica: it fetches the doc and page chunks it needs, edits docs via the normalizing PUT, and pushes what it gathers from OpenAlex into the Cloudflare store. Local state is only the conversation (localStorage) and per-session caches.",
         "mode": "markdown"
       },
-      "x": -2624.490650063616,
-      "y": 89.2327993687477,
+      "x": -2490.4255052136446,
+      "y": 133.3090712587631,
       "color": "accent-3",
       "contentHeight": 168.76601631649106,
       "contentWidth": 340.9574747968284
@@ -238,8 +240,8 @@
         "text": "The provider contract: `GET /works/{id}` and `GET /works?search=` over HTTPS, JSON. Polite pool via `mailto`; rate-limited. This is the shape both agents gather against.",
         "mode": "markdown"
       },
-      "x": 520,
-      "y": 60,
+      "x": 617.6661705941253,
+      "y": 75.62658514907434,
       "contentHeight": 225.73355671136102,
       "contentWidth": 457.9867969091928
     },
@@ -250,10 +252,10 @@
         "text": "Provider land: the external scholarly systems Braincrawl can gather from, their HTTP contracts, and the adapters that translate Braincrawl's shared provider protocol into each system's request and response shapes.\n\nThe shared `ProviderCmd` / `Provider` / `Envelope + Emission` protocol lives here so further adapters become sibling integrations, rather than loose nodes scattered through the CLI.",
         "mode": "markdown"
       },
-      "x": -671.5746651583823,
-      "y": -1455.4530079099113,
+      "x": -453.55044820191324,
+      "y": -2412.213698006949,
       "color": "accent-2",
-      "contentHeight": 1839.5252401223056,
+      "contentHeight": 2752.216784564968,
       "contentWidth": 2572.7243553259914,
       "ports": {
         "entry": {
@@ -262,7 +264,7 @@
         },
         "exit": {
           "side": "right",
-          "offset": 0.5448579282641219
+          "offset": 0.4895966156288584
         }
       }
     },
@@ -523,8 +525,8 @@
         "text": "L1 seam: versioned artifact descriptors per (canonical id, role). Async, `Result<_, DomainError>`.\n\n```rust\ncurrent_artifact(id, role) -> Option<Artifact>\nnext_version(id, role) -> u32\nrecord(&Artifact)\n```\n\nimpls: `SqliteStore` (native) · `D1Store` (worker)",
         "mode": "markdown"
       },
-      "x": 1493.7668120798232,
-      "y": 449.4222673820576,
+      "x": 1494,
+      "y": 608,
       "color": "accent-8",
       "contentHeight": 241.1804319491779,
       "contentWidth": 351.45766185799187
@@ -600,8 +602,8 @@
         "text": "The platform-agnostic use-case layer (`crates/core/src/usecases.rs`, doc02.01.03) — one struct assembled from seven seams; each deployment is this struct with different parts.\n\n```rust\nStore<M, B, P, R, C, Clk, Id>\n  M:   MetadataStore     B: BlobStore      P: ArtifactStore\n  R:   IdResolver        C: Coordinator    // with_lock(key) -> LockGuard\n  Clk: Clock             Id: IdGen\n```\n\nOwns the domain policy no trait signature shows:\n\n```\nlock key    highest-priority alias namespace:\n            doi > pmid > pmcid > openalex > semantic_scholar > arxiv\nread merge  newest fetched_at wins per field; tie-break = lexicographically\n            smallest source; provenance map records each winner\nnew work    unknown alias -> mint GUID (IdGen), remember (IdResolver)\n```",
         "mode": "markdown"
       },
-      "x": 631.7028452058355,
-      "y": 950.8752987696017,
+      "x": 741.4864234681967,
+      "y": 1039.2376384128756,
       "color": "accent-4",
       "contentHeight": 288,
       "contentWidth": 560
@@ -613,8 +615,8 @@
         "text": "Per-work single-writer seam — only `usecases::Store` takes it, wrapping every write. Async, `Result<_, DomainError>`.\n\n```rust\nwith_lock(key) -> LockGuard   // dropping the guard releases\n```\n\nLock key = the work's highest-priority alias (policy owned by `usecases::Store`).\n\nimpls: `LocalCoordinator` (native, in-process) · `DoCoordinator` (worker, Durable Object)",
         "mode": "markdown"
       },
-      "x": 70.67318044665183,
-      "y": 684.9985230441913,
+      "x": 503.68420208009326,
+      "y": 736.8683911972118,
       "color": "accent-8",
       "contentHeight": 218.33334350585946,
       "contentWidth": 563.3333740234375
@@ -639,8 +641,8 @@
         "text": "**Clap boundary.** `Cli::parse()` reads the process argument vector and produces the typed command tree. It may print usage/help and terminate on parse failure, so it is not literally pure; the testable form is conceptually `argv → Result<Cli, clap::Error>`.\n\n```rust\nCli { global: GlobalArgs, namespace: Namespace }\nNamespace::Openalex(OpenalexArgs {\n  cmd: OpenalexCmd::Search { entity, query }\n})\nGlobalArgs → OutputOpts\n```\n\nOnly after parsing does `run()` resolve `Config` and match on `cli.namespace`.",
         "mode": "markdown"
       },
-      "x": -1326.3363366808455,
-      "y": 1332.3373484168799,
+      "x": -1606.5922084921194,
+      "y": 1352.8689580997484,
       "color": "accent-4",
       "contentHeight": 172,
       "contentWidth": 560
@@ -1014,8 +1016,8 @@
         "text": "OS argument vector\n\nbraincrawl openalex search works \"graph neural networks\"\n\nInput to Clap. This is process input, not yet a Rust command value.",
         "mode": "code"
       },
-      "x": -1648.8260690195234,
-      "y": 1669.7663640111507,
+      "x": -1565.378988538247,
+      "y": 1689.1991964502138,
       "color": "accent-6"
     },
     {
@@ -1025,8 +1027,8 @@
         "text": "OpenalexCmd::Search {\n  entity: String,\n  query: String,\n}\n\nA typed enum value selected from Cli.namespace. No network request has happened.",
         "mode": "code"
       },
-      "x": -1864.3719948863363,
-      "y": 627.0056585341879,
+      "x": -1766.9254448604227,
+      "y": 747.3320873707509,
       "color": "accent-6",
       "contentHeight": 160,
       "contentWidth": 514
@@ -1038,8 +1040,8 @@
         "text": "match oa.cmd {\n  OpenalexCmd::Search { entity, query } =>\n    ProviderCmd::Search { entity: Some(entity), query },\n  // other OpenAlex verbs\n}\n\nLocal enum-to-enum transformation; no network, store, or stdout effect.",
         "mode": "code"
       },
-      "x": -1257.718226381457,
-      "y": 484.11760501186836,
+      "x": -1394.409724377741,
+      "y": 456.2881376468056,
       "color": "accent-4",
       "contentHeight": 175,
       "contentWidth": 460
@@ -1051,8 +1053,8 @@
         "text": "fn run_provider(\n  p: &dyn Provider,\n  cmd: ProviderCmd,\n  store: &StoreClient,\n  opts: &OutputOpts,\n) -> Result<()>\n\nCalls p.dispatch; then renders its Envelope and, unless --skip-push, pushes its Emission.",
         "mode": "code"
       },
-      "x": -1319.5457034775843,
-      "y": 903.0396999836361,
+      "x": -1118.064043049894,
+      "y": 894.846448585384,
       "color": "accent-4",
       "contentHeight": 205,
       "contentWidth": 560
@@ -1065,9 +1067,11 @@
         "text": "impl Provider for OpenAlexProvider {\n  fn dispatch(cmd, opts)\n    -> Result<(Envelope, Emission), ProviderError>\n}\n\nFor Search, it chooses the entity (works by default) and calls openalex::verbs::search(&self.client, …). This is the concrete method selected through &dyn Provider.",
         "mode": "code"
       },
-      "x": 25,
-      "y": 350,
-      "color": "accent-8"
+      "x": 157.8260005919534,
+      "y": 391.9964755306596,
+      "color": "accent-8",
+      "contentHeight": 190,
+      "contentWidth": 560
     },
     {
       "id": "client.openalex-client",
@@ -1077,8 +1081,8 @@
         "text": "list(entity, ListParams) -> Result<ListPage>\n\nBuilds the query URL, then reqwest::blocking::Client sends GET to api.openalex.org. Retries HTTP 429 and 5xx responses (up to 3 retries).\n\nThis is the OpenAlex network-effect boundary.",
         "mode": "code"
       },
-      "x": 25,
-      "y": 650,
+      "x": 200.50321539027982,
+      "y": 691.5312780171498,
       "color": "accent-4"
     },
     {
@@ -1102,8 +1106,8 @@
         "text": "**Output effect.** `render(&envelope, opts)` writes the display Envelope to stdout, or `--emission` writes the store-ready Emission instead.",
         "mode": "markdown"
       },
-      "x": -489.9771142241301,
-      "y": 593.7788961712272,
+      "x": -411.03017819880995,
+      "y": 947.696901500674,
       "color": "accent-6",
       "contentHeight": 94,
       "contentWidth": 560
@@ -1116,7 +1120,7 @@
         "text": "The complete OpenAlex provider: an external scholarly service, its HTTP contract, and Braincrawl's adapter that carries the shared provider protocol across that boundary.",
         "mode": "markdown"
       },
-      "x": 1125.4651519291094,
+      "x": 1174,
       "y": 74.69207942084677,
       "color": "accent-4",
       "contentHeight": 980,
@@ -1130,8 +1134,8 @@
         "text": "The shared Rust vocabulary between the CLI and provider implementations: one command shape, one dispatch contract, and one paired result shape.\n\nEach provider-specific adapter enters and leaves through this protocol.",
         "mode": "markdown"
       },
-      "x": 30,
-      "y": 350,
+      "x": 221,
+      "y": 736,
       "color": "accent-8",
       "contentHeight": 240,
       "contentWidth": 650
@@ -1141,14 +1145,11 @@
       "name": "Crossref",
       "parent": "box.providers",
       "content": {
-        "text": "The Crossref provider path. It backfills reference lists through Crossref's deposited-reference HTTP surface.\n\nUnlike OpenAlex, Crossref currently bypasses the shared `Provider` trait and runs its refs-specific path in `main.rs`.",
+        "text": "The Crossref provider path: it backfills reference lists through Crossref's deposited-reference HTTP surface.\n\n`CrossrefProvider` implements `Provider` and flows through `run_provider` like the other adapters. Because Crossref keys by DOI, `resolve_doi` converts the work id to a DOI before dispatch.",
         "mode": "markdown"
       },
-      "x": 1228.0512025073049,
-      "y": 1190.110501265879,
-      "color": "accent-4",
-      "contentHeight": 230,
-      "contentWidth": 650
+      "x": 1712.7425300504806,
+      "y": 2091.1559623837597
     },
     {
       "id": "module.arxiv-adapter",
@@ -1158,8 +1159,8 @@
         "text": "The keyless arXiv provider: its preprint API and Braincrawl adapter. It uses the shared `ProviderCmd` / `Provider` protocol, but supports only `get` and `search`.",
         "mode": "markdown"
       },
-      "x": 30,
-      "y": 720,
+      "x": 1174,
+      "y": 1078.6920794208468,
       "color": "accent-4",
       "contentHeight": 760,
       "contentWidth": 850
@@ -1172,8 +1173,8 @@
         "text": "Public arXiv preprint API. Braincrawl queries it for individual records and Atom-feed search results; no API key is configured.",
         "mode": "markdown"
       },
-      "x": 25,
-      "y": 60,
+      "x": 79.90606781783822,
+      "y": 62.287738862408105,
       "color": "accent-3",
       "contentHeight": 150,
       "contentWidth": 310
@@ -1186,8 +1187,8 @@
         "text": "impl Provider for ArxivProvider {\n  fn dispatch(cmd, opts)\n    -> Result<(Envelope, Emission), ProviderError>\n}\n\nDispatches `Get` and `Search` to `arxiv::verbs`; all other shared verbs return `UnsupportedVerb`.",
         "mode": "code"
       },
-      "x": 25,
-      "y": 260,
+      "x": 150.82643334254954,
+      "y": 248.5612219079486,
       "color": "accent-8",
       "contentHeight": 210,
       "contentWidth": 510
@@ -1205,6 +1206,28 @@
       "color": "accent-4",
       "contentHeight": 170,
       "contentWidth": 510
+    },
+    {
+      "id": "cli.braincrawl.alias",
+      "name": "alias (helper)",
+      "x": -1776.498821468768,
+      "y": 1114.8094392122546,
+      "color": "accent-4"
+    },
+    {
+      "id": "cli.braincrawl.resolve-doi",
+      "name": "resolve_doi",
+      "x": -1420,
+      "y": 1080,
+      "color": "accent-4"
+    },
+    {
+      "id": "impl.crossref-provider",
+      "name": "CrossrefProvider (impl Provider)",
+      "parent": "module.crossref-provider",
+      "x": 25,
+      "y": 340,
+      "color": "accent-8"
     }
   ],
   "edges": [
@@ -1219,10 +1242,6 @@
     {
       "from": "box.openalex",
       "to": "contract.openalex.http"
-    },
-    {
-      "from": "cli.braincrawl.crossref.refs",
-      "to": "box.crossref"
     },
     {
       "from": "client.store-client",
@@ -1415,6 +1434,26 @@
     {
       "from": "client.arxiv-client",
       "to": "box.arxiv"
+    },
+    {
+      "from": "cli.braincrawl.crossref.refs",
+      "to": "cli.braincrawl.resolve-doi"
+    },
+    {
+      "from": "cli.braincrawl.resolve-doi",
+      "to": "cli.braincrawl.alias"
+    },
+    {
+      "from": "cli.braincrawl.resolve-doi",
+      "to": "cli.braincrawl.run-provider"
+    },
+    {
+      "from": "trait.provider",
+      "to": "impl.crossref-provider"
+    },
+    {
+      "from": "impl.crossref-provider",
+      "to": "box.crossref"
     }
   ]
 }

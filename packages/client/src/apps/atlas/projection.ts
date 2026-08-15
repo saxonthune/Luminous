@@ -387,3 +387,26 @@ export function projectAtlasNodes(doc: AtlasDocument): AtlasRenderNode[] {
     };
   });
 }
+
+/**
+ * The drop-target under a canvas-space point: the deepest render node whose
+ * box contains it, skipping `exclude` (the dragged subtree). Rect-math twin
+ * of cactus's DOM `findContainerAt` for the drag hot path — elementsFromPoint
+ * there forces a layout flush against the styles the same pointer move just
+ * wrote. Depth is the paint order (z-index 2·depth in AtlasNodeLayer), with
+ * later-projected nodes winning ties, so both hit-tests agree on overlaps.
+ */
+export function findContainerAtPoint(
+  nodes: readonly AtlasRenderNode[],
+  x: number,
+  y: number,
+  exclude?: ReadonlySet<string>,
+): string | null {
+  let best: AtlasRenderNode | null = null;
+  for (const rn of nodes) {
+    if (exclude?.has(rn.node.id)) continue;
+    if (x < rn.x || y < rn.y || x > rn.x + rn.w || y > rn.y + rn.h) continue;
+    if (!best || rn.depth >= best.depth) best = rn;
+  }
+  return best?.node.id ?? null;
+}
