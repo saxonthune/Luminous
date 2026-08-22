@@ -123,16 +123,21 @@ function MenuItemRenderer(props: { item: MenuItem } & OnActionProp): JSX.Element
         {(item) => {
           const sub = () => item() as Extract<MenuItem, { type: 'submenu' }>;
           return (
-            <DropdownMenu.Sub>
+            // overlap + gutter + shift make the panel adjoin its trigger, so the
+            // pointer never crosses a dead gap that would close the submenu
+            // (Kobalte's documented submenu pattern; SubContent must be portalled).
+            <DropdownMenu.Sub overlap gutter={4} shift={-8}>
               <DropdownMenu.SubTrigger class="cactus-chrome-menu-item">
                 {sub().label}
                 <span aria-hidden>›</span>
               </DropdownMenu.SubTrigger>
-              <DropdownMenu.SubContent class="cactus-chrome-menu-content">
-                <For each={sub().items}>
-                  {(child) => <MenuItemRenderer item={child} onAction={props.onAction} />}
-                </For>
-              </DropdownMenu.SubContent>
+              <DropdownMenu.Portal>
+                <DropdownMenu.SubContent class="cactus-chrome-menu-content" style={{ 'z-index': '1000' }}>
+                  <For each={sub().items}>
+                    {(child) => <MenuItemRenderer item={child} onAction={props.onAction} />}
+                  </For>
+                </DropdownMenu.SubContent>
+              </DropdownMenu.Portal>
             </DropdownMenu.Sub>
           );
         }}
@@ -153,6 +158,12 @@ function MenuItemRenderer(props: { item: MenuItem } & OnActionProp): JSX.Element
               </Show>
             </DropdownMenu.Item>
           );
+        }}
+      </Match>
+      <Match when={props.item.type === 'custom' && props.item}>
+        {(item) => {
+          const custom = () => item() as Extract<MenuItem, { type: 'custom' }>;
+          return <div data-menu-custom={custom().id}>{custom().render()}</div>;
         }}
       </Match>
     </Switch>

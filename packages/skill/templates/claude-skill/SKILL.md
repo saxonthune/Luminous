@@ -1,6 +1,6 @@
 ---
 name: luminous
-description: Luminous canvas tool — create and work with visual canvases that serve both human spatial thinking and AI structured context. Use when building canvases, writing pipeline scripts, or working with .canvases/ files.
+description: Luminous canvas tool — create and work with visual canvases that serve both human spatial thinking and AI structured context. Use when building canvases, writing pipeline scripts, or working with .luminous/ files.
 ---
 
 # Luminous
@@ -11,7 +11,7 @@ This is a *design* tool, not a diagramming tool. Diagrams are pictures. Design i
 
 ## What a Canvas Is
 
-A `.canvas.json` file in `.canvases/` contains:
+A `.canvas.json` file in `.luminous/` contains:
 
 - **Schemas** — define what kinds of nodes and edges exist on this canvas. Each schema has a name, label, and primitives (visual building blocks like title, markdown body, drag-bar).
 - **Structure** — the nodes. Each node references a schema, has geometry (x, y, w, h), optional content (field values), and optional nesting (parentId).

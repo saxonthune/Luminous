@@ -12,6 +12,33 @@ export interface Transform {
 export interface UseViewportOptions {
   minZoom?: number; // default 0.15
   maxZoom?: number; // default 2
+  /** Pan on plain left-button drag. Default true; hosts that bind left-drag
+      to box selection disable it — middle-drag still pans. */
+  leftDragPan?: boolean;
+}
+
+export interface PanFilterEvent {
+  type: string;
+  button?: number;
+  target: EventTarget | null;
+}
+
+/** The viewport pan/zoom gate. Fail-safe by default: a pointer gesture pans
+ *  only when it lands on an explicit `[data-pan-surface]` element. Wheel and
+ *  middle- and right-drag always pass regardless of target. */
+export function shouldViewportPan(
+  event: PanFilterEvent,
+  opts: { leftDragPan: boolean }
+): boolean {
+  if (event.type === 'wheel') return true;
+  if (event.type === 'mousedown' && event.button === 1) return true; // middle-drag always pans
+  if (event.type === 'mousedown' && event.button === 2) return true; // right-drag pans; a right click with no drag falls through to the context menu (Canvas suppresses the menu when the gesture moved)
+  const target = event.target as HTMLElement | null;
+  const onSurface = !!target?.closest?.('[data-pan-surface]');
+  if (!onSurface) return false; // fail safe: not the background → never pan
+  if (event.type === 'mousedown') return opts.leftDragPan || event.button !== 0;
+  if (event.type === 'touchstart') return true;
+  return false;
 }
 
 export interface UseViewportResult {
@@ -33,33 +60,39 @@ export interface UseViewportResult {
 }
 
 export function useViewport(options: UseViewportOptions = {}): UseViewportResult {
-  const { minZoom = 0.15, maxZoom = 2 } = options;
+  const { minZoom = 0.15, maxZoom = 2, leftDragPan = true } = options;
 
   const [transform, setTransform] = createSignal<Transform>({ x: 0, y: 0, k: 1 });
   let container: HTMLDivElement | undefined;
   let zoomBehavior: ZoomBehavior<HTMLDivElement, unknown> | null = null;
+
+  // d3-zoom emits per pointer event; propagating each one repaints the whole
+  // canvas more often than the display can show. Coalesce to one signal set
+  // per animation frame — the transform signal lags d3's internal transform
+  // by at most a frame, which nothing observes across.
+  let pendingTransform: Transform | null = null;
+  let transformRafId = 0;
+  const flushTransform = () => {
+    transformRafId = 0;
+    if (pendingTransform) {
+      setTransform(pendingTransform);
+      pendingTransform = null;
+    }
+  };
 
   const setContainerRef = (el: HTMLDivElement) => {
     container = el;
 
     const zb = d3Zoom<HTMLDivElement, unknown>()
       .scaleExtent([minZoom, maxZoom])
-      .filter((event) => {
-        if (event.type === 'wheel') return true;
-        // Middle mouse (button 1) always pans, regardless of target
-        if (event.type === 'mousedown' && event.button === 1) return true;
-        const target = event.target as HTMLElement;
-        if (target.closest?.('[data-no-pan]')) return false;
-        if (event.type === 'mousedown') return true;
-        if (event.type === 'touchstart') return true;
-        return false;
-      })
+      .filter((event) => shouldViewportPan(event, { leftDragPan }))
       .on('zoom', (event) => {
-        setTransform({
+        pendingTransform = {
           x: event.transform.x,
           y: event.transform.y,
           k: event.transform.k,
-        });
+        };
+        if (!transformRafId) transformRafId = requestAnimationFrame(flushTransform);
       });
 
     zoomBehavior = zb;
@@ -67,6 +100,7 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
   };
 
   onCleanup(() => {
+    if (transformRafId) cancelAnimationFrame(transformRafId);
     if (container) select(container).on('.zoom', null);
   });
 

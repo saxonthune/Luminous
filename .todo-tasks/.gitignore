@@ -1,5 +1,10 @@
 inbox/
 .running/
+.done/
 .archived/
+tasks/
+results/
+chains/
+*.epic.md
 *.log
 .version

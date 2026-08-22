@@ -9,7 +9,14 @@ export interface NodeContainerProps {
   y: () => number;
   w: () => number;
   h: () => number;
+  /** Generic scene ordering number. Hosts may interleave nodes with route bands. */
+  visualBand?: () => number;
   softContainer?: () => boolean;
+  /** Inset of the soft-container box from this Node's own edges (top/left/
+   * right/bottom, in px) — when absent, the box fills the Node at `inset:0`
+   * as before (Canvas, Dataflow). Atlas supplies this to draw the container
+   * as its own bordered box, separated from the Node's outer edge by a bezel. */
+  containerInset?: () => { top: number; left: number; right: number; bottom: number };
   onPointerDown?: (e: PointerEvent) => void;
   onContextMenu?: (e: MouseEvent) => void;
   children?: JSX.Element;
@@ -58,21 +65,48 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         width: `${props.w()}px`,
         height: `${props.h()}px`,
         overflow: 'hidden',
+        'z-index': props.visualBand?.(),
+        'pointer-events': 'auto',
+        // A node is its own stacking context: z-index inside it (bezel, soft
+        // container, content) is private and never leaks to the shared layer,
+        // so cross-node stacking is pure DOM order. Nodes are flat siblings
+        // drawn parents-before-children (projection.ts), which makes every
+        // part of a child — bezel included — paint above its whole container.
+        isolation: 'isolate',
       }}
-      onPointerDown={(e) => props.onPointerDown?.(e)}
+      on:pointerdown={(e) => props.onPointerDown?.(e)}
       onContextMenu={(e) => props.onContextMenu?.(e)}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
+      {/* Bezel: an opaque fill for the whole node box so no canvas shows
+          through the padding between the node's components. Sits one layer
+          behind the soft-container well (z -2 vs -1), so a container's child
+          region still paints on top of it. Transparent by default — a host
+          opts in by setting --cactus-node-bezel (see AtlasCanvas). */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: '0',
+          'z-index': '-2',
+          background: 'var(--cactus-node-bezel, transparent)',
+          border: '1px solid var(--cactus-node-border, transparent)',
+          'border-radius': 'var(--cactus-node-radius, 0)',
+          'pointer-events': 'none',
+        }}
+      />
       <Show when={props.softContainer?.()}>
         <div
           data-soft-container="true"
           style={{
             position: 'absolute',
-            inset: '0',
+            top: `${props.containerInset?.().top ?? 0}px`,
+            left: `${props.containerInset?.().left ?? 0}px`,
+            right: `${props.containerInset?.().right ?? 0}px`,
+            bottom: `${props.containerInset?.().bottom ?? 0}px`,
             'z-index': '-1',
             background: 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
-            border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+            border: '1px solid var(--cactus-container-border, var(--cactus-border-subtle, #f3f4f6))',
             'border-radius': '8px',
             'pointer-events': 'none',
           }}

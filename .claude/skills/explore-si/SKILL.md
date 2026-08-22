@@ -1,5 +1,5 @@
 ---
-skill: explore-si
+name: explore-si
 description: |
   Self-improving Explore. Runs a broad read-only fan-out search like Explore mode,
   then identifies where missing, stale, or confusing docs slowed the search down,
@@ -36,7 +36,7 @@ Add this instruction to the Explore agent's prompt, on top of the search task:
 > where, what you actually had to do instead. Friction includes: no entry-point
 > doc or index; a CLAUDE.md / README that omits a key directory; stale paths or
 > renamed symbols in docs; naming conventions you had to infer from code because
-> nothing stated them; a `.carta` spec that contradicts the code.
+> nothing stated them; a `.rhidoc` spec that contradicts the code.
 > Return TWO sections: (A) the answer to the search question, (B) the friction
 > log as a list. If there was no friction, say so explicitly.
 
@@ -63,8 +63,8 @@ friction log and these rules:
 **Scope — what may be edited:**
 - Agent-context / navigational docs: `CLAUDE.md`, `AGENTS.md`, `README.md`,
   package-level docs, and code-navigation comments. Edit directly.
-- `.carta/` specs: in scope, but **must** go through the `carta` CLI for
-  structural changes and `carta regenerate` after frontmatter edits. Content
+- `.rhidoc/` specs: in scope, but **must** go through the `rhidoc` CLI for
+  structural changes and `rhidoc regenerate` after frontmatter edits. Content
   edits to existing spec bodies may be direct. Follow the rules in `CLAUDE.md`.
 
 **Constraints:**
@@ -72,7 +72,7 @@ friction log and these rules:
 - Fix what the explorer needed: add the missing index, correct the stale path,
   state the convention that had to be inferred. Keep edits minimal and in the
   voice of the surrounding doc.
-- If a friction entry reveals a contradiction between a `.carta` spec and the
+- If a friction entry reveals a contradiction between a `.rhidoc` spec and the
   code, do NOT silently rewrite the spec — flag it in the agent's final report
   for the user to resolve. Specs are a source-of-truth bridge.
 - Do not commit. Leave changes in the working tree for the user to review.

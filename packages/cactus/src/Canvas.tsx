@@ -1,14 +1,16 @@
-import { createSignal, createMemo, onCleanup, Show, type JSX } from 'solid-js';
+import { createSignal, createMemo, onCleanup, Show, For, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { useViewport, type UseViewportOptions, type Transform } from './interactions/useViewport.js';
 import { observeLongTasks } from './perf.js';
-import { useConnectionDrag } from './interactions/useConnectionDrag.js';
-import { useBoxSelect } from './interactions/useBoxSelect.js';
+import { useGesture } from './interactions/useGesture.js';
 import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
+import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
 import { EdgeLayer } from './EdgeLayer.js';
-import type { EdgeDeclaration } from './types.js';
+import { routeEdges, type EdgeGeometry } from './edgeRouting.js';
+import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
+import { computeBounds } from './geometry/geometry.js';
 import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
 import { ChromeSlots } from './chrome/ChromeSlots.js';
 import { MenuRoot } from './chrome/ChromePrimitives.js';
@@ -37,12 +39,33 @@ export interface CanvasProps {
   connectionDrag?: {
     onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;
     isValidConnection?: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => boolean;
+    /** Ctrl/Meta + release (or click) while connecting — see `useGesture`'s
+        `connection.onConnectDrop` (R52). */
+    onConnectDrop?: (info: {
+      source: string;
+      sourceHandle: string | null;
+      clientX: number;
+      clientY: number;
+      ctrlKey: boolean;
+    }) => void;
   };
   boxSelect?: {
     getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
+    /** 'shift-drag' (default) or 'drag' — plain left-drag marquees and left-drag
+        panning is disabled (middle-drag still pans). */
+    trigger?: 'shift-drag' | 'drag';
   };
   /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
   edges?: EdgeDeclaration[];
+  /** Maps the current selection to the node IDs whose incident Edges should be
+   * emphasized. Hosts can project domain relationships such as containment;
+   * by default only the literally selected node IDs are used. */
+  edgeEmphasisNodeIds?: (selectedIds: ReadonlyArray<string>) => ReadonlyArray<string>;
+  /** Keep the last computed Edge geometry while true. Nodes may continue to
+   * move; routing catches up once this becomes false. */
+  freezeEdgeRouting?: () => boolean;
+  /** Clusters to draw as a tinted underlay behind their member nodes. */
+  clusters?: ClusterDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
   class?: string;
   children: JSX.Element;
@@ -63,6 +86,10 @@ export interface CanvasProps {
   nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
   /** Returns a MenuSchema for a background right-click, or undefined for no menu. */
   backgroundContextMenu?: () => MenuSchema | undefined;
+  /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
+  edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
+  /** Fires whenever the selection changes (click, marquee, clear). */
+  onSelectionChange?: (ids: ReadonlyArray<string>) => void;
 }
 
 export interface CanvasRef {
@@ -72,6 +99,201 @@ export interface CanvasRef {
   zoomIn: () => void;
   zoomOut: () => void;
   clearSelection: () => void;
+  getSelectedIds: () => ReadonlyArray<string>;
+  setSelectedIds: (ids: string[]) => void;
+}
+
+/** Pointer must travel this far (screen px) before a label drag starts, so a
+    double-click to edit doesn't jiggle the cluster. */
+const LABEL_DRAG_THRESHOLD = 3;
+
+// Tag hanging outside the cluster rect, under its bottom-right corner — member
+// boxes can't cover it there. border-top: none + squared top corners make it
+// read as attached to the cluster border.
+const LABEL_TAG_STYLE: JSX.CSSProperties = {
+  position: 'absolute',
+  right: '8px',
+  top: '100%',
+  padding: '1px 8px',
+  'font-size': '11px',
+  background: 'var(--cactus-surface, #ffffff)',
+  border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+  'border-top': 'none',
+  'border-radius': '0 0 6px 6px',
+  'white-space': 'nowrap',
+};
+
+/**
+ * Cluster label — passive text by default; double-click-editable when
+ * `onLabelEdit` is provided, draggable (moving the whole cluster) when
+ * `onDrag` is provided. Editing state is local to this component so a
+ * per-cluster signal isn't threaded through the parent.
+ */
+function ClusterLabel(props: {
+  label: string;
+  zoomScale: () => number;
+  onLabelEdit?: (newLabel: string) => void;
+  onDragStart?: () => void;
+  onDrag?: (deltaX: number, deltaY: number) => void;
+  onDragEnd?: () => void;
+}) {
+  const [editing, setEditing] = createSignal(false);
+  let inputRef: HTMLInputElement | undefined;
+
+  const startEdit = () => {
+    if (!props.onLabelEdit) return;
+    setEditing(true);
+    queueMicrotask(() => {
+      inputRef?.focus();
+      inputRef?.select();
+    });
+  };
+
+  const commit = () => {
+    const value = inputRef?.value ?? '';
+    setEditing(false);
+    if (value !== '' && value !== props.label) {
+      props.onLabelEdit?.(value);
+    }
+  };
+
+  const cancel = () => setEditing(false);
+
+  const handleDragPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 || !props.onDrag) return;
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let started = false;
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (!started) {
+        if (Math.hypot(dx, dy) < LABEL_DRAG_THRESHOLD) return;
+        started = true;
+        props.onDragStart?.();
+      }
+      const k = props.zoomScale();
+      props.onDrag?.(dx / k, dy / k);
+    };
+
+    const handleUp = () => {
+      if (started) props.onDragEnd?.();
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  };
+
+  const interactive = () => Boolean(props.onLabelEdit || props.onDrag);
+
+  return (
+    <Show
+      when={editing()}
+      fallback={
+        <div
+          style={{
+            ...LABEL_TAG_STYLE,
+            color: 'var(--cactus-fg-muted, #6b7280)',
+            'pointer-events': interactive() ? 'auto' : 'none',
+            cursor: props.onDrag ? 'grab' : props.onLabelEdit ? 'text' : undefined,
+          }}
+          data-no-pan={interactive() ? 'true' : undefined}
+          onPointerDown={handleDragPointerDown}
+          onDblClick={props.onLabelEdit ? (e) => { e.stopPropagation(); startEdit(); } : undefined}
+        >
+          {props.label}
+        </div>
+      }
+    >
+      <input
+        ref={inputRef}
+        value={props.label}
+        style={{
+          ...LABEL_TAG_STYLE,
+          'pointer-events': 'auto',
+        }}
+        data-no-pan="true"
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') commit();
+          else if (e.key === 'Escape') cancel();
+        }}
+        onBlur={commit}
+      />
+    </Show>
+  );
+}
+
+/**
+ * Underlay rendering for cluster rects — a passive, pointer-events-none tint
+ * derived from the live node-rect registry. A cluster with no registered
+ * members (empty set, or no rects yet) renders nothing.
+ */
+export function ClusterUnderlay(props: {
+  clusters: ClusterDeclaration[];
+  getNodeRects: () => ReadonlyMap<string, NodeRect>;
+  zoomScale: () => number;
+  /** Like EdgeLayer's lines/labels split: 'rects' paints the tint below the
+      node layer; 'labels' repeats the bounds math in an overlay above it, so
+      labels stay visible and reachable by the pointer (the node layer's
+      full-canvas wrapper hit-tests over anything beneath it). */
+  layer: 'rects' | 'labels';
+}) {
+  return (
+    <For each={props.clusters}>
+      {(cluster) => {
+        const bounds = createMemo(() => {
+          const rects = props.getNodeRects();
+          const memberRects = cluster.memberIds
+            .map((id) => rects.get(id))
+            .filter((r): r is NodeRect => r != null)
+            .map((r) => ({ x: r.x, y: r.y, width: r.w, height: r.h }));
+          if (memberRects.length === 0) return null;
+          return computeBounds(memberRects, { padding: 16, minWidth: 0, minHeight: 0 });
+        });
+        return (
+          <Show when={bounds()}>
+            {(b) => (
+              <div
+                data-cluster-id={props.layer === 'rects' ? cluster.id : undefined}
+                style={{
+                  position: 'absolute',
+                  left: `${b().x}px`,
+                  top: `${b().y}px`,
+                  width: `${b().width}px`,
+                  height: `${b().height}px`,
+                  ...(props.layer === 'rects'
+                    ? {
+                        background: cluster.tint ?? 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
+                        border: '1px solid var(--cactus-border-subtle, #f3f4f6)',
+                        'border-radius': '8px',
+                      }
+                    : {}),
+                  'pointer-events': 'none',
+                }}
+              >
+                <Show when={props.layer === 'labels' && cluster.label}>
+                  <ClusterLabel
+                    label={cluster.label!}
+                    zoomScale={props.zoomScale}
+                    onLabelEdit={cluster.onLabelEdit}
+                    onDragStart={cluster.onDragStart}
+                    onDrag={cluster.onDrag}
+                    onDragEnd={cluster.onDragEnd}
+                  />
+                </Show>
+              </div>
+            )}
+          </Show>
+        );
+      }}
+    </For>
+  );
 }
 
 /** Flatten all Action records from a ChromeSchema for hotkey registration. */
@@ -97,7 +319,46 @@ export function Canvas(props: CanvasProps) {
   // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
   // parents are expected to remount Canvas if the configuration changes.
   /* eslint-disable solid/reactivity */
-  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(props.viewportOptions);
+  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(
+    props.boxSelect?.trigger === 'drag'
+      ? { ...props.viewportOptions, leftDragPan: false }
+      : props.viewportOptions
+  );
+
+  // Right-button click vs. drag disambiguation. The right button both pans (drag)
+  // and opens the context menu (click). We cannot decide from the `contextmenu`
+  // event, whose timing is not portable — Chromium/Linux and macOS fire it on
+  // press (before any drag is visible); Firefox fires it on release. So we drive
+  // the menu from pointer events instead: track how far the pointer moved between
+  // right-button pointerdown and pointerup, and open the menu on pointerup only
+  // when movement stayed within the slop threshold. `contextmenu` is always
+  // suppressed so the native menu never shows.
+  const RIGHT_DRAG_SLOP_PX = 4;
+  let rightGesture: { x: number; y: number; moved: boolean } | null = null;
+  // A pointer-driven right gesture already decided the menu on pointerup; ignore
+  // the trailing native `contextmenu` (Firefox fires it after release).
+  let swallowContextMenu = false;
+
+  const onRightPointerMove = (e: PointerEvent) => {
+    if (rightGesture && Math.hypot(e.clientX - rightGesture.x, e.clientY - rightGesture.y) > RIGHT_DRAG_SLOP_PX) {
+      rightGesture.moved = true;
+    }
+  };
+  const onRightPointerUp = (e: PointerEvent) => {
+    if (e.button !== 2) return;
+    window.removeEventListener('pointermove', onRightPointerMove);
+    window.removeEventListener('pointerup', onRightPointerUp);
+    const gesture = rightGesture;
+    rightGesture = null;
+    swallowContextMenu = true;
+    if (gesture && !gesture.moved) {
+      openContextMenuAt(e.target as HTMLElement, e.clientX, e.clientY, e);
+    }
+  };
+  onCleanup(() => {
+    window.removeEventListener('pointermove', onRightPointerMove);
+    window.removeEventListener('pointerup', onRightPointerUp);
+  });
 
   // Node rect registry — populated by NodeContainer via context; consumed by EdgeLayer.
   const nodeRectsData = new Map<string, NodeRect>();
@@ -129,6 +390,22 @@ export function Canvas(props: CanvasProps) {
     return { x: -t.x / t.k, y: -t.y / t.k, w: el.clientWidth / t.k, h: el.clientHeight / t.k };
   };
 
+  // A route band is a generic visual ordering number. Hosts assign its meaning
+  // (for example, Atlas containment depth); cactus only renders each band as a
+  // separate sibling layer so host nodes can interleave with routes.
+  const routedEdges = createMemo<ReadonlyMap<string, EdgeGeometry>>((previous) => {
+    if (props.freezeEdgeRouting?.()) return previous;
+    return routeEdges(props.edges ?? [], getNodeRects());
+  }, new Map());
+
+  const edgeRouteBands = createMemo(() => {
+    const bands = new Set<number>();
+    for (const geometry of routedEdges().values()) {
+      for (const band of geometry.segmentLayers) bands.add(band);
+    }
+    return [...bands].sort((a, b) => a - b);
+  });
+
   // Header-height registry — populated by <NodeHeader> via context; consumed by layout.
   const headerHeightsData = new Map<string, number>();
   const [headerHeightsVersion, setHeaderHeightsVersion] = createSignal(0);
@@ -146,33 +423,45 @@ export function Canvas(props: CanvasProps) {
     return headerHeightsData;
   };
 
-  const connectionDragResult = useConnectionDrag(
-    props.connectionDrag
-      ? { ...props.connectionDrag, screenToCanvas }
-      : { onConnect: () => {}, screenToCanvas }
-  );
-  const { connectionDrag: connectionDragState, startConnection } = connectionDragResult;
-
-  const selection = useSelection({});
+  const selection = useSelection({ onSelectionChange: (ids) => props.onSelectionChange?.(ids) });
   const { selectedIds, clearSelection, isSelected, onNodePointerDown, setSelectedIds } = selection;
+  const edgeEmphasisNodeIds = createMemo(() =>
+    props.edgeEmphasisNodeIds?.(selectedIds()) ?? selectedIds(),
+  );
 
   const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
 
-  const boxSelectResult = useBoxSelect(
-    props.boxSelect
-      ? {
-          transform,
-          containerEl,
-          getNodeRects: props.boxSelect.getNodeRects,
-          onBoxSelectHits: selection.mergeBoxSelection,
-        }
-      : {
-          transform,
-          containerEl,
-          getNodeRects: () => [],
-        }
-  );
-  const { selectionRect } = boxSelectResult;
+  const gestureResult = useGesture({
+    zoomScale: () => transform().k,
+    callbacks: {},
+    boxSelect: {
+      transform,
+      containerEl,
+      getNodeRects: props.boxSelect?.getNodeRects ?? (() => []),
+      trigger: props.boxSelect?.trigger,
+      onBoxSelectHits: props.boxSelect ? selection.mergeBoxSelection : undefined,
+    },
+    connection: props.connectionDrag
+      ? { ...props.connectionDrag, screenToCanvas }
+      : undefined,
+  });
+  const { gesture, beginConnect } = gestureResult;
+  const marqueeRect = () => {
+    const g = gesture();
+    return g.kind === 'marquee' ? g.rect : null;
+  };
+  const connectionDragState = (): ConnectionDragState | null => {
+    const g = gesture();
+    if (g.kind !== 'connecting') return null;
+    return {
+      sourceNodeId: g.sourceId,
+      sourceHandle: g.sourceHandle,
+      startCanvasX: g.startCanvasX,
+      startCanvasY: g.startCanvasY,
+      currentScreenX: g.currentScreenX,
+      currentScreenY: g.currentScreenY,
+    };
+  };
 
   if (import.meta.env.DEV) {
     const cleanup = observeLongTasks();
@@ -212,12 +501,14 @@ export function Canvas(props: CanvasProps) {
     zoomIn,
     zoomOut,
     clearSelection,
+    getSelectedIds: () => selectedIds(),
+    setSelectedIds,
   });
 
   const contextValue: CanvasContextValue = {
     transform,
     screenToCanvas,
-    startConnection: props.connectionDrag ? startConnection : () => {},
+    startConnection: props.connectionDrag ? beginConnect : () => {},
     connectionDrag: props.connectionDrag ? connectionDragState : () => null,
     selectedIds,
     clearSelection,
@@ -238,34 +529,50 @@ export function Canvas(props: CanvasProps) {
   };
   /* eslint-enable solid/reactivity */
 
-  const handleContextMenu = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
+  // Resolve which menu the target under the pointer owns and open it. Position is
+  // the release point. `rawEvent` is handed to the onBackgroundContextMenu escape
+  // hatch, which wants the underlying MouseEvent.
+  const openContextMenuAt = (target: HTMLElement, clientX: number, clientY: number, rawEvent: MouseEvent) => {
     const container = target.closest?.('[data-container-id]');
 
     if (container && props.nodeContextMenu) {
       const nodeId = container.getAttribute('data-container-id')!;
       const schema = props.nodeContextMenu(nodeId);
       if (schema && schema.items.length > 0) {
-        e.preventDefault();
-        setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+        setCtxMenuState({ x: clientX, y: clientY, schema });
         return;
       }
     }
 
     if (!container) {
-      if (props.backgroundContextMenu) {
-        const schema = props.backgroundContextMenu();
+      const edgeEl = target.closest?.('[data-edge-id]');
+      if (edgeEl && props.edgeContextMenu) {
+        const edgeId = edgeEl.getAttribute('data-edge-id')!;
+        const schema = props.edgeContextMenu(edgeId);
         if (schema && schema.items.length > 0) {
-          e.preventDefault();
-          setCtxMenuState({ x: e.clientX, y: e.clientY, schema });
+          setCtxMenuState({ x: clientX, y: clientY, schema });
           return;
         }
       }
-      if (props.onBackgroundContextMenu) {
-        e.preventDefault();
-        props.onBackgroundContextMenu(e);
+      if (props.backgroundContextMenu) {
+        const schema = props.backgroundContextMenu();
+        if (schema && schema.items.length > 0) {
+          setCtxMenuState({ x: clientX, y: clientY, schema });
+          return;
+        }
       }
+      props.onBackgroundContextMenu?.(rawEvent);
     }
+  };
+
+  const handleContextMenu = (e: MouseEvent) => {
+    e.preventDefault(); // never show the native menu; the canvas drives its own
+    if (swallowContextMenu) {
+      swallowContextMenu = false; // trailing native menu from a gesture already resolved on pointerup
+      return;
+    }
+    if (rightGesture) return; // a right-button gesture is in flight; pointerup will decide (Chromium/Linux fires contextmenu on press)
+    openContextMenuAt(e.target as HTMLElement, e.clientX, e.clientY, e); // keyboard menu key, or any non-pointer contextmenu
   };
 
   return (
@@ -275,6 +582,12 @@ export function Canvas(props: CanvasProps) {
         class={props.class}
         style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
         onPointerDown={(e) => {
+          swallowContextMenu = false; // any fresh pointer interaction clears a stale swallow from a prior gesture
+          if (e.button === 2) {
+            rightGesture = { x: e.clientX, y: e.clientY, moved: false };
+            window.addEventListener('pointermove', onRightPointerMove);
+            window.addEventListener('pointerup', onRightPointerUp);
+          }
           if (props.onBackgroundPointerDown) {
             const target = e.target as HTMLElement;
             if (!target.closest?.('[data-no-pan]')) {
@@ -284,17 +597,30 @@ export function Canvas(props: CanvasProps) {
         }}
         onContextMenu={handleContextMenu}
       >
+        <div
+          data-cactus-pan-surface
+          data-pan-surface
+          style={{ position: 'absolute', inset: '0' }}
+        />
+
         {props.renderBackground
           ? props.renderBackground(transform(), props.patternId)
           : <DotGrid transform={transform()} patternId={props.patternId} />
         }
 
-        <Show when={(props.edges?.length ?? 0) > 0}>
-          <svg data-cactus-edge-layer-lines width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
-            <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="lines" zoom={() => transform().k} viewport={edgeViewport} />
-            </g>
-          </svg>
+        <Show when={(props.clusters?.length ?? 0) > 0}>
+          <div
+            data-cactus-cluster-underlay
+            style={{
+              transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
+              "transform-origin": '0 0',
+              position: 'absolute',
+              inset: '0',
+              "pointer-events": 'none',
+            }}
+          >
+            <ClusterUnderlay clusters={props.clusters!} getNodeRects={getNodeRects} zoomScale={() => transform().k} layer="rects" />
+          </div>
         </Show>
 
         <div
@@ -303,15 +629,61 @@ export function Canvas(props: CanvasProps) {
             "transform-origin": '0 0',
             position: 'absolute',
             inset: '0',
+            "pointer-events": 'none',
           }}
         >
+          <Show when={(props.edges?.length ?? 0) > 0}>
+            <div data-cactus-edge-layer-lines>
+              <For each={edgeRouteBands()}>
+                {(band) => (
+                  <svg
+                    data-cactus-edge-route-band={band}
+                    width="100%"
+                    height="100%"
+                    style={{
+                      position: 'absolute',
+                      inset: '0',
+                      overflow: 'visible',
+                      'pointer-events': 'none',
+                      'z-index': `${band}`,
+                    }}
+                  >
+                    <EdgeLayer
+                      edges={props.edges!}
+                      routes={routedEdges}
+                      emphasisNodeIds={edgeEmphasisNodeIds}
+                      layer="lines"
+                      routeBand={band}
+                      zoom={() => transform().k}
+                      viewport={edgeViewport}
+                    />
+                  </svg>
+                )}
+              </For>
+            </div>
+          </Show>
           {props.children}
         </div>
+
+        <Show when={(props.clusters?.length ?? 0) > 0}>
+          <div
+            data-cactus-cluster-labels
+            style={{
+              transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().k})`,
+              "transform-origin": '0 0',
+              position: 'absolute',
+              inset: '0',
+              "pointer-events": 'none',
+            }}
+          >
+            <ClusterUnderlay clusters={props.clusters!} getNodeRects={getNodeRects} zoomScale={() => transform().k} layer="labels" />
+          </div>
+        </Show>
 
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
+              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>
@@ -338,7 +710,7 @@ export function Canvas(props: CanvasProps) {
           </svg>
         </Show>
 
-        <Show when={selectionRect()}>
+        <Show when={marqueeRect()}>
           {(rect) => (
             <div
               style={{

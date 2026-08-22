@@ -23,8 +23,8 @@ build-cactus:
 
 # build the storage server
 build-server:
-    pnpm -C packages/server-next exec rimraf dist
-    pnpm -C packages/server-next exec tsc
+    pnpm -C packages/server exec rimraf dist
+    pnpm -C packages/server exec tsc
 
 # build (regenerate) the MCP server bundle
 build-mcp:
@@ -35,8 +35,8 @@ mcp: build-mcp
 
 # build the canvas client
 build-client:
-    pnpm -C packages/client-next exec tsc -b
-    pnpm -C packages/client-next exec vite build
+    pnpm -C packages/client exec tsc -b
+    pnpm -C packages/client exec vite build
 
 # ---- test ----
 
@@ -53,14 +53,14 @@ test-mcp:
     pnpm -C packages/mcp exec vitest run
 
 test-client:
-    pnpm -C packages/client-next exec vitest run
+    pnpm -C packages/client exec vitest run
 
 test-server:
-    pnpm -C packages/server-next exec vitest run
+    pnpm -C packages/server exec vitest run
 
 # run client end-to-end tests (Playwright)
 test-e2e:
-    pnpm -C packages/client-next exec playwright test
+    pnpm -C packages/client exec playwright test
 
 # ---- typecheck ----
 
@@ -77,7 +77,7 @@ typecheck-mcp:
     pnpm -C packages/mcp exec tsgo --noEmit -p tsconfig.json
 
 typecheck-client:
-    pnpm -C packages/client-next exec tsgo --noEmit
+    pnpm -C packages/client exec tsgo --noEmit
 
 # ---- lint ----
 
@@ -89,15 +89,15 @@ lint:
 
 # run the storage server + canvas client together
 dev:
-    pnpm -C packages/server-next exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.canvases & pnpm -C packages/client-next exec vite
+    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.luminous & pnpm -C packages/client exec vite
 
 # run the canvas client only
 dev-client:
-    pnpm -C packages/client-next exec vite
+    pnpm -C packages/client exec vite
 
 # run the storage server only
 dev-server:
-    pnpm -C packages/server-next exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.canvases
+    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.luminous
 
 # run the MCP server from source over stdio
 dev-mcp:
@@ -105,11 +105,11 @@ dev-mcp:
 
 # preview the production client build
 preview:
-    pnpm -C packages/client-next exec vite preview
+    pnpm -C packages/client exec vite preview
 
 # start the built storage server
 start-server:
-    node packages/server-next/dist/index.js
+    node packages/server/dist/index.js
 
 # ---- generators ----
 

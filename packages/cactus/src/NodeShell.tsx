@@ -1,7 +1,7 @@
 import type { JSX } from 'solid-js';
 import { useCanvasContext } from './CanvasContext.js';
 import { ConnectionHandle } from './ConnectionHandle.js';
-import type { ResizeDirection } from './interactions/useNodeResize.js';
+import type { ResizeDirection } from './interactions/useGesture.js';
 
 export interface NodeShellProps {
   nodeId: string;
@@ -33,6 +33,7 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
         top: `${props.y()}px`,
         width: `${props.w()}px`,
         'min-height': `${props.h()}px`,
+        'pointer-events': 'auto',
         'box-shadow': 'var(--cactus-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05))',
         background: 'var(--cactus-surface, #ffffff)',
         ...(selected()

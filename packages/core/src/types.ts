@@ -134,9 +134,13 @@ export type NodeRole = 'spatial' | 'latent' | 'hidden';
  *               edge kind per view may take this role.
  * - `arrow`   — drawn as a visible edge between two spatial nodes.
  * - `summary` — collapsed into a badge/count/chip on the source node.
+ * - `cluster` — member (`from`) grouped under hub (`to`) as an annotation-only
+ *               underlay. No coordinate ownership, no layout influence, and
+ *               (unlike `contain`) no tree constraints — see
+ *               `evaluateClusters`.
  * - `hidden`  — present in the graph, not rendered in this view.
  */
-export type EdgeRole = 'contain' | 'arrow' | 'summary' | 'hidden';
+export type EdgeRole = 'contain' | 'arrow' | 'summary' | 'cluster' | 'hidden';
 
 export type LayerState = 'on' | 'peek' | 'off';
 
@@ -247,6 +251,22 @@ export interface ContainmentWarning {
   code: 'multiple-parents' | 'cycle' | 'missing-node';
   nodeId: NodeId;
   message: string;
+}
+
+// ============================================================================
+// Clusters — computed, not stored
+// ============================================================================
+
+/**
+ * One cluster: the hub node's id and the ids of its members. Produced by
+ * `evaluateClusters(graph, view)` from `cluster`-role edges — a member
+ * (`edge.from`) points at its hub (`edge.to`). Annotation-only: no
+ * coordinate ownership, no layout influence, no tree constraints. A node may
+ * belong to several clusters; hubs with no members produce no cluster.
+ */
+export interface ClusterProjection {
+  hubId: NodeId;
+  memberIds: NodeId[];
 }
 
 // ============================================================================
@@ -428,6 +448,8 @@ export interface SceneGraph {
   summaryEdges: Edge[];
   /** Per-view nesting tree from the contain-role edge subset. */
   containment: ContainmentTree;
+  /** Cluster projections from the cluster-role edge subset. Annotation-only. */
+  clusters: ClusterProjection[];
   /** Non-fatal evaluation warnings. */
   warnings: SceneWarning[];
 }

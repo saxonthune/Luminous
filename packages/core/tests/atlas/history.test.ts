@@ -1,0 +1,265 @@
+import { describe, it, expect } from 'vitest';
+import { invertAtlasAction, invertAtlasBatch } from '../../src/atlas/history.ts';
+import { applyAtlasBatch, buildBisectActions } from '../../src/atlas/operations.ts';
+import type { AtlasAction, AtlasDocument } from '../../src/atlas/types.ts';
+
+function doc(nodes: AtlasDocument['nodes'], edges: AtlasDocument['edges'] = []): AtlasDocument {
+  return { v: 1, nodes, edges };
+}
+
+function roundTrips(before: AtlasDocument, actions: AtlasAction[]) {
+  const applied = applyAtlasBatch(before, actions);
+  if (!applied.ok) throw new Error(`setup: ${applied.error}`);
+  const inverse = invertAtlasBatch(before, actions);
+  const restored = applyAtlasBatch(applied.doc, inverse);
+  if (!restored.ok) throw new Error(`undo: ${restored.error}`);
+  expect(restored.doc).toEqual(before);
+}
+
+describe('invertAtlasAction', () => {
+  it('inverts addNode into a matching removeNode', () => {
+    const before = doc([]);
+    const action: AtlasAction = { type: 'addNode', id: 'a', name: 'A' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'removeNode', id: 'a' }]);
+  });
+
+  it('inverts reparent back to the prior (defined) parent', () => {
+    const before = doc([
+      { id: 'p1', name: 'P1' },
+      { id: 'p2', name: 'P2' },
+      { id: 'a', name: 'A', parent: 'p1' },
+    ]);
+    const action: AtlasAction = { type: 'reparent', id: 'a', parent: 'p2' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'reparent', id: 'a', parent: 'p1' }]);
+  });
+
+  it('inverts a grouping reparent into a reparent-back plus the stripped edges', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'b', to: 'a' }]);
+    expect(invertAtlasAction(before, { type: 'reparent', id: 'b', parent: 'a' })).toEqual([
+      { type: 'reparent', id: 'b' },
+      { type: 'addEdge', from: 'b', to: 'a' },
+    ]);
+  });
+
+  it('inverts reparent back to root (no prior parent)', () => {
+    const before = doc([
+      { id: 'p', name: 'P' },
+      { id: 'a', name: 'A' },
+    ]);
+    const action: AtlasAction = { type: 'reparent', id: 'a', parent: 'p' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'reparent', id: 'a' }]);
+  });
+
+  it('inverts setNode with the same keys, valued from before', () => {
+    const before = doc([{ id: 'a', name: 'A', x: 1, y: 2 }]);
+    const action: AtlasAction = { type: 'setNode', id: 'a', x: 10, y: 20 };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setNode', id: 'a', x: 1, y: 2 }]);
+  });
+
+  it('inverts a field-deletion setNode by restoring absence as an explicit undefined', () => {
+    const before = doc([{ id: 'a', name: 'A' }]);
+    const action: AtlasAction = { type: 'setNode', id: 'a', color: 'accent-8' };
+    const inverse = invertAtlasAction(before, action);
+    expect(inverse).toEqual([{ type: 'setNode', id: 'a', color: undefined }]);
+    expect(inverse[0]).toHaveProperty('color');
+  });
+
+  it('inverts a content height setNode by restoring the prior value', () => {
+    const before = doc([{ id: 'a', name: 'A', contentHeight: 100 }]);
+    const action: AtlasAction = { type: 'setNode', id: 'a', contentHeight: 200 };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setNode', id: 'a', contentHeight: 100 }]);
+  });
+
+  it('inverts removeNode into an addNode rebuild plus its touching edges', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B', x: 3 }], [{ from: 'a', to: 'b' }]);
+    const action: AtlasAction = { type: 'removeNode', id: 'b' };
+    expect(invertAtlasAction(before, action)).toEqual([
+      { type: 'addNode', id: 'b', name: 'B', x: 3 },
+      { type: 'addEdge', from: 'a', to: 'b' },
+    ]);
+  });
+
+  it('inverts removeNode of a container with fields addNode cannot carry, via a trailing setNode', () => {
+    const before = doc([
+      { id: 'c', name: 'C', color: 'accent-2', content: { text: 'hi', mode: 'code' }, contentWidth: 120 },
+      { id: 'k', name: 'K', parent: 'c', x: 1, y: 2 },
+    ]);
+    const action: AtlasAction = { type: 'removeNode', id: 'c' };
+    expect(invertAtlasAction(before, action)).toEqual([
+      { type: 'addNode', id: 'c', name: 'C' },
+      { type: 'setNode', id: 'c', content: { text: 'hi', mode: 'code' }, color: 'accent-2', contentWidth: 120 },
+      { type: 'addNode', id: 'k', name: 'K', parent: 'c', x: 1, y: 2 },
+    ]);
+  });
+
+  it('inverts a content width setNode by restoring the prior value', () => {
+    const before = doc([{ id: 'a', name: 'A', contentWidth: 100 }]);
+    const action: AtlasAction = { type: 'setNode', id: 'a', contentWidth: 200 };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setNode', id: 'a', contentWidth: 100 }]);
+  });
+
+  it('inverts addEdge into a matching removeEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+    const action: AtlasAction = { type: 'addEdge', from: 'a', to: 'b' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'removeEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('inverts removeEdge into a matching addEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    const action: AtlasAction = { type: 'removeEdge', from: 'a', to: 'b' };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'addEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('inverts setLegend into a setLegend carrying the prior legend', () => {
+    const before: AtlasDocument = { v: 1, legend: { 'accent-1': 'old' }, nodes: [], edges: [] };
+    const action: AtlasAction = { type: 'setLegend', legend: { 'accent-2': 'new' } };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setLegend', legend: { 'accent-1': 'old' } }]);
+  });
+
+  it('inverts setLegend on a document with no legend into a clearing setLegend', () => {
+    const before = doc([]);
+    const action: AtlasAction = { type: 'setLegend', legend: { 'accent-1': 'new' } };
+    expect(invertAtlasAction(before, action)).toEqual([{ type: 'setLegend', legend: {} }]);
+  });
+});
+
+describe('invertAtlasBatch', () => {
+  it('round-trips a single addNode', () => {
+    const before = doc([]);
+    roundTrips(before, [{ type: 'addNode', id: 'a', name: 'A', x: 1, y: 2 }]);
+  });
+
+  it('round-trips a reparent that strips a parent-child edge, restoring the edge on undo', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    roundTrips(before, [{ type: 'reparent', id: 'b', parent: 'a' }]);
+  });
+
+  it('round-trips a deep-strip reparent: subtree-to-ancestor edges come back on undo', () => {
+    const before = doc(
+      [
+        { id: 'outer', name: 'Outer' },
+        { id: 'inner', name: 'Inner', parent: 'outer' },
+        { id: 'sub', name: 'Sub' },
+        { id: 'leaf', name: 'Leaf', parent: 'sub' },
+      ],
+      [{ from: 'leaf', to: 'outer' }],
+    );
+    roundTrips(before, [{ type: 'reparent', id: 'sub', parent: 'inner' }]);
+  });
+
+  it('round-trips a single reparent', () => {
+    const before = doc([
+      { id: 'p1', name: 'P1' },
+      { id: 'p2', name: 'P2' },
+      { id: 'a', name: 'A', parent: 'p1' },
+    ]);
+    roundTrips(before, [{ type: 'reparent', id: 'a', parent: 'p2' }]);
+  });
+
+  it('round-trips cleanup of the old Container Ports on reparent and removal', () => {
+    const before = doc([
+      { id: 'box', name: 'Box', ports: { exit: { side: 'bottom', offset: 0.75 } } },
+      { id: 'child', name: 'Child', parent: 'box' },
+    ]);
+    roundTrips(before, [{ type: 'reparent', id: 'child' }]);
+    roundTrips(before, [{ type: 'removeNode', id: 'child' }]);
+  });
+
+  it('round-trips setNode fields, including field-deletion (content, color, x/y, contentHeight)', () => {
+    const before = doc([
+      { id: 'a', name: 'A', content: { text: 'hi', mode: 'markdown' }, color: 'accent-8', x: 1, y: 2, contentHeight: 100 },
+    ]);
+    roundTrips(before, [
+      { type: 'setNode', id: 'a', content: undefined, color: undefined, x: undefined, y: undefined, contentHeight: undefined },
+    ]);
+  });
+
+  it('round-trips setNode name', () => {
+    const before = doc([{ id: 'a', name: 'A' }]);
+    roundTrips(before, [{ type: 'setNode', id: 'a', name: 'Renamed' }]);
+  });
+
+  it('round-trips a multi-action batch in reverse order, folding forward through intermediate state', () => {
+    const before = doc([{ id: 'p', name: 'P' }]);
+    const actions: AtlasAction[] = [
+      { type: 'addNode', id: 'a', name: 'A', x: 0, y: 0 },
+      { type: 'reparent', id: 'a', parent: 'p' },
+      { type: 'setNode', id: 'a', x: 50, y: 60 },
+    ];
+    const inverse = invertAtlasBatch(before, actions);
+    expect(inverse).toEqual([
+      { type: 'setNode', id: 'a', x: 0, y: 0 },
+      { type: 'reparent', id: 'a' },
+      { type: 'removeNode', id: 'a' },
+    ]);
+    roundTrips(before, actions);
+  });
+
+  it('round-trips a single addEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+    roundTrips(before, [{ type: 'addEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('round-trips a single removeEdge', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    roundTrips(before, [{ type: 'removeEdge', from: 'a', to: 'b' }]);
+  });
+
+  it('round-trips removeNode of a container: descendants and touching edges come back', () => {
+    // Removed nodes sit last in the array so the rebuild (which appends)
+    // restores the exact document, array order included.
+    const before = doc(
+      [
+        { id: 'x', name: 'X' },
+        { id: 'c', name: 'C', color: 'accent-2', contentHeight: 80 },
+        { id: 'k', name: 'K', parent: 'c', x: 1, y: 2, content: { text: 'hi', mode: 'markdown' } },
+      ],
+      [
+        { from: 'x', to: 'c' },
+        { from: 'k', to: 'x' },
+      ],
+    );
+    roundTrips(before, [{ type: 'removeNode', id: 'c' }]);
+  });
+
+  it('rebuilds parents before children even when a child precedes its parent in the array', () => {
+    const before = doc([
+      { id: 'x', name: 'X' },
+      { id: 'k', name: 'K', parent: 'c' },
+      { id: 'c', name: 'C' },
+    ]);
+    const actions: AtlasAction[] = [{ type: 'removeNode', id: 'c' }];
+    const applied = applyAtlasBatch(before, actions);
+    if (!applied.ok) throw new Error(`setup: ${applied.error}`);
+    const restored = applyAtlasBatch(applied.doc, invertAtlasBatch(before, actions));
+    if (!restored.ok) throw new Error(`undo: ${restored.error}`);
+    // Array order is not preserved (the rebuild appends), so compare as sets.
+    expect([...restored.doc.nodes].sort((a, b) => a.id.localeCompare(b.id))).toEqual(
+      [...before.nodes].sort((a, b) => a.id.localeCompare(b.id)),
+    );
+  });
+
+  it('round-trips a setLegend from an unlabeled document', () => {
+    const before = doc([]);
+    roundTrips(before, [{ type: 'setLegend', legend: { 'accent-1': 'user-facing interface' } }]);
+  });
+
+  it('round-trips a setLegend that replaces an existing legend', () => {
+    const before: AtlasDocument = { v: 1, legend: { 'accent-1': 'old', 'accent-3': 'kept' }, nodes: [], edges: [] };
+    roundTrips(before, [{ type: 'setLegend', legend: { 'accent-2': 'new' } }]);
+  });
+
+  it('inverts a bisect batch back to the original single edge, with the new node gone', () => {
+    const before = doc([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], [{ from: 'a', to: 'b' }]);
+    const actions = buildBisectActions(before, { from: 'a', to: 'b' }, { id: 'n', name: 'N' });
+    const applied = applyAtlasBatch(before, actions);
+    if (!applied.ok) throw new Error(`setup: ${applied.error}`);
+    expect(applied.doc.nodes.map((n) => n.id)).toEqual(['a', 'b', 'n']);
+
+    roundTrips(before, actions);
+    const inverse = invertAtlasBatch(before, actions);
+    const restored = applyAtlasBatch(applied.doc, inverse);
+    if (!restored.ok) throw new Error(`undo: ${restored.error}`);
+    expect(restored.doc.nodes.some((n) => n.id === 'n')).toBe(false);
+  });
+});

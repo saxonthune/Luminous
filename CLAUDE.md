@@ -4,7 +4,7 @@
 
 Luminous bridges human visual thinking and AI structured context. Humans reason well with spatial canvas tools; AI performs well with high-quality structured context. Luminous is the interface between both — a canvas where humans see and arrange software artifacts, backed by structured data that AI agents can read, query, and act on. Work flows in both directions.
 
-This is a *design* tool, not a diagramming tool. It was extracted from the Carta monorepo as the TypeScript/React visual layer. Carta remains the spec/docs system and Python CLI; Luminous is the visual companion.
+This is a *design* tool, not a diagramming tool. It was extracted from the Rhidoc monorepo as the TypeScript/React visual layer. Rhidoc remains the spec/docs system and Python CLI; Luminous is the visual companion.
 
 ## Project Structure
 
@@ -13,12 +13,37 @@ Monorepo (pnpm workspaces). Two tracks:
 ### Active development (new unfolding architecture)
 
 ```
-server-next  (dumb storage + file-change notifications)
-client-next  (Solid.js canvas, all domain logic)
+server  (dumb storage + file-change notifications)
+client  (Solid.js canvas, all domain logic)
 ```
 
-- `@luminous/server` (`packages/server-next`) — filesystem serving, WebSocket file-change notifications, no domain logic
-- `@luminous/canvas` (`packages/client-next`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting
+- `@luminous/server` (`packages/server`) — filesystem serving, WebSocket file-change notifications, no domain logic
+- `@luminous/client` (`packages/client`) — Solid.js + cactus canvas engine, notes, freeform edges, nesting. It is a platform wrapper (`AppShell`, `AppHeader`) hosting apps under `src/apps/`.
+
+## The three products
+
+Luminous is a platform of apps (doc01.04) sharing one canvas engine and one wrapper. Three are under development:
+
+| Product | Code | Docs | What it is |
+|---|---|---|---|
+| **Canvas** | `src/apps/canvas/CanvasApp.tsx` | doc01.08 | The general canvas — graph + pack model, notes, freeform edges, nesting. The first app, formerly known simply as Luminous. |
+| **Dataflow** (Flow) | `src/apps/dataflow/` | doc01.05 | Read-only viewer of `*.dataflow.json` documents (doc02.21.03) — a program designed as boxes and flows before the program exists. |
+| **Atlas** | `src/apps/atlas/` | doc01.07 | One dense canvas of a whole program: inventories of its interfaces, and from each entry the dataflow behind it. braincrawl is the first draft (doc01.07.02). |
+
+Each app owns what it reads and writes. The graph-and-pack model belongs to Canvas, not to the platform — cactus renders whatever projection an app makes.
+
+### Naming and scope — two rules that keep the apps apart
+
+**"Luminous" means the platform; "Canvas" means the app.** Docs written before the
+platform had three apps say "Luminous" and mean Canvas. Read them that way, and never
+write new prose that way — name the app.
+
+**A doc's product scope is decided by the vocabulary it speaks, not by the package its
+code lives in.** Pack, graph, kind, view, render template, and primitive are Canvas's
+vocabulary, so a doc using them binds Canvas — even though that code lives in
+`@luminous/core`, which Atlas imports too. `@luminous/core` is not the platform's core;
+it holds Canvas's machinery, Atlas's module, and genuinely shared rendering in one
+package. The package boundary does not track the product boundary.
 
 ### Legacy (schema-first, being superseded)
 
@@ -32,19 +57,19 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Current Milestone
 
-**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.carta/01-luminous/01-vision/03-milestones.md` for the full roadmap.
+**Milestone 1: Solid.js Project Summary Canvas.** A pipeline script that performs static analysis of this Solid.js codebase and emits a `.canvas.json` with the component tree (one color), reactive signals (another color, nested in their creating component), and external data sources (a third color). Signals point to their consumers via distinct edge colors. See `.rhidoc/01-product/03-milestones/` for the full roadmap.
 
 ## Development Philosophy
 
 - **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Living software starts small and develops centers and ornamentation as feature complexity evolves.
 - **Happy path first**: implement the minimal end-to-end path. Complex algorithms, guards, and elaborate systems come only when sufficient forces cross the threshold — change in quantity begets change in quality.
-- **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in carta bridge the gap between them — they don't replace either side.
+- **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in rhidoc bridge the gap between them — they don't replace either side.
 - **Refactorability**: every part (specs, artifacts, code) must be refactorable. Avoid structures that resist change — they become degenerative over time and require massive investment to evolve.
 - **Willing to delete**: no backward compatibility with features nobody uses. If something isn't earning its place, remove it.
 
 ## Architecture Direction
 
-See `.carta/01-luminous/02-design/01-pdr-unfolding-architecture.md` for full details. Key decisions:
+See `.rhidoc/02-design/01-pdr-unfolding-architecture.md` for full details. Key decisions:
 
 - **Polymorphic nodes.** Notes are the primary node type, but the data model is a discriminated union — portals, pipeline-generated nodes (components, signals), and future types share base properties (position, size, nesting) and differ by `type` field.
 - **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
@@ -63,7 +88,7 @@ The canvas engine is called **cactus** (`packages/cactus/src/`). Custom, domain-
 **Engine/domain boundary.** Luminous translates the intention of graph + pack declarations into a visual canvas; cactus *is* that visual API. So the split is not "engine supports everything, domain restricts" — it's by *kind of concern*:
 
 - **Visual and interaction concerns belong in cactus** — how the canvas looks and behaves: layout, drag, snapping, collision-free placement, hit-testing. These are not domain logic and should not leak into the domain layer.
-- **Meaning belongs in the domain layer** (`client-next`) — what nodes and edges *are*, the graph + pack declaration, what is semantically allowed.
+- **Meaning belongs in the domain layer** (`client`) — what nodes and edges *are*, the graph + pack declaration, what is semantically allowed.
 
 cactus operates on the rendered projection (the DOM — `data-container-id` nesting, measured rects), not the abstract graph. The domain layer declares intent and persists results; it does not compute visual geometry.
 
@@ -71,33 +96,27 @@ This boundary is a first-class design principle under active test — see PDR D8
 
 ## Docs / Specs
 
-The `.carta/` directory contains structured specifications managed by the `carta` CLI.
+The `.rhidoc/` directory contains structured specifications managed by the `rhidoc` CLI.
 
-- **Content edits** to existing docs: direct file editing is fine, then `carta regenerate`
-- **Structural changes**: use `carta` commands (see below)
-- If confused about usage, run `carta ai-skill` for the full CLI reference with examples
+- `.rhidoc/MANIFEST.md` is the index of every doc — read it first to find one.
+- **Content edits** to existing docs: direct file editing is fine, then `rhidoc regenerate`
+- **Structural changes**: use `rhidoc` commands
+- **After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md
+- Run `rhidoc ai-skill` for the full CLI reference with examples
 
-### Carta Commands Quick Reference
+### Atlas UI requirements (doc01.07.04)
 
-All paths are relative to the workspace root, **without** the `.carta/` prefix (e.g., `01-luminous/02-design`, not `.carta/01-luminous/02-design`).
+When working on Atlas, always consult `.rhidoc/01-product/07-atlas/04-ui-requirements.md`
+first — it is the controlled list of UI requirements (R-numbers) and the input-command
+bindings table. A change that adds or alters UI behavior updates that doc in the same
+change: new behavior gets the next unused R-number (identifiers are never reused), and
+the bindings table stays in sync.
 
-**After any structural change**, run `carta regenerate` to rebuild MANIFEST.md. Most commands do this automatically; use `--no-regen` to skip (useful during batch operations).
-
-| Command | Use case | Flags |
-|---|---|---|
-| `carta regenerate` | After editing frontmatter, or to fix a stale MANIFEST | (none) |
-| `carta create <dest> <slug>` | Add a new doc to an existing section | `--title`, `--summary`, `--tags` (comma-sep), `--deps` (comma-sep), `--order`, `--dry-run` |
-| `carta group <target>` | Create a new section (directory + 00-index.md) | `--title`, `--no-regen` |
-| `carta delete <path> [paths...]` | Remove docs; siblings renumber to close gaps | `--dry-run`, `--output-mapping` |
-| `carta move <src> <dest>` | Reorder docs or move between sections | `--order`, `--mkdir`, `--rename`, `--no-gap-close` (for batch moves), `--dry-run` |
-| `carta punch <path>` | A leaf doc outgrew one file — expand into a directory | `--as-child` (put content in 01-slug.md, generate skeleton index), `--dry-run` |
-| `carta flatten <path>` | A section collapsed to one doc — dissolve back to leaf | `--keep-index`, `--force`, `--at`, `--dry-run` |
-| `carta rename <path> <new-slug>` | Change a doc/dir slug without moving it | `--no-regen` |
-| `carta cat <ref>` | Quick-read a doc by cross-reference ID (e.g. `doc02.01`) | (none) |
-
-### Pack/graph schema changes
+### Pack/graph schema changes (Canvas)
 
 When a change adds or modifies a field in the pack or graph schema — including optional nodeKind props that have engine-side behavior (e.g. `tier`) — update `.claude/skills/luminous-pipeline/SKILL.md` in the same change. A sibling-repo pipeline agent was blocked because it grep'd the skill for `tier`, found nothing, and couldn't act without asking a human.
+
+The same rule covers the dataflow document shape: a change to `packages/core/src/dataflow/types.ts` (or the check/operation rules) updates `.claude/skills/luminous-dataflow/SKILL.md` and its `dataflow-document.schema.json` copy, plus the sidecar schema in doc02.21.01, in the same change.
 
 ### Primitive vocabulary reference
 
@@ -120,6 +139,12 @@ to see all recipes. Common ones: `just build`, `just test`, `just typecheck`,
 `just lint`, `just dev`, `just mcp` (regenerate the MCP server bundle).
 
 Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
+
+### E2E tests
+
+The user runs E2E tests manually. Agents shall not run Playwright or other E2E
+tests unless the user explicitly asks for an E2E test run in the current request.
+Use focused unit, integration, type, or build checks for routine verification.
 
 ## Type Checking
 

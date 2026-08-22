@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { findContainerAt } from '../src/geometry/containment';
+import { findContainerAt, isOverContainerInterior } from '../src/geometry/containment';
 
 // jsdom does not implement elementsFromPoint; stub it before each test.
 beforeEach(() => {
@@ -59,5 +59,59 @@ describe('findContainerAt', () => {
     mockElementsFromPoint([plain, target]);
 
     expect(findContainerAt(10, 10)).toBe('found');
+  });
+
+  it('skips excluded container IDs, e.g. the node being dragged', () => {
+    const dragged = makeDropTarget('dragged');
+    const underneath = makeDropTarget('container');
+    mockElementsFromPoint([dragged, underneath]);
+
+    expect(findContainerAt(10, 10, new Set(['dragged']))).toBe('container');
+  });
+
+  it('returns null when every match is excluded', () => {
+    const dragged = makeDropTarget('dragged');
+    mockElementsFromPoint([dragged]);
+
+    expect(findContainerAt(10, 10, new Set(['dragged']))).toBeNull();
+  });
+});
+
+function stubRect(el: Element, rect: { left: number; top: number; width: number; height: number }): void {
+  vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+    ...rect,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    x: rect.left,
+    y: rect.top,
+    toJSON: () => ({}),
+  });
+}
+
+describe('isOverContainerInterior', () => {
+  it('returns false for a leaf node with no [data-soft-container] descendant', () => {
+    const node = document.createElement('div');
+    expect(isOverContainerInterior(node, 5, 5)).toBe(false);
+  });
+
+  it('returns true for a point inside the soft-container interior rect', () => {
+    const node = document.createElement('div');
+    const interior = document.createElement('div');
+    interior.setAttribute('data-soft-container', 'true');
+    node.appendChild(interior);
+    stubRect(interior, { left: 10, top: 10, width: 100, height: 100 });
+
+    expect(isOverContainerInterior(node, 50, 50)).toBe(true);
+  });
+
+  it('returns false for a point outside the soft-container interior rect (e.g. the header band)', () => {
+    const node = document.createElement('div');
+    const interior = document.createElement('div');
+    interior.setAttribute('data-soft-container', 'true');
+    node.appendChild(interior);
+    // Header occupies y:[0,10) above the interior's inset top.
+    stubRect(interior, { left: 10, top: 10, width: 100, height: 100 });
+
+    expect(isOverContainerInterior(node, 50, 5)).toBe(false);
   });
 });

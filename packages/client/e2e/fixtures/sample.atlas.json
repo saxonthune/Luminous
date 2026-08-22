@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "nodes": [
+    {
+      "id": "system",
+      "name": "System",
+      "content": { "mode": "markdown", "text": "The top-level container node." }
+    },
+    {
+      "id": "component",
+      "name": "Component",
+      "parent": "system",
+      "content": { "mode": "markdown", "text": "A nested node inside System." }
+    }
+  ],
+  "edges": [{ "from": "system", "to": "component", "label": "contains" }]
+}

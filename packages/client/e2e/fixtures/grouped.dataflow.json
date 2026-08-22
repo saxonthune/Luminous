@@ -1,0 +1,64 @@
+{
+  "v": 1,
+  "boxes": [
+    {
+      "id": "standings",
+      "name": "Standings",
+      "description": "The maintainer's reality feed of current tournament standings.",
+      "contract": {
+        "format": "prose",
+        "text": "Standings file fields: v, resolved as ref/team pairs."
+      },
+      "group": "Static Files"
+    },
+    {
+      "id": "team-list",
+      "name": "Team list",
+      "description": "The team registry; registry order is load-bearing because the share-code encoding indexes teams by it.",
+      "group": "Static Files"
+    },
+    {
+      "id": "user-brackets",
+      "name": "User brackets",
+      "description": "Entrant bracket picks, submitted through the Builder as a URL-safe share code.",
+      "group": "Static Files"
+    },
+    {
+      "id": "enriched-data",
+      "name": "Enriched data",
+      "description": "Standings enriched with the team list into a display-ready model of each match's teams and results."
+    },
+    {
+      "id": "scorer",
+      "name": "Scorer",
+      "description": "Grades an entrant's bracket picks against the enriched standings into a bracket score."
+    },
+    {
+      "id": "standings-view",
+      "name": "Standings view",
+      "description": "Renders reality as it stands, with no picks and no scoring.",
+      "group": "Views"
+    },
+    {
+      "id": "bracket-view",
+      "name": "Bracket view",
+      "description": "Renders an entrant's bracket against reality and shows its score.",
+      "group": "Views"
+    },
+    {
+      "id": "leaderboard",
+      "name": "Leaderboard",
+      "description": "Scores every entrant's bracket and ranks them.",
+      "group": "Views"
+    }
+  ],
+  "flows": [
+    { "from": "standings", "to": "enriched-data" },
+    { "from": "team-list", "to": "enriched-data" },
+    { "from": "enriched-data", "to": "standings-view" },
+    { "from": "enriched-data", "to": "scorer" },
+    { "from": "user-brackets", "to": "scorer" },
+    { "from": "scorer", "to": "bracket-view" },
+    { "from": "scorer", "to": "leaderboard" }
+  ]
+}

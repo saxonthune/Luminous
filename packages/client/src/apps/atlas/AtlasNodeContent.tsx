@@ -1,0 +1,465 @@
+import { createEffect, createSignal, For, on, Show, type JSX } from 'solid-js';
+import { marked } from 'marked';
+import type { AtlasColorToken, AtlasContentMode, AtlasData, AtlasDataSource, AtlasNode, ResolvedContent } from '@luminous/core/atlas';
+import { resolveContent } from '@luminous/core/atlas';
+import type { NodeEditForm } from './mutations.ts';
+import { containerHeaderHeight, MIN_CONTENT_HEIGHT, MIN_CONTENT_WIDTH } from './projection.ts';
+
+/** Escapes the three markup-significant characters filled text can carry out
+ * of a source file — a string literal or comment may embed `<script>` or the
+ * like, and unlike authored Content (deliberately unescaped, see the
+ * innerHTML below) this text was never written by the person looking at it. */
+function escapeFilledText(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** The R78 hover/edit-mode label: the key plus its source path and line range. */
+function describeSource(key: string, source: AtlasDataSource | undefined): string {
+  if (!source) return `Filled from "${key}"`;
+  const lines = source.lines ? `:${source.lines[0]}-${source.lines[1]}` : '';
+  return `Filled from "${key}" — ${source.path}${lines}`;
+}
+
+/** Mirrors cactus's `ResizeDirection` shape (`useGesture.ts`) — the domain
+ * only ever drags right/bottom (the Do NOT list defers origin-shifting
+ * left/top resize), so each axis is a plain boolean instead of the full
+ * left/right/top/bottom/none union. */
+export interface ContentResizeDirection {
+  horizontal: boolean;
+  vertical: boolean;
+}
+
+export interface AtlasNodeContentProps {
+  node: () => AtlasNode | undefined;
+  /** The Atlas Data File resolved for the open Document, if one exists —
+   * `resolveContent` draws from this to fill a Node whose Content names a
+   * key, else the authored text renders unchanged. */
+  data: () => AtlasData | undefined;
+  /** Whether this Node has children — a container's own content is clamped
+   * to the header band so it never bleeds behind the child area (a leaf
+   * fills its whole box). */
+  hasChildren: () => boolean;
+  /** The Color to draw this Node in — the live preview when hovering a
+   * swatch, else its own `node.color`. `undefined` draws the unchanged
+   * bg-surface/border-border-subtle look. */
+  color: () => AtlasColorToken | undefined;
+  selected: () => boolean;
+  editing: () => boolean;
+  onEnterEdit: () => void;
+  onCommit: (form: NodeEditForm) => void;
+  onCancel: () => void;
+  onModeChange: (mode: AtlasContentMode) => void;
+  /** The live drag preview for this Node's content size — `undefined`
+   * outside of a drag. Owned by AtlasCanvas, same pattern as color preview.
+   * Either dimension may be absent: an edge grip drags one, the corner
+   * grip drags both. */
+  previewSize: () => { width?: number; height?: number } | undefined;
+  /** This Node's current committed box size (post shrink-wrap floor) — the
+   * drag-start reference for the frame grips. For a leaf it's the leaf's own
+   * stored/default size; for a container it's the shrink-wrapped floor size
+   * from projection.ts, since the frame grip sizes the container box itself,
+   * not the header band. */
+  frameSize: () => { width: number; height: number };
+  /** Canvas zoom scale, so a screen-pixel drag maps to canvas-space size. */
+  zoomScale: () => number;
+  /** Fires with a live size while dragging a resize handle, and `undefined`
+   * once the drag ends (including a cancelled drag). */
+  onResizePreview: (size: { width?: number; height?: number } | undefined) => void;
+  /** Fires once, on release, with the final size to persist. */
+  onResizeCommit: (size: { width?: number; height?: number }) => void;
+  /** Fires on a resize grip's double click (R72/R73) with that grip's axes —
+   * the fit-to-content command. The host decides what "fit" means (measure a
+   * leaf's Content, clear a Container's stored floors). */
+  onFitContent: (dir: ContentResizeDirection) => void;
+}
+
+const MODES: Array<{ value: AtlasContentMode; label: string }> = [
+  { value: 'markdown', label: 'MD' },
+  { value: 'code', label: 'Code' },
+];
+
+/** Whether a wheel event should scroll the content element (true) rather
+ * than bubble to d3-zoom for canvas zoom (false): the element must overflow
+ * and have room left to scroll in the wheel's direction. */
+export function shouldConsumeWheel(
+  el: { scrollHeight: number; clientHeight: number; scrollTop: number },
+  deltaY: number,
+): boolean {
+  if (el.scrollHeight <= el.clientHeight) return false;
+  if (deltaY > 0) return el.scrollTop + el.clientHeight < el.scrollHeight;
+  if (deltaY < 0) return el.scrollTop > 0;
+  return false;
+}
+
+/** A quiet two-segment toggle for `content.mode`, present in read and edit
+ * views alike so a reader sees a Node's declared intention without entering
+ * edit mode. Writes immediately — it is not part of the edit form's commit. */
+function ModeSwitcher(props: { mode: AtlasContentMode | undefined; onChange: (mode: AtlasContentMode) => void }): JSX.Element {
+  return (
+    <div
+      class="flex w-fit shrink-0 overflow-hidden rounded border border-border-subtle text-[10px]"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onDblClick={(e) => e.stopPropagation()}
+    >
+      <For each={MODES}>
+        {(m) => (
+          <button
+            type="button"
+            class={`px-1.5 py-0.5 ${
+              props.mode === m.value
+                ? 'bg-accent-subtle text-fg'
+                : 'bg-surface text-fg-subtle hover:bg-surface-alt'
+            }`}
+            onClick={() => props.onChange(m.value)}
+          >
+            {m.label}
+          </button>
+        )}
+      </For>
+    </div>
+  );
+}
+
+/** Renders resolved Content per its Mode — shared by the read view and the
+ * filled-Content edit view, so the two never draw Filled markdown
+ * differently. Filled markdown is escaped before `marked.parse` (R76); code
+ * mode never reaches `innerHTML`, so it needs no escaping either way. */
+function ResolvedBody(props: { resolved: ResolvedContent }): JSX.Element {
+  return (
+    <Show
+      when={props.resolved.mode === 'code'}
+      fallback={
+        <div
+          class="atlas-node-md text-xs text-fg-muted"
+          // SECURITY: marked does not sanitize HTML; atlas documents are
+          // author-controlled workspace files, same trust class as graph data
+          // (see InfoModal.tsx). Filled text is escaped above since it comes
+          // from an extracted source file, not the person looking at it.
+          // eslint-disable-next-line solid/no-innerhtml
+          innerHTML={marked.parse(
+            props.resolved.filled ? escapeFilledText(props.resolved.text) : props.resolved.text,
+            { async: false },
+          ) as string}
+        />
+      }
+    >
+      <pre class="whitespace-pre-wrap break-words rounded bg-surface-alt p-1 font-mono text-[10px] text-fg-muted">
+        {props.resolved.text}
+      </pre>
+    </Show>
+  );
+}
+
+/** Renders a Node's interior: a read view (name, switcher, Content drawn per
+ * Mode) or, while editing, a name input and a raw text area. Double-click
+ * enters edit mode; Ctrl+Enter or blurring the whole form commits; Escape
+ * cancels. */
+export function AtlasNodeContent(props: AtlasNodeContentProps): JSX.Element {
+  const [name, setName] = createSignal('');
+  const [text, setText] = createSignal('');
+  let nameInput: HTMLInputElement | undefined;
+  let formEl: HTMLFormElement | undefined;
+
+  // Reset the form from the current node each time edit mode is entered, so a
+  // prior cancel never leaks stale values into the next edit.
+  createEffect(on(() => props.editing(), (editing) => {
+    if (!editing) return;
+    const node = props.node();
+    setName(node?.name ?? '');
+    setText(node?.content?.text ?? '');
+    queueMicrotask(() => nameInput?.focus());
+  }));
+
+  function commit() {
+    props.onCommit({ name: name(), text: text() });
+  }
+
+  // The resolved read view: a Node with no Content resolves to `undefined`
+  // and falls to the "+ Add content" branch below; one with Content but no
+  // `from` (or a `from` missing from `data`) resolves to its own authored
+  // text unchanged. `mode` always comes from the authored Content.
+  const resolved = () => resolveContent(props.node()?.content, props.data());
+
+  // Drags a Node frame's right edge, bottom edge, or corner grip, per `dir`.
+  // Raw pointer events, not cactus's useGesture drag — this is the Node's
+  // own frame grip, not the whole-Node move gesture. The drag-start
+  // reference is the current committed box size (`frameSize`) for both a
+  // leaf and a container — a container's grip now sizes its box, not its
+  // (fixed) header band.
+  function beginResize(e: PointerEvent, dir: ContentResizeDirection) {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = props.previewSize()?.width ?? props.frameSize().width;
+    const startHeight = props.previewSize()?.height ?? props.frameSize().height;
+
+    const handleMove = (ev: PointerEvent) => {
+      const next: { width?: number; height?: number } = {};
+      if (dir.horizontal) {
+        const dx = (ev.clientX - startX) / props.zoomScale();
+        next.width = Math.max(MIN_CONTENT_WIDTH, startWidth + dx);
+      }
+      if (dir.vertical) {
+        const dy = (ev.clientY - startY) / props.zoomScale();
+        next.height = Math.max(MIN_CONTENT_HEIGHT, startHeight + dy);
+      }
+      props.onResizePreview(next);
+    };
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      const finalSize = props.previewSize();
+      props.onResizePreview(undefined);
+      if (finalSize !== undefined) props.onResizeCommit(finalSize);
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }
+
+  // The Color overrides bg-surface/border-border-subtle via inline style
+  // (which always wins over the classes) rather than a dynamic Tailwind
+  // class, since a `bg-atlas-${token}` string built at runtime is invisible
+  // to Tailwind's static content scan.
+  //
+  // Fill with the muted `-container` tint (a mix toward --surface) and reserve
+  // the saturated solid for the border accent — the container role/on-container
+  // pattern. The tint stays near --surface, so the existing --fg/--fg-muted text
+  // keeps its contrast in every theme; the solid at full saturation would blend.
+  const colorStyle = (): JSX.CSSProperties => {
+    const token = props.color();
+    if (!token) return {};
+    return {
+      'background-color': `var(--color-atlas-${token}-container)`,
+      'border-color': `var(--color-atlas-${token})`,
+    };
+  };
+
+  // A container's title row is a filled, bounded bar so it reads as the node's
+  // identity above its (neutral grey) child region. It carries the node's color
+  // when it has one, else the plain surface — either way a visible bar, unlike a
+  // leaf's title which sits inside the leaf's own colored body.
+  const headerBarStyle = (): JSX.CSSProperties => {
+    const token = props.color();
+    if (token) {
+      return {
+        'background-color': `var(--color-atlas-${token}-container)`,
+        'border-color': `var(--color-atlas-${token})`,
+      };
+    }
+    return { 'background-color': 'var(--surface-alt)', 'border-color': 'var(--border)' };
+  };
+
+  return (
+    <div
+      class={`relative flex h-full w-full flex-col gap-1 overflow-hidden rounded p-2 ${
+        // Negative offset keeps the outline inside NodeContainer's overflow:hidden clip.
+        props.selected() ? 'outline outline-2 -outline-offset-2 outline-accent-subtle' : ''
+      }`}
+      onDblClick={(e) => {
+        if (props.editing()) return;
+        e.stopPropagation();
+        props.onEnterEdit();
+      }}
+    >
+      <Show
+        when={props.editing()}
+        fallback={
+          <>
+            <div
+              class="flex items-center justify-between gap-1"
+              classList={{ 'rounded border px-1.5 py-1': props.hasChildren() }}
+              style={props.hasChildren() ? headerBarStyle() : undefined}
+            >
+              <div class="truncate text-sm font-semibold text-fg">{props.node()?.name}</div>
+              <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
+            </div>
+            {/* The Content band (R42): always present, even for a Node with no
+                Content — then it shows an "Add content" affordance instead of
+                rendered text. For a container this band is the fixed header
+                region and stops there — its children draw below, in the
+                container box the geometry reserves for them (not this band
+                bleeding into it). For a leaf it fills the rest of the box.
+                For a container this is the fixed header height regardless
+                of any live frame-resize preview (the header doesn't grow);
+                for a leaf it tracks the live resize preview, else the
+                committed height. */}
+            <div
+              class="relative min-h-0 flex-1 overflow-hidden rounded border border-border-subtle bg-surface"
+              style={{
+                ...colorStyle(),
+                ...(props.hasChildren() ? { 'max-height': `${containerHeaderHeight(props.node())}px` } : {}),
+              }}
+              title={resolved()?.filled ? describeSource(resolved()!.key!, resolved()!.source) : undefined}
+            >
+              {/* R76/R77: a quiet, persistent marker so a Filled or
+                  missing-key Node is told apart from an authored one without
+                  selecting it — the badge, not a border or tint, so it
+                  doesn't compete with the Node's Color on a dense canvas. */}
+              <Show when={resolved()?.filled}>
+                <div class="pointer-events-none absolute right-1 top-1 z-10 rounded bg-surface/80 px-1 text-[9px] font-medium uppercase tracking-wide text-fg-subtle">
+                  filled
+                </div>
+              </Show>
+              <Show when={resolved()?.missingKey}>
+                <div
+                  class="pointer-events-none absolute right-1 top-1 z-10 rounded bg-surface/80 px-1 text-[9px] font-medium uppercase tracking-wide"
+                  style={{ color: 'var(--danger, #dc2626)' }}
+                >
+                  missing key
+                </div>
+              </Show>
+              <div
+                class="h-full overflow-auto p-1 pb-3"
+                style={{ 'overscroll-behavior': 'contain' }}
+                on:wheel={(e) => {
+                  if (shouldConsumeWheel(e.currentTarget, e.deltaY)) e.stopPropagation();
+                }}
+              >
+                <Show when={resolved()}>{(content) => <ResolvedBody resolved={content()} />}</Show>
+                <Show when={!props.node()?.content}>
+                  <button
+                    type="button"
+                    class="text-xs text-fg-subtle underline decoration-dotted hover:text-fg-muted"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onEnterEdit();
+                    }}
+                  >
+                    + Add content
+                  </button>
+                </Show>
+              </div>
+              {/* The content resize handle, a visible grip at the section's
+                  bottom edge — native pointerdown so its stopPropagation
+                  (beginResize) genuinely blocks NodeContainer's native
+                  pointerdown during bubbling, instead of losing the race to
+                  it (see the task's Do NOT list). A container's header no
+                  longer drags (it auto-sizes) — its height grip lives on the
+                  Node frame instead, below. */}
+              <Show when={!props.hasChildren()}>
+                <div
+                  class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
+                  data-no-pan="true"
+                  on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
+                  onDblClick={(e) => {
+                    e.stopPropagation();
+                    props.onFitContent({ horizontal: false, vertical: true });
+                  }}
+                >
+                  <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
+                </div>
+              </Show>
+            </div>
+            {/* Width grip, on the Node frame (not the content band): sizes
+                the whole box for a leaf, the container box for a container
+                (both store into contentWidth), same native-pointerdown
+                pattern as above. */}
+            <div
+              class="absolute inset-y-0 right-0 flex w-3 cursor-col-resize items-center justify-end"
+              data-no-pan="true"
+              on:pointerdown={(e) => beginResize(e, { horizontal: true, vertical: false })}
+              onDblClick={(e) => {
+                e.stopPropagation();
+                props.onFitContent({ horizontal: true, vertical: false });
+              }}
+            >
+              <div class="mr-0.5 h-8 w-1 rounded-full bg-border-subtle" />
+            </div>
+            {/* Height grip, on the Node frame's bottom edge — a container's
+                own equivalent of the leaf's content-band bottom grip above:
+                it sizes the container box (the shrink-wrap floor), never the
+                fixed header band, and never moves children (R37-R39). */}
+            <Show when={props.hasChildren()}>
+              <div
+                class="absolute inset-x-0 bottom-0 flex h-3 cursor-row-resize items-end justify-center"
+                data-no-pan="true"
+                on:pointerdown={(e) => beginResize(e, { horizontal: false, vertical: true })}
+                onDblClick={(e) => {
+                  e.stopPropagation();
+                  props.onFitContent({ horizontal: false, vertical: true });
+                }}
+              >
+                <div class="mb-0.5 h-1 w-8 rounded-full bg-border-subtle" />
+              </div>
+            </Show>
+            {/* Diagonal grip: both axes, for a leaf and a container alike —
+                a container's corner now sizes its box on both axes too. */}
+            <div
+              class="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize"
+              data-no-pan="true"
+              on:pointerdown={(e) => beginResize(e, { horizontal: true, vertical: true })}
+              onDblClick={(e) => {
+                e.stopPropagation();
+                props.onFitContent({ horizontal: true, vertical: true });
+              }}
+            >
+              <div class="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full bg-border-subtle" />
+            </div>
+          </>
+        }
+      >
+        <form
+          ref={formEl}
+          data-no-pan="true"
+          class="flex h-full w-full flex-col gap-1"
+          onPointerDown={(e) => e.stopPropagation()}
+          onSubmit={(e) => e.preventDefault()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              props.onCancel();
+            } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              commit();
+            }
+          }}
+          onFocusOut={(e) => {
+            const related = e.relatedTarget as Node | null;
+            if (related && formEl?.contains(related)) return;
+            commit();
+          }}
+        >
+          <div class="flex items-center justify-between gap-1">
+            <input
+              ref={nameInput}
+              class="min-w-0 flex-1 rounded border border-border-subtle bg-surface px-1 py-0.5 text-sm font-semibold text-fg"
+              value={name()}
+              onInput={(e) => setName(e.currentTarget.value)}
+            />
+            <ModeSwitcher mode={props.node()?.content?.mode} onChange={props.onModeChange} />
+          </div>
+          {/* R78: Filled Content refuses edits — the Name (above) and Mode
+              stay editable since both are authored, but the Content itself
+              is read-only here, with the key and source shown instead of a
+              text area. A missing key still draws the editable fallback
+              textarea below, exactly as an unfilled Node does, since that
+              text is what a commit would actually change. */}
+          <Show
+            when={resolved()?.filled ? resolved() : undefined}
+            fallback={
+              <textarea
+                class="flex-1 resize-none rounded border border-border-subtle bg-surface px-1 py-0.5 font-mono text-xs text-fg-muted"
+                value={text()}
+                onInput={(e) => setText(e.currentTarget.value)}
+              />
+            }
+          >
+            {(content) => (
+              <div class="flex flex-1 min-h-0 flex-col gap-1">
+                <div class="truncate text-[10px] text-fg-subtle" title={describeSource(content().key!, content().source)}>
+                  {describeSource(content().key!, content().source)}
+                </div>
+                <div class="min-h-0 flex-1 overflow-auto rounded border border-border-subtle bg-surface p-1">
+                  <ResolvedBody resolved={content()} />
+                </div>
+              </div>
+            )}
+          </Show>
+        </form>
+      </Show>
+    </div>
+  );
+}

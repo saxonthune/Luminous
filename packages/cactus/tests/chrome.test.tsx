@@ -204,6 +204,62 @@ describe('MenuRoot', () => {
     expect(trigger!.textContent).toContain('More');
     cleanup();
   });
+
+  it('renders a custom item\'s content when the menu is open', () => {
+    const schema: MenuSchema = {
+      id: 'test-menu',
+      items: [
+        { type: 'custom', id: 'swatch-grid', render: () => <div class="test-swatch-grid">swatches</div> },
+      ],
+    };
+    const { cleanup } = renderInto(() => (
+      <MenuRoot schema={schema} open onOpenChange={() => {}} anchorX={0} anchorY={0} />
+    ));
+    const wrapper = document.querySelector('[data-menu-custom="swatch-grid"]');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.querySelector('.test-swatch-grid')).not.toBeNull();
+    cleanup();
+  });
+
+  it('does not call render for a custom item when the menu is closed', () => {
+    const renderSpy = vi.fn(() => <div class="test-swatch-grid">swatches</div>);
+    const schema: MenuSchema = {
+      id: 'test-menu',
+      items: [
+        { type: 'custom', id: 'swatch-grid', render: renderSpy },
+      ],
+    };
+    const { cleanup } = renderInto(() => (
+      <MenuRoot schema={schema} open={false} onOpenChange={() => {}} anchorX={0} anchorY={0} />
+    ));
+    expect(renderSpy).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it('renders a custom item nested inside a submenu', () => {
+    const schema: MenuSchema = {
+      id: 'test-menu',
+      items: [
+        {
+          type: 'submenu',
+          label: 'Color',
+          items: [
+            { type: 'custom', id: 'swatch-grid', render: () => <div class="test-swatch-grid">swatches</div> },
+          ],
+        },
+      ],
+    };
+    const { cleanup } = renderInto(() => (
+      <MenuRoot schema={schema} open onOpenChange={() => {}} anchorX={0} anchorY={0} />
+    ));
+    const trigger = document.querySelector('.cactus-chrome-menu-item') as HTMLElement | null;
+    expect(trigger).not.toBeNull();
+    trigger!.click();
+    const wrapper = document.querySelector('[data-menu-custom="swatch-grid"]');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.querySelector('.test-swatch-grid')).not.toBeNull();
+    cleanup();
+  });
 });
 
 describe('ChromeSlots', () => {

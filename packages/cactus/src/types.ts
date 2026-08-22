@@ -1,5 +1,23 @@
 import type { JSX } from 'solid-js';
 
+export interface RegisteredNodeRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface RoutePoint {
+  x: number;
+  y: number;
+}
+
+export interface EdgeRoute {
+  points: RoutePoint[];
+  /** One visual band for each segment. Missing values use band 0. */
+  segmentLayers?: number[];
+}
+
 /**
  * A declared edge for cactus to draw. Cactus computes geometry; the host
  * declares connectivity and optional styling hints. Domain-agnostic — no
@@ -14,6 +32,8 @@ export interface EdgeDeclaration {
   labelText?: string;
   /** Optional Solid component rendered at the path midpoint. */
   label?: () => JSX.Element;
+  /** Optional host-owned route projection. Return null to use cactus's direct route. */
+  routeBuilder?: (nodeRects: ReadonlyMap<string, RegisteredNodeRect>) => EdgeRoute | null;
 }
 
 export interface EdgeStyling {
@@ -23,4 +43,26 @@ export interface EdgeStyling {
   width?: number;
   /** Show an arrowhead triangle on the target end. Default false. */
   arrowHead?: boolean;
+}
+
+/**
+ * A declared cluster for cactus to render as a tinted underlay behind a set
+ * of member nodes. Cactus derives the bounds from the members' registered
+ * rects; the host declares membership and optional styling — see
+ * doc02.05.06.
+ */
+export interface ClusterDeclaration {
+  id: string;
+  memberIds: string[];
+  label?: string;
+  tint?: string;
+  /** When provided, the label becomes editable: double-click swaps it for a
+      text input; commit (Enter or blur) calls back with the new value. */
+  onLabelEdit?: (newLabel: string) => void;
+  /** When provided, left-dragging the label moves the cluster. Cactus reports
+      cumulative canvas-space deltas from the drag start; the host applies
+      them to the member nodes' positions. */
+  onDragStart?: () => void;
+  onDrag?: (deltaX: number, deltaY: number) => void;
+  onDragEnd?: () => void;
 }

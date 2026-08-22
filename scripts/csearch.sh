@@ -12,9 +12,9 @@
 #   scripts/csearch.sh -f <name-glob> [path]     Find files by name.
 #
 # Examples:
-#   scripts/csearch.sh 'resolveRoots' packages/server-next
-#   scripts/csearch.sh 'fg-subtle' packages/client-next '*.css'
-#   scripts/csearch.sh -m packages/client-next/src 'fg-muted' 'fg-subtle'
+#   scripts/csearch.sh 'resolveRoots' packages/server
+#   scripts/csearch.sh 'fg-subtle' packages/client '*.css'
+#   scripts/csearch.sh -m packages/client/src 'fg-muted' 'fg-subtle'
 #   scripts/csearch.sh -f '*.pack.json'
 #
 # Defaults: searches the repo root, skips node_modules / dist / .git.

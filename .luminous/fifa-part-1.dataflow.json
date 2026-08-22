@@ -1,0 +1,22 @@
+{
+  "v": 1,
+  "boxes": [
+    {
+      "id": "json-w-standings",
+      "name": "Json w/ standings",
+      "description": "The maintainer's results feed: raw league standings pulled from the source feed each week.",
+      "contract": {
+        "format": "prose",
+        "text": "Standings file fields: v, resolved as ref/team pairs."
+      }
+    },
+    {
+      "id": "bracket-w-teams",
+      "name": "Bracket w/ teams",
+      "description": "What the end user sees: a knockout bracket with each match's teams and results."
+    }
+  ],
+  "flows": [
+    { "from": "json-w-standings", "to": "bracket-w-teams" }
+  ]
+}

@@ -125,4 +125,28 @@ describe('routeEdges', () => {
     expect(forward.get('z')!.y1).toBe(reversed.get('z')!.y1);
     expect(forward.get('a')!.y1).not.toBe(forward.get('z')!.y1);
   });
+
+  it('uses a host route, preserving its segment bands and total-length label midpoint', () => {
+    const result = routeEdges([
+      {
+        ...edge('e1', 'a', 'b'),
+        routeBuilder: () => ({
+          points: [{ x: 60, y: 20 }, { x: 130, y: 20 }, { x: 130, y: 160 }],
+          segmentLayers: [1, 3],
+        }),
+      },
+    ], HORIZ_NODES);
+    const route = result.get('e1')!;
+    expect(route.points).toEqual([{ x: 60, y: 20 }, { x: 130, y: 20 }, { x: 130, y: 160 }]);
+    expect(route.segmentLayers).toEqual([1, 3]);
+    // Total route length is 210, so the midpoint is 105px along the second segment.
+    expect(route.labelX).toBe(130);
+    expect(route.labelY).toBe(55);
+  });
+
+  it('falls back to the bundled direct route when a host route is unavailable', () => {
+    const result = routeEdges([{ ...edge('e1', 'a', 'b'), routeBuilder: () => null }], HORIZ_NODES);
+    expect(result.get('e1')!.points).toEqual([{ x: 60, y: 20 }, { x: 200, y: 20 }]);
+    expect(result.get('e1')!.segmentLayers).toEqual([0]);
+  });
 });

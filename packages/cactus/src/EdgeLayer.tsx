@@ -1,8 +1,7 @@
 import { createMemo, createSignal, For, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
-import { routeEdges, type NodeRect } from './edgeRouting.js';
-import { useCanvasContext } from './CanvasContext.js';
+import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
 
 export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
 
@@ -20,8 +19,13 @@ const DIMMED_OPACITY = 0.15;
 
 interface EdgeLayerProps {
   edges: EdgeDeclaration[];
-  getNodeRects: () => ReadonlyMap<string, NodeRect>;
+  routes: () => ReadonlyMap<string, EdgeGeometry>;
+  emphasisNodeIds: () => ReadonlyArray<string>;
+  /** Required only by the label layer for label/node collision checks. */
+  getNodeRects?: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
+  /** Draw only segments assigned to this visual band. Labels span the whole route. */
+  routeBand?: number;
   zoom: () => number;
   viewport?: () => { x: number; y: number; w: number; h: number } | null;
 }
@@ -63,17 +67,19 @@ interface LabelRect {
 }
 
 function chooseLabelAnchor(
-  pts: { x1: number; y1: number; x2: number; y2: number; labelX: number; labelY: number },
+  pts: EdgeGeometry,
   box: { w: number; h: number },
   sourceId: string,
   targetId: string,
   rects: ReadonlyMap<string, NodeRect>,
   placedLabels: readonly LabelRect[],
 ): { x: number; y: number } {
-  const len = Math.hypot(pts.x2 - pts.x1, pts.y2 - pts.y1);
+  const tail = pts.points.at(-1) ?? { x: pts.x2, y: pts.y2 };
+  const beforeTail = pts.points.at(-2) ?? { x: pts.x1, y: pts.y1 };
+  const len = Math.hypot(tail.x - beforeTail.x, tail.y - beforeTail.y);
   if (len === 0) return { x: pts.labelX, y: pts.labelY };
-  const ux = (pts.x2 - pts.x1) / len;
-  const uy = (pts.y2 - pts.y1) / len;
+  const ux = (tail.x - beforeTail.x) / len;
+  const uy = (tail.y - beforeTail.y) / len;
   const offsets = [0, -0.15, 0.15, -0.3, 0.3, -0.4, 0.4];
 
   let bestOverlap = Infinity;
@@ -103,7 +109,6 @@ function chooseLabelAnchor(
 }
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
-  const { selectedIds } = useCanvasContext();
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
 
   // Counter-scale label text so on-screen size stays readable across zoom levels.
@@ -114,7 +119,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   });
   const labelHaloWidth = createMemo(() => labelFontSize() * 0.35);
 
-  const routed = createMemo(() => routeEdges(props.edges, props.getNodeRects()));
+  const routed = () => props.routes();
 
   const visibleEdges = createMemo(() => {
     const vp = props.viewport?.();
@@ -136,7 +141,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   // nodes. Outer memo so per-edge rendering and the revealed-popover see the
   // same chosen position.
   const labelAnchors = createMemo(() => {
-    const rects = props.getNodeRects();
+    const rects = props.getNodeRects?.() ?? new Map<string, NodeRect>();
     const r = routed();
     const fs = LABEL_ANCHOR_REF_FS;
     const map = new Map<string, { x: number; y: number }>();
@@ -186,7 +191,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
             };
           });
 
-          const emphasis = createMemo(() => edgeEmphasis(edge, selectedIds()));
+          const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
           const opacity = createMemo(() => (emphasis() === 'dimmed' ? DIMMED_OPACITY : 1));
 
           const dash = edge.styling?.dash;
@@ -204,20 +209,40 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
               {(pts) => (
                 <>
                   <Show when={props.layer === 'lines'}>
-                    <line
-                      x1={pts().x1}
-                      y1={pts().y1}
-                      x2={pts().x2}
-                      y2={pts().y2}
-                      stroke={color}
-                      stroke-width={width}
-                      stroke-dasharray={strokeDasharray}
-                      stroke-linecap="round"
-                      opacity={opacity()}
-                    />
-                    <Show when={arrowHead}>
-                      <path d={arrowHeadPath(pts().x1, pts().y1, pts().x2, pts().y2)} fill={color} opacity={opacity()} />
-                    </Show>
+                    <For each={pts().points.slice(1)}>
+                      {(end, index) => {
+                        const start = () => pts().points[index()];
+                        const segmentBand = () => pts().segmentLayers[index()] ?? 0;
+                        const isFinal = () => index() === pts().points.length - 2;
+                        return (
+                          <Show when={props.routeBand === undefined || segmentBand() === props.routeBand}>
+                            <polyline
+                              points={`${start().x},${start().y} ${end.x},${end.y}`}
+                              stroke={color}
+                              stroke-width={width}
+                              stroke-dasharray={strokeDasharray}
+                              stroke-linecap="round"
+                              fill="none"
+                              opacity={opacity()}
+                            />
+                            <Show when={arrowHead && isFinal()}>
+                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y)} fill={color} opacity={opacity()} />
+                            </Show>
+                            <line
+                              x1={start().x}
+                              y1={start().y}
+                              x2={end.x}
+                              y2={end.y}
+                              stroke="transparent"
+                              stroke-width={Math.max(12, width)}
+                              data-edge-id={edge.id}
+                              data-route-segment={index()}
+                              style={{ 'pointer-events': 'stroke' }}
+                            />
+                          </Show>
+                        );
+                      }}
+                    </For>
                   </Show>
                   <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
                     <Show when={labelBox()}>

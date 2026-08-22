@@ -1,3 +1,5 @@
+import type { JSX } from 'solid-js';
+
 export interface Action {
   id: string;
   label: string;
@@ -12,6 +14,7 @@ export interface Action {
 export type MenuItem =
   | { type: 'action'; action: Action }
   | { type: 'submenu'; label: string; items: MenuItem[] }
+  | { type: 'custom'; id: string; render: () => JSX.Element }
   | { type: 'divider' };
 
 export interface MenuSchema {

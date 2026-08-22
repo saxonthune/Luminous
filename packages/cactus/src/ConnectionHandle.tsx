@@ -14,14 +14,13 @@ export function ConnectionHandle(props: ConnectionHandleProps): JSX.Element {
   let el: HTMLDivElement | undefined;
 
   const handlePointerDown = (event: PointerEvent) => {
-    if (props.type === 'source' && props.onStartConnection) {
-      event.stopPropagation();
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        props.onStartConnection(props.nodeId, props.id ?? null, rect.right, rect.top + rect.height / 2);
-      } else {
-        props.onStartConnection(props.nodeId, props.id ?? null, event.clientX, event.clientY);
-      }
+    if (props.type !== 'source' || !props.onStartConnection) return;
+    event.stopPropagation();
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      props.onStartConnection(props.nodeId, props.id ?? null, rect.right, rect.top + rect.height / 2);
+    } else {
+      props.onStartConnection(props.nodeId, props.id ?? null, event.clientX, event.clientY);
     }
   };
 
@@ -30,7 +29,7 @@ export function ConnectionHandle(props: ConnectionHandleProps): JSX.Element {
       ref={el}
       style={props.style}
       class={props.class}
-      onPointerDown={(e) => { if (props.type === 'source') handlePointerDown(e); }}
+      on:pointerdown={handlePointerDown}
       {...(props.type === 'target'
         ? {
             'data-connection-target': 'true',

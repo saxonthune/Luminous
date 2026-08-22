@@ -8,18 +8,13 @@
  *    spread perpendicular to the pair's axis so lines and labels don't stack.
  *    Works for reverse pairs, same-direction parallels, and arbitrary mixes.
  *
- * Future passes (TODO): container avoidance, curve routing, self-loops.
- * Add them here so EdgeLayer stays a pure renderer.
+ * Hosts may instead supply route geometry. Cactus keeps the direct route as
+ * its generic fallback and leaves domain-specific routing outside the engine.
  */
 
-import type { EdgeDeclaration } from './types.js';
+import type { EdgeDeclaration, EdgeRoute, RegisteredNodeRect, RoutePoint } from './types.js';
 
-export interface NodeRect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+export type NodeRect = RegisteredNodeRect;
 
 export interface EdgeGeometry {
   x1: number;
@@ -28,6 +23,8 @@ export interface EdgeGeometry {
   y2: number;
   labelX: number;
   labelY: number;
+  points: RoutePoint[];
+  segmentLayers: number[];
 }
 
 const BUNDLE_SPACING = 18;
@@ -52,6 +49,43 @@ function lineExitsBox(
   const ty = dy === 0 ? Infinity : halfH / Math.abs(dy);
   const t = Math.min(tx, ty);
   return { x: cx + t * dx, y: cy + t * dy };
+}
+
+function routeLength(points: readonly RoutePoint[]): number {
+  let length = 0;
+  for (let i = 1; i < points.length; i++) length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  return length;
+}
+
+function midpointAtLength(points: readonly RoutePoint[], distance: number): RoutePoint {
+  let remaining = distance;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len === 0) continue;
+    if (remaining <= len) {
+      const t = remaining / len;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    remaining -= len;
+  }
+  return points[points.length - 1] ?? { x: 0, y: 0 };
+}
+
+function toGeometry(route: EdgeRoute, labelT = 0.5): Pick<EdgeGeometry, 'points' | 'segmentLayers' | 'x1' | 'y1' | 'x2' | 'y2' | 'labelX' | 'labelY'> {
+  const points = route.points;
+  const length = routeLength(points);
+  const label = midpointAtLength(points, length * labelT);
+  const first = points[0] ?? { x: 0, y: 0 };
+  const last = points[points.length - 1] ?? first;
+  return {
+    x1: first.x, y1: first.y, x2: last.x, y2: last.y,
+    labelX: label.x, labelY: label.y,
+    points,
+    segmentLayers: route.segmentLayers?.length === Math.max(0, points.length - 1)
+      ? route.segmentLayers
+      : points.slice(1).map(() => 0),
+  };
 }
 
 function pairKey(a: string, b: string): string {
@@ -128,14 +162,12 @@ export function routeEdges(
       }
     }
 
-    out.set(e.id, {
-      x1,
-      y1,
-      x2,
-      y2,
-      labelX: x1 + (x2 - x1) * labelT,
-      labelY: y1 + (y2 - y1) * labelT,
-    });
+    const custom = e.routeBuilder?.(nodeRects);
+    if (custom && custom.points.length >= 2) {
+      out.set(e.id, { ...toGeometry(custom), segmentLayers: custom.segmentLayers ?? custom.points.slice(1).map(() => 0) });
+    } else {
+      out.set(e.id, toGeometry({ points: [{ x: x1, y: y1 }, { x: x2, y: y2 }], segmentLayers: [0] }, labelT));
+    }
   }
 
   return out;

@@ -7,7 +7,9 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { render } from 'solid-js/web';
+import { createSignal } from 'solid-js';
 import { Canvas } from '../src/Canvas';
+import type { CanvasRef } from '../src/Canvas';
 import { NodeContainer } from '../src/NodeContainer';
 import type { EdgeDeclaration } from '../src/types';
 
@@ -38,6 +40,35 @@ function getEdgeLayers(container: HTMLElement): { lines: Element | null; labels:
 }
 
 describe('Canvas edge rendering', () => {
+  it('uses the host projection of selected IDs for edge emphasis', () => {
+    let canvasRef: CanvasRef | undefined;
+    const edges: EdgeDeclaration[] = [
+      { id: 'child-edge', sourceId: 'child', targetId: 'other' },
+      { id: 'unrelated-edge', sourceId: 'x', targetId: 'y' },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas
+        ref={(ref) => { canvasRef = ref; }}
+        edges={edges}
+        edgeEmphasisNodeIds={(selected) => selected.includes('parent') ? [...selected, 'child'] : selected}
+      >
+        <NodeContainer nodeId="parent" x={() => 0} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="child" x={() => 100} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="other" x={() => 200} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="x" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="y" x={() => 200} y={() => 100} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    canvasRef!.setSelectedIds(['parent']);
+    const routes = container.querySelectorAll('[data-cactus-edge-layer-lines] polyline');
+    expect(routes[0].getAttribute('opacity')).toBe('1');
+    expect(routes[1].getAttribute('opacity')).toBe('0.15');
+
+    cleanup();
+  });
+
   it('renders an SVG line between two nodes', () => {
     const edges: EdgeDeclaration[] = [
       {
@@ -204,6 +235,150 @@ describe('Canvas edge rendering', () => {
     // Click the same label text again to toggle (collapse)
     text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(labels!.querySelector('foreignObject')).toBeNull();
+
+    cleanup();
+  });
+
+  it('renders an invisible hit line with data-edge-id alongside the visible line', () => {
+    const edges: EdgeDeclaration[] = [
+      { id: 'e1', sourceId: 'node-a', targetId: 'node-b', styling: { width: 2 } },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const { lines } = getEdgeLayers(container);
+    const hitLine = lines!.querySelector('line[data-edge-id="e1"]');
+    expect(hitLine).not.toBeNull();
+    expect(hitLine!.getAttribute('stroke')).toBe('transparent');
+    expect(Number(hitLine!.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(12);
+
+    cleanup();
+  });
+
+  it('opens edgeContextMenu on right-click over an edge hit line', () => {
+    const edges: EdgeDeclaration[] = [
+      { id: 'e1', sourceId: 'node-a', targetId: 'node-b' },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas
+        edges={edges}
+        edgeContextMenu={(edgeId) =>
+          edgeId === 'e1'
+            ? { id: 'edge-menu', items: [{ type: 'action', action: { id: 'delete', label: 'Delete' } }] }
+            : undefined
+        }
+      >
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const { lines } = getEdgeLayers(container);
+    const hitLine = lines!.querySelector('line[data-edge-id="e1"]')!;
+    hitLine.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+
+    expect(document.body.textContent).toContain('Delete');
+
+    cleanup();
+  });
+
+  it('renders a multi-segment route in its declared bands and keeps every hit target on the semantic edge', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'e1', sourceId: 'node-a', targetId: 'node-b', styling: { arrowHead: true },
+        routeBuilder: () => ({
+          points: [{ x: 60, y: 20 }, { x: 130, y: 20 }, { x: 130, y: 120 }, { x: 200, y: 120 }],
+          segmentLayers: [1, 3, 3],
+        }),
+      },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 0} y={() => 0} w={() => 60} h={() => 40} visualBand={() => 0} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 100} w={() => 60} h={() => 40} visualBand={() => 4} />
+      </Canvas>
+    ));
+
+    expect(container.querySelector('[data-cactus-edge-route-band="1"]')).not.toBeNull();
+    expect(container.querySelector('[data-cactus-edge-route-band="3"]')).not.toBeNull();
+    const hits = container.querySelectorAll('line[data-edge-id="e1"]');
+    expect(hits).toHaveLength(3);
+    expect([...hits].every((line) => line.getAttribute('data-edge-id') === 'e1')).toBe(true);
+    const arrow = container.querySelector('[data-cactus-edge-route-band="3"] path');
+    expect(arrow?.getAttribute('d')).toContain('M 200 120');
+    cleanup();
+  });
+
+  it('does not clip route bands to the screen-sized canvas wrapper', () => {
+    const edges: EdgeDeclaration[] = [
+      {
+        id: 'offscreen-route', sourceId: 'node-a', targetId: 'node-b',
+        routeBuilder: () => ({
+          points: [{ x: -6000, y: 1200 }, { x: 8000, y: 1200 }],
+          segmentLayers: [-1],
+        }),
+      },
+    ];
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => -6060} y={() => 1180} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 8000} y={() => 1180} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const band = container.querySelector('[data-cactus-edge-route-band="-1"]') as SVGElement;
+    expect(band.style.overflow).toBe('visible');
+    expect(band.querySelector('line[data-edge-id="offscreen-route"]')).not.toBeNull();
+    cleanup();
+  });
+
+  it('computes shared route geometry once and holds it fixed while routing is frozen', () => {
+    const [x, setX] = createSignal(0);
+    const [frozen, setFrozen] = createSignal(false);
+    let routeCalls = 0;
+    const edges: EdgeDeclaration[] = [{
+      id: 'shared-route', sourceId: 'node-a', targetId: 'node-b',
+      routeBuilder: () => {
+        routeCalls++;
+        return {
+          points: [{ x: x() + 60, y: 20 }, { x: 130, y: 20 }, { x: 200, y: 20 }],
+          segmentLayers: [1, 3],
+        };
+      },
+    }];
+    const { cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges} freezeEdgeRouting={frozen}>
+        <NodeContainer nodeId="node-a" x={x} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 0} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    expect(routeCalls).toBe(1);
+    setFrozen(true);
+    setX(50);
+    expect(routeCalls).toBe(1);
+    setFrozen(false);
+    expect(routeCalls).toBe(2);
+    cleanup();
+  });
+
+  it('exposes getSelectedIds on CanvasRef, empty when nothing is selected', () => {
+    let ref: CanvasRef | undefined;
+
+    const { cleanup } = renderIntoContainer(() => (
+      <Canvas ref={(r) => { ref = r; }}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    expect(ref).toBeDefined();
+    expect(ref!.getSelectedIds()).toEqual([]);
 
     cleanup();
   });

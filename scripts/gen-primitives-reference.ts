@@ -129,7 +129,7 @@ const BANNER =
 
 const INTRO = `# Primitive Vocabulary Reference
 
-Source of truth: \`.carta/02-design/16-renderer-engine.md\` (doc02.16). This file is a condensed agent-facing catalog. If the two diverge, the source doc wins.
+Source of truth: \`.rhidoc/02-design/16-renderer-engine.md\` (doc02.16). This file is a condensed agent-facing catalog. If the two diverge, the source doc wins.
 
 The primitive vocabulary is the fixed set of building blocks a pack author composes in each kind's \`render\` field. The interpreter in \`@luminous/core\` executes these; pack authors only write JSON.`;
 

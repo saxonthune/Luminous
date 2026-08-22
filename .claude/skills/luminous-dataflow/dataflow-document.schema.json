@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dataflow Document",
+  "description": "Informative description of the *.dataflow.json shape. The TypeScript types in packages/core/src/dataflow/ are the source of truth; the types win when the two disagree.",
+  "type": "object",
+  "required": ["v", "boxes", "flows"],
+  "additionalProperties": false,
+  "properties": {
+    "v": { "type": "integer" },
+    "boxes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "group": { "type": "string", "minLength": 1 },
+          "contract": {
+            "type": "object",
+            "required": ["format", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "format": { "type": "string" },
+              "text": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "flows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "additionalProperties": false,
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import type { JSX } from 'solid-js';
+import { For } from 'solid-js';
 import type { RenderContext } from '../../types.ts';
 
 interface KvItem {
@@ -46,12 +47,12 @@ export default function KvList(
 
   return (
     <div style={containerStyle}>
-      {items.map((item) => (
+      <For each={items}>{(item) => (
         <div style={rowStyle}>
           <span style={keyStyle}>{item.key}</span>
           <span style={valStyle}>{item.value}</span>
         </div>
-      ))}
+      )}</For>
     </div>
   );
 }
