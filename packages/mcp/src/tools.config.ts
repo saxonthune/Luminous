@@ -1,4 +1,5 @@
 import { ATLAS_COLOR_TOKENS } from '@luminous/core/atlas'
+import { TRACE_NODE_KINDS } from '@luminous/core/linen'
 
 export type ParamType =
   | 'string'
@@ -872,6 +873,281 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             type: 'described',
             innerType: { type: 'array', items: { type: 'object', properties: {} } },
             description: "Ordered array of atlas actions to apply atomically.",
+          },
+        },
+      },
+    },
+  },
+  linen: {
+    description:
+      "Author Linen documents — .linen.json Traces of what happens when a program runs. A Document holds Modules (nestable containers, the ownership boundaries control passes across), Contracts (declared data shapes), Trace Nodes (typed steps drawn as Glyphs: entry, filter, switch, transformation, type, pass, return, release-control), and Edges (trace-node -> trace-node carries control and Trace order; node-or-module -> contract is an Edge to a Contract). Ids are author-supplied and meaningful. Trace order and the format a Trace resumes with after a Pass are derived, never stored — use `trace` to walk a Trace end to end with the derived resume Contracts, and `manifest` for a Module's computed outbound summary.",
+    local: true,
+    actions: {
+      list: {
+        description: "Return the paths of all linen documents (files ending '.linen.json') in the workspace.",
+        method: 'GET',
+        path: '',
+        params: {},
+      },
+      create: {
+        description: "Create a new empty linen document at path. Fails if path does not end '.linen.json'.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: {
+            type: 'described',
+            innerType: 'string',
+            description: "Filename to create, must end '.linen.json', e.g. 'nyc-subwhere.linen.json'.",
+          },
+        },
+      },
+      read: {
+        description: "Load the complete linen document (modules, contracts, nodes, edges) plus its current check issues.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      'node/get': {
+        description: "Fetch a single Trace Node by its exact id. Throws if the id does not exist.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to fetch.",
+          },
+        },
+      },
+      'node/create': {
+        description: "Add a new Trace Node with an explicit, author-chosen id. A 'pass' node must name the Module passed to via `to`; a 'type' node may name a Contract via `contract`. Fails if the id already exists or the module does not exist. The result includes check issues — a warning that a Pass's target Module has no Contract connected means the resume format cannot be derived yet.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new Trace Node, e.g. 'poll.decode'. Must not already exist.",
+          },
+          kind: {
+            type: 'described',
+            innerType: { type: 'enum', values: TRACE_NODE_KINDS },
+            description: "Trace Node type from the descriptor table.",
+          },
+          module: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the containing Module. Must already exist.",
+          },
+          'annotation?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Selected-node prose: what happens here.",
+          },
+          'to?': {
+            type: 'described',
+            innerType: 'string',
+            description: "For a 'pass' node only (required there): id of the Module passed to.",
+          },
+          'contract?': {
+            type: 'described',
+            innerType: 'string',
+            description: "For a 'type' node only: id of the Contract naming its format.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Manual position inside the Module, overriding the derived slot. x and y must appear together.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Manual position inside the Module, overriding the derived slot. x and y must appear together.",
+          },
+        },
+      },
+      'node/set': {
+        description: "Update an existing Trace Node's annotation, position, pass target, or type contract. Only fields provided are changed.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to update.",
+          },
+          'annotation?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New annotation text.",
+          },
+          'to?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New target Module for a 'pass' node.",
+          },
+          'contract?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New Contract for a 'type' node.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "New position. x and y must appear together.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "New position. x and y must appear together.",
+          },
+        },
+      },
+      'node/delete': {
+        description: "Remove a Trace Node along with any Edges touching it.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to remove.",
+          },
+        },
+      },
+      'module/create': {
+        description: "Add a new Module. `parent` nests it inside another Module (a Deployment is a Module containing Modules).",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new Module, e.g. 'feed-poller'. Must not already exist.",
+          },
+          name: {
+            type: 'described',
+            innerType: 'string',
+            description: "Human-readable name for the Module.",
+          },
+          'parent?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the containing Module, if nested. Must already exist.",
+          },
+        },
+      },
+      'contract/create': {
+        description: "Add a new Contract — a declared data shape, owned by one Module and shared to its consumers. Connect it to a Module with edge/connect so Passes into that Module can derive their resume format.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new Contract, e.g. 'render-snapshot'. Must not already exist.",
+          },
+          name: {
+            type: 'described',
+            innerType: 'string',
+            description: "Human-readable name for the Contract, e.g. 'RenderSnapshot'.",
+          },
+          'owner?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Module that owns this Contract.",
+          },
+          'text?': {
+            type: 'described',
+            innerType: 'string',
+            description: "The declared data shape, in the described system's notation, trimmed to what the Trace needs.",
+          },
+        },
+      },
+      'edge/connect': {
+        description: "Add an Edge. Two legal shapes: trace-node -> trace-node (a control Edge, carrying Trace order) or trace-node-or-module -> contract (an Edge to a Contract). Duplicates are rejected.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the source (a Trace Node, or a Module when connecting to a Contract).",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the target (a Trace Node, or a Contract).",
+          },
+        },
+      },
+      'edge/disconnect': {
+        description: "Remove the Edge from one endpoint to another.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Edge's source.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Edge's target.",
+          },
+        },
+      },
+      batch: {
+        description: "Apply a sequence of linen actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addModule' | 'addContract' | 'addNode' | 'setNode' | 'removeNode' | 'connect' | 'disconnect' | 'setAnnotation') and that action's own fields (see the matching single actions above).",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          actions: {
+            type: 'described',
+            innerType: { type: 'array', items: { type: 'object', properties: {} } },
+            description: "Ordered array of linen actions to apply atomically.",
+          },
+        },
+      },
+      check: {
+        description: "Validate the document and return issues: errors (dangling Edge endpoints, illegal endpoint combinations, a terminating node with an outgoing control Edge, a Filter without exactly one continuing exit, an Entry with incoming control Edges) and warnings (a Pass whose target Module has no Contract connected — the resume format cannot be derived; a node unreachable from any Entry). Warnings never block a write.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      trace: {
+        description: "Walk the Trace from an Entry: the ordered steps (depth-first over control Edges), each with its kind, term, Module, and annotation, and at each Pass the target Module plus the derived resume Contract (the return rule) — computed, never stored.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          entry: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to start from (normally an 'entry' node).",
+          },
+        },
+      },
+      manifest: {
+        description: "A Module's computed Manifest: the Edges leaving its subtree, the Contracts among their targets, and the Passes out of it with their derived resume Contracts. Computed, never authored.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          module: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Module whose Manifest to compute.",
           },
         },
       },
