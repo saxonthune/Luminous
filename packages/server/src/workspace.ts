@@ -39,7 +39,7 @@ async function walk(dir: string): Promise<string[]> {
       results.push(...(await walk(join(dir, entry.name))))
     } else if (
       entry.isFile() &&
-      (entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json") || entry.name.endsWith(".atlas.json"))
+      (entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json") || entry.name.endsWith(".atlas.json") || entry.name.endsWith(".linen.json"))
     ) {
       results.push(join(dir, entry.name))
     }
@@ -92,10 +92,11 @@ function stripDocSuffix(fileName: string): string {
   if (fileName.endsWith(".graph.json")) return basename(fileName, ".graph.json")
   if (fileName.endsWith(".dataflow.json")) return basename(fileName, ".dataflow.json")
   if (fileName.endsWith(".atlas.json")) return basename(fileName, ".atlas.json")
+  if (fileName.endsWith(".linen.json")) return basename(fileName, ".linen.json")
   return fileName
 }
 
-/** Scan every root for *.graph.json, *.dataflow.json, and *.atlas.json files, namespacing paths by root name. */
+/** Scan every root for *.graph.json, *.dataflow.json, *.atlas.json, and *.linen.json files, namespacing paths by root name. */
 export async function scanDocuments(roots: WorkspaceRoot[]): Promise<DocumentMeta[]> {
   const metas: DocumentMeta[] = []
   for (const root of roots) {

@@ -15,6 +15,7 @@ const recentWrites = new Map<string, number>()
 const DATAFLOW_SUFFIX = ".dataflow.json"
 const ATLAS_SUFFIX = ".atlas.json"
 const ATLASDATA_SUFFIX = ".atlasdata.json"
+const LINEN_SUFFIX = ".linen.json"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
@@ -24,9 +25,13 @@ export function isAtlasPath(relativePath: string): boolean {
   return relativePath.endsWith(ATLAS_SUFFIX)
 }
 
+export function isLinenPath(relativePath: string): boolean {
+  return relativePath.endsWith(LINEN_SUFFIX)
+}
+
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
-  return isDataflowPath(relativePath) || isAtlasPath(relativePath)
+  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath)
 }
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
@@ -214,7 +219,7 @@ export async function applyAction(
   params: Record<string, unknown>
 ): Promise<ActionResult> {
   if (isRawDocPath(relativePath)) {
-    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json)" }
+    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json)" }
   }
   const doc = await getDocument(relativePath)
   const result = applyActionToDoc(doc, action, params)
@@ -230,7 +235,7 @@ export async function applyBatch(
   actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
 ): Promise<Array<ActionResult & { ref?: string }>> {
   if (isRawDocPath(relativePath)) {
-    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json)" }]
+    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json)" }]
   }
   const doc = await getDocument(relativePath)
   const refs = new Map<string, string>()

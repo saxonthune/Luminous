@@ -195,7 +195,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return
     }
     if (!isRawDocPath(docPath)) {
-      sendJson(res, 400, { ok: false, error: "only .dataflow.json or .atlas.json paths may be written here" })
+      sendJson(res, 400, { ok: false, error: "only .dataflow.json, .atlas.json, or .linen.json paths may be written here" })
       return
     }
     if (body.content === undefined) {
