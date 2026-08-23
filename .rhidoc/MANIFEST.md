@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -97,6 +97,15 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 
 | doc01.08.00 | `08-canvas/00-index.md` |  |  | — | — | — |
 | doc01.08.01 | `08-canvas/01-idea.md` | The general canvas — a property graph of nodes and edges, projected through a pack that declares kinds, render templates, and views; the app the graph-and-pack model belongs to | canvas, apps, packs, property-graph | doc01.04, doc02.11, doc02.14 | — | — |
+
+### Linen
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.09.00 | `09-linen/00-index.md` |  |  | — | — | — |
+| doc01.09.01 | `09-linen/01-idea.md` | A canvas app that answers "what happens when this runs" — nested modules drawn as symbol sequences of control flow and data transformation, annotated on selection | linen, apps, control-flow, symbols, contracts | doc01.04, doc01.09.02 | doc01.09.02 | — |
+| doc01.09.02 | `09-linen/02-glossary.md` | The Linen controlled vocabulary — the terms Linen docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, linen | doc01.09.01 | doc01.09.01 | — |
 
 ## 02-design — Design
 
@@ -201,7 +210,7 @@ Quick lookup for file-path→doc mapping:
 | `allen` | doc01.07.05 |
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
-| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc02.21.03 |
+| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc02.21.03 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04, doc01.07.06 |
 | `background` | doc01.02 |
@@ -230,6 +239,8 @@ Quick lookup for file-path→doc mapping:
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `containment` | doc01.07.06 |
 | `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21.01 |
+| `contracts` | doc01.09.01 |
+| `control-flow` | doc01.09.01 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
 | `crystallization` | doc02.01 |
@@ -258,7 +269,7 @@ Quick lookup for file-path→doc mapping:
 | `format` | doc02.21.01 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02 |
 | `gojs` | doc01.06.01.06 |
 | `graph` | doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
@@ -277,6 +288,7 @@ Quick lookup for file-path→doc mapping:
 | `layout` | doc02.05.03, doc02.05.04, doc02.05.06 |
 | `legibility` | doc03.07 |
 | `libraries` | doc01.06.01.01 |
+| `linen` | doc01.09.01, doc01.09.02 |
 | `litegraph` | doc01.06.01.07 |
 | `maintenance` | doc00.02 |
 | `mcp` | doc02.04, doc02.15, doc02.21.02, doc03.06 |
@@ -344,6 +356,7 @@ Quick lookup for file-path→doc mapping:
 | `static-analysis` | doc01.03.01, doc02.07, doc02.10.01 |
 | `style` | doc00.04 |
 | `subtypes` | doc00.05 |
+| `symbols` | doc01.09.01 |
 | `theme` | doc02.22.01 |
 | `theming` | doc02.05.05 |
 | `theory` | doc00.01 |
@@ -361,7 +374,7 @@ Quick lookup for file-path→doc mapping:
 | `views` | doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc03.04 |
-| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc03.02 |
+| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc03.02 |
 | `web-library` | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07 |
 | `whiteboard` | doc01.06.01.03 |
 | `workbench` | doc03.08 |
