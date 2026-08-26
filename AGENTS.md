@@ -98,7 +98,7 @@ This boundary is a first-class design principle under active test — see PDR D8
 
 The `.rhidoc/` directory contains structured specifications managed by the `rhidoc` CLI.
 
-- `.rhidoc/MANIFEST.md` is the index of every doc — read it first to find one.
+- **Finding docs:** `.rhidoc/MANIFEST.md` is the index of every doc, with a one-line summary per doc. Whenever you need to consult a spec, a design decision, a roadmap item, or any product documentation — read `MANIFEST.md` first, then open *only* the docs relevant to the query. Never guess a doc path; the manifest is the map.
 - **Content edits** to existing docs: direct file editing is fine, then `rhidoc regenerate`
 - **Structural changes**: use `rhidoc` commands
 - **After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md

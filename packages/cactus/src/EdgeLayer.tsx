@@ -21,6 +21,10 @@ interface EdgeLayerProps {
   edges: EdgeDeclaration[];
   routes: () => ReadonlyMap<string, EdgeGeometry>;
   emphasisNodeIds: () => ReadonlyArray<string>;
+  emphasisStyle: {
+    dimUnselected: boolean;
+    selectedWidthMultiplier: number;
+  };
   /** Required only by the label layer for label/node collision checks. */
   getNodeRects?: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
@@ -192,7 +196,9 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           });
 
           const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
-          const opacity = createMemo(() => (emphasis() === 'dimmed' ? DIMMED_OPACITY : 1));
+          const opacity = createMemo(() =>
+            props.emphasisStyle.dimUnselected && emphasis() === 'dimmed' ? DIMMED_OPACITY : 1,
+          );
 
           const dash = edge.styling?.dash;
           const strokeDasharray =
@@ -200,7 +206,9 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           const color = edge.styling?.colorToken
             ? `var(--${edge.styling.colorToken})`
             : 'var(--cactus-fg-muted, #6b7280)';
-          const width = edge.styling?.width ?? 1.5;
+          const width = () =>
+            (edge.styling?.width ?? 1.5) *
+            (emphasis() === 'incident' ? props.emphasisStyle.selectedWidthMultiplier : 1);
           const arrowHead = edge.styling?.arrowHead ?? false;
 
           // TODO(routing): straight-line routing only. Curve/avoid-containers routing is a follow-up.
@@ -219,7 +227,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                             <polyline
                               points={`${start().x},${start().y} ${end.x},${end.y}`}
                               stroke={color}
-                              stroke-width={width}
+                              stroke-width={width()}
                               stroke-dasharray={strokeDasharray}
                               stroke-linecap="round"
                               fill="none"
@@ -234,7 +242,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                               x2={end.x}
                               y2={end.y}
                               stroke="transparent"
-                              stroke-width={Math.max(12, width)}
+                              stroke-width={Math.max(12, width())}
                               data-edge-id={edge.id}
                               data-route-segment={index()}
                               style={{ 'pointer-events': 'stroke' }}

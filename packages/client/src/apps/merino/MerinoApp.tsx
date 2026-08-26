@@ -1,39 +1,31 @@
 import { createSignal, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import type { DataflowDocument } from '@luminous/core/dataflow';
-import { parseDataflowDocument } from '@luminous/core/dataflow';
+import type { MerinoDocument } from '@luminous/core/merino';
+import { emptyMerinoDocument, parseMerinoDocument, serializeMerinoDocument } from '@luminous/core/merino';
 import { DocumentPicker } from '../../DocumentPicker';
 import { ToastTray, type Toast } from '../../ToastTray';
-import {
-  fetchServerSources,
-  copyDocument,
-  moveDocument,
-  deleteDocument,
-  writeDocument,
-  type CanvasSource,
-} from '../../sources';
+import { fetchServerSources, writeDocument, type CanvasSource } from '../../sources';
 import { readParam, writeParam } from '../../urlState';
 import { watchDocuments } from '../../ws/watchClient';
-import { DataflowCanvas } from './DataflowCanvas';
-import { RenameDialog } from './RenameDialog';
+import { MerinoCanvas } from './MerinoCanvas.tsx';
+import { NewDocumentDialog } from './NewDocumentDialog';
 
-type DataflowAppState =
+type MerinoAppState =
   | { kind: 'booting' }
   | { kind: 'picker' }
   | { kind: 'loadingDoc' }
   | { kind: 'mounted' }
   | { kind: 'error'; reason: string };
 
-export function DataflowApp() {
+export function MerinoApp() {
   const initialSrc = readParam('src');
 
-  const [shell, setShell] = createSignal<DataflowAppState>({ kind: 'booting' });
+  const [shell, setShell] = createSignal<MerinoAppState>({ kind: 'booting' });
   const [sources, setSources] = createSignal<CanvasSource[] | null>(null);
   const [sourceId, setSourceId] = createSignal<string | null>(null);
-  const [doc, setDoc] = createSignal<DataflowDocument | null>(null);
+  const [doc, setDoc] = createSignal<MerinoDocument | null>(null);
   const [toasts, setToasts] = createSignal<Toast[]>([]);
-  const [renaming, setRenaming] = createSignal<CanvasSource | null>(null);
-  const [deleting, setDeleting] = createSignal<CanvasSource | null>(null);
+  const [creatingIn, setCreatingIn] = createSignal<CanvasSource | null>(null);
   let ownWritesInFlight = 0;
 
   function enqueueToast(message: string) {
@@ -46,10 +38,20 @@ export function DataflowApp() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
+  // The Edge preview exists exactly for the duration of its gesture, rather
+  // than for ToastTray's normal timeout.
+  const EDGE_TOAST_ID = 'merino-edge-preview';
+  function setEdgeToast(message: string | null) {
+    setToasts((prev) => {
+      const rest = prev.filter((toast) => toast.id !== EDGE_TOAST_ID);
+      return message ? [...rest, { id: EDGE_TOAST_ID, message }] : rest;
+    });
+  }
+
   function loadDoc(id: string) {
     const source = sources()?.find((s) => s.id === id);
     if (!source) {
-      enqueueToast(`Dataflow "${id}" not found`);
+      enqueueToast(`Merino document "${id}" not found`);
       setShell({ kind: 'picker' });
       setSourceId(null);
       writeParam('src', null);
@@ -58,7 +60,7 @@ export function DataflowApp() {
     source
       .load()
       .then((text) => {
-        const result = parseDataflowDocument(text);
+        const result = parseMerinoDocument(text);
         if (!result.ok) {
           handleDocFailed(source.label, result.issues.join('; '));
           return;
@@ -78,25 +80,25 @@ export function DataflowApp() {
     setShell({ kind: 'picker' });
   }
 
+  async function dispatchDoc(next: MerinoDocument) {
+    const id = sourceId();
+    if (!id) return;
+    setDoc(next);
+    ownWritesInFlight += 1;
+    const result = await writeDocument(id, JSON.parse(serializeMerinoDocument(next)));
+    if (!result.ok) {
+      ownWritesInFlight -= 1;
+      enqueueToast(`Failed to save changes: ${result.error}`);
+      loadDoc(id);
+    }
+  }
+
   function onSelect(source: CanvasSource) {
     setSourceId(source.id);
     setDoc(null);
     writeParam('src', source.id);
     setShell({ kind: 'loadingDoc' });
     loadDoc(source.id);
-  }
-
-  async function dispatchDoc(next: DataflowDocument) {
-    const id = sourceId();
-    if (!id) return;
-    setDoc(next);
-    ownWritesInFlight += 1;
-    const result = await writeDocument(id, next);
-    if (!result.ok) {
-      ownWritesInFlight -= 1;
-      enqueueToast(`Failed to save changes: ${result.error}`);
-      loadDoc(id);
-    }
   }
 
   function onBack() {
@@ -116,54 +118,37 @@ export function DataflowApp() {
     return slash === -1 ? '' : id.slice(0, slash + 1);
   }
 
+  /** Directory to show the user — the real filesystem path when known, else the namespaced id prefix. */
+  function displayDirOf(source: CanvasSource): string {
+    if (source.absPath) return dirOf(source.absPath);
+    return dirOf(source.id);
+  }
+
   function refreshSources() {
-    return fetchServerSources('.dataflow.json').then((list) => setSources(list));
+    return fetchServerSources('.merino.json').then((list) => setSources(list));
   }
 
-  async function handleDuplicate(source: CanvasSource) {
-    const dir = dirOf(source.id);
-    let to = `${dir}${source.label}-copy.dataflow.json`;
-    let result = await copyDocument(source.id, to);
-    let attempt = 2;
-    while (!result.ok && result.error === 'target exists' && attempt <= 20) {
-      to = `${dir}${source.label}-copy-${attempt}.dataflow.json`;
-      result = await copyDocument(source.id, to);
-      attempt += 1;
+  async function handleCreateSubmit(name: string) {
+    const representative = creatingIn();
+    if (!representative) return;
+    const dir = dirOf(representative.id);
+    const path = `${dir}${name}.merino.json`;
+    const result = await writeDocument(path, JSON.parse(serializeMerinoDocument(emptyMerinoDocument())));
+    setCreatingIn(null);
+    if (!result.ok) {
+      enqueueToast(`Failed to create "${name}": ${result.error}`);
+      return;
     }
-    if (result.ok) {
-      await refreshSources();
-      enqueueToast(`Duplicated "${source.label}"`);
-    } else {
-      enqueueToast(`Failed to duplicate "${source.label}": ${result.error}`);
-    }
-  }
-
-  async function handleRenameSubmit(newSlug: string) {
-    const source = renaming();
-    if (!source) return;
-    const dir = dirOf(source.id);
-    const to = `${dir}${newSlug}.dataflow.json`;
-    const result = await moveDocument(source.id, to);
-    setRenaming(null);
-    if (result.ok) {
-      await refreshSources();
-      enqueueToast(`Renamed "${source.label}" to "${newSlug}"`);
-    } else {
-      enqueueToast(`Failed to rename "${source.label}": ${result.error}`);
-    }
-  }
-
-  async function handleDeleteConfirm() {
-    const source = deleting();
-    if (!source) return;
-    const result = await deleteDocument(source.id);
-    setDeleting(null);
-    if (result.ok) {
-      await refreshSources();
-      enqueueToast(`Deleted "${source.label}"`);
-    } else {
-      enqueueToast(`Failed to delete "${source.label}": ${result.error}`);
-    }
+    await refreshSources();
+    const created = sources()?.find((s) => s.id === path);
+    onSelect(
+      created ?? {
+        id: path,
+        label: name,
+        root: representative.root,
+        load: () => fetch('/api/document/' + encodeURIComponent(path)).then((r) => r.text()),
+      }
+    );
   }
 
   function boot() {
@@ -172,7 +157,7 @@ export function DataflowApp() {
       setShell({ kind: 'picker' });
       return;
     }
-    fetchServerSources('.dataflow.json')
+    fetchServerSources('.merino.json')
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);
@@ -216,7 +201,7 @@ export function DataflowApp() {
           <button
             onClick={onBack}
             class="rounded px-2 py-1 text-sm text-fg-muted hover:bg-surface-alt hover:text-fg"
-            title="Back to dataflows"
+            title="Back to Merino documents"
           >
             ← Back
           </button>
@@ -236,24 +221,27 @@ export function DataflowApp() {
           <Match when={shell().kind === 'picker' || shell().kind === 'loadingDoc'}>
             <div class="flex flex-1 flex-col">
               <DocumentPicker
-                heading="Dataflows"
+                heading="Merino documents"
                 sources={sources() ?? []}
                 onSelect={onSelect}
                 loadingId={shell().kind === 'loadingDoc' ? sourceId() : null}
-                onRename={(s) => setRenaming(s)}
-                onDuplicate={handleDuplicate}
-                onDelete={(s) => setDeleting(s)}
+                onCreate={(source) => setCreatingIn(source)}
               />
               <Show when={__GITHUB_PAGES__}>
                 <p class="pb-4 text-center text-xs text-fg-subtle">
-                  Dataflow documents are served by the local Luminous server — not available on
+                  Merino documents are served by the local Luminous server — not available on
                   this static site.
                 </p>
               </Show>
             </div>
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>
-            <DataflowCanvas doc={doc()!} onDocChange={(next) => void dispatchDoc(next)} />
+            <MerinoCanvas
+              doc={doc()!}
+              dispatchDoc={dispatchDoc}
+              onRefused={enqueueToast}
+              onEdgePreviewChange={setEdgeToast}
+            />
           </Match>
           <Match when={shell().kind === 'error'}>
             {(() => {
@@ -261,7 +249,7 @@ export function DataflowApp() {
               const reason = s.kind === 'error' ? s.reason : '';
               return (
                 <div class="flex flex-1 flex-col items-center justify-center gap-4">
-                  <div class="text-fg">Failed to list dataflows</div>
+                  <div class="text-fg">Failed to list Merino documents</div>
                   <div class="text-sm text-fg-muted">{reason}</div>
                   <button
                     onClick={onRetry}
@@ -275,46 +263,18 @@ export function DataflowApp() {
           </Match>
         </Switch>
       </div>
-      <Show when={renaming()}>
-        {(source) => (
-          <RenameDialog
-            source={source()}
-            onSubmit={handleRenameSubmit}
-            onCancel={() => setRenaming(null)}
+      <Show when={creatingIn()}>
+        {(representative) => (
+          <NewDocumentDialog
+            dir={displayDirOf(representative())}
+            existingLabels={
+              sources()
+                ?.filter((s) => dirOf(s.id) === dirOf(representative().id))
+                .map((s) => s.label) ?? []
+            }
+            onSubmit={handleCreateSubmit}
+            onCancel={() => setCreatingIn(null)}
           />
-        )}
-      </Show>
-      <Show when={deleting()}>
-        {(source) => (
-          <div
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-            onClick={() => setDeleting(null)}
-          >
-            <div
-              class="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-6"
-              style={{ 'box-shadow': 'var(--shadow-sm)' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 class="mb-4 text-lg font-semibold text-fg">Delete</h2>
-              <p class="text-sm text-fg-muted">
-                Delete "{source().label}.dataflow.json"? This cannot be undone.
-              </p>
-              <div class="mt-6 flex justify-end gap-2">
-                <button
-                  onClick={() => setDeleting(null)}
-                  class="rounded px-3 py-1 text-sm text-fg-muted hover:bg-surface-alt hover:text-fg"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  class="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
         )}
       </Show>
       <ToastTray toasts={toasts()} onDismiss={dismissToast} />

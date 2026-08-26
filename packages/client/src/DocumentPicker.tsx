@@ -10,6 +10,9 @@ interface DocumentPickerProps {
   onRename?: (source: CanvasSource) => void;
   onDuplicate?: (source: CanvasSource) => void;
   onDelete?: (source: CanvasSource) => void;
+  /** Called with a representative source from the group when its "new document" button is
+   * clicked — the caller derives the target directory from that source's id. */
+  onCreate?: (representative: CanvasSource) => void;
 }
 
 interface RootGroup {
@@ -95,14 +98,27 @@ export function DocumentPicker(props: DocumentPickerProps) {
             <For each={groups()}>
               {(group) => (
                 <section>
-                  <div class="mb-1">
-                    <h2 class="text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                      {group.root}
-                    </h2>
-                    <Show when={group.rootDir}>
-                      <p class="truncate text-[10px] text-fg-subtle" title={group.rootDir}>
-                        {group.rootDir}
-                      </p>
+                  <div class="mb-1 flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <h2 class="text-xs font-semibold uppercase tracking-wide text-fg-muted">
+                        {group.root}
+                      </h2>
+                      <Show when={group.rootDir}>
+                        <p class="truncate text-[10px] text-fg-subtle" title={group.rootDir}>
+                          {group.rootDir}
+                        </p>
+                      </Show>
+                    </div>
+                    <Show when={props.onCreate}>
+                      <button
+                        onClick={() => props.onCreate!(group.sources[0])}
+                        class="rounded p-1 text-fg-muted hover:bg-surface-alt hover:text-fg"
+                        title={`New document in ${group.root}`}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
                     </Show>
                   </div>
                   <ul class="max-h-56 divide-y divide-border-subtle overflow-y-auto">

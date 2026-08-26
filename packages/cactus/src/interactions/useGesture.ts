@@ -37,9 +37,9 @@ export interface ConnectionPayload {
 export const DRAG_THRESHOLD = 3;
 
 export interface GestureCallbacks {
-  onDragStart?: (nodeId: string) => void;
-  onDrag?: (nodeId: string, dx: number, dy: number) => void;
-  onDragEnd?: (nodeId: string, dx: number, dy: number) => void;
+  onDragStart?: (nodeId: string, nodeIds: ReadonlyArray<string>) => void;
+  onDrag?: (nodeId: string, dx: number, dy: number, nodeIds: ReadonlyArray<string>) => void;
+  onDragEnd?: (nodeId: string, dx: number, dy: number, nodeIds: ReadonlyArray<string>) => void;
   onResizeStart?: (nodeId: string, direction: ResizeDirection) => void;
   onResize?: (nodeId: string, deltaWidth: number, deltaHeight: number, direction: ResizeDirection) => void;
   onResizeEnd?: (nodeId: string) => void;
@@ -49,6 +49,9 @@ export interface UseGestureOptions {
   /** Current zoom scale — accessor for reactive updates */
   zoomScale: () => number;
   callbacks: GestureCallbacks;
+  /** Resolves the Nodes that share a drag with the pressed Node. The gesture
+   * remains domain-agnostic; hosts choose selection or containment semantics. */
+  dragGroup?: (nodeId: string) => ReadonlyArray<string>;
   /** When provided, wires the marquee (box-select) lifecycle: a plain-left or
       shift-left press on the pan surface starts a `marquee` gesture. */
   boxSelect?: {
@@ -93,6 +96,9 @@ export interface UseGestureResult {
   isDraggingNode: (nodeId: string) => boolean;
   /** The active drag delta, canvas-space, `{0,0}` when idle */
   dragDelta: () => { dx: number; dy: number };
+  /** Node ids moving in the active drag; contains only the pressed Node when
+   * no `dragGroup` resolver was provided. */
+  draggedNodeIds: () => ReadonlyArray<string>;
   /** Start a connection drag from a source handle */
   beginConnect: (sourceNodeId: string, sourceHandle: string | null, clientX: number, clientY: number) => void;
   /** Start a resize drag on a node from a resize handle */
@@ -103,6 +109,7 @@ const IDLE: Gesture = { kind: 'idle' };
 
 export function useGesture(options: UseGestureOptions): UseGestureResult {
   const [gesture, setGesture] = createSignal<Gesture>(IDLE);
+  const [draggedNodeIds, setDraggedNodeIds] = createSignal<ReadonlyArray<string>>([]);
 
   const draggingId = () => {
     const g = gesture();
@@ -135,25 +142,28 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
 
       if (g.kind === 'pressing') {
         if (Math.hypot(rawDx, rawDy) < DRAG_THRESHOLD) return;
+        const group = options.dragGroup?.(nodeId) ?? [nodeId];
+        setDraggedNodeIds(group.length > 0 ? [...group] : [nodeId]);
         setGesture({ kind: 'draggingNode', nodeId, startX, startY, dx: rawDx / k, dy: rawDy / k });
         target?.setPointerCapture?.(event.pointerId);
         captured = true;
-        options.callbacks.onDragStart?.(nodeId);
+        options.callbacks.onDragStart?.(nodeId, draggedNodeIds());
         return;
       }
 
       const dx = rawDx / k;
       const dy = rawDy / k;
       setGesture({ kind: 'draggingNode', nodeId, startX, startY, dx, dy });
-      options.callbacks.onDrag?.(nodeId, dx, dy);
+      options.callbacks.onDrag?.(nodeId, dx, dy, draggedNodeIds());
     };
 
     const handlePointerUp = () => {
       const g = gesture();
       if (g.kind === 'draggingNode') {
-        options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy);
+        options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy, draggedNodeIds());
       }
       setGesture(IDLE);
+      setDraggedNodeIds([]);
       if (captured) target?.releasePointerCapture?.(event.pointerId);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
@@ -429,5 +439,5 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
     });
   }
 
-  return { gesture, beginPress, isDraggingNode, dragDelta, beginConnect, beginResize };
+  return { gesture, beginPress, isDraggingNode, dragDelta, draggedNodeIds, beginConnect, beginResize };
 }

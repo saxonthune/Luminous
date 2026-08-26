@@ -16,6 +16,7 @@ const DATAFLOW_SUFFIX = ".dataflow.json"
 const ATLAS_SUFFIX = ".atlas.json"
 const ATLASDATA_SUFFIX = ".atlasdata.json"
 const LINEN_SUFFIX = ".linen.json"
+const MERINO_SUFFIX = ".merino.json"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
@@ -29,9 +30,13 @@ export function isLinenPath(relativePath: string): boolean {
   return relativePath.endsWith(LINEN_SUFFIX)
 }
 
+export function isMerinoPath(relativePath: string): boolean {
+  return relativePath.endsWith(MERINO_SUFFIX)
+}
+
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
-  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath)
+  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath)
 }
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
@@ -343,7 +348,9 @@ export function watchDocuments(
           !normalized.endsWith(".graph.json") &&
           !normalized.endsWith(DATAFLOW_SUFFIX) &&
           !normalized.endsWith(ATLAS_SUFFIX) &&
-          !normalized.endsWith(ATLASDATA_SUFFIX)
+          !normalized.endsWith(ATLASDATA_SUFFIX) &&
+          !normalized.endsWith(LINEN_SUFFIX) &&
+          !normalized.endsWith(MERINO_SUFFIX)
         ) {
           return
         }

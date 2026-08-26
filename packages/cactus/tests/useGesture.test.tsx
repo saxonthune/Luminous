@@ -34,6 +34,20 @@ function Harness(props: {
   );
 }
 
+function GroupHarness(props: {
+  exposeEl: (el: HTMLDivElement) => void;
+  exposeDraggedNodeIds: (ids: () => ReadonlyArray<string>) => void;
+  onDragEnd: (ids: ReadonlyArray<string>) => void;
+}) {
+  const gesture = useGesture({
+    zoomScale: () => 1,
+    dragGroup: () => ['a', 'b'],
+    callbacks: { onDragEnd: (_nodeId, _dx, _dy, ids) => props.onDragEnd(ids) },
+  });
+  props.exposeDraggedNodeIds(gesture.draggedNodeIds);
+  return <div ref={(el) => props.exposeEl(el)} onPointerDown={(e) => gesture.beginPress('a', e)} />;
+}
+
 function mount(zoomScale = 1) {
   const started: string[] = [];
   const dragged: Array<[string, number, number]> = [];
@@ -115,6 +129,26 @@ describe('useGesture', () => {
     up();
     expect(ended).toEqual([['a', 10, 0]]);
     expect(gesture()).toEqual({ kind: 'idle' });
+    cleanup();
+  });
+
+  it('exposes and reports a resolved drag group', () => {
+    let el!: HTMLDivElement;
+    let draggedNodeIds!: () => ReadonlyArray<string>;
+    const ended: ReadonlyArray<string>[] = [];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const cleanup = render(
+      () => <GroupHarness exposeEl={(node) => { el = node; }} exposeDraggedNodeIds={(ids) => { draggedNodeIds = ids; }} onDragEnd={(ids) => ended.push(ids)} />,
+      host,
+    );
+
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    move({ clientX: 10, clientY: 0 });
+    expect(draggedNodeIds()).toEqual(['a', 'b']);
+    up();
+    expect(ended).toEqual([['a', 'b']]);
+    expect(draggedNodeIds()).toEqual([]);
     cleanup();
   });
 

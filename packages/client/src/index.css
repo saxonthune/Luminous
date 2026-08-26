@@ -29,6 +29,9 @@ body {
   --accent-hover: #1d4ed8;
   --accent-10: rgba(37, 99, 235, 0.1);
   --accent-subtle: #3b82f6;
+  /* Merino type badges: the token palette in this theme is dark/saturated
+     enough that one fixed foreground reads on every token's fill. */
+  --type-badge-fg: #ffffff;
   --edge: #94a3b8;
   --edge-label: #64748b;
   --dot-grid: #d1d5db;
@@ -82,6 +85,10 @@ body {
   --accent-hover: #c07840;
   --accent-10: rgba(212, 145, 90, 0.1);
   --accent-subtle: #d4915a;
+  /* Dusk's token palette runs light/pastel (it's the dark theme's accent
+     hues, lifted to stay visible on a dark surface) — badge text needs to be
+     dark, the opposite of --on-accent, to stay readable on those fills. */
+  --type-badge-fg: #1e1a17;
   --edge: #8a7a68;
   --edge-label: #a89888;
   --dot-grid: #3a3228;
@@ -121,7 +128,7 @@ body {
 [data-theme="ground"] {
   /* TIER 1: palette */
   --tone-0: #f4ece1;
-  --tone-1: #ede2d2;
+  --tone-1: #faf7f1;
   --tone-2: #ddcfba;
   --tone-3: #b8a78c;
   --tone-4: #7d6b50;
@@ -149,6 +156,9 @@ body {
   --fg-muted: var(--tone-4);
   --fg-subtle: var(--tone-3);
   --on-accent: var(--tone-0);
+  /* Ground's token palette (--hue-*) is dark/muted like light theme's, so a
+     light foreground reads on every token's fill. */
+  --type-badge-fg: var(--tone-0);
   --accent: var(--hue-oxide);
   --accent-hover: color-mix(in oklch, var(--hue-oxide) 75%, var(--tone-6));
   --accent-10: color-mix(in oklch, var(--hue-oxide) 10%, transparent);
@@ -251,6 +261,19 @@ body {
   --color-atlas-accent-7-container:    color-mix(in oklch, var(--color-token-oxide) var(--color-token-container-mix), var(--surface));
   --color-atlas-accent-8:               var(--color-token-rose);
   --color-atlas-accent-8-container:     color-mix(in oklch, var(--color-token-rose) var(--color-token-container-mix), var(--surface));
+}
+
+/* Merino color tokens — its own named slots so a Node Type or Edge Type stores
+   a Merino token, aliased to the shared accent seam above. */
+:root {
+  --color-merino-accent-1: var(--color-atlas-accent-1);
+  --color-merino-accent-2: var(--color-atlas-accent-2);
+  --color-merino-accent-3: var(--color-atlas-accent-3);
+  --color-merino-accent-4: var(--color-atlas-accent-4);
+  --color-merino-accent-5: var(--color-atlas-accent-5);
+  --color-merino-accent-6: var(--color-atlas-accent-6);
+  --color-merino-accent-7: var(--color-atlas-accent-7);
+  --color-merino-accent-8: var(--color-atlas-accent-8);
 }
 
 /* TIER 3: Tailwind token layer — never overridden, generates utilities */

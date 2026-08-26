@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
+import { createSignal, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { LinenDocument } from '@luminous/core/linen';
 import { parseLinenDocument, serializeLinenDocument } from '@luminous/core/linen';
@@ -123,11 +123,6 @@ export function LinenApp() {
         setShell({ kind: 'error', reason });
       });
   }
-
-  createEffect(() => {
-    const label = sourceLabel();
-    document.title = label ? `${label} — Luminous` : 'Luminous';
-  });
 
   onMount(() => {
     boot();

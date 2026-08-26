@@ -58,6 +58,10 @@ interface CanvasProps {
     getNodeRects: () => NodeRect[]
   }
   edges?: EdgeDeclaration[]
+  edgeEmphasis?: {
+    dimUnselected?: boolean
+    selectedWidthMultiplier?: number
+  }
   freezeEdgeRouting?: () => boolean
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element
@@ -74,7 +78,7 @@ interface CanvasProps {
 }
 ```
 
-`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress.
+`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
 
 `onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
 
@@ -303,10 +307,29 @@ The host owns the route projection: containment, ports, collision policy, and do
 | `useNodeDrag` | Recommended (reads zoom) | No (you pass `zoomScale`) | Pass result's `onPointerDown` to `NodeContainer` |
 | `useNodeResize` | Recommended | No | Pair with `ResizeHandle` |
 | `useConnectionDrag` | Recommended | No | Called by Canvas when `connectionDrag` prop is set |
+| `useGesture` | Recommended | No | Composable press, drag, resize, connection, and marquee gestures |
 | `useSelection` | Recommended | No (called internally by Canvas) | Selection already exposed via `useCanvasContext` |
 | `useBoxSelect` | Yes | Yes (transform) | Activated by Shift+drag on background |
 | `useKeyboardShortcuts` | No | No | Window-level listener |
 | `useNodeLinks` | No | No | Pure lookup; no DOM/event side-effects |
+
+### useGesture
+
+Composes pointer gestures for a host node layer. Its optional `dragGroup` resolver
+returns the Node ids that should move with a pressed Node. Cactus reports that
+same group through `draggedNodeIds` and as the final argument of drag callbacks;
+the host supplies the domain meaning (for example, the current selection) and
+persists the resulting position changes.
+
+```typescript
+useGesture({
+  zoomScale,
+  dragGroup: (pressedId) => selectedIds().includes(pressedId) ? selectedIds() : [pressedId],
+  callbacks: {
+    onDragEnd: (pressedId, dx, dy, nodeIds) => savePositions(nodeIds, dx, dy),
+  },
+})
+```
 
 ### useViewport
 

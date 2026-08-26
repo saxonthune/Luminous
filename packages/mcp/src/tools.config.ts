@@ -1,5 +1,6 @@
 import { ATLAS_COLOR_TOKENS } from '@luminous/core/atlas'
 import { TRACE_NODE_KINDS } from '@luminous/core/linen'
+import { MERINO_COLOR_TOKENS, MERINO_DASHES, MERINO_TABS } from '@luminous/core/merino'
 
 export type ParamType =
   | 'string'
@@ -1150,6 +1151,201 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             description: "Id of the Module whose Manifest to compute.",
           },
         },
+      },
+    },
+  },
+
+  merino: {
+    description:
+      "Author Merino documents — .merino.json node-and-edge graphs for software design. A Document has two Tabs (requirements, deployments); every Node and Edge belongs to one Tab, and an Edge never crosses between them. Nodes carry a user-managed Node Type (drawn in a Color); a Node with a `parent` is a Subnode, drawn joined to its parent by a dotted link (never stored as an Edge). Edges carry a user-managed Edge Type (Color, dash, arrowhead). Node Types and Edge Types are registries kept in the Document; a Type still in use cannot be removed. Ids are author-supplied and meaningful. Every write returns the document's check issues alongside.",
+    local: true,
+    actions: {
+      list: {
+        description: "Return the paths of all merino documents (files ending '.merino.json') in the workspace.",
+        method: 'GET',
+        path: '',
+        params: {},
+      },
+      create: {
+        description: "Create a new merino document at path, seeded with starter Node Types (event, requirement, resource, deployment) and Edge Types (triggers, needs). Fails if path does not end '.merino.json'.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: { type: 'described', innerType: 'string', description: "Filename to create, must end '.merino.json'." },
+        },
+      },
+      read: {
+        description: "Load the complete merino document (node types, edge types, nodes, edges) plus its current check issues.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      'node/get': {
+        description: "Fetch a single Node by its exact id. Throws if the id does not exist.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node to fetch." },
+        },
+      },
+      'node/create': {
+        description: "Add a Node with an explicit, author-chosen id on one Tab. `parent` makes it a Subnode of another Node on the same Tab. Omit x/y to let the viewer place it. Fails if the id exists, the node type is unknown, or the parent is missing or on another Tab.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Node, e.g. 'on-load'. Must not already exist." },
+          tab: { type: 'described', innerType: { type: 'enum', values: MERINO_TABS }, description: "Which Tab the Node lives on." },
+          nodeType: { type: 'described', innerType: 'string', description: "Id of a Node Type in the registry." },
+          name: { type: 'described', innerType: 'string', description: "Display name for the Node." },
+          'text?': { type: 'described', innerType: 'string', description: "Longer prose the Node carries — the detail a designer adds." },
+          'parent?': { type: 'described', innerType: 'string', description: "Id of the parent Node this is a Subnode of. Must be on the same Tab." },
+          'x?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
+          'y?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
+        },
+      },
+      'node/set': {
+        description: "Update a Node's name, text, node type, parent (reparenting the Subnode), or position. Only provided fields change.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node to update." },
+          'name?': { type: 'described', innerType: 'string', description: "New display name." },
+          'text?': { type: 'described', innerType: 'string', description: "New prose text." },
+          'nodeType?': { type: 'described', innerType: 'string', description: "New Node Type id." },
+          'parent?': { type: 'described', innerType: 'string', description: "New parent Node id (reparent). Must be on the same Tab and not a descendant." },
+          'x?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
+          'y?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
+        },
+      },
+      'node/delete': {
+        description: "Remove a Node together with its Subnodes and every Edge touching the removed subtree.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node to remove." },
+        },
+      },
+      'edge/connect': {
+        description: "Add a typed Edge between two Nodes on the same Tab. Fails if the id exists, the edge type is unknown, either Node is missing, or the Nodes are on different Tabs.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Edge. Must not already exist." },
+          edgeType: { type: 'described', innerType: 'string', description: "Id of an Edge Type in the registry." },
+          from: { type: 'described', innerType: 'string', description: "Id of the source Node." },
+          to: { type: 'described', innerType: 'string', description: "Id of the target Node." },
+        },
+      },
+      'edge/set': {
+        description: "Change an existing Edge's Type.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge to retype." },
+          edgeType: { type: 'described', innerType: 'string', description: "Id of the new Edge Type." },
+        },
+      },
+      'edge/disconnect': {
+        description: "Remove an Edge by its id.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge to remove." },
+        },
+      },
+      'nodeType/add': {
+        description: "Add a Node Type to the registry.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Node Type." },
+          name: { type: 'described', innerType: 'string', description: "Display name." },
+          color: { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "Color token the Type is drawn in." },
+        },
+      },
+      'nodeType/set': {
+        description: "Rename or recolor a Node Type. Only provided fields change.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node Type to update." },
+          'name?': { type: 'described', innerType: 'string', description: "New display name." },
+          'color?': { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "New color token." },
+        },
+      },
+      'nodeType/remove': {
+        description: "Remove a Node Type. Fails if any Node still uses it — reassign those Nodes first.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node Type to remove." },
+        },
+      },
+      'edgeType/add': {
+        description: "Add an Edge Type to the registry, with its drawing style.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Edge Type." },
+          name: { type: 'described', innerType: 'string', description: "Display name." },
+          color: { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "Color token." },
+          dash: { type: 'described', innerType: { type: 'enum', values: MERINO_DASHES }, description: "Line style." },
+          arrowHead: { type: 'described', innerType: 'boolean', description: "Whether to draw an arrowhead at the target." },
+          directed: { type: 'described', innerType: 'boolean', description: "Whether the Edge means a direction rather than a plain association." },
+        },
+      },
+      'edgeType/set': {
+        description: "Change an Edge Type's name or style. Only provided fields change.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge Type to update." },
+          'name?': { type: 'described', innerType: 'string', description: "New display name." },
+          'color?': { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "New color token." },
+          'dash?': { type: 'described', innerType: { type: 'enum', values: MERINO_DASHES }, description: "New line style." },
+          'arrowHead?': { type: 'described', innerType: 'boolean', description: "New arrowhead setting." },
+          'directed?': { type: 'described', innerType: 'boolean', description: "New directed setting." },
+        },
+      },
+      'edgeType/remove': {
+        description: "Remove an Edge Type. Fails if any Edge still uses it — reassign those Edges first.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge Type to remove." },
+        },
+      },
+      batch: {
+        description: "Apply a sequence of merino actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNodeType' | 'setNodeType' | 'removeNodeType' | 'addEdgeType' | 'setEdgeType' | 'removeEdgeType' | 'addNode' | 'setNode' | 'removeNode' | 'connect' | 'setEdge' | 'disconnect') and that action's own fields.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          actions: {
+            type: 'described',
+            innerType: { type: 'array', items: { type: 'object', properties: {} } },
+            description: "Ordered array of merino actions to apply atomically.",
+          },
+        },
+      },
+      check: {
+        description: "Validate the document and return issues: errors (an Edge naming a missing Node, a Node or Edge whose Type is not in the registry, an Edge crossing between Tabs, a Subnode on a different Tab than its parent, a parent cycle, duplicate ids) and warnings (a Node Type or Edge Type defined but unused). Warnings never block a write.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
       },
     },
   },

@@ -1,0 +1,148 @@
+{
+  "v": 1,
+  "nodeTypes": [
+    {
+      "id": "event",
+      "name": "Event",
+      "color": "accent-4"
+    },
+    {
+      "id": "requirement",
+      "name": "Requirement",
+      "color": "accent-2"
+    },
+    {
+      "id": "resource",
+      "name": "Resource",
+      "color": "accent-6"
+    },
+    {
+      "id": "deployment",
+      "name": "Deployment",
+      "color": "accent-1"
+    },
+    {
+      "id": "type-1",
+      "name": "UI State",
+      "color": "accent-5"
+    }
+  ],
+  "edgeTypes": [
+    {
+      "id": "triggers",
+      "name": "triggers",
+      "color": "accent-4",
+      "dash": "solid",
+      "arrowHead": true,
+      "directed": true
+    },
+    {
+      "id": "needs",
+      "name": "needs",
+      "color": "accent-6",
+      "dash": "solid",
+      "arrowHead": true,
+      "directed": true
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n-1",
+      "tab": "requirements",
+      "type": "event",
+      "name": "New node",
+      "text": "Example details foo bar baz the quick brown\n\n",
+      "x": -76.96365417402035,
+      "y": 418.71465383544916
+    },
+    {
+      "id": "n-2",
+      "tab": "requirements",
+      "type": "type-1",
+      "name": "fdf",
+      "parent": "n-1",
+      "expanded": true,
+      "x": 122.22813876866849,
+      "y": 556.1011005903641
+    },
+    {
+      "id": "n-3",
+      "tab": "requirements",
+      "type": "type-1",
+      "name": "Landing Page",
+      "expanded": true,
+      "x": -1843.8806214569236,
+      "y": 148.42351278403
+    },
+    {
+      "id": "n-4",
+      "tab": "requirements",
+      "type": "type-1",
+      "name": "Build a Bracket",
+      "x": -964.9810400733334,
+      "y": 162.85039367873932
+    },
+    {
+      "id": "n-5",
+      "tab": "requirements",
+      "type": "event",
+      "name": "New node",
+      "x": -24.895859819498128,
+      "y": 237.4471440000479
+    },
+    {
+      "id": "n-6",
+      "tab": "requirements",
+      "type": "type-1",
+      "name": "Tournament Standings",
+      "x": -474.6812768015701,
+      "y": 241.27091314516255
+    },
+    {
+      "id": "n-7",
+      "tab": "requirements",
+      "type": "type-1",
+      "name": "New node",
+      "x": -1105.6123058177197,
+      "y": 492.05026649274527
+    },
+    {
+      "id": "n-8",
+      "tab": "requirements",
+      "type": "type-1",
+      "name": "New node",
+      "x": -1659.2031608699524,
+      "y": 566.4892956566497
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-1",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "n-3",
+      "to": "n-7"
+    },
+    {
+      "id": "e-2",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "n-3",
+      "to": "n-4"
+    },
+    {
+      "id": "e-3",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "n-4",
+      "to": "n-6"
+    },
+    {
+      "id": "e-4",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "n-3",
+      "to": "n-8"
+    }
+  ]
+}

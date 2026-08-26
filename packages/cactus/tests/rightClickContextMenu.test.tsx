@@ -65,6 +65,12 @@ describe('right-button context menu vs. pan', () => {
     fire(surface, 'pointerup', RIGHT, 101, 100); // within slop
     fire(surface, 'contextmenu', RIGHT, 101, 100);
     expect(backgroundContextMenu).toHaveBeenCalledTimes(1);
+    expect(backgroundContextMenu).toHaveBeenCalledWith({
+      clientX: 101,
+      clientY: 100,
+      canvasX: 101,
+      canvasY: 100,
+    });
   });
 
   it('opens the menu on a clean right-click — Chromium order (contextmenu on press)', () => {

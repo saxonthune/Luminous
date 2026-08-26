@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
+import { createSignal, Match, Switch, onMount, onCleanup, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { AtlasData, AtlasDocument } from '@luminous/core/atlas';
 import { parseAtlasDocument, serializeAtlasDocument } from '@luminous/core/atlas';
@@ -149,11 +149,6 @@ export function AtlasApp() {
         setShell({ kind: 'error', reason });
       });
   }
-
-  createEffect(() => {
-    const label = sourceLabel();
-    document.title = label ? `${label} — Luminous` : 'Luminous';
-  });
 
   onMount(() => {
     boot();

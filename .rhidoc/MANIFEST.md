@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -106,6 +106,15 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.09.00 | `09-linen/00-index.md` |  |  | — | — | — |
 | doc01.09.01 | `09-linen/01-idea.md` | A canvas app that answers "what happens when this runs" — nested modules drawn as symbol sequences of control flow and data transformation, annotated on selection | linen, apps, control-flow, symbols, contracts | doc01.04, doc01.09.02 | doc01.09.02 | — |
 | doc01.09.02 | `09-linen/02-glossary.md` | The Linen controlled vocabulary — the terms Linen docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, linen | doc01.09.01 | doc01.09.01 | — |
+
+### Merino
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.10.00 | `10-merino/00-index.md` |  |  | — | — | — |
+| doc01.10.01 | `10-merino/01-idea.md` | A general-purpose node-and-edge app for designing a program as event-driven requirements and their deployments, grown by attaching detail subnodes until an agent has enough to change source code | merino, apps, requirements, deployments, differentiation | doc01.04 | doc01.10.02 | — |
+| doc01.10.02 | `10-merino/02-requirements.md` | Merino's capabilities as a controlled, EARS-like list of shall-statements, prefixed per section, plus an agent-capabilities section for MCP and the input-command bindings table | merino, ui, requirements, mcp | doc01.10.01 | — | — |
 
 ## 02-design — Design
 
@@ -210,7 +219,7 @@ Quick lookup for file-path→doc mapping:
 | `allen` | doc01.07.05 |
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
-| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc02.21.03 |
+| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc02.21.03 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04, doc01.07.06 |
 | `background` | doc01.02 |
@@ -250,10 +259,12 @@ Quick lookup for file-path→doc mapping:
 | `data-model` | doc03.03 |
 | `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc01.07.01, doc01.07.02, doc02.21.01, doc02.21.02, doc02.21.03 |
 | `decoration` | doc02.17 |
+| `deployments` | doc01.10.01 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
 | `desktop-library` | doc01.06.01.08 |
 | `diagram-engine` | doc01.06.01.06 |
+| `differentiation` | doc01.10.01 |
 | `disclosure` | doc02.11 |
 | `discriminant` | doc02.06.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04, doc00.05 |
@@ -291,8 +302,9 @@ Quick lookup for file-path→doc mapping:
 | `linen` | doc01.09.01, doc01.09.02 |
 | `litegraph` | doc01.06.01.07 |
 | `maintenance` | doc00.02 |
-| `mcp` | doc02.04, doc02.15, doc02.21.02, doc03.06 |
+| `mcp` | doc01.10.02, doc02.04, doc02.15, doc02.21.02, doc03.06 |
 | `menus` | doc02.20 |
+| `merino` | doc01.10.01, doc01.10.02 |
 | `meta` | doc00.01 |
 | `milestone-1` | doc02.07, doc02.10.01 |
 | `milestone-2` | doc03.06 |
@@ -335,7 +347,7 @@ Quick lookup for file-path→doc mapping:
 | `relations` | doc01.07.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.21.03, doc03.05 |
-| `requirements` | doc01.05.04, doc01.07.04 |
+| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
@@ -365,7 +377,7 @@ Quick lookup for file-path→doc mapping:
 | `tools` | doc02.04, doc02.15, doc02.21.02 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
-| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc02.12, doc02.22.01 |
+| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc02.12, doc02.22.01 |
 | `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `unreal` | doc01.06.01.09 |

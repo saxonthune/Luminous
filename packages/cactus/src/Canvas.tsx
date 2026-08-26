@@ -26,6 +26,14 @@ export interface ConnectionPreviewCoords {
   currentY: number;
 }
 
+/** Cursor position for a canvas context menu, in viewport and canvas space. */
+export interface CanvasContextMenuPosition {
+  clientX: number;
+  clientY: number;
+  canvasX: number;
+  canvasY: number;
+}
+
 /**
  * Cactus is domain-agnostic. It accepts opaque node and edge declarations with
  * geometry hints. It does not know about kinds, views, roles, layers, disclosure,
@@ -57,6 +65,13 @@ export interface CanvasProps {
   };
   /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
   edges?: EdgeDeclaration[];
+  /** Visual treatment for Edges incident to the selected Nodes. Unselected
+   * Edges dim by default; hosts can retain their opacity and thicken selected
+   * Edges instead. */
+  edgeEmphasis?: {
+    dimUnselected?: boolean;
+    selectedWidthMultiplier?: number;
+  };
   /** Maps the current selection to the node IDs whose incident Edges should be
    * emphasized. Hosts can project domain relationships such as containment;
    * by default only the literally selected node IDs are used. */
@@ -85,7 +100,7 @@ export interface CanvasProps {
   /** Returns a MenuSchema for a node right-click, or undefined for no menu. */
   nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
   /** Returns a MenuSchema for a background right-click, or undefined for no menu. */
-  backgroundContextMenu?: () => MenuSchema | undefined;
+  backgroundContextMenu?: (position: CanvasContextMenuPosition) => MenuSchema | undefined;
   /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
   edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
   /** Fires whenever the selection changes (click, marquee, clear). */
@@ -428,6 +443,10 @@ export function Canvas(props: CanvasProps) {
   const edgeEmphasisNodeIds = createMemo(() =>
     props.edgeEmphasisNodeIds?.(selectedIds()) ?? selectedIds(),
   );
+  const edgeEmphasisStyle = {
+    dimUnselected: props.edgeEmphasis?.dimUnselected ?? true,
+    selectedWidthMultiplier: props.edgeEmphasis?.selectedWidthMultiplier ?? 1,
+  };
 
   const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
 
@@ -555,7 +574,13 @@ export function Canvas(props: CanvasProps) {
         }
       }
       if (props.backgroundContextMenu) {
-        const schema = props.backgroundContextMenu();
+        const canvasPoint = screenToCanvas(clientX, clientY);
+        const schema = props.backgroundContextMenu({
+          clientX,
+          clientY,
+          canvasX: canvasPoint.x,
+          canvasY: canvasPoint.y,
+        });
         if (schema && schema.items.length > 0) {
           setCtxMenuState({ x: clientX, y: clientY, schema });
           return;
@@ -652,6 +677,7 @@ export function Canvas(props: CanvasProps) {
                       edges={props.edges!}
                       routes={routedEdges}
                       emphasisNodeIds={edgeEmphasisNodeIds}
+                      emphasisStyle={edgeEmphasisStyle}
                       layer="lines"
                       routeBand={band}
                       zoom={() => transform().k}
@@ -683,7 +709,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
+              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>
