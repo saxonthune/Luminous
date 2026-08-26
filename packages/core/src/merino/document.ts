@@ -1,12 +1,14 @@
 import { isMerinoColorToken } from './colors.ts';
 import { MERINO_CURRENT_VERSION, migrateMerinoDocument } from './migrate.ts';
-import { isMerinoDash, isMerinoTab } from './types.ts';
+import { isMerinoContainerLayout, isMerinoDash, isMerinoPortSide, isMerinoTab } from './types.ts';
 import type {
   MerinoDocument,
   MerinoEdge,
   MerinoEdgeType,
   MerinoNode,
   MerinoNodeType,
+  MerinoPortPosition,
+  MerinoPorts,
 } from './types.ts';
 
 export type ParseMerinoDocumentResult =
@@ -40,9 +42,11 @@ export function emptyMerinoDocument(): MerinoDocument {
 }
 
 const TOP_LEVEL_FIELDS = new Set(['v', 'nodeTypes', 'edgeTypes', 'nodes', 'edges']);
-const NODE_TYPE_FIELDS = new Set(['id', 'name', 'color']);
+const NODE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'layout']);
 const EDGE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'dash', 'arrowHead', 'directed']);
-const NODE_FIELDS = new Set(['id', 'tab', 'type', 'name', 'text', 'parent', 'expanded', 'x', 'y']);
+const NODE_FIELDS = new Set(['id', 'tab', 'type', 'name', 'text', 'parent', 'expanded', 'order', 'ports', 'width', 'height', 'x', 'y']);
+const PORTS_FIELDS = new Set(['entry', 'exit']);
+const PORT_FIELDS = new Set(['side', 'offset']);
 const EDGE_FIELDS = new Set(['id', 'tab', 'type', 'from', 'to']);
 
 function unknownFieldIssues(obj: Record<string, unknown>, allowed: Set<string>, path: string): string[] {
@@ -87,8 +91,14 @@ function parseNodeType(value: unknown, path: string, issues: string[]): MerinoNo
     issues.push(`${path}.color: must be a Merino color token`);
     ok = false;
   }
+  if (t['layout'] !== undefined && !isMerinoContainerLayout(t['layout'])) {
+    issues.push(`${path}.layout: must be "container" or "list"`);
+    ok = false;
+  }
   if (!ok) return undefined;
-  return { id: t['id'] as string, name: t['name'] as string, color: t['color'] as MerinoNodeType['color'] };
+  const type: MerinoNodeType = { id: t['id'] as string, name: t['name'] as string, color: t['color'] as MerinoNodeType['color'] };
+  if (isMerinoContainerLayout(t['layout'])) type.layout = t['layout'];
+  return type;
 }
 
 function parseEdgeType(value: unknown, path: string, issues: string[]): MerinoEdgeType | undefined {
@@ -118,6 +128,36 @@ function parseEdgeType(value: unknown, path: string, issues: string[]): MerinoEd
   };
 }
 
+function parsePortPosition(value: unknown, path: string, issues: string[]): MerinoPortPosition | undefined {
+  const p = asObject(value, path, 'port', issues);
+  if (p === undefined) return undefined;
+  issues.push(...unknownFieldIssues(p, PORT_FIELDS, path));
+  let ok = true;
+  if (!isMerinoPortSide(p['side'])) {
+    issues.push(`${path}.side: must be one of top, right, bottom, left`);
+    ok = false;
+  }
+  if (!(typeof p['offset'] === 'number' && Number.isFinite(p['offset']))) {
+    issues.push(`${path}.offset: must be a finite number`);
+    ok = false;
+  }
+  if (!ok) return undefined;
+  return { side: p['side'] as MerinoPortPosition['side'], offset: p['offset'] as number };
+}
+
+function parsePorts(value: unknown, path: string, issues: string[]): MerinoPorts | undefined {
+  const p = asObject(value, path, 'ports', issues);
+  if (p === undefined) return undefined;
+  issues.push(...unknownFieldIssues(p, PORTS_FIELDS, path));
+  const ports: MerinoPorts = {};
+  for (const kind of ['entry', 'exit'] as const) {
+    if (p[kind] === undefined) continue;
+    const pos = parsePortPosition(p[kind], `${path}.${kind}`, issues);
+    if (pos !== undefined) ports[kind] = pos;
+  }
+  return ports;
+}
+
 function parseNode(value: unknown, path: string, issues: string[]): MerinoNode | undefined {
   const n = asObject(value, path, 'node', issues);
   if (n === undefined) return undefined;
@@ -131,6 +171,10 @@ function parseNode(value: unknown, path: string, issues: string[]): MerinoNode |
     issues.push(`${path}.expanded: must be a boolean`);
     ok = false;
   }
+  if (n['order'] !== undefined && !(typeof n['order'] === 'number' && Number.isFinite(n['order']))) {
+    issues.push(`${path}.order: must be a finite number`);
+    ok = false;
+  }
   if (!isMerinoTab(n['tab'])) {
     issues.push(`${path}.tab: must be "requirements" or "deployments"`);
     ok = false;
@@ -139,11 +183,23 @@ function parseNode(value: unknown, path: string, issues: string[]): MerinoNode |
     issues.push(`${path}: "x" and "y" must appear together`);
     ok = false;
   }
+  for (const field of ['width', 'height'] as const) {
+    if (n[field] !== undefined && !(typeof n[field] === 'number' && Number.isFinite(n[field]) && n[field] > 0)) {
+      issues.push(`${path}.${field}: must be a positive finite number`);
+      ok = false;
+    }
+  }
   for (const field of ['x', 'y'] as const) {
     if (n[field] !== undefined && !(typeof n[field] === 'number' && Number.isFinite(n[field]))) {
       issues.push(`${path}.${field}: must be a finite number`);
       ok = false;
     }
+  }
+  let ports: MerinoPorts | undefined;
+  if (n['ports'] !== undefined) {
+    const before = issues.length;
+    ports = parsePorts(n['ports'], `${path}.ports`, issues);
+    if (issues.length > before) ok = false;
   }
   if (!ok) return undefined;
   const node: MerinoNode = {
@@ -155,6 +211,10 @@ function parseNode(value: unknown, path: string, issues: string[]): MerinoNode |
   if (n['text'] !== undefined) node.text = n['text'] as string;
   if (n['parent'] !== undefined) node.parent = n['parent'] as string;
   if (n['expanded'] !== undefined) node.expanded = n['expanded'] as boolean;
+  if (n['order'] !== undefined) node.order = n['order'] as number;
+  if (ports !== undefined) node.ports = ports;
+  if (n['width'] !== undefined) node.width = n['width'] as number;
+  if (n['height'] !== undefined) node.height = n['height'] as number;
   if (n['x'] !== undefined) node.x = n['x'] as number;
   if (n['y'] !== undefined) node.y = n['y'] as number;
   return node;
@@ -307,11 +367,20 @@ export function parseMerinoDocument(text: string): ParseMerinoDocumentResult {
 }
 
 function serializeNodeType(t: MerinoNodeType): Record<string, unknown> {
-  return { id: t.id, name: t.name, color: t.color };
+  const out: Record<string, unknown> = { id: t.id, name: t.name, color: t.color };
+  if (t.layout !== undefined) out['layout'] = t.layout;
+  return out;
 }
 
 function serializeEdgeType(t: MerinoEdgeType): Record<string, unknown> {
   return { id: t.id, name: t.name, color: t.color, dash: t.dash, arrowHead: t.arrowHead, directed: t.directed };
+}
+
+function serializePorts(ports: MerinoPorts): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (ports.entry !== undefined) out['entry'] = { side: ports.entry.side, offset: ports.entry.offset };
+  if (ports.exit !== undefined) out['exit'] = { side: ports.exit.side, offset: ports.exit.offset };
+  return out;
 }
 
 function serializeNode(n: MerinoNode): Record<string, unknown> {
@@ -319,6 +388,10 @@ function serializeNode(n: MerinoNode): Record<string, unknown> {
   if (n.text !== undefined) out['text'] = n.text;
   if (n.parent !== undefined) out['parent'] = n.parent;
   if (n.expanded !== undefined) out['expanded'] = n.expanded;
+  if (n.order !== undefined) out['order'] = n.order;
+  if (n.ports !== undefined) out['ports'] = serializePorts(n.ports);
+  if (n.width !== undefined) out['width'] = n.width;
+  if (n.height !== undefined) out['height'] = n.height;
   if (n.x !== undefined) out['x'] = n.x;
   if (n.y !== undefined) out['y'] = n.y;
   return out;

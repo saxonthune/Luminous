@@ -20,6 +20,7 @@ import {
 import type {
   MerinoAction,
   MerinoColorToken,
+  MerinoContainerLayout,
   MerinoDash,
   MerinoDocument,
   MerinoNode,
@@ -112,7 +113,7 @@ export async function getMerinoNode(serverUrl: string, path: string, id: string)
 export async function merinoNodeCreate(
   serverUrl: string,
   path: string,
-  fields: { id: string; tab: MerinoTab; nodeType: string; name: string; text?: string; parent?: string; x?: number; y?: number },
+  fields: { id: string; tab: MerinoTab; nodeType: string; name: string; text?: string; parent?: string; order?: number; x?: number; y?: number },
 ): Promise<MerinoWriteResult> {
   const doc = await loadMerino(serverUrl, path)
   return commit(serverUrl, path, addNode(doc, fields))
@@ -122,7 +123,7 @@ export async function merinoNodeSet(
   serverUrl: string,
   path: string,
   id: string,
-  patch: { name?: string; text?: string; nodeType?: string; parent?: string; x?: number; y?: number },
+  patch: { name?: string; text?: string; nodeType?: string; parent?: string; order?: number; x?: number; y?: number },
 ): Promise<MerinoWriteResult> {
   const doc = await loadMerino(serverUrl, path)
   return commit(serverUrl, path, setNode(doc, id, provided(patch)))
@@ -155,7 +156,7 @@ export async function merinoDisconnect(serverUrl: string, path: string, id: stri
 export async function merinoNodeTypeAdd(
   serverUrl: string,
   path: string,
-  fields: { id: string; name: string; color: MerinoColorToken },
+  fields: { id: string; name: string; color: MerinoColorToken; layout?: MerinoContainerLayout },
 ): Promise<MerinoWriteResult> {
   const doc = await loadMerino(serverUrl, path)
   return commit(serverUrl, path, addNodeType(doc, fields))
@@ -165,7 +166,7 @@ export async function merinoNodeTypeSet(
   serverUrl: string,
   path: string,
   id: string,
-  patch: { name?: string; color?: MerinoColorToken },
+  patch: { name?: string; color?: MerinoColorToken; layout?: MerinoContainerLayout },
 ): Promise<MerinoWriteResult> {
   const doc = await loadMerino(serverUrl, path)
   return commit(serverUrl, path, setNodeType(doc, id, provided(patch)))

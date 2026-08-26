@@ -59,6 +59,9 @@ export interface UseGestureOptions {
     transform: () => Transform;
     /** Container element accessor — the marquee listener binds here */
     containerEl: () => HTMLElement | undefined;
+    /** Converts viewport-relative pointer coordinates through the active
+        camera so marquee hit-testing shares the Canvas coordinate path. */
+    screenToCanvas?: (screenX: number, screenY: number) => { x: number; y: number };
     /** Returns current node rects in canvas coordinates for hit-testing */
     getNodeRects: () => NodeRect[];
     /** 'shift-drag' (default) needs Shift held; 'drag' marquees on plain
@@ -110,6 +113,11 @@ const IDLE: Gesture = { kind: 'idle' };
 export function useGesture(options: UseGestureOptions): UseGestureResult {
   const [gesture, setGesture] = createSignal<Gesture>(IDLE);
   const [draggedNodeIds, setDraggedNodeIds] = createSignal<ReadonlyArray<string>>([]);
+  // Temporary coordinate probe. Enable with `?cactusDebug=1` in a Vite dev
+  // session; it reports the pointer, containing block, expected and measured
+  // marquee box, camera, and canvas-space selection rect.
+  const debugMarquee = import.meta.env.DEV
+    && new URLSearchParams(window.location.search).has('cactusDebug');
 
   const draggingId = () => {
     const g = gesture();
@@ -402,12 +410,19 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
           };
           setGesture({ kind: 'marquee', startX, startY, rect });
 
+          const screenToCanvas = boxSelect.screenToCanvas;
           const t = boxSelect.transform();
+          const canvasStart = screenToCanvas
+            ? screenToCanvas(startX, startY)
+            : { x: (startX - containerRect.left - t.x) / t.k, y: (startY - containerRect.top - t.y) / t.k };
+          const canvasEnd = screenToCanvas
+            ? screenToCanvas(currentX, currentY)
+            : { x: (currentX - containerRect.left - t.x) / t.k, y: (currentY - containerRect.top - t.y) / t.k };
           const canvasRect = {
-            x: (rect.x - t.x) / t.k,
-            y: (rect.y - t.y) / t.k,
-            width: rect.width / t.k,
-            height: rect.height / t.k,
+            x: Math.min(canvasStart.x, canvasEnd.x),
+            y: Math.min(canvasStart.y, canvasEnd.y),
+            width: Math.abs(canvasEnd.x - canvasStart.x),
+            height: Math.abs(canvasEnd.y - canvasStart.y),
           };
 
           // A node whose box contains the whole marquee is not a hit — a
@@ -418,6 +433,55 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
             .filter((nr) => rectsIntersect(canvasRect, nr) && !rectContainsRect(nr, canvasRect))
             .map((nr) => nr.id);
           boxSelect.onBoxSelectHits?.(hits);
+
+          if (debugMarquee) {
+            requestAnimationFrame(() => {
+              const overlay = container.querySelector<HTMLElement>('[data-cactus-marquee]');
+              const actual = overlay?.getBoundingClientRect();
+              const describeElement = (el: HTMLElement | null) => {
+                if (!el) return null;
+                const bounds = el.getBoundingClientRect();
+                const style = getComputedStyle(el);
+                return {
+                  tag: el.tagName.toLowerCase(),
+                  class: el.className || undefined,
+                  bounds: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height },
+                  position: style.position,
+                  transform: style.transform,
+                  overflow: style.overflow,
+                  scrollLeft: el.scrollLeft,
+                  scrollTop: el.scrollTop,
+                };
+              };
+              console.debug('[cactus marquee]', {
+                pointer: { x: currentX, y: currentY },
+                canvasBounds: {
+                  left: containerRect.left,
+                  top: containerRect.top,
+                  width: containerRect.width,
+                  height: containerRect.height,
+                },
+                marqueeLocal: rect,
+                expectedOverlay: {
+                  left: containerRect.left + rect.x,
+                  top: containerRect.top + rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                },
+                actualOverlay: actual && {
+                  left: actual.left,
+                  top: actual.top,
+                  width: actual.width,
+                  height: actual.height,
+                },
+                overlayParent: describeElement(overlay?.parentElement ?? null),
+                overlayOffsetParent: describeElement(overlay?.offsetParent as HTMLElement | null),
+                transform: t,
+                canvasRect,
+                hitIds: hits,
+              });
+            });
+          }
         };
 
         const handlePointerUp = () => {

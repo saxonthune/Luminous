@@ -58,7 +58,9 @@ export interface CanvasProps {
     }) => void;
   };
   boxSelect?: {
-    getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
+    /** Defaults to the measured rectangles registered by NodeContainer. Supply
+     * this only to filter or replace the selectable geometry. */
+    getNodeRects?: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
     /** 'shift-drag' (default) or 'drag' — plain left-drag marquees and left-drag
         panning is disabled (middle-drag still pans). */
     trigger?: 'shift-drag' | 'drag';
@@ -456,7 +458,19 @@ export function Canvas(props: CanvasProps) {
     boxSelect: {
       transform,
       containerEl,
-      getNodeRects: props.boxSelect?.getNodeRects ?? (() => []),
+      screenToCanvas,
+      // NodeContainer's measured rectangles are the canvas's authoritative
+      // geometry. Falling back to them keeps marquee selection aligned with
+      // the rendered nodes at every zoom level.
+      getNodeRects: props.boxSelect?.getNodeRects ?? (() => {
+        return [...getNodeRects().entries()].map(([id, rect]) => ({
+          id,
+          x: rect.x,
+          y: rect.y,
+          width: rect.w,
+          height: rect.h,
+        }));
+      }),
       trigger: props.boxSelect?.trigger,
       onBoxSelectHits: props.boxSelect ? selection.mergeBoxSelection : undefined,
     },
@@ -605,7 +619,7 @@ export function Canvas(props: CanvasProps) {
       <div
         ref={setContainerRef}
         class={props.class}
-        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
+        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'clip', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
         onPointerDown={(e) => {
           swallowContextMenu = false; // any fresh pointer interaction clears a stale swallow from a prior gesture
           if (e.button === 2) {
@@ -739,6 +753,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={marqueeRect()}>
           {(rect) => (
             <div
+              data-cactus-marquee
               style={{
                 position: 'absolute',
                 left: `${rect().x}px`,

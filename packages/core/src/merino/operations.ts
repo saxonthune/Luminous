@@ -1,11 +1,13 @@
 import type {
   MerinoAction,
+  MerinoContainerLayout,
   MerinoDash,
   MerinoDocument,
   MerinoEdge,
   MerinoEdgeType,
   MerinoNode,
   MerinoNodeType,
+  MerinoPorts,
   MerinoTab,
 } from './types.ts';
 
@@ -43,24 +45,30 @@ export function descendantIds(doc: MerinoDocument, id: string): string[] {
 
 export function addNodeType(
   doc: MerinoDocument,
-  fields: { id: string; name: string; color: MerinoNodeType['color'] },
+  fields: { id: string; name: string; color: MerinoNodeType['color']; layout?: MerinoContainerLayout },
 ): MerinoResult {
   if (doc.nodeTypes.some(t => t.id === fields.id)) {
     return { ok: false, error: `node type "${fields.id}" already exists` };
   }
-  return { ok: true, doc: { ...doc, nodeTypes: [...doc.nodeTypes, { ...fields }] } };
+  const type: MerinoNodeType = { id: fields.id, name: fields.name, color: fields.color };
+  if (fields.layout !== undefined) type.layout = fields.layout;
+  return { ok: true, doc: { ...doc, nodeTypes: [...doc.nodeTypes, type] } };
 }
 
 export function setNodeType(
   doc: MerinoDocument,
   id: string,
-  patch: { name?: string; color?: MerinoNodeType['color'] },
+  patch: { name?: string; color?: MerinoNodeType['color']; layout?: MerinoContainerLayout | null },
 ): MerinoResult {
   const index = doc.nodeTypes.findIndex(t => t.id === id);
   if (index === -1) return { ok: false, error: `node type "${id}" does not exist` };
   const next = { ...doc.nodeTypes[index] };
   if (patch.name !== undefined) next.name = patch.name;
   if (patch.color !== undefined) next.color = patch.color;
+  if ('layout' in patch) {
+    if (patch.layout === null || patch.layout === undefined) delete next.layout;
+    else next.layout = patch.layout;
+  }
   const nodeTypes = [...doc.nodeTypes];
   nodeTypes[index] = next;
   return { ok: true, doc: { ...doc, nodeTypes } };
@@ -128,7 +136,7 @@ export function removeEdgeType(doc: MerinoDocument, id: string): MerinoResult {
 
 export function addNode(
   doc: MerinoDocument,
-  fields: { id: string; tab: MerinoTab; nodeType: string; name: string; text?: string; parent?: string; x?: number; y?: number },
+  fields: { id: string; tab: MerinoTab; nodeType: string; name: string; text?: string; parent?: string; order?: number; x?: number; y?: number },
 ): MerinoResult {
   if (anyIdTaken(doc, fields.id)) {
     return { ok: false, error: `id "${fields.id}" already exists` };
@@ -151,6 +159,7 @@ export function addNode(
   const node: MerinoNode = { id: fields.id, tab: fields.tab, type: fields.nodeType, name: fields.name };
   if (fields.text !== undefined) node.text = fields.text;
   if (fields.parent !== undefined) node.parent = fields.parent;
+  if (fields.order !== undefined) node.order = fields.order;
   if (fields.x !== undefined) node.x = fields.x;
   if (fields.y !== undefined) node.y = fields.y;
   return { ok: true, doc: { ...doc, nodes: [...doc.nodes, node] } };
@@ -159,7 +168,7 @@ export function addNode(
 export function setNode(
   doc: MerinoDocument,
   id: string,
-  patch: { name?: string; text?: string; nodeType?: string; parent?: string | null; expanded?: boolean; x?: number; y?: number },
+  patch: { name?: string; text?: string; nodeType?: string; parent?: string | null; expanded?: boolean; order?: number; ports?: MerinoPorts; width?: number; height?: number; x?: number; y?: number },
 ): MerinoResult {
   const index = doc.nodes.findIndex(n => n.id === id);
   if (index === -1) return { ok: false, error: `node "${id}" does not exist` };
@@ -168,6 +177,21 @@ export function setNode(
   if (patch.expanded !== undefined) {
     if (patch.expanded) node.expanded = true;
     else delete node.expanded;
+  }
+  if ('order' in patch) {
+    if (patch.order === undefined) delete node.order;
+    else node.order = patch.order;
+  }
+  if ('ports' in patch) {
+    if (patch.ports === undefined) delete node.ports;
+    else node.ports = patch.ports;
+  }
+  for (const field of ['width', 'height'] as const) {
+    if (!(field in patch)) continue;
+    const value = patch[field];
+    if (value === undefined) delete node[field];
+    else if (!Number.isFinite(value) || value <= 0) return { ok: false, error: `"${field}" must be a positive finite number` };
+    else node[field] = value;
   }
   if ('text' in patch) {
     if (patch.text === undefined) delete node.text;
@@ -277,11 +301,16 @@ export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoAction[]): 
     let result: MerinoResult;
     switch (action.type) {
       case 'addNodeType':
-        result = addNodeType(current, { id: action.id, name: action.name, color: action.color });
+        result = addNodeType(current, { id: action.id, name: action.name, color: action.color, layout: action.layout });
         break;
-      case 'setNodeType':
-        result = setNodeType(current, action.id, { name: action.name, color: action.color });
+      case 'setNodeType': {
+        const patch: { name?: string; color?: MerinoNodeType['color']; layout?: MerinoContainerLayout | null } = {};
+        if ('name' in action) patch.name = action.name;
+        if ('color' in action) patch.color = action.color;
+        if ('layout' in action) patch.layout = action.layout ?? null;
+        result = setNodeType(current, action.id, patch);
         break;
+      }
       case 'removeNodeType':
         result = removeNodeType(current, action.id);
         break;
@@ -303,16 +332,20 @@ export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoAction[]): 
       case 'addNode':
         result = addNode(current, {
           id: action.id, tab: action.tab, nodeType: action.nodeType, name: action.name,
-          text: action.text, parent: action.parent, x: action.x, y: action.y,
+          text: action.text, parent: action.parent, order: action.order, x: action.x, y: action.y,
         });
         break;
       case 'setNode': {
-        const patch: { name?: string; text?: string; nodeType?: string; parent?: string | null; expanded?: boolean; x?: number; y?: number } = {};
+        const patch: { name?: string; text?: string; nodeType?: string; parent?: string | null; expanded?: boolean; order?: number; ports?: MerinoPorts; width?: number; height?: number; x?: number; y?: number } = {};
         if ('name' in action) patch.name = action.name;
         if ('text' in action) patch.text = action.text;
         if ('nodeType' in action) patch.nodeType = action.nodeType;
         if ('parent' in action) patch.parent = action.parent;
         if ('expanded' in action) patch.expanded = action.expanded;
+        if ('order' in action) patch.order = action.order;
+        if ('ports' in action) patch.ports = action.ports;
+        if ('width' in action) patch.width = action.width;
+        if ('height' in action) patch.height = action.height;
         if ('x' in action) patch.x = action.x;
         if ('y' in action) patch.y = action.y;
         result = setNode(current, action.id, patch);

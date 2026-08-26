@@ -17,7 +17,10 @@ const doc: MerinoDocument = {
   ],
 };
 
-const renderNodes = doc.nodes.map((node) => ({ node, x: node.x!, y: node.y!, w: 100, h: 50 }));
+const renderNodes = doc.nodes.map((node) => ({
+  node, x: node.x!, y: node.y!, w: 100, h: 50,
+  isContainer: false, isList: false, contained: false, hasChildren: false, depth: 0,
+}));
 
 describe('Merino clipboard', () => {
   it('copies selected nodes, their internal edges, and their rendered positions', () => {

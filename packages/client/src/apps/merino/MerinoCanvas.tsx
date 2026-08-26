@@ -1,26 +1,41 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount, type JSX } from 'solid-js';
-import type { MerinoAction, MerinoColorToken, MerinoDocument, MerinoTab } from '@luminous/core/merino';
-import { MERINO_TABS, applyMerinoBatch } from '@luminous/core/merino';
-import { Canvas, ConnectionPreview, NodeContainer, useCanvasContext, useGesture } from '@luminous/cactus';
+import type { MerinoAction, MerinoColorToken, MerinoDocument, MerinoPortPosition, MerinoPorts, MerinoTab } from '@luminous/core/merino';
+import { MERINO_TABS, applyMerinoBatch, descendantIds } from '@luminous/core/merino';
+import { BoundaryHandle, Canvas, ConnectionPreview, NodeContainer, ResizeHandle, useCanvasContext, useGesture } from '@luminous/cactus';
 import type { CanvasRef } from '@luminous/cactus';
-import { NODE_HEADER_HEIGHT, NODE_HEIGHT, NODE_WIDTH, nodeTypeById, projectMerino, tokenVar, type MerinoRenderNode } from './projection.ts';
+import { CONTAINER_PADDING, DEFAULT_ENTRY_PORT, DEFAULT_EXIT_PORT, LIST_GAP, NODE_HEADER_HEIGHT, NODE_HEIGHT, NODE_WIDTH, childAreaOrigin, findContainerAtPoint, growOnlyContainerActions, listInsertionIndex, merinoPortDimensions, nodeHeight, nodeTypeById, projectMerino, tokenVar, type MerinoRenderNode } from './projection.ts';
 import { nodeContextMenu, backgroundContextMenu, edgeContextMenu, type MerinoMenuDeps } from './menus.tsx';
 import { ManageTypesPanel } from './ManageTypesPanel.tsx';
 import { copyMerinoSelection, pasteMerinoSelection, type MerinoClipboard } from './clipboard.ts';
+import { buildRemoveOverlapActions } from './tidy.ts';
+import { transientViewportOptions } from '../../canvas-tools/transientViewport.ts';
 
 const EDGE_TAB_SIZE = 18;
-
 function isEditableTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('input, textarea, [contenteditable="true"]'));
+}
+
+/** Clear a focused details editor before a canvas gesture reads focus state.
+ * The document listener that calls this runs in capture phase, ahead of cactus's
+ * pointer handlers, so a click-away cannot leave the editor focused for a drag
+ * or camera update. */
+export function blurFocusedDetailsEditor(target: EventTarget | null): void {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLTextAreaElement) || active.dataset.merinoDetailsEditor !== 'true') return;
+  if (target instanceof Element && target.closest('[data-merino-details-editor]')) return;
+  active.blur();
 }
 
 const TAB_LABELS: Record<MerinoTab, string> = { requirements: 'Requirements', deployments: 'Deployments' };
 
 export interface MerinoCanvasProps {
   doc: MerinoDocument;
+  /** Stable identity used only to retain the transient browser viewport. */
+  sourceId: string;
   dispatchDoc: (next: MerinoDocument) => void;
   onRefused?: (message: string) => void;
-  /** A non-expiring message describing the in-progress Edge gesture. */
+  /** A non-expiring message describing the in-progress gesture — an Edge being
+   * drawn, or a Node being dragged into or out of a Container. */
   onEdgePreviewChange?: (message: string | null) => void;
 }
 
@@ -62,10 +77,55 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     setRecentTypeIds((prev) => [typeId, ...prev.filter((t) => t !== typeId)]);
   }
 
-  const projection = createMemo(() => projectMerino(props.doc, tab()));
+  // A boundary Port being dragged: applied to the render doc so the Edges
+  // routing through it re-thread live, before the move is committed.
+  const [previewPorts, setPreviewPorts] = createSignal<{ nodeId: string; ports: MerinoPorts } | undefined>();
+  const docForRender = createMemo(() => {
+    const preview = previewPorts();
+    if (!preview) return props.doc;
+    return { ...props.doc, nodes: props.doc.nodes.map((n) => n.id === preview.nodeId ? { ...n, ports: preview.ports } : n) };
+  });
+
+  const projection = createMemo(() => projectMerino(docForRender(), tab()));
   const renderNodes = createMemo(() => projection().nodes);
   const edges = createMemo(() => projection().edges);
   const typesById = createMemo(() => nodeTypeById(props.doc));
+
+  // Which Container Ports an Edge actually threads through — those draw at full
+  // opacity, the rest sit faint until hovered. Mirrors the router's crossing
+  // decision: a Container's `exit` is used on the source side of the lowest
+  // common ancestor, its `entry` on the destination side.
+  const usedPorts = createMemo(() => {
+    const typeMap = typesById();
+    const byId = new Map(props.doc.nodes.map((n) => [n.id, n]));
+    const containerParent = (id: string): string | undefined => {
+      const n = byId.get(id);
+      if (!n || n.parent === undefined) return undefined;
+      const parent = byId.get(n.parent);
+      return parent && typeMap.get(parent.type)?.layout !== undefined ? n.parent : undefined;
+    };
+    const ancestors = (id: string): string[] => {
+      const out: string[] = [];
+      const node = byId.get(id);
+      let current = node && typeMap.get(node.type)?.layout !== undefined ? id : containerParent(id);
+      while (current !== undefined) { out.push(current); current = containerParent(current); }
+      return out;
+    };
+    const used = new Set<string>();
+    for (const edge of props.doc.edges) {
+      const source = ancestors(edge.from);
+      const target = ancestors(edge.to);
+      const common = source.find((id) => target.includes(id));
+      for (const id of common ? source.slice(0, source.indexOf(common)) : source) used.add(`${id}:exit`);
+      for (const id of common ? target.slice(0, target.indexOf(common)) : target) used.add(`${id}:entry`);
+    }
+    return used;
+  });
+
+  function commitPorts(nodeId: string, ports: MerinoPorts): void {
+    setPreviewPorts(undefined);
+    dispatchAction([{ type: 'setNode', id: nodeId, ports }]);
+  }
 
   const menuDeps: MerinoMenuDeps = { doc: () => props.doc, recentTypeIds };
 
@@ -76,7 +136,20 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
       props.onRefused?.(result.error);
       return;
     }
-    props.dispatchDoc(result.doc);
+    const sizeTouchedIds = new Set(actions.flatMap((action) =>
+      action.type === 'setNode' && ('width' in action || 'height' in action) ? [action.id] : [],
+    ));
+    const growOnly = growOnlyContainerActions(props.doc, result.doc, sizeTouchedIds);
+    if (growOnly.length === 0) {
+      props.dispatchDoc(result.doc);
+      return;
+    }
+    const grown = applyMerinoBatch(result.doc, growOnly);
+    if (!grown.ok) {
+      props.onRefused?.(grown.error);
+      return;
+    }
+    props.dispatchDoc(grown.doc);
   }
 
   function firstNodeType(): string | undefined {
@@ -87,12 +160,102 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     return props.doc.edgeTypes[0]?.id;
   }
 
+  // Persist a dragged Node's new position in its own frame: relative to its
+  // Container's child area when contained, absolute otherwise. The Container's
+  // child-area origin moves with it, so a child dragged alongside its Container
+  // keeps the same relative slot and follows for free.
+  function repositionAction(id: string, dx: number, dy: number, rnById: Map<string, MerinoRenderNode>): MerinoAction[] {
+    const rn = rnById.get(id);
+    if (!rn) return [];
+    if (rn.contained && rn.node.parent !== undefined) {
+      const parent = rnById.get(rn.node.parent);
+      if (parent) {
+        const originX = parent.x + CONTAINER_PADDING;
+        const origin = childAreaOrigin(parent.node);
+        const originY = parent.y + origin.y;
+        return [{ type: 'setNode', id, x: rn.x + dx - originX, y: rn.y + dy - originY }];
+      }
+    }
+    return [{ type: 'setNode', id, x: rn.x + dx, y: rn.y + dy }];
+  }
+
+  // Renumber a `list` Container's children so the dragged Node lands in the slot
+  // its drop-center falls into. Emits a full 0-based renumber (only for children
+  // whose order actually shifts), plus the dragged Node's parent/order and the
+  // clearing of its x/y — a list child is placed by order, not coordinates.
+  function listReorderActions(targetId: string, draggedId: string, centerY: number, rns: MerinoRenderNode[]): MerinoAction[] {
+    const index = listInsertionIndex(rns, targetId, draggedId, centerY);
+    const siblings = rns
+      .filter((r) => r.contained && r.node.parent === targetId && r.node.id !== draggedId)
+      .sort((a, b) => a.y - b.y)
+      .map((r) => r.node.id);
+    const ordered = [...siblings.slice(0, index), draggedId, ...siblings.slice(index)];
+    const orderById = new Map(rns.map((r) => [r.node.id, r.node.order]));
+    const actions: MerinoAction[] = [];
+    ordered.forEach((nid, i) => {
+      if (nid === draggedId) {
+        actions.push({ type: 'setNode', id: nid, parent: targetId, order: i, x: undefined, y: undefined });
+      } else if (orderById.get(nid) !== i) {
+        actions.push({ type: 'setNode', id: nid, order: i });
+      }
+    });
+    return actions;
+  }
+
   function endDrag(nodeIds: ReadonlyArray<string>, dx: number, dy: number) {
-    const positions = new Map(renderNodes().map((node) => [node.node.id, node]));
-    dispatchAction(nodeIds.flatMap((id): MerinoAction[] => {
-      const node = positions.get(id);
-      return node ? [{ type: 'setNode', id, x: node.x + dx, y: node.y + dy }] : [];
-    }));
+    const rnById = new Map(renderNodes().map((r) => [r.node.id, r]));
+
+    // A multi-Node drag never changes Container membership (N12 is single-Node);
+    // each selected root moves in its own frame. A selected child of a selected
+    // Container already follows that Container live, so writing it as well
+    // would apply the same delta a second time after release.
+    if (nodeIds.length !== 1) {
+      const selected = new Set(nodeIds);
+      const roots = nodeIds.filter((id) => {
+        let current = rnById.get(id);
+        while (current?.contained && current.node.parent !== undefined) {
+          if (selected.has(current.node.parent)) return false;
+          current = rnById.get(current.node.parent);
+        }
+        return true;
+      });
+      dispatchAction(roots.flatMap((id) => repositionAction(id, dx, dy, rnById)));
+      return;
+    }
+
+    const id = nodeIds[0];
+    const rn = rnById.get(id);
+    if (!rn) return;
+    const tethered = rn.node.parent !== undefined && !rn.contained;
+    // A tethered Subnode keeps its dotted parent; dragging only moves it.
+    if (tethered) {
+      dispatchAction([{ type: 'setNode', id, x: rn.x + dx, y: rn.y + dy }]);
+      return;
+    }
+
+    const newX = rn.x + dx;
+    const newY = rn.y + dy;
+    const exclude = new Set(descendantIds(props.doc, id));
+    const target = findContainerAtPoint(renderNodes(), newX + rn.w / 2, newY + rn.h / 2, exclude);
+    const currentParent = rn.contained ? rn.node.parent ?? null : null;
+    const targetRn = target !== null ? rnById.get(target) : undefined;
+
+    // Dropping into a `list` Container (whether it is the current parent or a new
+    // one) is an ordered insert, not a free placement.
+    if (targetRn?.isList) {
+      dispatchAction(listReorderActions(target!, id, newY + rn.h / 2, renderNodes()));
+      return;
+    }
+    if (target === currentParent) {
+      dispatchAction(repositionAction(id, dx, dy, rnById));
+      return;
+    }
+    if (targetRn) {
+      const origin = childAreaOrigin(targetRn.node);
+      dispatchAction([{ type: 'setNode', id, parent: target!, x: newX - (targetRn.x + origin.x), y: newY - (targetRn.y + origin.y) }]);
+    } else {
+      dispatchAction([{ type: 'setNode', id, parent: null, x: newX, y: newY }]);
+    }
   }
 
   function onConnect(c: { source: string; target: string }) {
@@ -172,20 +335,27 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
       return;
     }
     const id = uniqueId(props.doc, 'n');
-    let x = 40;
-    let y = 40;
-    if (parent !== undefined) {
+    // A child of a Container carries no absolute coordinates — the projection
+    // places it (freely stacked, or appended to a list). Inside a `list`, it also
+    // takes the next `order`. Everything else is placed in absolute coordinates.
+    const parentLayout = parent !== undefined
+      ? typesById().get(props.doc.nodes.find(n => n.id === parent)?.type ?? '')?.layout
+      : undefined;
+    let coords: { x: number; y: number } | undefined;
+    let order: number | undefined;
+    if (parentLayout !== undefined) {
+      coords = undefined;
+      if (parentLayout === 'list') order = props.doc.nodes.filter(n => n.parent === parent).length;
+    } else if (parent !== undefined) {
       const prn = renderNodes().find(n => n.node.id === parent);
-      if (prn) { x = prn.x + 40; y = prn.y + NODE_HEIGHT + 48; }
+      coords = prn ? { x: prn.x + 40, y: prn.y + NODE_HEIGHT + 48 } : { x: 40, y: 40 };
     } else if (position !== undefined) {
-      x = position.x;
-      y = position.y;
+      coords = position;
     } else {
       const count = renderNodes().length;
-      x = 40 + (count % 4) * (NODE_WIDTH + 48);
-      y = 40 + Math.floor(count / 4) * (NODE_HEIGHT + 48);
+      coords = { x: 40 + (count % 4) * (NODE_WIDTH + 48), y: 40 + Math.floor(count / 4) * (NODE_HEIGHT + 48) };
     }
-    dispatchAction([{ type: 'addNode', id, tab: tab(), nodeType, name: 'New node', parent, x, y }]);
+    dispatchAction([{ type: 'addNode', id, tab: tab(), nodeType, name: 'New node', parent, order, x: coords?.x, y: coords?.y }]);
     touchType(nodeType);
     // `selectedId` only tracks Merino's command target; cactus owns the
     // rendered selection. Select the new Node there too, replacing any prior
@@ -256,6 +426,10 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     canvasRef.fitView(list.map(n => ({ x: n.x, y: n.y, width: n.w, height: n.h })), 64);
   }
 
+  function tidyContainer(id: string) {
+    dispatchAction(buildRemoveOverlapActions(props.doc, id));
+  }
+
   return (
     <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0, display: 'flex', 'flex-direction': 'column' }}>
       <div class="flex items-center gap-1 border-b border-border bg-surface px-3 py-1">
@@ -280,13 +454,11 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
       <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
         <Canvas
           ref={(r) => { canvasRef = r; }}
+          viewportOptions={transientViewportOptions(`luminous:merino:viewport:${props.sourceId}`)}
           edges={edges()}
           edgeEmphasis={{ dimUnselected: false, selectedWidthMultiplier: 2 }}
           boxSelect={{
             trigger: 'drag',
-            getNodeRects: () => renderNodes().map((node) => ({
-              id: node.node.id, x: node.x, y: node.y, width: node.w, height: node.h,
-            })),
           }}
           onSelectionChange={(ids) => setSelectedId(ids.length > 0 ? ids[0] : null)}
           onAction={onAction}
@@ -311,9 +483,16 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
             typeName={(typeId) => typesById().get(typeId)?.name ?? typeId}
             onDragEnd={endDrag}
             onToggleExpand={(nodeId, expanded) => dispatchAction([{ type: 'setNode', id: nodeId, expanded }])}
+            onTidy={tidyContainer}
             onRename={(nodeId, name) => dispatchAction([{ type: 'setNode', id: nodeId, name }])}
             onSetText={(nodeId, text) => dispatchAction([{ type: 'setNode', id: nodeId, text }])}
+            onResize={(nodeId, size) => dispatchAction([{ type: 'setNode', id: nodeId, ...size }])}
             onEdgePreviewChange={props.onEdgePreviewChange}
+            onPortPreview={(nodeId, ports) => setPreviewPorts({ nodeId, ports })}
+            onPortCommit={commitPorts}
+            onPortCancel={() => setPreviewPorts(undefined)}
+            portUsed={(nodeId, kind) => usedPorts().has(`${nodeId}:${kind}`)}
+            previewPorts={previewPorts}
           />
         </Canvas>
 
@@ -340,15 +519,28 @@ interface MerinoNodeLayerProps {
   typeName: (typeId: string) => string;
   onDragEnd: (nodeIds: ReadonlyArray<string>, dx: number, dy: number) => void;
   onToggleExpand: (nodeId: string, expanded: boolean) => void;
+  onTidy: (nodeId: string) => void;
   onRename: (nodeId: string, name: string) => void;
   onSetText: (nodeId: string, text: string) => void;
+  onResize: (nodeId: string, size: { width: number; height: number }) => void;
   onEdgePreviewChange?: (message: string | null) => void;
+  onPortPreview: (nodeId: string, ports: MerinoPorts) => void;
+  onPortCommit: (nodeId: string, ports: MerinoPorts) => void;
+  onPortCancel: () => void;
+  portUsed: (nodeId: string, kind: 'entry' | 'exit') => boolean;
+  previewPorts: () => { nodeId: string; ports: MerinoPorts } | undefined;
 }
 
 /** Rendered inside <Canvas> so useCanvasContext resolves (same constraint as
  * Linen's and Atlas's node layers). */
 function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
   const ctx = useCanvasContext();
+  const [resizePreview, setResizePreview] = createSignal<{ nodeId: string; width: number; height: number } | undefined>();
+  onMount(() => {
+    const onDocumentPointerDown = (event: PointerEvent) => blurFocusedDetailsEditor(event.target);
+    document.addEventListener('pointerdown', onDocumentPointerDown, true);
+    onCleanup(() => document.removeEventListener('pointerdown', onDocumentPointerDown, true));
+  });
   const gesture = useGesture({
     zoomScale: () => ctx.transform().k,
     // Cactus owns the generic selection-group gesture; Merino owns only
@@ -357,36 +549,161 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
       const selected = ctx.selectedIds();
       return selected.includes(nodeId) ? selected : [nodeId];
     },
-    callbacks: { onDragEnd: (_nodeId, dx, dy, nodeIds) => props.onDragEnd(nodeIds, dx, dy) },
+    callbacks: {
+      onDragEnd: (_nodeId, dx, dy, nodeIds) => props.onDragEnd(nodeIds, dx, dy),
+      onResize: (nodeId, deltaWidth, deltaHeight) => {
+        const node = props.nodes().find((rn) => rn.node.id === nodeId);
+        if (!node) return;
+        setResizePreview({
+          nodeId,
+          width: Math.max(node.minW ?? node.w, node.w + deltaWidth),
+          height: Math.max(node.minH ?? node.h, node.h + deltaHeight),
+        });
+      },
+      onResizeEnd: (nodeId) => {
+        const preview = resizePreview();
+        setResizePreview(undefined);
+        if (preview?.nodeId === nodeId) props.onResize(nodeId, preview);
+      },
+    },
   });
+  // Container membership among the rendered Nodes — a contained Node's parent
+  // is a Container. Used so a child follows its Container's live drag delta.
+  const containerParentOf = createMemo(() => {
+    const m = new Map<string, string>();
+    for (const rn of props.nodes()) if (rn.contained && rn.node.parent) m.set(rn.node.id, rn.node.parent);
+    return m;
+  });
+  // A Node follows the drag if it is dragged directly, or any Container ancestor
+  // of it is — moving a Container moves everything inside it.
+  const isFollowing = (id: string): boolean => {
+    const dragged = new Set(gesture.draggedNodeIds());
+    const cpo = containerParentOf();
+    let current: string | undefined = id;
+    while (current !== undefined) {
+      if (dragged.has(current)) return true;
+      current = cpo.get(current);
+    }
+    return false;
+  };
   const dragDelta = (id: string) => {
     const g = gesture.gesture();
-    if (g.kind !== 'draggingNode' || !gesture.draggedNodeIds().includes(id)) return { dx: 0, dy: 0 };
+    if (g.kind !== 'draggingNode' || !isFollowing(id)) return { dx: 0, dy: 0 };
     return gesture.dragDelta();
   };
 
+  const containerChildrenOf = createMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const rn of props.nodes()) {
+      if (!rn.contained || !rn.node.parent) continue;
+      const list = m.get(rn.node.parent) ?? [];
+      list.push(rn.node.id);
+      m.set(rn.node.parent, list);
+    }
+    return m;
+  });
+  // A Node plus its whole containment subtree — the Containers a drop may not
+  // file it into (you can't file a Node inside its own child).
+  const descendantSet = (id: string): Set<string> => {
+    const out = new Set<string>([id]);
+    const children = containerChildrenOf();
+    const stack = [id];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      for (const child of children.get(current) ?? []) {
+        if (!out.has(child)) { out.add(child); stack.push(child); }
+      }
+    }
+    return out;
+  };
+
+  // The sentence describing what releasing the current Node drag would do —
+  // file into a Container, detach to the top level, or just move (mirrors the
+  // reparent decision in MerinoCanvas.endDrag). Null when nothing is dragging.
+  const describeNodeDrag = (): string | null => {
+    const dragged = gesture.draggedNodeIds();
+    if (dragged.length === 0) return null;
+    const nodes = props.nodes();
+    const nameOf = (id: string) => nodes.find((n) => n.node.id === id)?.node.name ?? id;
+    if (dragged.length > 1) return `Moving ${dragged.length} nodes`;
+    const id = dragged[0];
+    const rn = nodes.find((n) => n.node.id === id);
+    if (!rn) return null;
+    // A tethered Subnode keeps its dotted parent; dragging only repositions it.
+    if (rn.node.parent !== undefined && !rn.contained) return `Moving "${nameOf(id)}"`;
+    const { dx, dy } = gesture.dragDelta();
+    const centerY = rn.y + dy + rn.h / 2;
+    const target = findContainerAtPoint(nodes, rn.x + dx + rn.w / 2, centerY, descendantSet(id));
+    const currentParent = rn.contained ? rn.node.parent ?? null : null;
+    const targetRn = target !== null ? nodes.find((n) => n.node.id === target) : undefined;
+    if (targetRn?.isList) {
+      const position = listInsertionIndex(nodes, target!, id, centerY) + 1;
+      return target === currentParent
+        ? `Moving "${nameOf(id)}" to position ${position} in "${nameOf(target!)}"`
+        : `Filing "${nameOf(id)}" into "${nameOf(target!)}" at position ${position}`;
+    }
+    if (target === currentParent) {
+      return currentParent ? `Moving "${nameOf(id)}" within "${nameOf(currentParent)}"` : `Moving "${nameOf(id)}"`;
+    }
+    if (target !== null) return `Filing "${nameOf(id)}" into "${nameOf(target)}"`;
+    return `Detaching "${nameOf(id)}" to the top level`;
+  };
+
+  // While a single Node is dragged over a `list` Container, its children below
+  // the hovered slot slide down to open a gap — the live preview of the ordered
+  // insert the drop will commit.
+  const liveList = createMemo(() => {
+    const g = gesture.gesture();
+    if (g.kind !== 'draggingNode') return null;
+    const dragged = gesture.draggedNodeIds();
+    if (dragged.length !== 1) return null;
+    const id = dragged[0];
+    const nodes = props.nodes();
+    const rn = nodes.find((n) => n.node.id === id);
+    if (!rn) return null;
+    const { dx, dy } = gesture.dragDelta();
+    const centerY = rn.y + dy + rn.h / 2;
+    const target = findContainerAtPoint(nodes, rn.x + dx + rn.w / 2, centerY, descendantSet(id));
+    if (target === null) return null;
+    const targetRn = nodes.find((n) => n.node.id === target);
+    if (!targetRn?.isList) return null;
+    return { target, draggedId: id, index: listInsertionIndex(nodes, target, id, centerY), shift: rn.h + LIST_GAP };
+  });
+  // The gap-opening offset for one list child during a live drag: children at or
+  // after the hovered slot shift down by the dragged Node's footprint.
+  const listShift = (rn: MerinoRenderNode): number => {
+    const ll = liveList();
+    if (!ll || !rn.contained || rn.node.parent !== ll.target || rn.node.id === ll.draggedId) return 0;
+    const pos = props.nodes()
+      .filter((n) => n.contained && n.node.parent === ll.target && n.node.id !== ll.draggedId)
+      .sort((a, b) => a.y - b.y)
+      .findIndex((n) => n.node.id === rn.node.id);
+    return pos >= ll.index ? ll.shift : 0;
+  };
+
   // The gesture state belongs to cactus; this layer translates it into the
-  // actor-aware sentence Merino shows in its reserved toast slot.
+  // actor-aware sentence Merino shows in its reserved toast slot — an Edge
+  // gesture's outcome, or (when none) a Node drag's Container outcome.
   createEffect(() => {
     const drag = ctx.connectionDrag();
-    if (!drag) {
-      props.onEdgePreviewChange?.(null);
+    if (drag) {
+      const source = props.nodes().find((node) => node.node.id === drag.sourceNodeId)?.node;
+      const sourceName = source?.name ?? drag.sourceNodeId;
+      if (ctx.ctrlHeld()) {
+        const typeName = source ? props.typeName(source.type) : 'same-type';
+        props.onEdgePreviewChange?.(`Creating new ${typeName} node with edge from "${sourceName}"`);
+        return;
+      }
+      const targetId = document
+        .elementsFromPoint(drag.currentScreenX, drag.currentScreenY)
+        .find((el) => el.hasAttribute('data-connection-target'))
+        ?.getAttribute('data-node-id') ?? null;
+      const targetName = targetId === null ? null : props.nodes().find((node) => node.node.id === targetId)?.node.name ?? targetId;
+      const base = targetName ? `Creating new edge from "${sourceName}" to "${targetName}"` : `Creating new edge from "${sourceName}"`;
+      props.onEdgePreviewChange?.(`${base} (hint: hold ctrl to add a new node)`);
       return;
     }
-    const source = props.nodes().find((node) => node.node.id === drag.sourceNodeId)?.node;
-    const sourceName = source?.name ?? drag.sourceNodeId;
-    if (ctx.ctrlHeld()) {
-      const typeName = source ? props.typeName(source.type) : 'same-type';
-      props.onEdgePreviewChange?.(`Creating new ${typeName} node with edge from "${sourceName}"`);
-      return;
-    }
-    const targetId = document
-      .elementsFromPoint(drag.currentScreenX, drag.currentScreenY)
-      .find((el) => el.hasAttribute('data-connection-target'))
-      ?.getAttribute('data-node-id') ?? null;
-    const targetName = targetId === null ? null : props.nodes().find((node) => node.node.id === targetId)?.node.name ?? targetId;
-    const base = targetName ? `Creating new edge from "${sourceName}" to "${targetName}"` : `Creating new edge from "${sourceName}"`;
-    props.onEdgePreviewChange?.(`${base} (hint: hold ctrl to add a new node)`);
+    props.onEdgePreviewChange?.(describeNodeDrag());
   });
   onCleanup(() => props.onEdgePreviewChange?.(null));
 
@@ -404,17 +721,44 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
         const isEdgeSource = () => ctx.connectionDrag()?.sourceNodeId === id;
         const tabVisible = () => hovered() || isEdgeSource();
         const delta = () => dragDelta(id);
+        const size = () => {
+          const preview = resizePreview();
+          return preview?.nodeId === id ? preview : { width: rn.w, height: rn.h };
+        };
+        const offsetY = () => delta().dy + listShift(rn);
         const color = () => props.typeColor(rn.node.type);
         const stopDrag = (e: PointerEvent) => e.stopPropagation();
+        // Boundary Ports — each Container's shared crossing point for every Edge
+        // that leaves (`exit`) or enters (`entry`) its box, draggable around the border.
+        const [hoveredPort, setHoveredPort] = createSignal<'entry' | 'exit' | null>(null);
+        const [draggedPort, setDraggedPort] = createSignal<'entry' | 'exit' | null>(null);
+        const portRect = () => ({ x: rn.x + delta().dx, y: rn.y + offsetY(), w: size().width, h: size().height });
+        const portPosition = (kind: 'entry' | 'exit'): MerinoPortPosition => {
+          const preview = props.previewPorts();
+          return (preview?.nodeId === id ? preview.ports[kind] : rn.node.ports?.[kind])
+            ?? (kind === 'entry' ? DEFAULT_ENTRY_PORT : DEFAULT_EXIT_PORT);
+        };
+        const updatePort = (kind: 'entry' | 'exit', position: MerinoPortPosition, commit: boolean) => {
+          const preview = props.previewPorts();
+          const base = preview?.nodeId === id ? preview.ports : rn.node.ports;
+          const ports = { ...base, [kind]: position };
+          if (commit) { setDraggedPort(null); props.onPortCommit(id, ports); }
+          else { setDraggedPort(kind); props.onPortPreview(id, ports); }
+        };
+        const portOpacity = (kind: 'entry' | 'exit') => props.portUsed(id, kind) || hoveredPort() === kind || draggedPort() === kind ? 1 : 0.35;
+        const glyphRotation = (kind: 'entry' | 'exit') => {
+          const inward = { top: 90, right: 180, bottom: -90, left: 0 }[portPosition(kind).side];
+          return inward + (kind === 'exit' ? 180 : 0);
+        };
         return (
           <div onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
             <NodeContainer
               nodeId={id}
               x={() => rn.x + delta().dx}
-              y={() => rn.y + delta().dy}
-              w={() => rn.w}
-              h={() => rn.h}
-              visualBand={() => 10}
+              y={() => rn.y + offsetY()}
+              w={() => size().width}
+              h={() => size().height}
+              visualBand={() => 2 * rn.depth}
               onPointerDown={(e) => { ctx.onNodePointerDown(id, e); gesture.beginPress(id, e); }}
             >
               <div
@@ -499,8 +843,8 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                   fallback={
                     <div
                       style={{
-                        flex: '1 1 auto',
-                        'min-height': '0',
+                        height: `${NODE_HEIGHT - NODE_HEADER_HEIGHT}px`,
+                        'flex-shrink': '0',
                         padding: '0 10px 6px',
                         'font-size': '11px',
                         'font-style': rn.node.text ? 'normal' : 'italic',
@@ -515,8 +859,9 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                     </div>
                   }
                 >
-                  <div style={{ flex: '1 1 auto', 'min-height': '0', padding: '0 8px 8px' }}>
+                  <div data-merino-details-editor style={{ height: `${nodeHeight(rn.node) - NODE_HEADER_HEIGHT}px`, 'flex-shrink': '0', padding: '0 8px 8px' }}>
                     <textarea
+                      data-merino-details-editor="true"
                       data-no-pan="true"
                       class="h-full w-full resize-none rounded border border-border bg-canvas px-2 py-1 text-xs text-fg placeholder:italic"
                       style={{ cursor: 'text' }}
@@ -524,20 +869,80 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                       value={rn.node.text ?? ''}
                       ref={(el) => queueMicrotask(() => el.focus())}
                       on:pointerdown={stopDrag}
-                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Escape') e.currentTarget.blur();
+                      }}
                       onChange={(e) => props.onSetText(id, e.currentTarget.value)}
                     />
                   </div>
                 </Show>
+                <Show when={rn.isContainer}>
+                  <div
+                    style={{
+                      flex: '1 1 auto',
+                      'min-height': '0',
+                      margin: `${CONTAINER_PADDING}px`,
+                      background: 'var(--color-merino-container-fill)',
+                      'border-radius': '2px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', 'align-items': 'center', gap: '4px', padding: '3px 6px' }}>
+                      <span
+                        style={{
+                          'font-size': '9px',
+                          'font-weight': '600',
+                          'line-height': '10px',
+                          color: 'var(--fg-muted)',
+                          'text-align': 'left',
+                        }}
+                      >
+                        {rn.isList ? 'List Container' : 'Freeform Container'}
+                      </span>
+                      <Show when={!rn.isList}>
+                        <button
+                          data-no-pan="true"
+                          title="Tidy — push overlapping nodes apart"
+                          style={{
+                            'flex-shrink': '0',
+                            height: '16px',
+                            padding: '0 6px',
+                            display: 'flex',
+                            'align-items': 'center',
+                            gap: '3px',
+                            'border-radius': '4px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--fg-muted)',
+                            'font-size': '9px',
+                            'font-weight': '600',
+                            'line-height': '1',
+                            cursor: 'pointer',
+                          }}
+                          on:pointerdown={stopDrag}
+                          onClick={(e) => { e.stopPropagation(); props.onTidy(id); }}
+                        >
+                          ⤡ Tidy
+                        </button>
+                      </Show>
+                    </div>
+                  </div>
+                </Show>
               </div>
+              <Show when={rn.isContainer}>
+                <ResizeHandle
+                  nodeId={id}
+                  onResizePointerDown={(nodeId, direction, event) => gesture.beginResize(nodeId, direction, event)}
+                />
+              </Show>
             </NodeContainer>
             <div
               data-no-pan="true"
               title="Drag to connect"
               style={{
                 position: 'absolute',
-                left: `${rn.x + delta().dx + rn.w - 6}px`,
-                top: `${rn.y + delta().dy + NODE_HEADER_HEIGHT / 2 - EDGE_TAB_SIZE / 2}px`,
+                left: `${rn.x + delta().dx + size().width - 6}px`,
+                top: `${rn.y + offsetY() + NODE_HEADER_HEIGHT / 2 - EDGE_TAB_SIZE / 2}px`,
                 width: `${EDGE_TAB_SIZE}px`,
                 height: `${EDGE_TAB_SIZE}px`,
                 'z-index': '20',
@@ -561,6 +966,40 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
             >
               →
             </div>
+            <For each={rn.isContainer ? (['entry', 'exit'] as const) : []}>
+              {(kind) => (
+                <BoundaryHandle
+                  rect={portRect}
+                  position={() => portPosition(kind)}
+                  width={() => merinoPortDimensions(portPosition(kind)).width}
+                  height={() => merinoPortDimensions(portPosition(kind)).height}
+                  onPreview={(position) => updatePort(kind, position, false)}
+                  onCommit={(position) => updatePort(kind, position, true)}
+                  onCancel={() => { setDraggedPort(null); props.onPortCancel(); }}
+                  style={{
+                    'z-index': `${2 * rn.depth + 2}`,
+                    'border-radius': '9999px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    opacity: `${portOpacity(kind)}`,
+                    cursor: 'grab',
+                    display: 'flex',
+                    'align-items': 'center',
+                    'justify-content': 'center',
+                    color: 'var(--fg-muted)',
+                    transition: 'opacity 120ms ease',
+                  }}
+                >
+                  <span
+                    data-merino-port={kind}
+                    data-node-id={id}
+                    onPointerEnter={() => setHoveredPort(kind)}
+                    onPointerLeave={() => setHoveredPort(null)}
+                    style={{ display: 'block', 'font-size': '8px', 'line-height': '1', transform: `rotate(${glyphRotation(kind)}deg)` }}
+                  >›</span>
+                </BoundaryHandle>
+              )}
+            </For>
           </div>
         );
       }}

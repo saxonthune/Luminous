@@ -64,7 +64,7 @@ Three coordinate spaces are in play:
 | **Screen** | Top-left of browser viewport | Pointer events, cursor tracking | `screenToCanvas(x, y)` |
 | **Container-local** | Top-left of Canvas container div | Connection preview, box-select overlay | `screen - containerRect` |
 
-The `screenToCanvas` function (from `useViewport`, returns signal Accessors) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
+The `screenToCanvas` function (from `useViewport`, returns signal Accessors) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. It and the rendered layers read the same viewport transform; D3 is the input source, not a second coordinate source. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
 
 ## DOM Attribute Conventions
 

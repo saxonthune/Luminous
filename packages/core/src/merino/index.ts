@@ -6,6 +6,10 @@ export type {
   MerinoEdgeType,
   MerinoTab,
   MerinoDash,
+  MerinoContainerLayout,
+  MerinoPortSide,
+  MerinoPortPosition,
+  MerinoPorts,
   MerinoAction,
   AddNodeTypeAction,
   SetNodeTypeAction,
@@ -20,7 +24,7 @@ export type {
   SetEdgeAction,
   DisconnectAction,
 } from './types.ts';
-export { MERINO_TABS, MERINO_DASHES, isMerinoTab, isMerinoDash } from './types.ts';
+export { MERINO_TABS, MERINO_DASHES, MERINO_CONTAINER_LAYOUTS, MERINO_PORT_SIDES, isMerinoTab, isMerinoDash, isMerinoContainerLayout, isMerinoPortSide } from './types.ts';
 export { MERINO_COLOR_TOKENS, isMerinoColorToken } from './colors.ts';
 export type { MerinoColorToken } from './colors.ts';
 export {

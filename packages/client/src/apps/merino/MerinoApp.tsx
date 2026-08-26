@@ -238,6 +238,7 @@ export function MerinoApp() {
           <Match when={shell().kind === 'mounted' && doc()}>
             <MerinoCanvas
               doc={doc()!}
+              sourceId={sourceId()!}
               dispatchDoc={dispatchDoc}
               onRefused={enqueueToast}
               onEdgePreviewChange={setEdgeToast}

@@ -38,6 +38,23 @@ an agent could act on it to change source code. Where a Node still holds
 unresolved ambiguity, the designer attaches Subnodes carrying more information,
 and each Subnode can itself be differentiated further.
 
+## Containers
+
+A Node Type may hold its children inside a box, in one of two ways. A
+**container** Type draws the box and lets its children sit anywhere inside it. A
+**list** Type draws the box too, but stacks its children top-to-bottom in an
+explicit order the designer sets by dragging them up and down. Either way, any
+Node of any Type can be placed inside — neither restricts which Types it accepts.
+This lets a designer group "what the user can do" under a bucket Node — one per
+screen or menu — while the children stay whatever Types the design needs; a list
+adds the case where their order carries meaning, like the ordered steps of what
+happens when an action fires.
+
+Containment and the dotted Subnode tether are the same parent link read three
+ways: when the parent's Type is a container the child sits freely inside its box,
+when it is a list the child takes its ordered slot in the stack, and when it is
+neither the child hangs off it by a dotted Edge as before.
+
 ## Two tabs
 
 Merino has two tabs the user selects between: **Requirements** and

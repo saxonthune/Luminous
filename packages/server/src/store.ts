@@ -339,6 +339,30 @@ export function watchDocuments(
   watchRoots: { name: string; dir: string }[],
   onChange: (relativePath: string) => void
 ): void {
+  // Native fs.watch commonly emits multiple events for one completed write.
+  // Coalescing by resolved path makes one external write one client reload;
+  // it also makes overlapping configured roots harmless for the same file.
+  const pendingChanges = new Map<string, ReturnType<typeof setTimeout>>()
+  const CHANGE_COALESCE_MS = 50
+
+  const scheduleChange = (docPath: string, absPath: string) => {
+    const previous = pendingChanges.get(absPath)
+    if (previous !== undefined) clearTimeout(previous)
+    const timer = setTimeout(() => {
+      pendingChanges.delete(absPath)
+      // writeRawDocument marks its own writes after the filesystem call. Check
+      // here, rather than at event receipt, so an early watcher notification
+      // cannot echo a server-originated write back to its client.
+      const lastWrite = recentWrites.get(absPath)
+      if (lastWrite !== undefined && Date.now() - lastWrite < 3000) return
+      recentWrites.delete(absPath)
+      cache.delete(docPath)
+      rawCache.delete(docPath)
+      onChange(docPath)
+    }, CHANGE_COALESCE_MS)
+    pendingChanges.set(absPath, timer)
+  }
+
   for (const root of watchRoots) {
     try {
       const watcher = watch(root.dir, { recursive: true }, (_event, filename) => {
@@ -356,14 +380,7 @@ export function watchDocuments(
         }
         const docPath = root.name ? `${root.name}/${normalized}` : normalized
         const absPath = resolve(root.dir, normalized)
-        const lastWrite = recentWrites.get(absPath)
-        if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {
-          return
-        }
-        recentWrites.delete(absPath)
-        cache.delete(docPath)
-        rawCache.delete(docPath)
-        onChange(docPath)
+        scheduleChange(docPath, absPath)
       })
       // Recursive watch on a large repo can exhaust inotify watches; degrade
       // gracefully (live-reload off for this root) rather than crash.

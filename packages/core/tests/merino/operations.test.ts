@@ -10,6 +10,7 @@ import {
   setEdge,
   disconnect,
   addNodeType,
+  setNodeType,
   removeNodeType,
   checkMerinoDocument,
   applyMerinoBatch,
@@ -114,6 +115,76 @@ describe('merino type registries', () => {
     doc = unwrap(addNodeType(doc, { id: 'ui-state', name: 'UI State', color: 'accent-5' }));
     doc = unwrap(addNode(doc, { id: 'a', tab: 'requirements', nodeType: 'ui-state', name: 'Homepage' }));
     expect(doc.nodes[0].type).toBe('ui-state');
+  });
+
+  it('gives a node type a layout, round-trips it, retypes it, and clears it', () => {
+    let doc = seeded();
+    doc = unwrap(addNodeType(doc, { id: 'screen', name: 'Screen', color: 'accent-1', layout: 'container' }));
+    expect(doc.nodeTypes.find(t => t.id === 'screen')?.layout).toBe('container');
+    const parsed = parseMerinoDocument(serializeMerinoDocument(doc));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.doc.nodeTypes.find(t => t.id === 'screen')?.layout).toBe('container');
+    doc = unwrap(setNodeType(doc, 'screen', { layout: 'list' }));
+    expect(doc.nodeTypes.find(t => t.id === 'screen')?.layout).toBe('list');
+    doc = unwrap(setNodeType(doc, 'screen', { layout: null }));
+    expect(doc.nodeTypes.find(t => t.id === 'screen')).not.toHaveProperty('layout');
+    expect(JSON.parse(serializeMerinoDocument(doc)).nodeTypes.find((t: { id: string }) => t.id === 'screen')).not.toHaveProperty('layout');
+  });
+
+  it('stores and clears a list child order', () => {
+    let doc = seeded();
+    doc = unwrap(addNodeType(doc, { id: 'action', name: 'Action', color: 'accent-3', layout: 'list' }));
+    doc = unwrap(addNode(doc, { id: 'act', tab: 'requirements', nodeType: 'action', name: 'Press' }));
+    doc = unwrap(addNode(doc, { id: 'step', tab: 'requirements', nodeType: 'requirement', name: 'Transition', parent: 'act', order: 0 }));
+    expect(doc.nodes.find(n => n.id === 'step')?.order).toBe(0);
+    const parsed = parseMerinoDocument(serializeMerinoDocument(doc));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.doc.nodes.find(n => n.id === 'step')?.order).toBe(0);
+    doc = unwrap(setNode(doc, 'step', { order: undefined }));
+    expect(doc.nodes.find(n => n.id === 'step')).not.toHaveProperty('order');
+  });
+
+  it('sets, round-trips, and clears a node’s boundary ports', () => {
+    let doc = seeded();
+    doc = unwrap(addNodeType(doc, { id: 'screen', name: 'Screen', color: 'accent-1', layout: 'container' }));
+    doc = unwrap(addNode(doc, { id: 'box', tab: 'requirements', nodeType: 'screen', name: 'Box', x: 0, y: 0 }));
+    doc = unwrap(setNode(doc, 'box', { ports: { entry: { side: 'top', offset: 0.25 }, exit: { side: 'bottom', offset: 0.75 } } }));
+    expect(doc.nodes.find(n => n.id === 'box')?.ports).toEqual({ entry: { side: 'top', offset: 0.25 }, exit: { side: 'bottom', offset: 0.75 } });
+    const parsed = parseMerinoDocument(serializeMerinoDocument(doc));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.doc.nodes.find(n => n.id === 'box')?.ports?.exit).toEqual({ side: 'bottom', offset: 0.75 });
+    doc = unwrap(setNode(doc, 'box', { ports: undefined }));
+    expect(doc.nodes.find(n => n.id === 'box')).not.toHaveProperty('ports');
+  });
+
+  it('rejects a port with an invalid side', () => {
+    const bad = JSON.stringify({
+      v: 2,
+      nodeTypes: [{ id: 'screen', name: 'Screen', color: 'accent-1', layout: 'container' }],
+      edgeTypes: [],
+      nodes: [{ id: 'box', tab: 'requirements', type: 'screen', name: 'Box', ports: { entry: { side: 'sideways', offset: 0.5 } } }],
+      edges: [],
+    });
+    const parsed = parseMerinoDocument(bad);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.issues.some(i => i.includes('side'))).toBe(true);
+  });
+
+  it('migrates a v1 container:true node type to layout:container', () => {
+    const v1 = JSON.stringify({
+      v: 1,
+      nodeTypes: [{ id: 'screen', name: 'Screen', color: 'accent-1', container: true }],
+      edgeTypes: [],
+      nodes: [],
+      edges: [],
+    });
+    const parsed = parseMerinoDocument(v1);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.doc.v).toBe(2);
+      expect(parsed.doc.nodeTypes[0]?.layout).toBe('container');
+      expect(parsed.doc.nodeTypes[0]).not.toHaveProperty('container');
+    }
   });
 });
 

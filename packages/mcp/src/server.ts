@@ -77,7 +77,7 @@ import {
   merinoBatch,
   merinoCheck,
 } from './merino-tools.js'
-import type { MerinoAction, MerinoColorToken, MerinoDash, MerinoTab } from '@luminous/core/merino'
+import type { MerinoAction, MerinoColorToken, MerinoContainerLayout, MerinoDash, MerinoTab } from '@luminous/core/merino'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -231,7 +231,7 @@ All mutations go through the same API that the browser canvas uses — there is 
 
 Prefer the canvas-batch tool for multi-step operations. It executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: canvas-pack (describe — inspect kind catalog), canvas (list/read/create documents), canvas-node (add/setProps/setTags/delete), canvas-edge (add/setProps/setTags/remove), canvas-batch (atomic multi-action sequences), canvas-query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), canvas-view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/get/node/search/node/children/edge/list/neighborhood/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/legend/set/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges, plus a Legend recording what each color means; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated; node/get/node/search/node/children/edge/list/neighborhood are focused, read-only queries that skip loading the whole Document), linen (list/create/read/node/get/node/create/node/set/node/delete/module/create/contract/create/edge/connect/edge/disconnect/batch/check/trace/manifest — author .linen.json Traces of what happens when a program runs: Modules contain typed Trace Nodes drawn as Glyphs, Edges carry control order or connect to Contracts; trace walks a Trace end to end with each Pass's derived resume Contract, and manifest computes a Module's outbound summary — both derived, never stored), merino (list/create/read/node/get/node/create/node/set/node/delete/edge/connect/edge/set/edge/disconnect/nodeType/add/nodeType/set/nodeType/remove/edgeType/add/edgeType/set/edgeType/remove/batch/check — author .merino.json node-and-edge graphs for software design across two Tabs, requirements and deployments; Nodes carry a user-managed Node Type and may hang off a parent as a dotted Subnode, Edges carry a user-managed Edge Type and never cross between Tabs, and both Type sets are registries kept in the Document).`
+Tool groups: canvas-pack (describe — inspect kind catalog), canvas (list/read/create documents), canvas-node (add/setProps/setTags/delete), canvas-edge (add/setProps/setTags/remove), canvas-batch (atomic multi-action sequences), canvas-query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), canvas-view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/get/node/search/node/children/edge/list/neighborhood/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/legend/set/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges, plus a Legend recording what each color means; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated; node/get/node/search/node/children/edge/list/neighborhood are focused, read-only queries that skip loading the whole Document), linen (list/create/read/node/get/node/create/node/set/node/delete/module/create/contract/create/edge/connect/edge/disconnect/batch/check/trace/manifest — author .linen.json Traces of what happens when a program runs: Modules contain typed Trace Nodes drawn as Glyphs, Edges carry control order or connect to Contracts; trace walks a Trace end to end with each Pass's derived resume Contract, and manifest computes a Module's outbound summary — both derived, never stored), merino (list/create/read/node/get/node/create/node/set/node/delete/edge/connect/edge/set/edge/disconnect/nodeType/add/nodeType/set/nodeType/remove/edgeType/add/edgeType/set/edgeType/remove/batch/check — author .merino.json node-and-edge graphs for software design across two Tabs, requirements and deployments; Nodes carry a user-managed Node Type and may hang off a parent — inside the parent's box when its Type's layout is a Container (freely placed) or a list (a vertical ordered stack keyed by each child's order), else as a dotted Subnode, Edges carry a user-managed Edge Type and never cross between Tabs, and both Type sets are registries kept in the Document).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
@@ -638,11 +638,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       text?: string
       parent?: string
       color?: MerinoColorToken
+      layout?: MerinoContainerLayout
       dash?: MerinoDash
       arrowHead?: boolean
       directed?: boolean
       from?: string
       to?: string
+      order?: number
       x?: number
       y?: number
       actions?: MerinoAction[]
@@ -669,13 +671,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!a.name) throw new Error("'name' is required for merino/node/create")
         result = await merinoNodeCreate(serverUrl, a.path, {
           id: a.id, tab: a.tab, nodeType: a.nodeType, name: a.name,
-          text: a.text, parent: a.parent, x: a.x, y: a.y,
+          text: a.text, parent: a.parent, order: a.order, x: a.x, y: a.y,
         })
       } else if (a.action === 'node/set') {
         if (!a.path) throw new Error("'path' is required for merino/node/set")
         if (!a.id) throw new Error("'id' is required for merino/node/set")
         result = await merinoNodeSet(serverUrl, a.path, a.id, {
-          name: a.name, text: a.text, nodeType: a.nodeType, parent: a.parent, x: a.x, y: a.y,
+          name: a.name, text: a.text, nodeType: a.nodeType, parent: a.parent, order: a.order, x: a.x, y: a.y,
         })
       } else if (a.action === 'node/delete') {
         if (!a.path) throw new Error("'path' is required for merino/node/delete")
@@ -701,11 +703,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!a.id) throw new Error("'id' is required for merino/nodeType/add")
         if (!a.name) throw new Error("'name' is required for merino/nodeType/add")
         if (!a.color) throw new Error("'color' is required for merino/nodeType/add")
-        result = await merinoNodeTypeAdd(serverUrl, a.path, { id: a.id, name: a.name, color: a.color })
+        result = await merinoNodeTypeAdd(serverUrl, a.path, { id: a.id, name: a.name, color: a.color, layout: a.layout })
       } else if (a.action === 'nodeType/set') {
         if (!a.path) throw new Error("'path' is required for merino/nodeType/set")
         if (!a.id) throw new Error("'id' is required for merino/nodeType/set")
-        result = await merinoNodeTypeSet(serverUrl, a.path, a.id, { name: a.name, color: a.color })
+        result = await merinoNodeTypeSet(serverUrl, a.path, a.id, { name: a.name, color: a.color, layout: a.layout })
       } else if (a.action === 'nodeType/remove') {
         if (!a.path) throw new Error("'path' is required for merino/nodeType/remove")
         if (!a.id) throw new Error("'id' is required for merino/nodeType/remove")

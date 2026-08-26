@@ -274,6 +274,9 @@ body {
   --color-merino-accent-6: var(--color-atlas-accent-6);
   --color-merino-accent-7: var(--color-atlas-accent-7);
   --color-merino-accent-8: var(--color-atlas-accent-8);
+  /* The neutral fill inside a Container Node's child area — colour identifies a
+     Node, never the region its children sit in, so this stays grey. */
+  --color-merino-container-fill: var(--atlas-container-fill);
 }
 
 /* TIER 3: Tailwind token layer — never overridden, generates utilities */

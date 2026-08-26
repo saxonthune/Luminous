@@ -104,6 +104,16 @@ The `.rhidoc/` directory contains structured specifications managed by the `rhid
 - **After any structural change**, run `rhidoc regenerate` to rebuild MANIFEST.md
 - Run `rhidoc ai-skill` for the full CLI reference with examples
 
+### Existing requirements documents
+
+When a change alters user-visible behavior in an area that already has a
+requirements document, update that document in the same change. Requirements
+state what a user can do or what a visible UI element does. They do not state
+CSS dimensions, layout constants, implementation mechanics, or other volatile
+values. When the area has no requirements document, do not create one solely
+for this rule. Keep an existing input-command bindings table in sync when the
+change adds or alters an input.
+
 ### Atlas UI requirements (doc01.07.04)
 
 When working on Atlas, always consult `.rhidoc/01-product/07-atlas/04-ui-requirements.md`
@@ -145,6 +155,13 @@ Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
 The user runs E2E tests manually. Agents shall not run Playwright or other E2E
 tests unless the user explicitly asks for an E2E test run in the current request.
 Use focused unit, integration, type, or build checks for routine verification.
+
+### Prototype testing
+
+The apps are prototypes. Keep verification proportionate so prototyping stays
+fast: prefer type checks and existing focused tests. Add a new automated test
+only when it protects a subtle or costly regression; do not add broad or
+mechanical coverage for ordinary prototype changes.
 
 ## Type Checking
 

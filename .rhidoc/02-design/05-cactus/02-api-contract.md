@@ -55,7 +55,9 @@ interface CanvasProps {
     isValidConnection?: (connection: Connection) => boolean
   }
   boxSelect?: {
-    getNodeRects: () => NodeRect[]
+    /** Optional override. Cactus otherwise uses the measured rectangles
+        registered by NodeContainer. */
+    getNodeRects?: () => NodeRect[]
   }
   edges?: EdgeDeclaration[]
   edgeEmphasis?: {
@@ -78,7 +80,7 @@ interface CanvasProps {
 }
 ```
 
-`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
+`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). Box selection uses those same measured rectangles by default, so its hit-testing follows the rendered Nodes. A host may supply `boxSelect.getNodeRects` only when it needs a different selectable set or geometry. `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
 
 `onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
 

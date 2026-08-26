@@ -107,13 +107,17 @@
       "id": "motion",
       "kind": "switch",
       "module": "feed-poller",
-      "annotation": "Branch on motion (reshape.ts:150-179): observed STOPPED_AT / approaching from a known departed stop / committed arrival overrun by >45s."
+      "annotation": "Branch on motion (reshape.ts:150-179): observed STOPPED_AT / approaching from a known departed stop / committed arrival overrun by >45s.",
+      "x": 526.8799947650807,
+      "y": 360.4317757967214
     },
     {
       "id": "anchor-at-stop",
       "kind": "transformation",
       "module": "feed-poller",
-      "annotation": "Observed AT the front stop: anchor there, glide toward the stops ahead."
+      "annotation": "Observed AT the front stop: anchor there, glide toward the stops ahead.",
+      "x": 527.8560509060941,
+      "y": 415.12000523491923
     },
     {
       "id": "dead-reckon",

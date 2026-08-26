@@ -1,6 +1,6 @@
 import { ATLAS_COLOR_TOKENS } from '@luminous/core/atlas'
 import { TRACE_NODE_KINDS } from '@luminous/core/linen'
-import { MERINO_COLOR_TOKENS, MERINO_DASHES, MERINO_TABS } from '@luminous/core/merino'
+import { MERINO_COLOR_TOKENS, MERINO_CONTAINER_LAYOUTS, MERINO_DASHES, MERINO_TABS } from '@luminous/core/merino'
 
 export type ParamType =
   | 'string'
@@ -1157,7 +1157,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
 
   merino: {
     description:
-      "Author Merino documents — .merino.json node-and-edge graphs for software design. A Document has two Tabs (requirements, deployments); every Node and Edge belongs to one Tab, and an Edge never crosses between them. Nodes carry a user-managed Node Type (drawn in a Color); a Node with a `parent` is a Subnode, drawn joined to its parent by a dotted link (never stored as an Edge). Edges carry a user-managed Edge Type (Color, dash, arrowhead). Node Types and Edge Types are registries kept in the Document; a Type still in use cannot be removed. Ids are author-supplied and meaningful. Every write returns the document's check issues alongside.",
+      "Author Merino documents — .merino.json node-and-edge graphs for software design. A Document has two Tabs (requirements, deployments); every Node and Edge belongs to one Tab, and an Edge never crosses between them. Nodes carry a user-managed Node Type (drawn in a Color). A Node with a `parent` is read by the parent Type's `layout`: when the parent is a Container it sits inside the parent's box (freely placed for `container`, or stacked top-to-bottom by each child's `order` for `list`); otherwise it is a Subnode, drawn joined to its parent by a dotted link (never stored as an Edge). A Container accepts a child of any Type. Edges carry a user-managed Edge Type (Color, dash, arrowhead). Node Types and Edge Types are registries kept in the Document; a Type still in use cannot be removed. Ids are author-supplied and meaningful. Every write returns the document's check issues alongside.",
     local: true,
     actions: {
       list: {
@@ -1190,7 +1190,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         },
       },
       'node/create': {
-        description: "Add a Node with an explicit, author-chosen id on one Tab. `parent` makes it a Subnode of another Node on the same Tab. Omit x/y to let the viewer place it. Fails if the id exists, the node type is unknown, or the parent is missing or on another Tab.",
+        description: "Add a Node with an explicit, author-chosen id on one Tab. `parent` makes it a child of another Node on the same Tab — a Subnode, or, when the parent Type is a Container, a contained child. Omit x/y to let the viewer place it; inside a `list` Container, set `order` (0-based) and leave x/y out. Fails if the id exists, the node type is unknown, or the parent is missing or on another Tab.",
         method: 'POST',
         path: '',
         params: {
@@ -1200,13 +1200,14 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           nodeType: { type: 'described', innerType: 'string', description: "Id of a Node Type in the registry." },
           name: { type: 'described', innerType: 'string', description: "Display name for the Node." },
           'text?': { type: 'described', innerType: 'string', description: "Longer prose the Node carries — the detail a designer adds." },
-          'parent?': { type: 'described', innerType: 'string', description: "Id of the parent Node this is a Subnode of. Must be on the same Tab." },
+          'parent?': { type: 'described', innerType: 'string', description: "Id of the parent Node this is a child of. Must be on the same Tab." },
+          'order?': { type: 'described', innerType: 'number', description: "0-based position within a `list`-layout Container parent — children stack by ascending order. Ignored for other parents; leave x/y out when setting it." },
           'x?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
           'y?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
         },
       },
       'node/set': {
-        description: "Update a Node's name, text, node type, parent (reparenting the Subnode), or position. Only provided fields change.",
+        description: "Update a Node's name, text, node type, parent (reparenting the child), list order, or position. Only provided fields change.",
         method: 'POST',
         path: '',
         params: {
@@ -1216,6 +1217,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           'text?': { type: 'described', innerType: 'string', description: "New prose text." },
           'nodeType?': { type: 'described', innerType: 'string', description: "New Node Type id." },
           'parent?': { type: 'described', innerType: 'string', description: "New parent Node id (reparent). Must be on the same Tab and not a descendant." },
+          'order?': { type: 'described', innerType: 'number', description: "New 0-based position within a `list`-layout Container parent. Ignored for other parents." },
           'x?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
           'y?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
         },
@@ -1269,10 +1271,11 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           id: { type: 'described', innerType: 'string', description: "Explicit id for the new Node Type." },
           name: { type: 'described', innerType: 'string', description: "Display name." },
           color: { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "Color token the Type is drawn in." },
+          'layout?': { type: 'described', innerType: { type: 'enum', values: MERINO_CONTAINER_LAYOUTS }, description: "Makes a Node of this Type hold its children inside its box (a Container) instead of tethering them by a dotted Edge: 'container' places children freely, 'list' stacks them top-to-bottom by each child's `order`. Omit for a leaf Type. A Container accepts a child of any Type." },
         },
       },
       'nodeType/set': {
-        description: "Rename or recolor a Node Type. Only provided fields change.",
+        description: "Rename, recolor, or set a Node Type's Container layout. Only provided fields change.",
         method: 'POST',
         path: '',
         params: {
@@ -1280,6 +1283,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           id: { type: 'described', innerType: 'string', description: "Id of the Node Type to update." },
           'name?': { type: 'described', innerType: 'string', description: "New display name." },
           'color?': { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "New color token." },
+          'layout?': { type: 'described', innerType: { type: 'enum', values: MERINO_CONTAINER_LAYOUTS }, description: "Set 'container' (freely placed children) or 'list' (a vertical ordered stack) to make this Type a Container. Clearing it back to a leaf is done from the Manage types panel, not this tool." },
         },
       },
       'nodeType/remove': {

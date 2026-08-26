@@ -218,6 +218,7 @@ export function AtlasApp() {
           <Match when={shell().kind === 'mounted' && doc()}>
             <AtlasCanvas
               doc={doc()!}
+              sourceId={sourceId()!}
               data={data()}
               dispatchDoc={dispatchDoc}
               onPendingMembershipChange={setDragToast}

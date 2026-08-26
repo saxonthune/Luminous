@@ -18,12 +18,29 @@ export function isMerinoDash(v: unknown): v is MerinoDash {
   return v === 'solid' || v === 'dashed' || v === 'dotted';
 }
 
+/** How a Node Type arranges the children hung off it. `container` draws them
+ * freely placed inside the box; `list` stacks them top-to-bottom in an explicit
+ * order. Absent means the Type is a leaf — its children tether as dotted
+ * Subnodes instead. */
+export type MerinoContainerLayout = 'container' | 'list';
+
+export const MERINO_CONTAINER_LAYOUTS: readonly MerinoContainerLayout[] = ['container', 'list'];
+
+export function isMerinoContainerLayout(v: unknown): v is MerinoContainerLayout {
+  return v === 'container' || v === 'list';
+}
+
 /** A user-managed Node Type: a name, drawn in one Color. Ids are author-chosen
  * and stable; the name is display text that may be renamed. */
 export interface MerinoNodeType {
   id: string;
   name: string;
   color: MerinoColorToken;
+  /** When set, a Node of this Type holds its children inside its box rather than
+   * tethering them by a dotted Edge — `container` for free placement, `list`
+   * for a vertical ordered stack. Membership is never type-restricted; either
+   * flavor accepts a child of any Type. Omitted when the Type is a leaf. */
+  layout?: MerinoContainerLayout;
 }
 
 /** A user-managed Edge Type: a name plus the style every Edge of this Type is
@@ -38,6 +55,30 @@ export interface MerinoEdgeType {
   /** Whether the Edge means a direction (source → target) rather than a plain
    * association. Recorded for meaning; the arrowhead controls the drawing. */
   directed: boolean;
+}
+
+/** A side of a Container's box a boundary Port clasps. */
+export type MerinoPortSide = 'top' | 'right' | 'bottom' | 'left';
+
+export const MERINO_PORT_SIDES: readonly MerinoPortSide[] = ['top', 'right', 'bottom', 'left'];
+
+export function isMerinoPortSide(v: unknown): v is MerinoPortSide {
+  return v === 'top' || v === 'right' || v === 'bottom' || v === 'left';
+}
+
+/** Where one boundary Port sits: which side of the box, and how far along it
+ * (0 at the top/left corner, 1 at the bottom/right). */
+export interface MerinoPortPosition {
+  side: MerinoPortSide;
+  offset: number;
+}
+
+/** A Container's two shared boundary Ports — where Edges leaving the box cross
+ * out (`exit`) and where Edges arriving cross in (`entry`). Copied from Atlas's
+ * port model; Merino keeps its own copy so the two can diverge. */
+export interface MerinoPorts {
+  entry?: MerinoPortPosition;
+  exit?: MerinoPortPosition;
 }
 
 export interface MerinoNode {
@@ -55,6 +96,17 @@ export interface MerinoNode {
   /** Progressive disclosure: a Node is drawn at the uniform compact size until
    * the user pins it open, when it grows to show its detail body inline. */
   expanded?: boolean;
+  /** Ordinal within a `list`-layout Container parent — children are stacked by
+   * ascending order. Meaningful only while the parent's Type is a `list`; x/y
+   * are ignored there. Omitted otherwise. */
+  order?: number;
+  /** Authored placements for this Container's two shared boundary Ports. Only
+   * meaningful on a Container Node; a leaf carries none. */
+  ports?: MerinoPorts;
+  /** User-set floors for a Container's outer box. Its children can always make
+   * either dimension larger; they can never be clipped by a smaller floor. */
+  width?: number;
+  height?: number;
   x?: number;
   y?: number;
 }
@@ -81,6 +133,7 @@ export interface AddNodeTypeAction {
   id: string;
   name: string;
   color: MerinoColorToken;
+  layout?: MerinoContainerLayout;
 }
 
 export interface SetNodeTypeAction {
@@ -88,6 +141,7 @@ export interface SetNodeTypeAction {
   id: string;
   name?: string;
   color?: MerinoColorToken;
+  layout?: MerinoContainerLayout;
 }
 
 export interface RemoveNodeTypeAction {
@@ -128,6 +182,7 @@ export interface AddNodeAction {
   name: string;
   text?: string;
   parent?: string;
+  order?: number;
   x?: number;
   y?: number;
 }
@@ -140,6 +195,12 @@ export interface SetNodeAction {
   nodeType?: string;
   parent?: string | null;
   expanded?: boolean;
+  order?: number;
+  /** Whole-record replacement of the Node's boundary Ports. Omission leaves
+   * them unchanged. */
+  ports?: MerinoPorts;
+  width?: number;
+  height?: number;
   x?: number;
   y?: number;
 }

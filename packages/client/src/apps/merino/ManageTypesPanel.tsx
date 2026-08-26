@@ -3,6 +3,7 @@ import {
   MERINO_COLOR_TOKENS,
   MERINO_DASHES,
   type MerinoColorToken,
+  type MerinoContainerLayout,
   type MerinoDash,
   type MerinoDocument,
 } from '@luminous/core/merino';
@@ -10,7 +11,7 @@ import { tokenVar } from './projection.ts';
 
 export interface ManageTypesPanelProps {
   doc: () => MerinoDocument;
-  onSetNodeType: (id: string, patch: { name?: string; color?: MerinoColorToken }) => void;
+  onSetNodeType: (id: string, patch: { name?: string; color?: MerinoColorToken; layout?: MerinoContainerLayout }) => void;
   onRemoveNodeType: (id: string) => void;
   onAddNodeType: () => void;
   onSetEdgeType: (id: string, patch: { name?: string; color?: MerinoColorToken; dash?: MerinoDash; arrowHead?: boolean; directed?: boolean }) => void;
@@ -65,13 +66,28 @@ export function ManageTypesPanel(props: ManageTypesPanelProps): JSX.Element {
           <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">Node types</div>
           <For each={props.doc().nodeTypes}>
             {(t) => (
-              <div class="mb-2 flex items-center gap-2">
+              <div class="mb-2 flex flex-wrap items-center gap-2">
                 <input
                   class="w-32 rounded border border-border bg-canvas px-2 py-1 text-sm text-fg"
                   value={t.name}
                   onChange={(e) => props.onSetNodeType(t.id, { name: e.currentTarget.value })}
                 />
                 <SwatchRow current={t.color} onSelect={(color) => props.onSetNodeType(t.id, { color })} />
+                <label class="flex items-center gap-1 text-xs text-fg-muted" title="A Container Node holds its children inside its box — freely placed, or as a vertical ordered list">
+                  holds
+                  <select
+                    class="rounded border border-border bg-canvas px-1 py-1 text-xs text-fg"
+                    value={t.layout ?? 'none'}
+                    onChange={(e) => {
+                      const v = e.currentTarget.value;
+                      props.onSetNodeType(t.id, { layout: v === 'none' ? undefined : (v as MerinoContainerLayout) });
+                    }}
+                  >
+                    <option value="none">nothing</option>
+                    <option value="container">a container</option>
+                    <option value="list">a list</option>
+                  </select>
+                </label>
                 <button
                   class="ml-auto rounded px-2 py-1 text-xs text-fg-muted hover:bg-surface-alt hover:text-danger"
                   onClick={() => props.onRemoveNodeType(t.id)}

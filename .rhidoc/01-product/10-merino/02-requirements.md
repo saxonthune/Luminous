@@ -11,8 +11,8 @@ Merino's capabilities, written as a controlled list of EARS-style requirements
 (Easy Approach to Requirements Syntax). Each requirement has a stable identifier
 prefixed by its section — **C** for Canvas, **N** for Nodes, **E** for Edges,
 **T** for Types, **M** for agent capabilities. Identifiers are never reused once
-assigned. Capitalized terms — Node, Subnode, Edge, Node Type, Edge Type, Tab —
-name Merino's constructs (doc01.10.01).
+assigned. Capitalized terms — Node, Subnode, Edge, Node Type, Edge Type, Tab,
+Container, Port — name Merino's constructs (doc01.10.01).
 
 ## Canvas
 
@@ -31,10 +31,17 @@ draws on them.
 - **C5.** The system shall allow the user to pan and zoom the canvas.
 - **C6.** The system shall allow the user to select one Node by clicking it and
   a collection of Nodes by dragging a marquee across the canvas background. It
-  shall visibly distinguish selected Nodes and their incident Edges while
-  leaving other Edges fully visible.
+  shall select Nodes where the marquee is drawn under the current camera, and
+  visibly distinguish selected Nodes and their incident Edges while leaving
+  other Edges fully visible.
 - **C7.** When the user drags a selected Node, the system shall move every
-  selected Node by the same distance.
+  selected Node by the same distance without moving a selected contained child
+  a second time when its selected Container also moves.
+- **C8.** The system shall preserve each open Document's viewport through
+  Document updates, drag completion, and development reloads without writing
+  the viewport to the Document.
+- **C9.** The system shall draw a grid across the canvas background to make the
+  workspace visible behind its Nodes and Edges.
 
 ## Nodes
 
@@ -42,6 +49,12 @@ A Node is the unit the user places and types. A Subnode is a Node the user hangs
 off another to carry more detail; it is joined to its parent by a dotted Edge.
 Differentiation (doc01.10.01) has no control of its own — it is the practice of
 adding Subnodes, and shows only as the dotted Edges they hang on.
+
+A parent link is read three ways, decided by the parent's Node Type (T8). When
+the parent's Type is a Container, the child sits inside the parent's box —
+freely placed for a `container`, or stacked in an explicit order for a `list`.
+When the parent is neither, the child hangs off it by the dotted Edge above. A
+Container accepts a child of any Type — it never restricts which Types it holds.
 
 - **N1.** The system shall allow the user to add a Node to the canvas.
 - **N2.** The system shall allow the user to drag a Node.
@@ -60,6 +73,41 @@ adding Subnodes, and shows only as the dotted Edges they hang on.
   through the context menu or the platform primary copy and paste shortcuts. A
   paste shall create fresh Nodes, preserve copied parent links and Edges whose
   endpoints were copied, and select the pasted Nodes.
+- **N10.** The system shall allow a Node of any Type to be a child of a Container
+  Node, without restricting which Types a Container accepts. A contained child
+  shares its Container's Tab.
+- **N11.** The system shall draw a child of a Container Node inside the
+  Container's box, and a child of a non-Container parent as a Subnode joined by a
+  dotted Edge.
+- **N12.** When the user drags a single Node onto a Container Node, the system
+  shall make it a child of that Container; when the user drags it onto the canvas
+  background, the system shall detach it to the top level.
+- **N13.** When the user drags a Container Node, the system shall move its child
+  Nodes with it.
+- **N14.** While the user drags a Node, the system shall display a gesture-scoped
+  indicator describing what releasing it would do — filing it into a Container,
+  detaching it to the top level, moving it in place, or, over a list Container,
+  the position it would take in that list.
+- **N15.** The system shall draw a list Container's children as a vertical stack
+  in an explicit order, and shall size the Container to fit the stacked children
+  as their sizes change.
+- **N16.** When the user drags a Node within a list Container, the system shall
+  let the user reorder it, opening a gap at the slot under the pointer while the
+  drag is in progress and committing the new order on release; when the user
+  drags a Node onto a list Container, the system shall file it at that slot.
+- **N17.** When a Node's details editor has focus, clicking outside it or
+  pressing Escape shall blur the editor.
+- **N18.** The system shall allow the user to resize a Container, keeping its
+  box at least large enough for its children and their padding.
+- **N19.** When a Container's child extent shrinks, the system shall keep the
+  Container's current size until the user resizes it.
+- **N20.** The system shall label a freeform Container "Freeform Container" and
+  a list Container "List Container" inside its box, left-aligned above its
+  children.
+- **N21.** The system shall offer a Tidy control beside a freeform Container's
+  label that pushes the Container's overlapping children apart until no two
+  overlap, then grows the Container to fit them. A list Container has no Tidy
+  control — it orders its children itself.
 
 ## Edges
 
@@ -81,6 +129,17 @@ typed Edge.
 - **E7.** While an Edge is in progress, the system shall display a gesture-scoped
   indicator describing its current outcome, including the new-Node outcome when
   the platform primary modifier is held.
+- **E8.** When an Edge crosses a Container's box, the system shall route it
+  through boundary Ports on that box — one where it leaves the source side, one
+  where it enters the destination side — so the crossing is legible rather than
+  cutting straight through the box.
+- **E9.** The system shall give each Container two boundary Ports, an entry and an
+  exit, shared by every Edge crossing that Container, and shall let the user drag
+  each Port to any side of the box. Absent a placement, the entry sits on the
+  left and the exit on the right.
+- **E10.** When an Edge targets a Container, the system shall route it through
+  that Container's entry Port; when an Edge starts at a Container, the system
+  shall route it through that Container's exit Port.
 
 ## Types
 
@@ -102,6 +161,11 @@ modal; only editing the set as a whole opens a panel.
   shall require reassigning those Nodes or Edges to another Type first.
 - **T7.** The system shall offer a Manage types panel listing the Document's Node
   Types and Edge Types, each editable, each with a control to remove it.
+- **T8.** The system shall let the user set a Node Type's layout in the Manage
+  types panel — to hold nothing (a leaf), a `container` (children freely placed),
+  or a `list` (children stacked in order) — and clear it back to a leaf. A Node's
+  Type being a Container is what makes the Node hold its children inside its box
+  (N11), and its being a list is what orders them (N15).
 
 ## Agent capabilities (MCP)
 
@@ -142,7 +206,15 @@ baseline navigation with no assigned requirement yet.
 | Canvas background | left click + drag | Marquee-select intersecting Nodes | C6 |
 | Node | left click | Select that Node | C6 |
 | Node | left click + drag | Move the Node, or every selected Node when it belongs to the selection | N2, C7 |
+| Container Node | left click + drag | Move the Container and its children together | N13, N2 |
+| Node | left click + drag onto a Container Node | Make the Node a child of the Container | N12 |
+| Node | left click + drag onto a list Container | File the Node into the list at the pointer's slot | N16 |
+| Node (child of a list Container) | left click + drag within its list | Reorder the Node in the list | N16 |
+| Node | left click + drag onto the canvas background | Detach the Node to the top level | N12 |
 | Node | double left click | Edit the Node's name and contents | N3 |
+| Node details editor | click outside, or Escape | Blur the details editor | N17 |
+| Container resize grip | left click + drag | Resize the Container without clipping its children | N18 |
+| Tidy control (freeform Container label) | left click | Push the Container's overlapping children apart | N21 |
 | Node | right click | Context menu: Copy, Paste, Add subnode, Type ▸, Delete | N5, N9 |
 | Canvas background | right click | Context menu: Paste | N9 |
 | Canvas | Ctrl/Cmd+C | Copy selected Nodes | N9 |
@@ -153,8 +225,10 @@ baseline navigation with no assigned requirement yet.
 | New type… (Node Type submenu) | left click | Create a Node Type and apply it to the Node | T2, T5 |
 | Connection indicator | left click + drag | Draw a preview Edge; on release over a Node, create an Edge to it | E1, E2, E7 |
 | In-progress Edge | hold Ctrl/Cmd and release | Create a same-Type Node at the pointer and connect the Edge | E6, E7 |
+| Container boundary Port | left click + drag | Move the Port to another side or position on the box | E9 |
 | Edge | right click | Context menu: Type ▸, Delete | E4, E5 |
 | Type ▸ (Edge context menu) | hover | Open the Edge Type submenu (Types + New type…) | E4, T5 |
 | Edge Type (submenu) | left click | Set the Edge's Type | E4 |
 | Delete (context menu) | left click | Remove the Node (with its Subnodes and Edges) or the Edge | N7, E5 |
 | Manage types control | left click | Open the Manage types panel | T7 |
+| Node Type layout select (Manage types) | change | Set the Node Type's layout — nothing, a container, or a list | T8 |
