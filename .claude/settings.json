@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck-edited.sh\""
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.agents/hooks/typecheck-edited.sh\""
           }
         ]
       }

@@ -34,7 +34,7 @@ Add this instruction to the Explore agent's prompt, on top of the search task:
 > While exploring, keep a **friction log**. Each time the docs slow you down,
 > record one entry: what you were looking for, what you expected to find and
 > where, what you actually had to do instead. Friction includes: no entry-point
-> doc or index; a CLAUDE.md / README that omits a key directory; stale paths or
+> doc or index; an AGENTS.md / README that omits a key directory; stale paths or
 > renamed symbols in docs; naming conventions you had to infer from code because
 > nothing stated them; a `.rhidoc` spec that contradicts the code.
 > Return TWO sections: (A) the answer to the search question, (B) the friction
@@ -50,7 +50,7 @@ proposed doc changes, e.g.:
 
 > Doc improvements queued (running in background):
 > - `packages/cactus/README.md` — add the `src/` layout, none documented
-> - `CLAUDE.md` — `tsgo` path note is stale, points at removed script
+> - `AGENTS.md` — `tsgo` path note is stale, points at removed script
 
 If the friction log is empty, say so and stop — there is nothing to improve.
 
@@ -61,11 +61,11 @@ Launch a background `Agent` (`subagent_type: "general-purpose"`,
 friction log and these rules:
 
 **Scope — what may be edited:**
-- Agent-context / navigational docs: `CLAUDE.md`, `AGENTS.md`, `README.md`,
+- Agent-context / navigational docs: `AGENTS.md`, `README.md`,
   package-level docs, and code-navigation comments. Edit directly.
 - `.rhidoc/` specs: in scope, but **must** go through the `rhidoc` CLI for
   structural changes and `rhidoc regenerate` after frontmatter edits. Content
-  edits to existing spec bodies may be direct. Follow the rules in `CLAUDE.md`.
+  edits to existing spec bodies may be direct. Follow the rules in `AGENTS.md`.
 
 **Constraints:**
 - Each change must trace to a specific friction-log entry. No speculative edits.

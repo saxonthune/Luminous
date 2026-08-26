@@ -8,7 +8,7 @@ Refine a pending task from a rough idea into an executable spec that a headless 
 
 If no slug provided, list untriaged drafts (the inbox):
 ```bash
-bash .claude/skills/todo-task/list-drafts.sh
+bash .agents/skills/todo-task/list-drafts.sh
 ```
 
 Present tasks to the user with `AskUserQuestion`:
@@ -39,7 +39,7 @@ Investigate the codebase to understand what changes are needed:
 3. **Read key files** — Read the files you'll need to modify. Understand their structure, patterns, and conventions.
 4. **Understand test patterns** — Find existing tests near the code you'll change. Note the test framework, assertion style, and what's already covered.
 5. **Check for gotchas** — Look for related code that might break, shared state, or implicit dependencies.
-6. **Read the interfaces the change touches — closely enough to quote them.** Read the actual references a decision rests on: the repo glossary or controlled vocabulary (follow the pointer in `CLAUDE.md`/`AGENTS.md`), the current CLI or API surface the task changes (`--help`, the actual signature/enum/route), and any dataflow it moves. Read each until you can quote it exactly — the signature, the enum variants that exist today, the string a command prints, the `file:line`. A skim yields a vague briefing; a quoted interface yields a recommendation.
+6. **Read the interfaces the change touches — closely enough to quote them.** Read the actual references a decision rests on: the repo glossary or controlled vocabulary (follow the pointer in `AGENTS.md`), the current CLI or API surface the task changes (`--help`, the actual signature/enum/route), and any dataflow it moves. Read each until you can quote it exactly — the signature, the enum variants that exist today, the string a command prints, the `file:line`. A skim yields a vague briefing; a quoted interface yields a recommendation.
 
 **Chain/epic phases:** If predecessors have not merged, do not read live code for their output — triage against the predecessor spec's `## Surface after this phase` block. The Surface stands in for code that does not exist yet; a symbol absent from it does not exist.
 

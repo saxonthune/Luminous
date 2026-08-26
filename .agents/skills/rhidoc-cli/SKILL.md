@@ -407,12 +407,12 @@ rhidoc init --rehydrate [--dry-run]
 Side effects (without --rehydrate):
   - Creates `.rhidoc.json` marker in the current directory.
   - Creates `DIRNAME/00-codex/00-index.md` and `DIRNAME/MANIFEST.md`.
-  - Hydrates `.claude/skills/rhidoc-cli/SKILL.md` (skips if exists).
+  - Hydrates the Claude-compatibility skill path, `.claude/skills/rhidoc-cli/SKILL.md` (skips if exists).
   - Runs initial MANIFEST regeneration.
 
 Side effects (with --rehydrate):
   - Overwrites `00-codex/*.md` with latest templates from installed rhidoc.
-  - Overwrites `.claude/skills/rhidoc-cli/SKILL.md` and `.claude/skills/docs-development/SKILL.md`.
+  - Overwrites the Claude-compatibility skill paths `.claude/skills/rhidoc-cli/SKILL.md` and `.claude/skills/docs-development/SKILL.md`.
   - Skips files that already match the latest version.
   - Does NOT touch user-created docs outside 00-codex.
   - Does NOT overwrite workspace.json fields (title, description, externalRefPaths).

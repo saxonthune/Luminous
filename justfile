@@ -131,7 +131,7 @@ gen-skill-reference:
 
 # fail if the committed primitive reference is stale (used in CI)
 check-skill-reference: gen-skill-reference
-    git diff --exit-code .claude/skills/luminous-pipeline/primitives-reference.md
+    git diff --exit-code .agents/skills/luminous-pipeline/primitives-reference.md
 
 # ---- misc ----
 

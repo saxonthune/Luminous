@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Generates .claude/skills/luminous-pipeline/primitives-reference.md from
+ * Generates .agents/skills/luminous-pipeline/primitives-reference.md from
  * the typed descriptor catalog in packages/core/src/render/primitive-descriptors.ts.
  *
  * Usage: pnpm exec tsx scripts/gen-primitives-reference.ts
@@ -14,7 +14,7 @@ import type { PrimitiveDescriptor, PropDescriptor } from '../packages/core/src/r
 import { PRIMITIVE_DESCRIPTORS } from '../packages/core/src/render/primitive-descriptors.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = join(ROOT, '.claude/skills/luminous-pipeline/primitives-reference.md');
+const OUT = join(ROOT, '.agents/skills/luminous-pipeline/primitives-reference.md');
 
 // ── Fixed trailing sections ───────────────────────────────────────────────────
 

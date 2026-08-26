@@ -37,9 +37,9 @@ rhidoc init --rehydrate --dry-run
 If it reports the wiring or codex templates are stale, offer to run
 `rhidoc init --rehydrate` (without `--dry-run`) to refresh them.
 
-### 3. Check the CLAUDE.md / AGENTS.md pointer
+### 3. Check the AGENTS.md pointer
 
-The project's top-level `CLAUDE.md` (or `AGENTS.md`) should point agents at the
+The project's top-level `AGENTS.md` should point agents at the
 workspace. Grep it for a reference to `.rhidoc/AGENTS.md` or `MANIFEST.md`. If
 missing, offer to add this pointer (do not duplicate the workspace's own rules —
 just link to them):
@@ -78,4 +78,4 @@ the things that are actually wrong — a healthy workspace needs no changes.
 This is the project's general-purpose Rhidoc diagnostics entry point. As new
 failure modes surface (stale MANIFEST, broken refs, missing codex docs, version
 skew between the installed CLI and the workspace), add a numbered check above
-rather than spreading guidance across CLAUDE.md.
+rather than spreading guidance across AGENTS.md.
