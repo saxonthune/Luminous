@@ -9,7 +9,8 @@
     {
       "id": "requirement",
       "name": "Subrequirement",
-      "color": "accent-2"
+      "color": "accent-2",
+      "agentGuidance": "A Subrequirement is a leaf requirement, never a container. Place it in the Requirements section, connect it by satisfies to the Requirement container it fulfills, and connect it by needs to the Resource nodes it consumes. It may not have requirement children."
     },
     {
       "id": "resource",
@@ -48,7 +49,8 @@
       "id": "event-subrequirement",
       "name": "Event Requirement",
       "color": "accent-2",
-      "layout": "container"
+      "layout": "container",
+      "agentGuidance": "An Event Requirement is the reciprocal breakout of an Event. It is a freeform container for one level of Requirement containers. Its Event connects to it with a triggers edge; do not nest Subrequirements directly inside it."
     },
     {
       "id": "ui-transition-graph",
@@ -66,7 +68,8 @@
       "id": "requirement-container",
       "name": "Requirement",
       "color": "accent-2",
-      "layout": "container"
+      "layout": "container",
+      "agentGuidance": "A Requirement is a freeform breakout container. It may contain one level of further Requirement containers where needed. Its leaf Subrequirements remain separate nodes connected by satisfies edges, rather than contained children."
     }
   ],
   "edgeTypes": [
@@ -554,8 +557,8 @@
       "parent": "requirements-area",
       "width": 472,
       "height": 616,
-      "x": 1140.635737008923,
-      "y": 41.39590861546185
+      "x": 503.71962600993845,
+      "y": 675.7237905555676
     },
     {
       "id": "bracket-submission-list",
@@ -563,8 +566,8 @@
       "type": "requirement-container",
       "name": "Bracket Submission List",
       "parent": "subrequirement-breakout",
-      "x": 40.30713658452959,
-      "y": 36.528429019594114
+      "x": 220.28494975939435,
+      "y": 83.35946369930161
     },
     {
       "id": "tournament-status",
@@ -595,8 +598,9 @@
       "tab": "requirements",
       "type": "resources",
       "name": "Requirements-Resources",
-      "width": 2063.4114549298656,
-      "height": 2993.613902248487,
+      "agentGuidance": "This is the top-level separation of requirements from resources. It has exactly two containment children: Requirements and Resources.",
+      "width": 3623.5780550743343,
+      "height": 3152.1183297462085,
       "x": -868.8254227412442,
       "y": 2824.381893877936
     },
@@ -664,8 +668,8 @@
       "type": "requirement-container",
       "name": "Grade Bracket",
       "parent": "subrequirement-breakout",
-      "x": 29.377369966776882,
-      "y": 230.94371156998022
+      "x": 89.06388586760214,
+      "y": 319.0961208401104
     },
     {
       "id": "decode-share-code",
@@ -722,8 +726,8 @@
       "type": "event-subrequirement",
       "name": "View Landing Page",
       "parent": "requirements-area",
-      "x": 96,
-      "y": 117
+      "x": 1115.7649140970611,
+      "y": 689.5464508107593
     },
     {
       "id": "build-bracket-breakout",
@@ -733,8 +737,8 @@
       "parent": "requirements-area",
       "width": 216,
       "height": 280,
-      "x": 362,
-      "y": 0
+      "x": 191.78970368865043,
+      "y": 881.33615449941
     },
     {
       "id": "track-tournament-breakout",
@@ -744,8 +748,8 @@
       "parent": "requirements-area",
       "width": 254.71687471355355,
       "height": 616,
-      "x": 762.6151990479838,
-      "y": 403.9505485655973
+      "x": 1882.0989052655032,
+      "y": 110.72162722460007
     },
     {
       "id": "view-bracket-breakout",
@@ -753,8 +757,8 @@
       "type": "event-subrequirement",
       "name": "View Bracket",
       "parent": "requirements-area",
-      "x": 0,
-      "y": 409
+      "x": 738.3786584908744,
+      "y": 298.4743550661433
     },
     {
       "id": "view-rendered-bracket-breakout",
@@ -764,8 +768,8 @@
       "parent": "requirements-area",
       "width": 297.7247191007836,
       "height": 380.08975952875994,
-      "x": 221,
-      "y": 491
+      "x": 1248,
+      "y": 128
     },
     {
       "id": "create-bracket",
@@ -782,8 +786,8 @@
       "type": "requirement",
       "name": "Resolve Bracket Entries",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 282
+      "x": 27.54762789691563,
+      "y": 218.5445090442845
     },
     {
       "id": "record-bracket-picks",
@@ -791,8 +795,8 @@
       "type": "requirement",
       "name": "Record Bracket Picks",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 349
+      "x": 276.2150926389747,
+      "y": 231.40005752035313
     },
     {
       "id": "load-submitted-brackets",
@@ -800,8 +804,8 @@
       "type": "requirement",
       "name": "Load Submitted Brackets",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 415
+      "x": 472.54206437689413,
+      "y": 241.50087683420588
     },
     {
       "id": "decode-submitted-brackets",
@@ -809,8 +813,8 @@
       "type": "requirement",
       "name": "Decode Submitted Brackets",
       "parent": "requirements-area",
-      "x": 865.3571060810453,
-      "y": 1124.6596856380984
+      "x": 1006.4278246792476,
+      "y": 192.83341209214677
     },
     {
       "id": "score-bracket-picks",
@@ -818,8 +822,8 @@
       "type": "requirement",
       "name": "Score Bracket Picks",
       "parent": "requirements-area",
-      "x": 631.9802577748751,
-      "y": 1157.3201415064805
+      "x": 614.6920457933713,
+      "y": 90.90715524608368
     },
     {
       "id": "calculate-host-bonus",
@@ -827,8 +831,8 @@
       "type": "requirement",
       "name": "Calculate Host Bonus",
       "parent": "requirements-area",
-      "x": 858.9041360894199,
-      "y": 1450.2440198210252
+      "x": 833.9754525761632,
+      "y": 79.88810408731752
     },
     {
       "id": "load-match-results",
@@ -836,8 +840,8 @@
       "type": "requirement",
       "name": "Load Match Results",
       "parent": "requirements-area",
-      "x": 344.76032634392243,
-      "y": 1016.9024988179563
+      "x": 2800,
+      "y": 0
     },
     {
       "id": "compose-live-status",
@@ -845,8 +849,8 @@
       "type": "requirement",
       "name": "Compose Live Status",
       "parent": "requirements-area",
-      "x": 337.59129373446956,
-      "y": 1114.7984286272454
+      "x": 2600,
+      "y": 0
     },
     {
       "id": "resolve-tournament-entries",
@@ -854,8 +858,8 @@
       "type": "requirement",
       "name": "Resolve Tournament Entries",
       "parent": "requirements-area",
-      "x": 352.28333952784084,
-      "y": 1194.4087735204807
+      "x": 3000,
+      "y": 0
     },
     {
       "id": "render-tournament-matches",
@@ -863,8 +867,8 @@
       "type": "requirement",
       "name": "Render Tournament Matches",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1264
+      "x": 2400,
+      "y": 0
     },
     {
       "id": "parse-share-code",
@@ -872,8 +876,8 @@
       "type": "requirement",
       "name": "Parse Share Code",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1329
+      "x": 1200,
+      "y": 0
     },
     {
       "id": "validate-bracket-payload",
@@ -881,8 +885,8 @@
       "type": "requirement",
       "name": "Validate Bracket Payload",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1394
+      "x": 1400,
+      "y": 0
     },
     {
       "id": "client-route-map",
@@ -906,8 +910,8 @@
       "type": "requirement",
       "name": "Open Bracket Builder",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1460
+      "x": 1600,
+      "y": 0
     },
     {
       "id": "open-tournament-tracker",
@@ -915,8 +919,8 @@
       "type": "requirement",
       "name": "Open Tournament Tracker",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1527
+      "x": 1800,
+      "y": 0
     },
     {
       "id": "render-submitted-bracket",
@@ -927,7 +931,7 @@
       "width": 220.34035849423742,
       "height": 155.6729946346051,
       "x": 24,
-      "y": 24
+      "y": 39.610311265760174
     },
     {
       "id": "load-submitted-bracket-view",
@@ -935,8 +939,8 @@
       "type": "requirement",
       "name": "Load Submitted Bracket",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1593
+      "x": 2000,
+      "y": 0
     },
     {
       "id": "display-submitted-bracket",
@@ -944,28 +948,40 @@
       "type": "requirement",
       "name": "Display Submitted Bracket",
       "parent": "requirements-area",
-      "x": 333,
-      "y": 1661
+      "x": 2200,
+      "y": 0
     },
     {
       "id": "requirements-area",
       "tab": "requirements",
       "type": "resources",
       "name": "Requirements",
+      "agentGuidance": "Owns the requirement tree: Event Requirement breakouts, Requirement containers through their existing containment, and leaf Subrequirements. Do not place Resource nodes here.",
       "parent": "resources-area",
+      "ports": {
+        "entry": {
+          "side": "left",
+          "offset": 0.25123050779470724
+        },
+        "exit": {
+          "side": "right",
+          "offset": 0.6870056097829679
+        }
+      },
       "width": 1698.2126214200352,
       "height": 1890.9607635205687,
-      "x": 249.73301653727458,
-      "y": 26.554612937386537
+      "x": 322.5844131666803,
+      "y": 149.99771011183475
     },
     {
       "id": "resources-section",
       "tab": "requirements",
       "type": "resources",
       "name": "Resources",
+      "agentGuidance": "Owns every Resource node as a flat list. Resources are reciprocal endpoints of leaf Subrequirements' needs edges; do not nest requirement nodes here.",
       "parent": "resources-area",
-      "x": 194.2711815032086,
-      "y": 1939.78911049212
+      "x": 435.92891609331707,
+      "y": 2138.6007207022976
     }
   ],
   "edges": [
@@ -1417,5 +1433,6 @@
       "from": "display-submitted-bracket",
       "to": "render-submitted-bracket"
     }
-  ]
+  ],
+  "agentGuidance": "Keep the UI Transition Graph separate from Requirements-Resources. Requirements-Resources contains exactly two child containers: Requirements holds the requirement tree and linked Subrequirements; Resources holds flat Resource nodes. Preserve semantic edges: Events trigger Event Requirements, Subrequirements satisfy Requirement containers, and leaf Subrequirements need Resources. Do not turn these semantic links into containment."
 }

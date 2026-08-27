@@ -108,6 +108,13 @@ Container accepts a child of any Type — it never restricts which Types it hold
   label that pushes the Container's overlapping children apart until no two
   overlap, then grows the Container to fit them. A list Container has no Tidy
   control — it orders its children itself.
+- **N22.** The system shall offer a Flow control beside a freeform Container's
+  label that arranges the Container's direct children into stacked rows so that
+  directed Edges flow downward — the target of a directed Edge is placed in a
+  row below its source. An Edge whose endpoints are nested deeper than the
+  Container's direct children counts for the direct child each endpoint sits
+  within, and an undirected Edge Type imposes no order. Children with no
+  ordering Edge share the top row. A list Container has no Flow control.
 
 ## Edges
 
@@ -227,6 +234,7 @@ baseline navigation with no assigned requirement yet.
 | Node details editor | click outside, or Escape | Blur the details editor | N17 |
 | Container resize grip | left click + drag | Resize the Container without clipping its children | N18 |
 | Tidy control (freeform Container label) | left click | Push the Container's overlapping children apart | N21 |
+| Flow control (freeform Container label) | left click | Arrange the Container's children into rows so directed Edges flow downward | N22 |
 | Node | right click | Context menu: Copy, Paste, Add subnode, Type ▸, Delete | N5, N9 |
 | Canvas background | right click | Context menu: Paste | N9 |
 | Canvas | Ctrl/Cmd+C | Copy selected Nodes | N9 |

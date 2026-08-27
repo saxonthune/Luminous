@@ -7,7 +7,7 @@ import { CONTAINER_PADDING, DEFAULT_ENTRY_PORT, DEFAULT_EXIT_PORT, LIST_GAP, NOD
 import { nodeContextMenu, backgroundContextMenu, edgeContextMenu, type MerinoMenuDeps } from './menus.tsx';
 import { ManageTypesPanel } from './ManageTypesPanel.tsx';
 import { copyMerinoSelection, pasteMerinoSelection, type MerinoClipboard } from './clipboard.ts';
-import { buildRemoveOverlapActions } from './tidy.ts';
+import { buildFlowLayoutActions, buildRemoveOverlapActions } from './tidy.ts';
 import { transientViewportOptions } from '../../canvas-tools/transientViewport.ts';
 
 const EDGE_TAB_SIZE = 18;
@@ -430,6 +430,10 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     dispatchAction(buildRemoveOverlapActions(props.doc, id));
   }
 
+  function flowContainer(id: string) {
+    dispatchAction(buildFlowLayoutActions(props.doc, id));
+  }
+
   return (
     <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0, display: 'flex', 'flex-direction': 'column' }}>
       <div class="flex items-center gap-1 border-b border-border bg-surface px-3 py-1">
@@ -484,6 +488,7 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
             onDragEnd={endDrag}
             onToggleExpand={(nodeId, expanded) => dispatchAction([{ type: 'setNode', id: nodeId, expanded }])}
             onTidy={tidyContainer}
+            onFlow={flowContainer}
             onRename={(nodeId, name) => dispatchAction([{ type: 'setNode', id: nodeId, name }])}
             onSetText={(nodeId, text) => dispatchAction([{ type: 'setNode', id: nodeId, text }])}
             onResize={(nodeId, size) => dispatchAction([{ type: 'setNode', id: nodeId, ...size }])}
@@ -520,6 +525,7 @@ interface MerinoNodeLayerProps {
   onDragEnd: (nodeIds: ReadonlyArray<string>, dx: number, dy: number) => void;
   onToggleExpand: (nodeId: string, expanded: boolean) => void;
   onTidy: (nodeId: string) => void;
+  onFlow: (nodeId: string) => void;
   onRename: (nodeId: string, name: string) => void;
   onSetText: (nodeId: string, text: string) => void;
   onResize: (nodeId: string, size: { width: number; height: number }) => void;
@@ -900,10 +906,8 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                         {rn.isList ? 'List Container' : 'Freeform Container'}
                       </span>
                       <Show when={!rn.isList}>
-                        <button
-                          data-no-pan="true"
-                          title="Tidy — push overlapping nodes apart"
-                          style={{
+                        {(() => {
+                          const chipStyle = {
                             'flex-shrink': '0',
                             height: '16px',
                             padding: '0 6px',
@@ -918,12 +922,30 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                             'font-weight': '600',
                             'line-height': '1',
                             cursor: 'pointer',
-                          }}
-                          on:pointerdown={stopDrag}
-                          onClick={(e) => { e.stopPropagation(); props.onTidy(id); }}
-                        >
-                          ⤡ Tidy
-                        </button>
+                          } as const;
+                          return (
+                            <>
+                              <button
+                                data-no-pan="true"
+                                title="Tidy — push overlapping nodes apart"
+                                style={chipStyle}
+                                on:pointerdown={stopDrag}
+                                onClick={(e) => { e.stopPropagation(); props.onTidy(id); }}
+                              >
+                                ⤡ Tidy
+                              </button>
+                              <button
+                                data-no-pan="true"
+                                title="Flow — stack children into rows so directed edges flow downward"
+                                style={chipStyle}
+                                on:pointerdown={stopDrag}
+                                onClick={(e) => { e.stopPropagation(); props.onFlow(id); }}
+                              >
+                                ↓ Flow
+                              </button>
+                            </>
+                          );
+                        })()}
                       </Show>
                     </div>
                   </div>
