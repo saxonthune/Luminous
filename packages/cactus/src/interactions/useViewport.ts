@@ -60,9 +60,26 @@ export interface UseViewportResult {
     padding?: number,
     animate?: boolean
   ) => void;
+  /** Center one canvas-space rect while retaining the current zoom level. */
+  centerView: (rect: { x: number; y: number; width: number; height: number }, animate?: boolean) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
+}
+
+/** The camera transform that places `rect` at the viewport center without
+ * changing the current scale. Kept pure so hosts can rely on the no-zoom
+ * invariant independently of d3. */
+export function centerTransform(
+  current: Transform,
+  viewport: { width: number; height: number },
+  rect: { x: number; y: number; width: number; height: number },
+): Transform {
+  return {
+    x: viewport.width / 2 - (rect.x + rect.width / 2) * current.k,
+    y: viewport.height / 2 - (rect.y + rect.height / 2) * current.k,
+    k: current.k,
+  };
 }
 
 export function useViewport(options: UseViewportOptions = {}): UseViewportResult {
@@ -150,6 +167,18 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     }
   };
 
+  const centerView = (
+    rect: { x: number; y: number; width: number; height: number },
+    animate = true,
+  ) => {
+    if (!container || !zoomBehavior) return;
+    const next = centerTransform(transform(), container.getBoundingClientRect(), rect);
+    const newTransform = zoomIdentity.translate(next.x, next.y).scale(next.k);
+    const selection = select(container);
+    if (animate) selection.transition().duration(300).call(zoomBehavior.transform, newTransform);
+    else selection.call(zoomBehavior.transform, newTransform);
+  };
+
   const zoomBy = (factor: number) => {
     if (!container || !zoomBehavior) return;
     select(container).transition().duration(200).call(zoomBehavior.scaleBy, factor);
@@ -172,6 +201,7 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     setContainerRef,
     containerEl: () => container,
     fitView,
+    centerView,
     zoomIn: () => zoomBy(1.15),
     zoomOut: () => zoomBy(1 / 1.15),
     screenToCanvas,

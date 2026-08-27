@@ -60,6 +60,7 @@ interface CanvasProps {
     getNodeRects?: () => NodeRect[]
   }
   edges?: EdgeDeclaration[]
+  visualLod?: VisualLodDeclaration[]
   edgeEmphasis?: {
     dimUnselected?: boolean
     selectedWidthMultiplier?: number
@@ -83,6 +84,10 @@ interface CanvasProps {
 `edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). Box selection uses those same measured rectangles by default, so its hit-testing follows the rendered Nodes. A host may supply `boxSelect.getNodeRects` only when it needs a different selectable set or geometry. `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
 
 `onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
+
+`visualLod` declares host-rendered screen-space units anchored to registered
+Nodes. Cactus measures and places these units above the graph and below chrome;
+see [Visual LOD](#visual-lod).
 
 **Ref methods** (`CanvasRef`) — accessed via ref callback (not `forwardRef`):
 
@@ -251,6 +256,124 @@ interface ConnectionPreviewProps {
   strokeDasharray?: string      // default '4 4'
 }
 ```
+
+### CounterScale
+
+`CounterScale` is a local visual wrapper for host content rendered inside the
+geometrically scaled graph. It reads the Canvas camera through context and
+applies a bounded inverse transform around a declared origin. It requires no
+zoom prop drilling.
+
+```typescript
+interface CounterScaleProps {
+  referenceZoom?: number // default: 1
+  minScale?: number      // default: 1
+  maxScale?: number      // default: unbounded
+  origin?: JSX.CSSProperties['transform-origin'] // default: "top left"
+  enabled?: boolean
+  class?: string
+  style?: JSX.CSSProperties
+  children?: JSX.Element
+}
+```
+
+The transform changes pixels, not layout geometry: it does not enlarge the
+Node's registered rectangle, reserve room around the Item, or avoid collisions.
+Hosts use it for modest, bounded resistance to shrinking within a Node. Content
+that must escape Node clipping or coordinate globally belongs in Visual LOD.
+
+### Visual LOD
+
+A Visual LOD Item is a host-rendered component whose data may belong to a Node
+but whose representation is drawn separately in screen space. The host declares
+meaning and priority; cactus owns measurement, anchor conversion, collision
+placement, stacking, and visibility.
+
+```typescript
+interface VisualLodDeclaration {
+  id: string
+  anchor: {
+    nodeId: string
+    placement?: VisualLodPlacement
+    offset?: { x: number; y: number } // screen px
+  }
+  priority: number                   // larger wins and paints above
+  collisionGroup?: string           // default: "default"
+  admission?: {
+    group: string                    // progressive-disclosure cohort
+    rank: number                     // lower ranks must complete first
+  }
+  minZoom?: number                  // inclusive
+  maxZoom?: number                  // exclusive
+  placement?: {
+    candidates?: VisualLodPlacement[]
+    displacement?: {
+      maxDistance: number              // screen px
+      step: number                     // screen px
+      directions: ('up' | 'right' | 'down' | 'left')[]
+    }
+    allowOcclusion?: boolean         // default: true
+    minVisibleFraction?: number      // default: 0.4
+  }
+  size?: {
+    estimate: (zoom: number) => { w: number; h: number }
+    key?: string                     // content/style measurement identity
+  }
+  pointerEvents?: 'none' | 'auto'
+  render: (state: {
+    zoom: () => number
+    status: () => 'placed' | 'occluded' | 'hidden'
+  }) => JSX.Element
+}
+```
+
+The layer mounts render results only for Items in the current visible placement;
+hidden candidates with estimates remain declaration and estimated-size data
+until admitted. An unestimated candidate mounts invisibly at rest only long
+enough to establish its first measurement. The layer observes mounted Items'
+screen dimensions. While the camera moves,
+cactus freezes the presentation zoom supplied to `render` and reuses each
+committed Item's dimensions, so host typography and other layout-affecting
+styles do not reflow per camera frame. It updates anchor coordinates at most
+once per animation frame, then advances presentation zoom and reconciles against
+the exact DOM size after motion settles. `size.key` changes when content or
+styling invalidates a prior exact measurement. A declaration without an
+estimator falls back to its last measured size during motion.
+
+Placement has three internal phases. At idle, the last result is the committed
+layout. During camera interaction, cactus projects that layout through the
+changing transform without searching for new candidates or admitting hidden
+Items; a hard collision may suppress a lower-priority Item for the remainder of
+the gesture. After input settles, cactus measures again and performs one full
+placement pass, retaining committed visible Items before filling newly available
+space. Separate entry and exit margins around zoom gates prevent repeated
+visibility changes near a threshold. This lifecycle requires no additional host
+declaration.
+
+At rest, on a Node-rectangle change or content resize, cactus derives candidate
+rectangles in container-local screen coordinates. It processes eligible
+declarations by descending priority with stable id tie-breaking. The first
+collision-free candidate wins; a prior candidate is tried first while it
+remains free, which prevents position hopping between settled layouts. If none is free, the
+least-overlapping candidate is drawn below the conflicting higher-priority
+Items while its approximate visible fraction meets `minVisibleFraction`;
+otherwise it is hidden. Items collide only within their `collisionGroup`.
+When `placement.displacement` is present, cactus also searches away from each
+fixed candidate in bounded screen-pixel steps. It prefers smaller displacement
+and retains a prior collision-free displacement to keep camera motion stable.
+
+Declarations may opt into progressive disclosure with `admission`. Cactus
+admits a group's distinct ranks in ascending order. It considers the next rank
+only when every Item in the current rank remains visible; if any Item is hidden,
+all higher ranks in that group are hidden. Admission groups are independent,
+and declarations without admission metadata retain ordinary priority ordering.
+The host derives group and rank from domain meaning; cactus applies the rule to
+the rendered Items.
+
+This is a deterministic greedy approximation to weighted point-feature label
+placement. It moves no Node and persists no placement. The host converts domain
+meaning such as containment depth or selection importance into the generic
+numeric `priority`.
 
 ## Edges
 

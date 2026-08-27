@@ -1,6 +1,6 @@
 import type { MerinoAction, MerinoDocument, MerinoEdgeType, MerinoNode, MerinoNodeType, MerinoPortPosition, MerinoTab } from '@luminous/core/merino';
 import type { EdgeDeclaration, EdgeRoute, RegisteredNodeRect, RoutePoint } from '@luminous/cactus';
-import { boundaryPoint, resolveAbsolutePositionByParentOf } from '@luminous/cactus';
+import { boundaryPoint, fanOffsets, projectToBoundary, resolveAbsolutePositionByParentOf } from '@luminous/cactus';
 
 export const NODE_WIDTH = 168;
 /** The name-and-type header, fixed on both collapsed and expanded Nodes. */
@@ -94,27 +94,20 @@ function rectCenter(rect: RegisteredNodeRect): RoutePoint {
   return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
 }
 
-/** Where the ray from `from` toward `toward` leaves `rect` — the Edge's first
- * point on the source box, or last on the target box. */
-function exitRect(from: RoutePoint, toward: RoutePoint, rect: RegisteredNodeRect): RoutePoint {
-  const dx = toward.x - from.x;
-  const dy = toward.y - from.y;
-  const tx = dx === 0 ? Infinity : rect.w / 2 / Math.abs(dx);
-  const ty = dy === 0 ? Infinity : rect.h / 2 / Math.abs(dy);
-  const t = Math.min(tx, ty);
-  return { x: from.x + dx * t, y: from.y + dy * t };
-}
-
 function containsPoint(rect: { x: number; y: number; w: number; h: number }, point: RoutePoint): boolean {
   return point.x >= rect.x - ROUTE_EPSILON && point.x <= rect.x + rect.w + ROUTE_EPSILON
     && point.y >= rect.y - ROUTE_EPSILON && point.y <= rect.y + rect.h + ROUTE_EPSILON;
 }
 
-function withoutDuplicatePoints(points: RoutePoint[]): RoutePoint[] {
-  return points.filter((point, index) => {
-    const previous = points[index - 1];
-    return !previous || Math.hypot(point.x - previous.x, point.y - previous.y) > ROUTE_EPSILON;
-  });
+/** Pixel spacing between Edges fanned out across a shared crossing — a Container
+ * Port every one of them threads, or a box side several of them leave from — so a
+ * bundle reads as separate lines instead of one converging pencil. */
+const CROSSING_FAN_SPACING = 16;
+/** Keep a fanned crossing on its side, never sliding it onto a corner. */
+const MIN_SIDE_OFFSET = 0.06;
+
+function sideIsHorizontal(side: MerinoPortPosition['side']): boolean {
+  return side === 'top' || side === 'bottom';
 }
 
 export interface MerinoRenderNode {
@@ -312,11 +305,20 @@ export function projectMerino(doc: MerinoDocument, tab: MerinoTab): MerinoProjec
     };
   });
 
-  // Container-crossing Edge routing, copied from Atlas: thread each authored
-  // Edge through the boundary Ports of the Containers it leaves and enters, so a
-  // connection between deeply nested Nodes is legible at each box wall. A null
-  // route (endpoints share no Container to cross) falls back to cactus's direct
-  // line.
+  // Container-crossing Edge routing, copied from Atlas and extended: thread each
+  // authored Edge through the boundary Ports of the Containers it leaves and
+  // enters, so a connection between deeply nested Nodes is legible at each box
+  // wall. Two passes make the wall crossings readable:
+  //   - Plan (topology): every Edge's ordered crossings are collected, then the
+  //     Edges sharing one crossing — a Port every one of them threads, or a box
+  //     side several leave from — are fanned apart across that side. This is what
+  //     unpacks the pencil of Edges converging on a single Container Port.
+  //   - Realize (geometry): each planned crossing becomes a waypoint, joined by
+  //     straight segments. The Port threading and consolidation are what make the
+  //     line legible; the segments themselves stay straight so nothing stacks into
+  //     bands or runs along a box edge.
+  // Both passes run over the projected rects; the realize pass reruns against the
+  // measured rects cactus passes each routeBuilder.
   const containerAncestors = (id: string): string[] => {
     const out: string[] = [];
     // A Container endpoint is itself a boundary to cross: an incoming Edge
@@ -328,11 +330,47 @@ export function projectMerino(doc: MerinoDocument, tab: MerinoTab): MerinoProjec
   };
   const containerIds = [...childrenOf.keys()];
   const depthById = new Map(nodesOnTab.map((n) => [n.id, depthOf(n.id)]));
+  const projRects = new Map<string, RegisteredNodeRect>(nodes.map((rn) => [rn.node.id, { x: rn.x, y: rn.y, w: rn.w, h: rn.h }]));
 
-  const routeEdge = (fromId: string, toId: string, rects: ReadonlyMap<string, RegisteredNodeRect>): EdgeRoute | null => {
-    const sourceRect = rects.get(fromId);
-    const targetRect = rects.get(toId);
-    if (!sourceRect || !targetRect) return null;
+  // One boundary crossing an Edge makes: which box, which side, and — filled in
+  // once every Edge is planned — this crossing's slot among the ones that share
+  // the side, so the fan spreads them evenly. `refCoord` orders that fan to reduce
+  // crossings: an exit is ordered by where the Edge is heading, an entry by where
+  // it came from. `slotToken` decides what shares a slot: at a Container Port every
+  // Edge of one bundle (same source group, destination group, and Edge Type)
+  // shares it, so those Edges coincide into one trunk; at a Node box each Edge
+  // keeps its own token, so the trunk frays into a spoke per Node.
+  type CrossingRole = 'source' | 'exit' | 'entry' | 'target';
+  interface Crossing {
+    rectId: string;
+    side: MerinoPortPosition['side'];
+    role: CrossingRole;
+    baseOffset: number;
+    slotToken: string;
+    refCoord: number;
+    index: number;
+    count: number;
+  }
+
+  const portFor = (id: string, kind: 'entry' | 'exit'): MerinoPortPosition =>
+    nodeById.get(id)?.ports?.[kind] ?? (kind === 'entry' ? DEFAULT_ENTRY_PORT : DEFAULT_EXIT_PORT);
+
+  // A Node's consolidation group — its immediate Container (or the Tab root) paired
+  // with its Node Type. Two Edges are the same bundle when their source groups,
+  // destination groups, and Edge Types all match; that bundle is what a Port
+  // consolidates into one trunk. Derived here, never stored.
+  const groupOf = (nodeId: string): string => `${containerParentOf.get(nodeId) ?? '∅'}:${nodeById.get(nodeId)?.type ?? '∅'}`;
+
+  const planEdge = (edge: { id: string; from: string; to: string; type: string }): Crossing[] | null => {
+    const fromId = edge.from;
+    const toId = edge.to;
+    const fromRect = projRects.get(fromId);
+    const toRect = projRects.get(toId);
+    if (!fromRect || !toRect) return null;
+    const fromCenter = rectCenter(fromRect);
+    const toCenter = rectCenter(toRect);
+    if (fromCenter.x === toCenter.x && fromCenter.y === toCenter.y) return null;
+
     const sourceAncestors = containerAncestors(fromId);
     const targetAncestors = containerAncestors(toId);
     const targetAncestorSet = new Set(targetAncestors);
@@ -341,38 +379,112 @@ export function projectMerino(doc: MerinoDocument, tab: MerinoTab): MerinoProjec
     const destinationContainers = lca
       ? targetAncestors.slice(0, targetAncestors.indexOf(lca)).reverse()
       : [...targetAncestors].reverse();
-    if (sourceContainers.length === 0 && destinationContainers.length === 0) return null;
 
-    const sourceCenter = rectCenter(sourceRect);
-    const targetCenter = rectCenter(targetRect);
-    if (sourceCenter.x === targetCenter.x && sourceCenter.y === targetCenter.y) return null;
+    const bundleKey = `${groupOf(fromId)}»${groupOf(toId)}»${edge.type}`;
+    const crossing = (rectId: string, side: MerinoPortPosition['side'], role: CrossingRole, baseOffset: number, slotToken: string): Crossing =>
+      ({ rectId, side, role, baseOffset, slotToken, refCoord: 0, index: 0, count: 0 });
+    const exits = sourceContainers.map((id) => crossing(id, portFor(id, 'exit').side, 'exit', portFor(id, 'exit').offset, bundleKey));
+    const entries = destinationContainers.map((id) => crossing(id, portFor(id, 'entry').side, 'entry', portFor(id, 'entry').offset, bundleKey));
 
-    const sourcePorts: RoutePoint[] = [];
-    for (const id of sourceContainers) {
-      const rect = rects.get(id);
-      const node = nodeById.get(id);
-      if (!rect || !node) return null;
-      const anchors = merinoPortAnchors(rect, node.ports?.exit ?? DEFAULT_EXIT_PORT);
-      sourcePorts.push(anchors.inside, anchors.outside);
+    const crossings: Crossing[] = [];
+    // A leaf endpoint anchors on the box side facing its first outward waypoint; a
+    // Container endpoint has no separate anchor — its own Port (already the first
+    // exit or last entry crossing) is where the Edge meets its wall. Endpoint slots
+    // are per-Edge (each Node its own spoke), keyed by the Edge id.
+    if (!isContainerNode(nodeById.get(fromId)!)) {
+      const firstOut = exits[0] ? merinoPortPoint(projRects.get(exits[0].rectId)!, { side: exits[0].side, offset: exits[0].baseOffset }) : toCenter;
+      crossings.push(crossing(fromId, projectToBoundary(fromRect, firstOut).side, 'source', 0.5, `${edge.id}:source`));
     }
-    const destinationPorts: RoutePoint[] = [];
-    for (const id of destinationContainers) {
-      const rect = rects.get(id);
-      const node = nodeById.get(id);
-      if (!rect || !node) return null;
-      const anchors = merinoPortAnchors(rect, node.ports?.entry ?? DEFAULT_ENTRY_PORT);
-      destinationPorts.push(anchors.outside, anchors.inside);
+    crossings.push(...exits, ...entries);
+    if (!isContainerNode(nodeById.get(toId)!)) {
+      const lastIn = entries.at(-1) ? merinoPortPoint(projRects.get(entries.at(-1)!.rectId)!, { side: entries.at(-1)!.side, offset: entries.at(-1)!.baseOffset }) : fromCenter;
+      crossings.push(crossing(toId, projectToBoundary(toRect, lastIn).side, 'target', 0.5, `${edge.id}:target`));
     }
-    const crossingPoints = [...sourcePorts, ...destinationPorts];
-    const points: RoutePoint[] = [
-      exitRect(sourceCenter, crossingPoints[0] ?? targetCenter, sourceRect),
-      ...crossingPoints,
-      exitRect(targetCenter, crossingPoints[crossingPoints.length - 1] ?? sourceCenter, targetRect),
-    ];
-    const routePoints = withoutDuplicatePoints(points);
-    if (routePoints.length < 2) return null;
-    const segmentLayers = routePoints.slice(1).map((end, index) => {
-      const start = routePoints[index];
+    if (crossings.length < 2) return null;
+
+    for (const c of crossings) {
+      const ref = c.role === 'entry' || c.role === 'target' ? fromCenter : toCenter;
+      c.refCoord = sideIsHorizontal(c.side) ? ref.x : ref.y;
+    }
+    return crossings;
+  };
+
+  // Plan every Edge, then group crossings by (box, side) and hand each its slot.
+  // Crossing objects are shared between a plan and its group, so writing the slot
+  // here updates the plan the realize pass reads.
+  const plans = new Map<string, Crossing[]>();
+  for (const edge of doc.edges) {
+    if (edge.tab !== tab) continue;
+    const plan = planEdge(edge);
+    if (plan) plans.set(edge.id, plan);
+  }
+  const sideGroups = new Map<string, Crossing[]>();
+  for (const plan of plans.values()) {
+    for (const c of plan) {
+      const key = `${c.rectId}:${c.side}`;
+      const group = sideGroups.get(key) ?? [];
+      group.push(c);
+      sideGroups.set(key, group);
+    }
+  }
+  // Slot by distinct token, not by crossing: crossings sharing a token (a bundle
+  // at a Port) take one slot and coincide; each token is ordered by the mean
+  // `refCoord` of its members. This is what draws a consolidated bundle as one
+  // trunk while spreading distinct bundles apart along the side.
+  for (const group of sideGroups.values()) {
+    const byToken = new Map<string, Crossing[]>();
+    for (const c of group) {
+      const list = byToken.get(c.slotToken);
+      if (list) list.push(c);
+      else byToken.set(c.slotToken, [c]);
+    }
+    const tokens = [...byToken].map(([token, members]) => ({
+      token,
+      refCoord: members.reduce((sum, c) => sum + c.refCoord, 0) / members.length,
+    }));
+    tokens.sort((a, b) => a.refCoord - b.refCoord);
+    tokens.forEach(({ token }, index) => {
+      for (const c of byToken.get(token)!) { c.index = index; c.count = tokens.length; }
+    });
+  }
+
+  const clampOffset = (offset: number): number => Math.max(MIN_SIDE_OFFSET, Math.min(1 - MIN_SIDE_OFFSET, offset));
+  // A crossing's Port position, its stored offset slid along the side by this
+  // Edge's fan slot (in side-length fractions, so the pixel spacing holds).
+  const fannedPosition = (c: Crossing, rect: RegisteredNodeRect): MerinoPortPosition => {
+    const sideLength = sideIsHorizontal(c.side) ? rect.w : rect.h;
+    const shift = sideLength > 0 ? fanOffsets(c.count, CROSSING_FAN_SPACING)[c.index] / sideLength : 0;
+    return { side: c.side, offset: clampOffset(c.baseOffset + shift) };
+  };
+
+  const realizeRoute = (edgeId: string, rects: ReadonlyMap<string, RegisteredNodeRect>): EdgeRoute | null => {
+    const plan = plans.get(edgeId);
+    if (!plan) return null;
+    const waypoints: RoutePoint[] = [];
+    for (const c of plan) {
+      const rect = rects.get(c.rectId);
+      if (!rect) return null;
+      const position = fannedPosition(c, rect);
+      if (c.role === 'source' || c.role === 'target') {
+        waypoints.push(merinoPortPoint(rect, position));
+      } else {
+        const anchors = merinoPortAnchors(rect, position);
+        // The Port's inside/outside pair is a short perpendicular stub, so the
+        // straight line pokes cleanly through the wall. Leaving a box: inside then
+        // out. Entering one: outside then in.
+        if (c.role === 'exit') waypoints.push(anchors.inside, anchors.outside);
+        else waypoints.push(anchors.outside, anchors.inside);
+      }
+    }
+    // Straight polyline through the fanned, consolidated anchors — no orthogonal
+    // turns, so nothing stacks into bands or drives along a box edge.
+    const points = waypoints.filter((p, index) => {
+      const previous = waypoints[index - 1];
+      return !previous || Math.hypot(p.x - previous.x, p.y - previous.y) > ROUTE_EPSILON;
+    });
+    if (points.length < 2) return null;
+    const segmentLayers = points.slice(1).map((end, index) => {
+      const start = points[index];
       const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
       let scope: string | undefined;
       for (const id of containerIds) {
@@ -383,7 +495,7 @@ export function projectMerino(doc: MerinoDocument, tab: MerinoTab): MerinoProjec
       }
       return scope === undefined ? -1 : 2 * (depthById.get(scope) ?? 0) + 1;
     });
-    return { points: routePoints, segmentLayers };
+    return { points, segmentLayers };
   };
 
   const edges: EdgeDeclaration[] = [];
@@ -415,7 +527,7 @@ export function projectMerino(doc: MerinoDocument, tab: MerinoTab): MerinoProjec
         arrowHead: type?.arrowHead ?? true,
         colorToken: type ? `color-merino-${type.color}` : 'fg',
       },
-      routeBuilder: (rects) => routeEdge(edge.from, edge.to, rects),
+      routeBuilder: (rects) => realizeRoute(edge.id, rects),
     });
   }
 

@@ -8,6 +8,31 @@ export interface MerinoMenuDeps {
   recentTypeIds: () => string[];
 }
 
+export interface MerinoDownstreamNode {
+  id: string;
+  name: string;
+}
+
+/** Distinct destinations of authored outbound Edges, in Document order. */
+export function downstreamNodes(doc: MerinoDocument, nodeId: string): MerinoDownstreamNode[] {
+  const names = new Map(doc.nodes.map((node) => [node.id, node.name]));
+  const seen = new Set<string>();
+  const downstream: MerinoDownstreamNode[] = [];
+  for (const edge of doc.edges) {
+    if (edge.from !== nodeId || seen.has(edge.to) || !names.has(edge.to)) continue;
+    seen.add(edge.to);
+    downstream.push({ id: edge.to, name: names.get(edge.to)! });
+  }
+  return downstream;
+}
+
+export function downstreamMenuItems(nodes: ReadonlyArray<MerinoDownstreamNode>): MenuItem[] {
+  return nodes.map((node) => ({
+    type: 'action',
+    action: { id: 'node.viewDownstream', label: node.name || node.id, payload: { targetId: node.id } },
+  }));
+}
+
 /** The ids of the built-in starter Node Types, in their canonical order. */
 const SEED_TYPE_IDS = SEED_NODE_TYPES.map((t) => t.id);
 
@@ -46,6 +71,18 @@ export function nodeContextMenu(deps: MerinoMenuDeps, nodeId: string): MenuSchem
   const doc = deps.doc();
   const node = doc.nodes.find((n) => n.id === nodeId);
   if (!node) return undefined;
+  const downstream = downstreamNodes(doc, nodeId);
+  const downstreamItem: MenuItem | undefined = downstream.length > 0
+    ? {
+        type: 'action-submenu',
+        action: {
+          id: 'node.viewDownstream',
+          label: 'View Downstream Node',
+          payload: { targetId: downstream[0].id },
+        },
+        items: downstreamMenuItems(downstream),
+      }
+    : undefined;
   return {
     id: `merino-node-${nodeId}`,
     items: [
@@ -54,6 +91,7 @@ export function nodeContextMenu(deps: MerinoMenuDeps, nodeId: string): MenuSchem
       { type: 'divider' },
       { type: 'action', action: { id: 'node.addSubnode', label: 'Add subnode', payload: { parent: nodeId } } },
       nodeTypeSubmenu(doc, node.type, nodeId),
+      ...(downstreamItem ? [downstreamItem] : []),
       { type: 'divider' },
       { type: 'action', action: { id: 'node.delete', label: 'Delete', tone: 'danger', payload: { id: nodeId } } },
     ],

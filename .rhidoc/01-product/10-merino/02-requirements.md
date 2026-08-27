@@ -42,6 +42,10 @@ draws on them.
   the viewport to the Document.
 - **C9.** The system shall draw a grid across the canvas background to make the
   workspace visible behind its Nodes and Edges.
+- **C10.** When a Node has one or more outbound Edges, the system shall let the
+  user center the viewport on a downstream Node without changing the current
+  zoom level; where several downstream Nodes exist, it shall offer a list of
+  their distinct destinations.
 
 ## Nodes
 
@@ -62,7 +66,8 @@ Container accepts a child of any Type — it never restricts which Types it hold
 - **N4.** The system shall give each Node a Node Type, and shall draw the Node so
   its Type is legible — in its Type's Color.
 - **N5.** When the user right-clicks a Node, the system shall open a context menu
-  offering Copy, Paste, Add subnode, a Type submenu, and Delete.
+  offering Copy, Paste, Add subnode, a Type submenu, and Delete; a Node with an
+  outbound Edge shall also offer downstream navigation.
 - **N6.** When the user adds a Subnode, the system shall create a child Node
   joined to its parent by a dotted Edge.
 - **N7.** When the user deletes a Node, the system shall remove the Node, its
@@ -108,13 +113,42 @@ Container accepts a child of any Type — it never restricts which Types it hold
   label that pushes the Container's overlapping children apart until no two
   overlap, then grows the Container to fit them. A list Container has no Tidy
   control — it orders its children itself.
-- **N22.** The system shall offer a Flow control beside a freeform Container's
-  label that arranges the Container's direct children into stacked rows so that
-  directed Edges flow downward — the target of a directed Edge is placed in a
-  row below its source. An Edge whose endpoints are nested deeper than the
+- **N22.** The system shall offer two Flow controls beside a freeform
+  Container's label that arrange the Container's direct children into stacked
+  ranks so that directed Edges flow one way — a downward control that stacks
+  ranks top-to-bottom (the target of a directed Edge placed below its source)
+  and a rightward control that stacks ranks left-to-right (the target placed
+  right of its source). An Edge whose endpoints are nested deeper than the
   Container's direct children counts for the direct child each endpoint sits
   within, and an undirected Edge Type imposes no order. Children with no
-  ordering Edge share the top row. A list Container has no Flow control.
+  ordering Edge share the first rank. A list Container has no Flow control.
+- **N23.** A Node with an outbound Edge shall show a downstream-navigation
+  control. With one downstream Node it shall navigate directly; with several it
+  shall also offer the downstream-destination list.
+- **N24.** When the user zooms out, the system shall replace each Node's ordinary
+  title presentation with a screen-readable overview identity containing its
+  name and colored Node Type badge. It shall make identities of less deeply
+  contained Nodes more prominent through size and surface tone; identities
+  shall become slightly darker with containment depth. Containment depth and
+  presentation shall be derived from the Document rather than stored in it.
+- **N25.** When overview identities would overlap, the system shall first try
+  nearby alternate positions around their Nodes, including positions within a
+  bounded distance above them, and hide an identity when none is collision-free.
+  It shall give less deeply contained Nodes priority and, at the same depth,
+  give Containers priority over leaf Nodes. Within each top-level containment
+  subtree, it shall show identities at a deeper level only when every identity
+  at each shallower level is visible. During continuous zoom, visible identities
+  shall retain their relative placement, identities shall not enter newly opened
+  space, and an identity hidden by collision shall remain hidden until zoom
+  settles. After zoom settles, the system shall reconcile placement while
+  preferring identities and positions that were already visible.
+- **N26.** The system shall tint a Container's child area with a faint wash of its
+  Node Type's Color, so the Container's interior carries its Type identity beneath
+  its children.
+- **N27.** Before the overview presentation replaces ordinary Node content, the
+  system shall keep each Node's title and Node Type badge readable as one bounded
+  identity while the surrounding Node continues to scale geometrically. The
+  ordinary identity shall hand off as a unit to the overview identity.
 
 ## Edges
 
@@ -132,7 +166,9 @@ typed Edge.
 - **E5.** The system shall allow the user to delete an Edge.
 - **E6.** When the user holds the platform primary modifier while releasing an
   in-progress Edge, the system shall create a new Node of the source Node's
-  Type at the pointer and connect the Edge to it.
+  Type at the pointer and connect the Edge to it. When the release is over a
+  Container, it shall file the new Node into that Container as a drag-drop would
+  (N12); over the background, it shall leave the Node at the top level.
 - **E7.** While an Edge is in progress, the system shall display a gesture-scoped
   indicator describing its current outcome, including the new-Node outcome when
   the platform primary modifier is held.
@@ -147,6 +183,15 @@ typed Edge.
 - **E10.** When an Edge targets a Container, the system shall route it through
   that Container's entry Port; when an Edge starts at a Container, the system
   shall route it through that Container's exit Port.
+- **E11.** When several Edges cross the same Container Port, the system shall fan
+  them out along that Port's side so they read as separate lines rather than
+  converging on a single point.
+- **E12.** When several Edges share a source group, a destination group, and an
+  Edge Type — a group being the Nodes of one Node Type in one Container — the
+  system shall consolidate them through their shared Container Ports into one
+  trunk, frayed into a spoke to each member Node, rather than drawing a separate
+  parallel line per Edge. Consolidation is derived from the Nodes and Edges, not
+  stored.
 
 ## Types
 
@@ -235,7 +280,12 @@ baseline navigation with no assigned requirement yet.
 | Container resize grip | left click + drag | Resize the Container without clipping its children | N18 |
 | Tidy control (freeform Container label) | left click | Push the Container's overlapping children apart | N21 |
 | Flow control (freeform Container label) | left click | Arrange the Container's children into rows so directed Edges flow downward | N22 |
-| Node | right click | Context menu: Copy, Paste, Add subnode, Type ▸, Delete | N5, N9 |
+| Downstream navigation control | left click | Center the viewport on the first downstream Node without changing zoom | C10, N23 |
+| Downstream navigation chevron | hover | Open the list of downstream Nodes | C10, N23 |
+| Downstream Node (list) | left click | Center the viewport on that downstream Node without changing zoom | C10 |
+| Node | right click | Context menu: Copy, Paste, Add subnode, Type ▸, View Downstream Node ▸, Delete | N5, N9, C10 |
+| View Downstream Node (context menu) | left click | Center the viewport on the first downstream Node without changing zoom | C10 |
+| View Downstream Node chevron | hover | Open the list of downstream Nodes | C10 |
 | Canvas background | right click | Context menu: Paste | N9 |
 | Canvas | Ctrl/Cmd+C | Copy selected Nodes | N9 |
 | Canvas | Ctrl/Cmd+V | Paste copied Nodes | N9 |

@@ -17,6 +17,9 @@ const MAX_SEPARATION_PASSES = 50;
 
 /** Vertical gap between rank rows in the flow layout. */
 const RANK_GAP = 64;
+/** Default inset from the Container's inner edge to the first rank, so Flow does
+ * not jam its children against the box wall. */
+const DEFAULT_FLOW_BUFFER = 24;
 /** Horizontal gap between siblings sharing a rank row in the flow layout. */
 const FLOW_GAP = 32;
 /** Barycenter ordering sweeps (down, up, down, up). Each pass reorders every
@@ -103,29 +106,38 @@ export function buildRemoveOverlapActions(doc: MerinoDocument, containerId: stri
 }
 
 /**
- * Ranks the direct children of a freeform Container into stacked rows so that
- * directed Edges flow downward — the layered (Sugiyama-style) graph layout,
- * scoped to one Container. Returns the position writes as setNode actions; a
- * `list` Container, or one with fewer than two children, is a no-op.
+ * Ranks the direct children of a freeform Container into stacked ranks so that
+ * directed Edges flow along one axis — the layered (Sugiyama-style) graph
+ * layout, scoped to one Container. `axis` picks the flow direction: `'vertical'`
+ * flows Edges downward (ranks stacked top-to-bottom, ordered left-to-right
+ * within a rank); `'horizontal'` flows Edges rightward (ranks stacked
+ * left-to-right, ordered top-to-bottom within a rank). Returns the position
+ * writes as setNode actions; a `list` Container, or one with fewer than two
+ * children, is a no-op.
  *
  * The sort key is the Edges, never the node Type. An Edge whose endpoints are
  * nested deeper than this Container's own children is *lifted*: each endpoint
  * counts for the direct child it descends from, so an Edge from a leaf to a
  * Requirement buried inside a breakout Container still orders the leaf against
- * that breakout. A directed Edge places its target one row below its source
- * (source on top), so a Container's arrows define which way "down" runs.
+ * that breakout. A directed Edge places its target one rank past its source, so
+ * a Container's arrows define which way the flow runs.
  *
  * Three phases:
  *  1. Rank — longest-path layering over the net edge direction between children
- *     (ties cast no constraint). A child's row is one below the deepest source
+ *     (ties cast no constraint). A child's rank is one past the deepest source
  *     that reaches it, so a child shared by several branches settles in the one
- *     row consistent with all of them.
- *  2. Order — within each row, sort by the barycenter (mean neighbour position)
- *     of the adjacent row, sweeping down then up to reduce crossings.
- *  3. Place — stack rows top-to-bottom, lay each row left-to-right by its order,
- *     using every child's rendered width and height.
+ *     rank consistent with all of them.
+ *  2. Order — within each rank, sort by the barycenter (mean neighbour position)
+ *     of the adjacent rank, sweeping forward then back to reduce crossings.
+ *  3. Place — stack ranks along the flow axis, lay each rank across the other
+ *     axis by its order, using every child's rendered width and height.
  */
-export function buildFlowLayoutActions(doc: MerinoDocument, containerId: string): MerinoAction[] {
+export function buildFlowLayoutActions(
+  doc: MerinoDocument,
+  containerId: string,
+  axis: 'vertical' | 'horizontal' = 'vertical',
+  buffer: number = DEFAULT_FLOW_BUFFER,
+): MerinoAction[] {
   const container = doc.nodes.find((n) => n.id === containerId);
   if (!container) return [];
   const rendered = projectMerino(doc, container.tab).nodes;
@@ -207,12 +219,20 @@ export function buildFlowLayoutActions(doc: MerinoDocument, containerId: string)
   }
   const sortedRanks = [...rows.keys()].sort((a, b) => a - b);
 
-  // Phase 2 — barycenter ordering. Seed each row's order by current position so
-  // an already-tidy graph stays put, then sweep.
+  // The flow axis carries the rank; the cross axis carries the order within a
+  // rank. Vertical flows down (rank = y, order = x); horizontal flows right
+  // (rank = x, order = y).
+  const crossPos = (id: string) => (axis === 'vertical' ? byId.get(id)!.x : byId.get(id)!.y);
+  const primaryPos = (id: string) => (axis === 'vertical' ? byId.get(id)!.y : byId.get(id)!.x);
+  const primarySize = (id: string) => (axis === 'vertical' ? byId.get(id)!.h : byId.get(id)!.w);
+  const crossSize = (id: string) => (axis === 'vertical' ? byId.get(id)!.w : byId.get(id)!.h);
+
+  // Phase 2 — barycenter ordering. Seed each rank's order by current cross-axis
+  // position so an already-tidy graph stays put, then sweep.
   const orderIndex = new Map<string, number>();
   for (const r of sortedRanks) {
     const row = rows.get(r)!;
-    row.sort((a, b) => (byId.get(a)!.x - byId.get(b)!.x) || (byId.get(a)!.y - byId.get(b)!.y));
+    row.sort((a, b) => (crossPos(a) - crossPos(b)) || (primaryPos(a) - primaryPos(b)));
     row.forEach((id, i) => orderIndex.set(id, i));
   }
   const barycenter = (id: string, neighbours: Set<string>): number => {
@@ -236,28 +256,29 @@ export function buildFlowLayoutActions(doc: MerinoDocument, containerId: string)
     }
   }
 
-  // Phase 3 — place. Stack rows; lay each left-to-right in the child-area frame,
-  // whose top-left is (0, 0), so every position is non-negative by construction.
+  // Phase 3 — place. Stack ranks along the flow axis; lay each rank across the
+  // cross axis in the child-area frame, whose top-left is (0, 0), so every
+  // position is non-negative by construction.
   const origin = childAreaOrigin(parentRn.node);
   const originX = parentRn.x + origin.x;
   const originY = parentRn.y + origin.y;
   const actions: MerinoAction[] = [];
-  let curY = 0;
+  let curPrimary = buffer;
   for (const r of sortedRanks) {
     const row = rows.get(r)!;
-    let curX = 0;
-    let rowHeight = 0;
+    let curCross = buffer;
+    let rankExtent = 0;
     for (const id of row) {
       const rn = byId.get(id)!;
-      const x = Math.round(curX);
-      const y = Math.round(curY);
+      const x = Math.round(axis === 'vertical' ? curCross : curPrimary);
+      const y = Math.round(axis === 'vertical' ? curPrimary : curCross);
       if (x !== Math.round(rn.x - originX) || y !== Math.round(rn.y - originY)) {
         actions.push({ type: 'setNode', id, x, y });
       }
-      curX += rn.w + FLOW_GAP;
-      rowHeight = Math.max(rowHeight, rn.h);
+      curCross += crossSize(id) + FLOW_GAP;
+      rankExtent = Math.max(rankExtent, primarySize(id));
     }
-    curY += rowHeight + RANK_GAP;
+    curPrimary += rankExtent + RANK_GAP;
   }
   return actions;
 }

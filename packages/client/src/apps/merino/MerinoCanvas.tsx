@@ -1,16 +1,69 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount, type JSX } from 'solid-js';
 import type { MerinoAction, MerinoColorToken, MerinoDocument, MerinoPortPosition, MerinoPorts, MerinoTab } from '@luminous/core/merino';
 import { MERINO_TABS, applyMerinoBatch, descendantIds } from '@luminous/core/merino';
-import { BoundaryHandle, Canvas, ConnectionPreview, NodeContainer, ResizeHandle, useCanvasContext, useGesture } from '@luminous/cactus';
-import type { CanvasRef } from '@luminous/cactus';
+import { BoundaryHandle, Canvas, ConnectionPreview, CounterScale, NodeContainer, ResizeHandle, SplitMenuButton, useCanvasContext, useGesture } from '@luminous/cactus';
+import type { CanvasRef, VisualLodDeclaration, VisualLodSize } from '@luminous/cactus';
 import { CONTAINER_PADDING, DEFAULT_ENTRY_PORT, DEFAULT_EXIT_PORT, LIST_GAP, NODE_HEADER_HEIGHT, NODE_HEIGHT, NODE_WIDTH, childAreaOrigin, findContainerAtPoint, growOnlyContainerActions, listInsertionIndex, merinoPortDimensions, nodeHeight, nodeTypeById, projectMerino, tokenVar, type MerinoRenderNode } from './projection.ts';
-import { nodeContextMenu, backgroundContextMenu, edgeContextMenu, type MerinoMenuDeps } from './menus.tsx';
+import { downstreamMenuItems, downstreamNodes, nodeContextMenu, backgroundContextMenu, edgeContextMenu, type MerinoMenuDeps } from './menus.tsx';
 import { ManageTypesPanel } from './ManageTypesPanel.tsx';
 import { copyMerinoSelection, pasteMerinoSelection, type MerinoClipboard } from './clipboard.ts';
 import { buildFlowLayoutActions, buildRemoveOverlapActions } from './tidy.ts';
 import { transientViewportOptions } from '../../canvas-tools/transientViewport.ts';
 
 const EDGE_TAB_SIZE = 18;
+/** Below this camera scale, names move into a screen-readable overview layer. */
+const TITLE_OVERVIEW_START_ZOOM = 0.65;
+const TITLE_OVERVIEW_FULL_ZOOM = 0.25;
+const TITLE_SCREEN_FONT_SIZE = 12;
+const TITLE_OUTERMOST_BONUS = 6;
+const TITLE_OVERVIEW_MAX_WIDTH = 220;
+const TITLE_OVERVIEW_MAX_DISPLACEMENT = 72;
+
+/** A smooth 0→1 blend as the camera moves from the close view to overview. */
+function overviewProgress(zoom: number): number {
+  const raw = Math.max(0, Math.min(1,
+    (TITLE_OVERVIEW_START_ZOOM - zoom) / (TITLE_OVERVIEW_START_ZOOM - TITLE_OVERVIEW_FULL_ZOOM),
+  ));
+  return raw * raw * (3 - 2 * raw);
+}
+
+function overviewTitleSize(depth: number, maxDepth: number, zoom: number): number {
+  const hierarchy = maxDepth === 0 ? 0 : (maxDepth - depth) / maxDepth;
+  return TITLE_SCREEN_FONT_SIZE + overviewProgress(zoom) * hierarchy * TITLE_OUTERMOST_BONUS;
+}
+
+/** Fast, deliberately conservative text-width estimate in screen pixels. The
+ * exact DOM size reconciles after zoom settles; this keeps camera motion free
+ * of synchronous layout reads. */
+function estimatedTextWidth(text: string, fontSize: number): number {
+  let em = 0;
+  for (const char of text) {
+    if (/[ilI1 .'`]/.test(char)) em += 0.32;
+    else if (/[MW@#%]/.test(char)) em += 0.9;
+    else if (/[A-Z0-9]/.test(char)) em += 0.68;
+    else em += 0.56;
+  }
+  return em * fontSize;
+}
+
+function estimatedOverviewIdentitySize(
+  name: string,
+  typeName: string,
+  depth: number,
+  maxDepth: number,
+  zoom: number,
+): VisualLodSize {
+  const titleSize = overviewTitleSize(depth, maxDepth, zoom);
+  const titleWidth = estimatedTextWidth(name, titleSize);
+  const badgeWidth = estimatedTextWidth(typeName, 10) + 12;
+  return {
+    // Outer padding (7px each side) and border (1px each side).
+    w: Math.min(TITLE_OVERVIEW_MAX_WIDTH, Math.ceil(Math.max(titleWidth, badgeWidth) + 16)),
+    // Outer padding + border, title line, 3px gap, and 14px badge.
+    h: Math.ceil(12 + titleSize * 1.15 + 3 + 14),
+  };
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('input, textarea, [contenteditable="true"]'));
 }
@@ -90,6 +143,75 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
   const renderNodes = createMemo(() => projection().nodes);
   const edges = createMemo(() => projection().edges);
   const typesById = createMemo(() => nodeTypeById(props.doc));
+  const maxDepth = createMemo(() => Math.max(0, ...renderNodes().map((node) => node.depth)));
+  const visualLod = createMemo<VisualLodDeclaration[]>(() => {
+    const deepest = maxDepth();
+    const typeMap = typesById();
+    const renderNodeById = new Map(renderNodes().map((node) => [node.node.id, node]));
+    const containmentRootId = (renderNode: MerinoRenderNode): string => {
+      let current = renderNode;
+      const visited = new Set<string>();
+      while (current.contained && current.node.parent !== undefined && !visited.has(current.node.id)) {
+        visited.add(current.node.id);
+        const parent = renderNodeById.get(current.node.parent);
+        if (!parent?.isContainer) break;
+        current = parent;
+      }
+      return current.node.id;
+    };
+    return renderNodes().map((renderNode) => {
+      const type = typeMap.get(renderNode.node.type);
+      const typeName = type?.name ?? renderNode.node.type;
+      return {
+        id: `merino-identity:${renderNode.node.id}`,
+        anchor: {
+          nodeId: renderNode.node.id,
+          placement: 'top-left',
+          offset: { x: 10, y: 9 },
+        },
+        // Depth is the dominant ordering. Within one depth, Containers earn
+        // the scarce overview space before leaf Nodes.
+        priority: (deepest - renderNode.depth) * 100
+          + (renderNode.isContainer ? 20 : 0)
+          + (renderNode.hasChildren ? 1 : 0),
+        collisionGroup: 'merino-identities',
+        admission: {
+          group: `merino-subtree:${containmentRootId(renderNode)}`,
+          rank: renderNode.depth,
+        },
+        maxZoom: TITLE_OVERVIEW_START_ZOOM,
+        placement: {
+          candidates: ['top-left', 'above-left', 'above'],
+          displacement: {
+            maxDistance: TITLE_OVERVIEW_MAX_DISPLACEMENT,
+            step: 12,
+            directions: ['up'],
+          },
+          allowOcclusion: false,
+        },
+        size: {
+          key: `${renderNode.node.name}\u0000${typeName}\u0000${renderNode.depth}/${deepest}`,
+          estimate: (zoom) => estimatedOverviewIdentitySize(
+            renderNode.node.name,
+            typeName,
+            renderNode.depth,
+            deepest,
+            zoom,
+          ),
+        },
+        render: ({ zoom }) => (
+          <MerinoOverviewIdentity
+            name={renderNode.node.name}
+            typeName={typeName}
+            typeColor={type ? tokenVar(type.color) : 'var(--border)'}
+            depth={renderNode.depth}
+            maxDepth={deepest}
+            zoom={zoom}
+          />
+        ),
+      };
+    });
+  });
 
   // Which Container Ports an Edge actually threads through — those draw at full
   // opacity, the rest sit faint until hovered. Mirrors the router's crossing
@@ -282,8 +404,23 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     if (!source || !edgeType || !canvasRef) return;
     const id = uniqueId(props.doc, 'n');
     const point = canvasRef.screenToCanvas(info.clientX, info.clientY);
+    // Release over a Container files the new Node into it (mirrors endDrag): a
+    // freeform Container takes the drop point in its child-area frame, a list
+    // Container appends. Released over the background, the Node stays top-level.
+    const target = findContainerAtPoint(renderNodes(), point.x, point.y);
+    const targetRn = target !== null ? renderNodes().find((n) => n.node.id === target) : undefined;
+    const base = { type: 'addNode' as const, id, tab: source.tab, nodeType: source.type, name: 'New node' };
+    let addNode: MerinoAction;
+    if (targetRn?.isList) {
+      addNode = { ...base, parent: target!, order: props.doc.nodes.filter((n) => n.parent === target).length };
+    } else if (targetRn) {
+      const origin = childAreaOrigin(targetRn.node);
+      addNode = { ...base, parent: target!, x: point.x - (targetRn.x + origin.x), y: point.y - (targetRn.y + origin.y) };
+    } else {
+      addNode = { ...base, x: point.x, y: point.y };
+    }
     dispatchAction([
-      { type: 'addNode', id, tab: source.tab, nodeType: source.type, name: 'New node', x: point.x, y: point.y },
+      addNode,
       { type: 'connect', id: uniqueId(props.doc, 'e'), edgeType, from: source.id, to: id },
     ]);
     touchType(source.type);
@@ -343,9 +480,20 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
       : undefined;
     let coords: { x: number; y: number } | undefined;
     let order: number | undefined;
-    if (parentLayout !== undefined) {
+    if (parentLayout === 'list') {
       coords = undefined;
-      if (parentLayout === 'list') order = props.doc.nodes.filter(n => n.parent === parent).length;
+      order = props.doc.nodes.filter(n => n.parent === parent).length;
+    } else if (parentLayout === 'container') {
+      // A freeform Container child placed from a canvas point (a right-click)
+      // lands at that point in the Container's child-area frame; without a point
+      // the projection stacks it.
+      const prn = position !== undefined ? renderNodes().find(n => n.node.id === parent) : undefined;
+      if (prn && position !== undefined) {
+        const origin = childAreaOrigin(prn.node);
+        coords = { x: position.x - (prn.x + origin.x), y: position.y - (prn.y + origin.y) };
+      } else {
+        coords = undefined;
+      }
     } else if (parent !== undefined) {
       const prn = renderNodes().find(n => n.node.id === parent);
       coords = prn ? { x: prn.x + 40, y: prn.y + NODE_HEIGHT + 48 } : { x: 40, y: 40 };
@@ -391,12 +539,16 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
       case 'selection.paste': pasteSelection(
         typeof p.x === 'number' && typeof p.y === 'number' ? { x: p.x, y: p.y } : undefined,
       ); break;
-      case 'node.add': addNodeAt(
-        undefined,
-        typeof p.nodeType === 'string' ? p.nodeType : undefined,
-        typeof p.x === 'number' && typeof p.y === 'number' ? { x: p.x, y: p.y } : undefined,
-      ); break;
+      case 'node.add': {
+        const position = typeof p.x === 'number' && typeof p.y === 'number' ? { x: p.x, y: p.y } : undefined;
+        // Adding from a Container's background files the new Node into it, like a
+        // drag-drop or the ctrl-drag gesture; from the empty canvas it stays top-level.
+        const parent = position ? (findContainerAtPoint(renderNodes(), position.x, position.y) ?? undefined) : undefined;
+        addNodeAt(parent, typeof p.nodeType === 'string' ? p.nodeType : undefined, position);
+        break;
+      }
       case 'node.addSubnode': addNodeAt(typeof p.parent === 'string' ? p.parent : undefined); break;
+      case 'node.viewDownstream': if (typeof p.targetId === 'string') centerNode(p.targetId); break;
       case 'node.setType': {
         if (typeof p.id !== 'string' || typeof p.typeId !== 'string') break;
         dispatchAction([{ type: 'setNode', id: p.id, nodeType: p.typeId }]);
@@ -426,12 +578,22 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     canvasRef.fitView(list.map(n => ({ x: n.x, y: n.y, width: n.w, height: n.h })), 64);
   }
 
+  function centerNode(id: string) {
+    const node = renderNodes().find((renderNode) => renderNode.node.id === id);
+    if (!node) return;
+    canvasRef?.centerView({ x: node.x, y: node.y, width: node.w, height: node.h });
+  }
+
   function tidyContainer(id: string) {
     dispatchAction(buildRemoveOverlapActions(props.doc, id));
   }
 
   function flowContainer(id: string) {
-    dispatchAction(buildFlowLayoutActions(props.doc, id));
+    dispatchAction(buildFlowLayoutActions(props.doc, id, 'vertical'));
+  }
+
+  function flowContainerHorizontal(id: string) {
+    dispatchAction(buildFlowLayoutActions(props.doc, id, 'horizontal'));
   }
 
   return (
@@ -460,6 +622,7 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
           ref={(r) => { canvasRef = r; }}
           viewportOptions={transientViewportOptions(`luminous:merino:viewport:${props.sourceId}`)}
           edges={edges()}
+          visualLod={visualLod()}
           edgeEmphasis={{ dimUnselected: false, selectedWidthMultiplier: 2 }}
           boxSelect={{
             trigger: 'drag',
@@ -489,6 +652,9 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
             onToggleExpand={(nodeId, expanded) => dispatchAction([{ type: 'setNode', id: nodeId, expanded }])}
             onTidy={tidyContainer}
             onFlow={flowContainer}
+            onFlowHorizontal={flowContainerHorizontal}
+            downstreamOf={(nodeId) => downstreamNodes(props.doc, nodeId)}
+            onViewDownstream={centerNode}
             onRename={(nodeId, name) => dispatchAction([{ type: 'setNode', id: nodeId, name }])}
             onSetText={(nodeId, text) => dispatchAction([{ type: 'setNode', id: nodeId, text }])}
             onResize={(nodeId, size) => dispatchAction([{ type: 'setNode', id: nodeId, ...size }])}
@@ -526,6 +692,9 @@ interface MerinoNodeLayerProps {
   onToggleExpand: (nodeId: string, expanded: boolean) => void;
   onTidy: (nodeId: string) => void;
   onFlow: (nodeId: string) => void;
+  onFlowHorizontal: (nodeId: string) => void;
+  downstreamOf: (nodeId: string) => ReadonlyArray<{ id: string; name: string }>;
+  onViewDownstream: (nodeId: string) => void;
   onRename: (nodeId: string, name: string) => void;
   onSetText: (nodeId: string, text: string) => void;
   onResize: (nodeId: string, size: { width: number; height: number }) => void;
@@ -734,6 +903,24 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
         const offsetY = () => delta().dy + listShift(rn);
         const color = () => props.typeColor(rn.node.type);
         const stopDrag = (e: PointerEvent) => e.stopPropagation();
+        const downstream = () => props.downstreamOf(id);
+        const downstreamAction = () => ({
+          id: 'node.viewDownstream',
+          label: '→',
+          payload: { targetId: downstream()[0]?.id },
+        });
+        const downstreamButtonStyle = {
+          'flex-shrink': '0',
+          width: '20px',
+          height: '20px',
+          display: 'flex',
+          'align-items': 'center',
+          'justify-content': 'center',
+          'border-radius': '4px',
+          color: 'var(--fg-muted)',
+          'font-size': '13px',
+          cursor: 'pointer',
+        } as const;
         // Boundary Ports — each Container's shared crossing point for every Edge
         // that leaves (`exit`) or enters (`entry`) its box, draggable around the border.
         const [hoveredPort, setHoveredPort] = createSignal<'entry' | 'exit' | null>(null);
@@ -781,12 +968,30 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                 }}
               >
                 <div style={{ display: 'flex', 'align-items': 'center', gap: '4px', height: `${NODE_HEADER_HEIGHT}px`, 'flex-shrink': '0', padding: '0 4px 0 10px' }}>
-                  <div style={{ display: 'flex', 'flex-direction': 'column', 'justify-content': 'center', gap: '2px', 'min-width': '0', flex: '1 1 auto' }}>
+                  <CounterScale
+                    maxScale={1.5}
+                    origin="left center"
+                    style={{
+                      display: 'flex',
+                      'flex-direction': 'column',
+                      'justify-content': 'center',
+                      gap: '2px',
+                      'min-width': '0',
+                      flex: '1 1 auto',
+                      opacity: ctx.transform().k < TITLE_OVERVIEW_START_ZOOM ? '0' : '1',
+                    }}
+                  >
                     <Show
                       when={editingName()}
                       fallback={
                         <span
-                          style={{ 'font-size': '12px', 'font-weight': '600', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}
+                          style={{
+                            'font-size': `${TITLE_SCREEN_FONT_SIZE}px`,
+                            'font-weight': '600',
+                            overflow: 'hidden',
+                            'text-overflow': 'ellipsis',
+                            'white-space': 'nowrap',
+                          }}
                           on:dblclick={(e) => { e.stopPropagation(); setEditingName(true); }}
                         >
                           {rn.node.name}
@@ -795,7 +1000,15 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                     >
                       <input
                         data-no-pan="true"
-                        style={{ 'font-size': '12px', 'font-weight': '600', width: '100%', border: 'none', outline: 'none', background: 'transparent', color: 'var(--fg)' }}
+                        style={{
+                          'font-size': `${TITLE_SCREEN_FONT_SIZE}px`,
+                          'font-weight': '600',
+                          width: '100%',
+                          border: 'none',
+                          outline: 'none',
+                          background: 'transparent',
+                          color: 'var(--fg)',
+                        }}
                         value={rn.node.name}
                         ref={(el) => queueMicrotask(() => { el.focus(); el.select(); })}
                         on:pointerdown={stopDrag}
@@ -822,7 +1035,7 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                     >
                       {props.typeName(rn.node.type)}
                     </span>
-                  </div>
+                  </CounterScale>
                   <button
                     data-no-pan="true"
                     title={rn.node.expanded ? 'Collapse detail' : 'Expand detail'}
@@ -843,6 +1056,32 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                   >
                     {rn.node.expanded ? '▾' : '▸'}
                   </button>
+                  <Show when={downstream().length === 1}>
+                    <button
+                      data-no-pan="true"
+                      title={`View downstream node: ${downstream()[0].name || downstream()[0].id}`}
+                      style={downstreamButtonStyle}
+                      on:pointerdown={stopDrag}
+                      onClick={(e) => { e.stopPropagation(); props.onViewDownstream(downstream()[0].id); }}
+                    >
+                      →
+                    </button>
+                  </Show>
+                  <Show when={downstream().length > 1}>
+                    <SplitMenuButton
+                      action={downstreamAction()}
+                      items={downstreamMenuItems(downstream())}
+                      title="View downstream node"
+                      class="flex flex-none"
+                      primaryClass="flex h-5 w-5 items-center justify-center rounded text-[13px] text-fg-muted"
+                      triggerClass="flex h-5 w-3 items-center justify-center rounded text-[13px] text-fg-muted"
+                      onAction={(actionId, payload) => {
+                        if (actionId !== 'node.viewDownstream') return;
+                        const targetId = (payload as { targetId?: unknown } | undefined)?.targetId;
+                        if (typeof targetId === 'string') props.onViewDownstream(targetId);
+                      }}
+                    />
+                  </Show>
                 </div>
                 <Show
                   when={rn.node.expanded}
@@ -889,7 +1128,7 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                       flex: '1 1 auto',
                       'min-height': '0',
                       margin: `${CONTAINER_PADDING}px`,
-                      background: 'var(--color-merino-container-fill)',
+                      background: `color-mix(in oklch, ${color()} 10%, var(--color-merino-container-fill))`,
                       'border-radius': '2px',
                     }}
                   >
@@ -936,12 +1175,21 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                               </button>
                               <button
                                 data-no-pan="true"
-                                title="Flow — stack children into rows so directed edges flow downward"
+                                title="Flow down — stack children into rows so directed edges flow downward"
                                 style={chipStyle}
                                 on:pointerdown={stopDrag}
                                 onClick={(e) => { e.stopPropagation(); props.onFlow(id); }}
                               >
                                 ↓ Flow
+                              </button>
+                              <button
+                                data-no-pan="true"
+                                title="Flow right — stack children into columns so directed edges flow rightward"
+                                style={chipStyle}
+                                on:pointerdown={stopDrag}
+                                onClick={(e) => { e.stopPropagation(); props.onFlowHorizontal(id); }}
+                              >
+                                → Flow
                               </button>
                             </>
                           );
@@ -1026,5 +1274,78 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
         );
       }}
     </For>
+  );
+}
+
+/**
+ * Merino's overview representation of a Node's identity. It reads the same
+ * domain data as the editable header, but is an independent representation
+ * rendered and coordinated by cactus's screen-space Visual LOD layer.
+ */
+function MerinoOverviewIdentity(props: {
+  name: string;
+  typeName: string;
+  typeColor: string;
+  depth: number;
+  maxDepth: number;
+  zoom: () => number;
+}): JSX.Element {
+  const titleSize = () => overviewTitleSize(props.depth, props.maxDepth, props.zoom());
+  const prominence = () => props.maxDepth === 0 ? 1 : 1 - props.depth / props.maxDepth;
+  const depthShade = () => props.maxDepth === 0 ? 0 : (props.depth / props.maxDepth) * 0.08;
+  const surfaceWeight = () => Math.round(74 + prominence() * 26);
+  const borderWeight = () => Math.round(52 + prominence() * 48);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        'flex-direction': 'column',
+        'align-items': 'flex-start',
+        'box-sizing': 'border-box',
+        gap: '3px',
+        'max-width': `${TITLE_OVERVIEW_MAX_WIDTH}px`,
+        'min-width': '0',
+        'white-space': 'nowrap',
+        padding: '5px 7px',
+        background: `linear-gradient(rgb(0 0 0 / ${depthShade()}), rgb(0 0 0 / ${depthShade()})), color-mix(in oklch, var(--surface) ${surfaceWeight()}%, var(--canvas))`,
+        border: `1px solid color-mix(in oklch, var(--border) ${borderWeight()}%, transparent)`,
+        'border-radius': '6px',
+        'box-shadow': `0 2px 5px rgb(0 0 0 / ${0.06 + prominence() * 0.1})`,
+      }}
+    >
+      <span
+        style={{
+          'font-size': `${titleSize()}px`,
+          'font-weight': '600',
+          'line-height': '1.15',
+          color: 'var(--fg)',
+          'max-width': '100%',
+          overflow: 'hidden',
+          'text-overflow': 'ellipsis',
+          'white-space': 'nowrap',
+        }}
+      >
+        {props.name}
+      </span>
+      <span
+        style={{
+          'font-size': '10px',
+          'font-weight': '600',
+          'line-height': '1',
+          color: 'var(--type-badge-fg)',
+          background: props.typeColor,
+          'box-sizing': 'border-box',
+          'max-width': '100%',
+          overflow: 'hidden',
+          padding: '2px 6px',
+          'border-radius': '9999px',
+          'text-overflow': 'ellipsis',
+          'white-space': 'nowrap',
+        }}
+      >
+        {props.typeName}
+      </span>
+    </div>
   );
 }

@@ -16,6 +16,8 @@ import { ChromeSlots } from './chrome/ChromeSlots.js';
 import { MenuRoot } from './chrome/ChromePrimitives.js';
 import { useHotkeys } from './chrome/useHotkeys.js';
 import { createLayoutOverrides } from './interactions/createLayoutOverrides.js';
+import { VisualLodLayer } from './VisualLodLayer.js';
+import type { VisualLodDeclaration } from './visualLod.js';
 
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
@@ -83,6 +85,9 @@ export interface CanvasProps {
   freezeEdgeRouting?: () => boolean;
   /** Clusters to draw as a tinted underlay behind their member nodes. */
   clusters?: ClusterDeclaration[];
+  /** Screen-space host components anchored to graph Nodes and coordinated by
+   * cactus for measurement, collision placement, stacking, and visibility. */
+  visualLod?: VisualLodDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
   class?: string;
   children: JSX.Element;
@@ -111,6 +116,8 @@ export interface CanvasProps {
 
 export interface CanvasRef {
   fitView: (rects: Array<{ x: number; y: number; width: number; height: number }>, padding?: number) => void;
+  /** Center a rect without changing the current zoom level. */
+  centerView: (rect: { x: number; y: number; width: number; height: number }) => void;
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
   getTransform: () => Transform;
   zoomIn: () => void;
@@ -336,7 +343,7 @@ export function Canvas(props: CanvasProps) {
   // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
   // parents are expected to remount Canvas if the configuration changes.
   /* eslint-disable solid/reactivity */
-  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(
+  const { transform, setContainerRef, containerEl, fitView, centerView, screenToCanvas, zoomIn, zoomOut } = useViewport(
     props.boxSelect?.trigger === 'drag'
       ? { ...props.viewportOptions, leftDragPan: false }
       : props.viewportOptions
@@ -529,6 +536,7 @@ export function Canvas(props: CanvasProps) {
 
   props.ref?.({
     fitView,
+    centerView,
     screenToCanvas,
     getTransform: () => transform(),
     zoomIn,
@@ -726,6 +734,14 @@ export function Canvas(props: CanvasProps) {
               <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
+        </Show>
+
+        <Show when={(props.visualLod?.length ?? 0) > 0}>
+          <VisualLodLayer
+            items={props.visualLod!}
+            getNodeRects={getNodeRects}
+            transform={transform}
+          />
         </Show>
 
         <Show when={connectionDragState() && props.renderConnectionPreview}>

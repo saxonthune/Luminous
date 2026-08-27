@@ -22,6 +22,33 @@ Cactus is "domain-agnostic" in a precise sense: it has no opinion about a "node 
 
 **Routes.** A Route is transient geometry for one Edge. A host may derive a Route from registered node rectangles and return ordered points with one visual band per segment. Cactus computes the geometry once for all visual layers, draws those segments, keeps their hit targets under the Edge's original id, places the arrowhead on the final segment, and places labels by the full Route length. A host assigns the meaning of a visual band; cactus only orders bands with Nodes that supply a matching `visualBand`. A host may temporarily freeze that shared geometry during an interaction and let it catch up afterward.
 
+**Visual LOD Items.** `visualLod?: VisualLodDeclaration[]` on `<Canvas>` lets a
+host supply screen-space Solid components anchored to registered Nodes. The
+host owns each item's content, zoom range, and semantic priority. Cactus
+measures the rendered unit, derives its screen anchor from the Node rectangle
+and camera, tries alternate positions to avoid other Items in its collision
+group, optionally searches within a host-declared screen-pixel displacement,
+and then either draws it behind higher-priority Items or hides it when too
+little remains visible. These Items are transient projections, never graph
+or document data. A host may group Items into ranked admission cohorts when
+deeper detail should appear only after every Item in the prior rank survives
+placement. A host may provide a screen-size estimator so camera motion
+uses an optimistic no-layout placement; cactus reconciles the actual rendered
+size after motion settles. Cactus treats camera motion as an interaction
+transaction: committed Items retain their candidate and displacement while the
+camera moves, their presentation zoom and dimensions remain frozen, hidden
+Items remain unmounted and do not enter temporary vacancies, and only severe
+collisions suppress another Item. Zoom gates have distinct entry and exit
+boundaries. Once input stops, cactus retains still-valid committed placements,
+then admits new Items and reconciles exact measurements in one settled layout.
+
+**Local counter-scaling.** `<CounterScale>` lets a host wrap a small subtree of
+ordinary Node content and resist camera shrinkage with a bounded inverse CSS
+transform. It reads the camera from Canvas context, so app components need no
+zoom prop chain. Counter-scaling remains inside the Node and does not alter
+layout or coordinate collisions; Visual LOD remains the mechanism for visuals
+that must escape the Node and compete for shared screen space.
+
 **Hit-testing and styling.** Cactus uses DOM data attributes (see [DOM Attribute Conventions](#dom-attribute-conventions)). Hosts and pack renderers may stamp additional attributes for CSS targeting; cactus only reads the ones it owns.
 
 If new code in cactus starts reading domain fields, interpreting schema names, or knowing what specific strings like `'component'` or `'renders'` mean, it belongs in the domain layer above cactus, not in cactus itself.
@@ -34,15 +61,19 @@ If new code in cactus starts reading domain fields, interpreting schema names, o
 
 **DOM-based hit-testing.** Rather than maintaining a spatial index, cactus uses `document.elementsFromPoint()` and data attributes for hit-testing. This is simpler, naturally respects CSS z-order, and means the DOM is the source of truth for what's clickable.
 
-**Render props for extensibility.** Edges, connection previews, and backgrounds are render props on `Canvas`. The engine renders the structural layers; the domain layer fills in the content.
+**Render props for extensibility.** Edges, Visual LOD Items, connection previews,
+and backgrounds accept host rendering. The engine renders and coordinates the
+structural layers; the domain layer fills in the content.
 
 ## Architecture Layers
 
-The canvas renders four DOM layers, stacked with absolute positioning:
+The canvas renders five conceptual DOM layers, stacked with absolute positioning:
 
 ```
 ┌─────────────────────────────────────────┐
-│  4. Overlays (box-select rect)          │  Screen coords
+│  5. Chrome                              │  Screen coords
+├─────────────────────────────────────────┤
+│  4. Visual LOD Items / box selection    │  Container-local screen px
 ├─────────────────────────────────────────┤
 │  3. Connection preview SVG              │  Container-local coords
 ├─────────────────────────────────────────┤
@@ -62,7 +93,7 @@ Three coordinate spaces are in play:
 |-------|--------|---------|------------|
 | **Canvas** | Top-left of infinite canvas | Node positions, edge endpoints, geometry utilities | Zoom-invariant |
 | **Screen** | Top-left of browser viewport | Pointer events, cursor tracking | `screenToCanvas(x, y)` |
-| **Container-local** | Top-left of Canvas container div | Connection preview, box-select overlay | `screen - containerRect` |
+| **Container-local** | Top-left of Canvas container div | Visual LOD Items, connection preview, box-select overlay | `screen - containerRect` |
 
 The `screenToCanvas` function (from `useViewport`, returns signal Accessors) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. It and the rendered layers read the same viewport transform; D3 is the input source, not a second coordinate source. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
 

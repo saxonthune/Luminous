@@ -21,6 +21,7 @@ beforeAll(() => {
 });
 import { ConnectionHandle } from '../src/ConnectionHandle';
 import { NodeContainer } from '../src/NodeContainer';
+import { counterScaleFactor } from '../src/CounterScale';
 import { CanvasContext } from '../src/CanvasContext';
 import type { CanvasContextValue } from '../src/CanvasContext';
 
@@ -158,6 +159,21 @@ function renderNodeContainer(ui: () => import('solid-js').JSX.Element) {
     </CanvasContext.Provider>
   ));
 }
+
+describe('counterScaleFactor', () => {
+  it('inverts camera zoom around the reference zoom', () => {
+    expect(counterScaleFactor(0.5)).toBe(2);
+  });
+
+  it('clamps the local scale to consumer bounds', () => {
+    expect(counterScaleFactor(0.25, 1, 1, 1.5)).toBe(1.5);
+    expect(counterScaleFactor(2, 1, 0.75, 1.5)).toBe(0.75);
+  });
+
+  it('normalizes reversed bounds', () => {
+    expect(counterScaleFactor(0.5, 1, 3, 1)).toBe(2);
+  });
+});
 
 describe('NodeContainer', () => {
   it('renders backing div with data-soft-container when softContainer returns true', () => {

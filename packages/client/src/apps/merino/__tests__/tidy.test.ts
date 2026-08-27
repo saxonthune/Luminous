@@ -163,3 +163,50 @@ describe('Merino tidy — flow layout', () => {
     expect(buildFlowLayoutActions(doc, 'box')).toEqual([]);
   });
 });
+
+describe('Merino tidy — horizontal flow layout', () => {
+  it('places a directed edge’s target in a column right of its source', () => {
+    const doc: MerinoDocument = {
+      v: 1, nodeTypes, edgeTypes: [flowEdgeType],
+      nodes: [
+        { id: 'box', tab: 'requirements', type: 'freeform', name: 'Box' },
+        { id: 'a', tab: 'requirements', type: 'leaf', name: 'A', parent: 'box', x: 500, y: 500 },
+        { id: 'b', tab: 'requirements', type: 'leaf', name: 'B', parent: 'box', x: 0, y: 0 },
+      ],
+      edges: [{ id: 'e', tab: 'requirements', type: 'flows', from: 'a', to: 'b' }],
+    };
+    const pos = posBy(doc, buildFlowLayoutActions(doc, 'box', 'horizontal') as SetNodeAction[]);
+    expect(pos.get('a')!.x).toBeLessThan(pos.get('b')!.x);
+  });
+
+  it('puts unconnected children in the same column, stacked vertically', () => {
+    const doc: MerinoDocument = {
+      v: 1, nodeTypes, edgeTypes: [flowEdgeType],
+      nodes: [
+        { id: 'box', tab: 'requirements', type: 'freeform', name: 'Box' },
+        { id: 'a', tab: 'requirements', type: 'leaf', name: 'A', parent: 'box', x: 200, y: 30 },
+        { id: 'b', tab: 'requirements', type: 'leaf', name: 'B', parent: 'box', x: 700, y: 90 },
+      ],
+      edges: [],
+    };
+    const pos = posBy(doc, buildFlowLayoutActions(doc, 'box', 'horizontal') as SetNodeAction[]);
+    expect(pos.get('a')!.x).toBe(pos.get('b')!.x);
+    expect(pos.get('a')!.y).not.toBe(pos.get('b')!.y);
+  });
+
+  it('writes only non-negative positions', () => {
+    const doc: MerinoDocument = {
+      v: 1, nodeTypes, edgeTypes: [flowEdgeType],
+      nodes: [
+        { id: 'box', tab: 'requirements', type: 'freeform', name: 'Box' },
+        { id: 'a', tab: 'requirements', type: 'leaf', name: 'A', parent: 'box', x: -300, y: -300 },
+        { id: 'b', tab: 'requirements', type: 'leaf', name: 'B', parent: 'box', x: 0, y: 0 },
+      ],
+      edges: [{ id: 'e', tab: 'requirements', type: 'flows', from: 'a', to: 'b' }],
+    };
+    for (const a of buildFlowLayoutActions(doc, 'box', 'horizontal') as SetNodeAction[]) {
+      expect(a.x).toBeGreaterThanOrEqual(0);
+      expect(a.y).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
