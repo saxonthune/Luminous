@@ -65,6 +65,7 @@ interface CanvasProps {
     dimUnselected?: boolean
     selectedWidthMultiplier?: number
   }
+  edgeLod?: EdgeLodPolicy
   freezeEdgeRouting?: () => boolean
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element
   renderBackground?: (transform: Transform, patternId?: string) => JSX.Element
@@ -81,7 +82,7 @@ interface CanvasProps {
 }
 ```
 
-`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). Box selection uses those same measured rectangles by default, so its hit-testing follows the rendered Nodes. A host may supply `boxSelect.getNodeRects` only when it needs a different selectable set or geometry. `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
+`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). Box selection uses those same measured rectangles by default, so its hit-testing follows the rendered Nodes. A host may supply `boxSelect.getNodeRects` only when it needs a different selectable set or geometry. `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `edgeLod` lets the host map an Edge plus the current zoom and emphasis state to visual opacity and label visibility. The host therefore retains semantic disclosure decisions while cactus applies them consistently to its Edge layers. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
 
 `onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
 
@@ -94,6 +95,9 @@ see [Visual LOD](#visual-lod).
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `fitView` | `(rects: NodeRect[], padding?: number) => void` | Smoothly zoom/pan to fit rectangles in view |
+| `centerView` | `(rect: NodeRect) => void` | Smoothly center a rectangle without changing zoom |
+| `focusView` | `(rect: NodeRect, zoom: number, animate?: boolean) => void` | Center a rectangle at a requested zoom |
+| `setView` | `(transform: Transform, animate?: boolean) => void` | Move to an exact camera transform, with scale clamped to the viewport extent |
 | `screenToCanvas` | `(screenX, screenY) => {x, y}` | Convert screen coordinates to canvas space |
 | `getTransform` | `() => Transform` | Current viewport transform |
 | `zoomIn` | `() => void` | Zoom in 1.15x with 300ms animation |
@@ -112,13 +116,19 @@ interface NodeContainerProps {
   w: () => number              // applied as min-width
   h: () => number              // applied as min-height
   visualBand?: () => number    // optional route-band ordering number
+  interactive?: () => boolean // false removes pointer hit-testing but preserves geometry
   onPointerDown?: (e: PointerEvent) => void
   onContextMenu?: (e: MouseEvent) => void
   children?: JSX.Element
 }
 ```
 
-Sizing model: `w` and `h` are **floors**, rendered as `min-width: ${w}px` and `min-height: ${h}px`. The node's div grows in both axes to fit content, so the border always encloses what is rendered inside. A `ResizeObserver` on the container updates the registered rect with the measured size after first layout, so edges and other consumers of `getNodeRects()` see the actual rendered dimensions rather than the layout hint. Layout algorithms should still pass measured leaf sizes via their `sizeOf` parameter so parent packing is accurate, but the visible border is no longer at risk of clipping content. `visualBand` lets a host place a Node between route bands; cactus assigns no domain meaning to the number.
+Sizing model: `w` and `h` define the Node's canvas-space dimensions. The Node
+registers that rectangle for Edges and other geometry consumers. `visualBand`
+lets a host place a Node between route bands; cactus assigns no domain meaning
+to the number. Setting `interactive` to false removes the Node from pointer
+hit-testing without unregistering its rectangle, allowing a host to cull a
+visual representation without destabilizing Edge geometry.
 
 ### NodeShell
 

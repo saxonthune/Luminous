@@ -62,6 +62,10 @@ export interface UseViewportResult {
   ) => void;
   /** Center one canvas-space rect while retaining the current zoom level. */
   centerView: (rect: { x: number; y: number; width: number; height: number }, animate?: boolean) => void;
+  /** Move the camera to an exact transform. Scale is clamped to the viewport extent. */
+  setView: (transform: Transform, animate?: boolean) => void;
+  /** Center one canvas-space rect at a requested zoom level. */
+  focusView: (rect: { x: number; y: number; width: number; height: number }, zoom: number, animate?: boolean) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
@@ -79,6 +83,19 @@ export function centerTransform(
     x: viewport.width / 2 - (rect.x + rect.width / 2) * current.k,
     y: viewport.height / 2 - (rect.y + rect.height / 2) * current.k,
     k: current.k,
+  };
+}
+
+/** The camera transform that places `rect` at the viewport center at `zoom`. */
+export function focusTransform(
+  viewport: { width: number; height: number },
+  rect: { x: number; y: number; width: number; height: number },
+  zoom: number,
+): Transform {
+  return {
+    x: viewport.width / 2 - (rect.x + rect.width / 2) * zoom,
+    y: viewport.height / 2 - (rect.y + rect.height / 2) * zoom,
+    k: zoom,
   };
 }
 
@@ -179,6 +196,25 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     else selection.call(zoomBehavior.transform, newTransform);
   };
 
+  const setView = (next: Transform, animate = true) => {
+    if (!container || !zoomBehavior) return;
+    const clamped = { ...next, k: Math.min(maxZoom, Math.max(minZoom, next.k)) };
+    const target = zoomIdentity.translate(clamped.x, clamped.y).scale(clamped.k);
+    const selection = select(container);
+    if (animate) selection.transition().duration(300).call(zoomBehavior.transform, target);
+    else selection.call(zoomBehavior.transform, target);
+  };
+
+  const focusView = (
+    rect: { x: number; y: number; width: number; height: number },
+    zoom: number,
+    animate = true,
+  ) => {
+    if (!container) return;
+    const clampedZoom = Math.min(maxZoom, Math.max(minZoom, zoom));
+    setView(focusTransform(container.getBoundingClientRect(), rect, clampedZoom), animate);
+  };
+
   const zoomBy = (factor: number) => {
     if (!container || !zoomBehavior) return;
     select(container).transition().duration(200).call(zoomBehavior.scaleBy, factor);
@@ -202,6 +238,8 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     containerEl: () => container,
     fitView,
     centerView,
+    setView,
+    focusView,
     zoomIn: () => zoomBy(1.15),
     zoomOut: () => zoomBy(1 / 1.15),
     screenToCanvas,

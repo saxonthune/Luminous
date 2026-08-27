@@ -5,6 +5,21 @@ import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
 
 export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
 
+export interface EdgeLodState {
+  zoom: number;
+  emphasis: EdgeEmphasis;
+}
+
+export interface EdgeLodStyle {
+  /** Multiplied with selection emphasis opacity. */
+  opacity?: number;
+  /** False withdraws the label while retaining the Edge line and hit target. */
+  labelVisible?: boolean;
+}
+
+/** Host-owned semantic policy; cactus owns applying its visual result. */
+export type EdgeLodPolicy = (edge: EdgeDeclaration, state: EdgeLodState) => EdgeLodStyle;
+
 export function edgeEmphasis(
   edge: { sourceId: string; targetId: string },
   selectedIds: ReadonlyArray<string>,
@@ -25,6 +40,7 @@ interface EdgeLayerProps {
     dimUnselected: boolean;
     selectedWidthMultiplier: number;
   };
+  lod?: EdgeLodPolicy;
   /** Required only by the label layer for label/node collision checks. */
   getNodeRects?: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
@@ -196,9 +212,16 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           });
 
           const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
-          const opacity = createMemo(() =>
-            props.emphasisStyle.dimUnselected && emphasis() === 'dimmed' ? DIMMED_OPACITY : 1,
-          );
+          const lodStyle = createMemo(() => props.lod?.(edge, {
+            zoom: props.zoom(),
+            emphasis: emphasis(),
+          }) ?? {});
+          const opacity = createMemo(() => {
+            const selectionOpacity = props.emphasisStyle.dimUnselected && emphasis() === 'dimmed'
+              ? DIMMED_OPACITY
+              : 1;
+            return selectionOpacity * Math.min(1, Math.max(0, lodStyle().opacity ?? 1));
+          });
 
           const dash = edge.styling?.dash;
           const strokeDasharray =
@@ -252,7 +275,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                       }}
                     </For>
                   </Show>
-                  <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
+                  <Show when={props.layer === 'labels' && lodStyle().labelVisible !== false && !!(edge.labelText || edge.label)}>
                     <Show when={labelBox()}>
                       {(box) => (
                         <rect

@@ -30,10 +30,11 @@ draws on them.
   background.
 - **C5.** The system shall allow the user to pan and zoom the canvas.
 - **C6.** The system shall allow the user to select one Node by clicking it and
-  a collection of Nodes by dragging a marquee across the canvas background. It
-  shall select Nodes where the marquee is drawn under the current camera, and
-  visibly distinguish selected Nodes and their incident Edges while leaving
-  other Edges fully visible.
+  a collection of Nodes by dragging a marquee across the canvas background or a
+  Container's empty interior — a drag begun over a Container's children area
+  marquees rather than moving the Container. It shall select Nodes where the
+  marquee is drawn under the current camera, and visibly distinguish selected
+  Nodes and their incident Edges while leaving other Edges fully visible.
 - **C7.** When the user drags a selected Node, the system shall move every
   selected Node by the same distance without moving a selected contained child
   a second time when its selected Container also moves.
@@ -149,6 +150,21 @@ Container accepts a child of any Type — it never restricts which Types it hold
   system shall keep each Node's title and Node Type badge readable as one bounded
   identity while the surrounding Node continues to scale geometrically. The
   ordinary identity shall hand off as a unit to the overview identity.
+- **N28.** At the structural viewing scale, the system shall preserve Node and
+  Container geometry while withdrawing secondary detail, editing and navigation
+  controls, Container layout controls, resize handles, and idle boundary Ports.
+  Hovering or selecting a Node shall restore that Node's secondary content in
+  place without changing the surrounding layout.
+- **N29.** At the structural and overview viewing scales, the system shall let
+  the user focus a Node at an editing scale by double-clicking its visible
+  identity or pressing Enter while it is selected. After such a focus, Escape
+  shall restore the camera position and scale from before the first focus.
+- **N30.** At the overview viewing scale, the system shall not leave an ordinary
+  Node card visible after withdrawing the card's identity. It shall preserve a
+  Container as a Type-tinted structural region, replace a sufficiently large
+  leaf Node with a Type-colored mark, and hide a leaf whose projected footprint
+  is too small to communicate useful structure. A Container's overview identity
+  shall report its number of directly contained Nodes.
 
 ## Edges
 
@@ -192,6 +208,14 @@ typed Edge.
   trunk, frayed into a spoke to each member Node, rather than drawing a separate
   parallel line per Edge. Consolidation is derived from the Nodes and Edges, not
   stored.
+- **E13.** When the user selects a Node, the system shall emphasize its incident
+  Edges and dim unrelated Edges so the selected Node's relationships can be
+  traced through the surrounding graph.
+- **E14.** At the structural viewing scale, the system shall retain Edges as
+  subdued relationship context and withdraw their labels. Selecting a Node
+  shall restore the prominence and labels of its incident Edges. At the
+  overview viewing scale, Edge lines shall become quieter and detailed Edge
+  labels shall remain withdrawn.
 
 ## Types
 
@@ -275,7 +299,10 @@ baseline navigation with no assigned requirement yet.
 | Node | left click + drag onto a list Container | File the Node into the list at the pointer's slot | N16 |
 | Node (child of a list Container) | left click + drag within its list | Reorder the Node in the list | N16 |
 | Node | left click + drag onto the canvas background | Detach the Node to the top level | N12 |
-| Node | double left click | Edit the Node's name and contents | N3 |
+| Node identity (editing scale) | double left click | Edit the Node's name and contents | N3 |
+| Node identity (structural or overview scale) | double left click | Focus the Node at editing scale | N29 |
+| Selected Node | Enter | Focus the Node at editing scale | N29 |
+| Canvas after Node focus | Escape | Restore the camera from before focus | N29 |
 | Node details editor | click outside, or Escape | Blur the details editor | N17 |
 | Container resize grip | left click + drag | Resize the Container without clipping its children | N18 |
 | Tidy control (freeform Container label) | left click | Push the Container's overlapping children apart | N21 |

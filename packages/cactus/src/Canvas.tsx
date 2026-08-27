@@ -7,7 +7,7 @@ import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
-import { EdgeLayer } from './EdgeLayer.js';
+import { EdgeLayer, type EdgeLodPolicy } from './EdgeLayer.js';
 import { routeEdges, type EdgeGeometry } from './edgeRouting.js';
 import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
 import { computeBounds } from './geometry/geometry.js';
@@ -76,6 +76,8 @@ export interface CanvasProps {
     dimUnselected?: boolean;
     selectedWidthMultiplier?: number;
   };
+  /** Host semantic policy for zoom-dependent Edge opacity and label disclosure. */
+  edgeLod?: EdgeLodPolicy;
   /** Maps the current selection to the node IDs whose incident Edges should be
    * emphasized. Hosts can project domain relationships such as containment;
    * by default only the literally selected node IDs are used. */
@@ -118,6 +120,10 @@ export interface CanvasRef {
   fitView: (rects: Array<{ x: number; y: number; width: number; height: number }>, padding?: number) => void;
   /** Center a rect without changing the current zoom level. */
   centerView: (rect: { x: number; y: number; width: number; height: number }) => void;
+  /** Move to an exact camera transform. */
+  setView: (transform: Transform, animate?: boolean) => void;
+  /** Center a rect at a requested zoom level. */
+  focusView: (rect: { x: number; y: number; width: number; height: number }, zoom: number, animate?: boolean) => void;
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
   getTransform: () => Transform;
   zoomIn: () => void;
@@ -343,7 +349,7 @@ export function Canvas(props: CanvasProps) {
   // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
   // parents are expected to remount Canvas if the configuration changes.
   /* eslint-disable solid/reactivity */
-  const { transform, setContainerRef, containerEl, fitView, centerView, screenToCanvas, zoomIn, zoomOut } = useViewport(
+  const { transform, setContainerRef, containerEl, fitView, centerView, setView, focusView, screenToCanvas, zoomIn, zoomOut } = useViewport(
     props.boxSelect?.trigger === 'drag'
       ? { ...props.viewportOptions, leftDragPan: false }
       : props.viewportOptions
@@ -537,6 +543,8 @@ export function Canvas(props: CanvasProps) {
   props.ref?.({
     fitView,
     centerView,
+    setView,
+    focusView,
     screenToCanvas,
     getTransform: () => transform(),
     zoomIn,
@@ -700,6 +708,7 @@ export function Canvas(props: CanvasProps) {
                       routes={routedEdges}
                       emphasisNodeIds={edgeEmphasisNodeIds}
                       emphasisStyle={edgeEmphasisStyle}
+                      lod={props.edgeLod}
                       layer="lines"
                       routeBand={band}
                       zoom={() => transform().k}
@@ -731,7 +740,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
+              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} lod={props.edgeLod} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>

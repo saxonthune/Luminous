@@ -1,5 +1,5 @@
 import './env.d.ts';
-export { useViewport } from './interactions/useViewport.js';
+export { useViewport, centerTransform, focusTransform } from './interactions/useViewport.js';
 export { SplitMenuButton } from './chrome/ChromePrimitives.js';
 export { useConnectionDrag } from './interactions/useConnectionDrag.js';
 export { useNodeDrag } from './interactions/useNodeDrag.js';
@@ -30,6 +30,7 @@ export type { ResizeHandleProps } from './ResizeHandle.js';
 export { DotGrid } from './DotGrid.js';
 export { CrossGrid, type CrossGridProps } from './CrossGrid.js';
 export { EdgeLabel } from './EdgeLabel.js';
+export type { EdgeEmphasis, EdgeLodPolicy, EdgeLodState, EdgeLodStyle } from './EdgeLayer.js';
 export { ConnectionPreview } from './ConnectionPreview.js';
 export { Canvas } from './Canvas.js';
 export { VisualLodLayer } from './VisualLodLayer.js';

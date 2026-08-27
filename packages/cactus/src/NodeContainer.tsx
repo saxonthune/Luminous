@@ -11,6 +11,9 @@ export interface NodeContainerProps {
   h: () => number;
   /** Generic scene ordering number. Hosts may interleave nodes with route bands. */
   visualBand?: () => number;
+  /** Keep the Node registered for geometry while removing it from pointer
+   * hit-testing, as when a host culls a too-small semantic representation. */
+  interactive?: () => boolean;
   softContainer?: () => boolean;
   /** Inset of the soft-container box from this Node's own edges (top/left/
    * right/bottom, in px) — when absent, the box fills the Node at `inset:0`
@@ -66,7 +69,7 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         height: `${props.h()}px`,
         overflow: 'hidden',
         'z-index': props.visualBand?.(),
-        'pointer-events': 'auto',
+        'pointer-events': props.interactive?.() === false ? 'none' : 'auto',
         // A node is its own stacking context: z-index inside it (bezel, soft
         // container, content) is private and never leaks to the shared layer,
         // so cross-node stacking is pure DOM order. Nodes are flat siblings
