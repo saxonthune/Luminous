@@ -41,10 +41,10 @@ export function emptyMerinoDocument(): MerinoDocument {
   };
 }
 
-const TOP_LEVEL_FIELDS = new Set(['v', 'nodeTypes', 'edgeTypes', 'nodes', 'edges']);
-const NODE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'layout']);
+const TOP_LEVEL_FIELDS = new Set(['v', 'nodeTypes', 'edgeTypes', 'nodes', 'edges', 'agentGuidance']);
+const NODE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'layout', 'agentGuidance']);
 const EDGE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'dash', 'arrowHead', 'directed']);
-const NODE_FIELDS = new Set(['id', 'tab', 'type', 'name', 'text', 'parent', 'expanded', 'order', 'ports', 'width', 'height', 'x', 'y']);
+const NODE_FIELDS = new Set(['id', 'tab', 'type', 'name', 'text', 'agentGuidance', 'parent', 'expanded', 'order', 'ports', 'width', 'height', 'x', 'y']);
 const PORTS_FIELDS = new Set(['entry', 'exit']);
 const PORT_FIELDS = new Set(['side', 'offset']);
 const EDGE_FIELDS = new Set(['id', 'tab', 'type', 'from', 'to']);
@@ -95,9 +95,11 @@ function parseNodeType(value: unknown, path: string, issues: string[]): MerinoNo
     issues.push(`${path}.layout: must be "container" or "list"`);
     ok = false;
   }
+  ok = optionalString(t, 'agentGuidance', path, issues) && ok;
   if (!ok) return undefined;
   const type: MerinoNodeType = { id: t['id'] as string, name: t['name'] as string, color: t['color'] as MerinoNodeType['color'] };
   if (isMerinoContainerLayout(t['layout'])) type.layout = t['layout'];
+  if (t['agentGuidance'] !== undefined) type.agentGuidance = t['agentGuidance'] as string;
   return type;
 }
 
@@ -166,6 +168,7 @@ function parseNode(value: unknown, path: string, issues: string[]): MerinoNode |
   ok = requireString(n, 'type', path, issues) && ok;
   ok = requireString(n, 'name', path, issues) && ok;
   ok = optionalString(n, 'text', path, issues) && ok;
+  ok = optionalString(n, 'agentGuidance', path, issues) && ok;
   ok = optionalString(n, 'parent', path, issues) && ok;
   if (n['expanded'] !== undefined && typeof n['expanded'] !== 'boolean') {
     issues.push(`${path}.expanded: must be a boolean`);
@@ -209,6 +212,7 @@ function parseNode(value: unknown, path: string, issues: string[]): MerinoNode |
     name: n['name'] as string,
   };
   if (n['text'] !== undefined) node.text = n['text'] as string;
+  if (n['agentGuidance'] !== undefined) node.agentGuidance = n['agentGuidance'] as string;
   if (n['parent'] !== undefined) node.parent = n['parent'] as string;
   if (n['expanded'] !== undefined) node.expanded = n['expanded'] as boolean;
   if (n['order'] !== undefined) node.order = n['order'] as number;
@@ -283,6 +287,7 @@ export function parseMerinoDocument(text: string): ParseMerinoDocumentResult {
 
   const obj = migrateMerinoDocument(parsed as Record<string, unknown>);
   const issues: string[] = unknownFieldIssues(obj, TOP_LEVEL_FIELDS, '');
+  optionalString(obj, 'agentGuidance', '', issues);
 
   if (typeof obj['v'] !== 'number') {
     issues.push('v: must be a number');
@@ -363,12 +368,15 @@ export function parseMerinoDocument(text: string): ParseMerinoDocumentResult {
   if (issues.length > 0) {
     return { ok: false, issues };
   }
-  return { ok: true, doc: { v: obj['v'] as number, nodeTypes, edgeTypes, nodes, edges } };
+  const doc: MerinoDocument = { v: obj['v'] as number, nodeTypes, edgeTypes, nodes, edges };
+  if (obj['agentGuidance'] !== undefined) doc.agentGuidance = obj['agentGuidance'] as string;
+  return { ok: true, doc };
 }
 
 function serializeNodeType(t: MerinoNodeType): Record<string, unknown> {
   const out: Record<string, unknown> = { id: t.id, name: t.name, color: t.color };
   if (t.layout !== undefined) out['layout'] = t.layout;
+  if (t.agentGuidance !== undefined) out['agentGuidance'] = t.agentGuidance;
   return out;
 }
 
@@ -386,6 +394,7 @@ function serializePorts(ports: MerinoPorts): Record<string, unknown> {
 function serializeNode(n: MerinoNode): Record<string, unknown> {
   const out: Record<string, unknown> = { id: n.id, tab: n.tab, type: n.type, name: n.name };
   if (n.text !== undefined) out['text'] = n.text;
+  if (n.agentGuidance !== undefined) out['agentGuidance'] = n.agentGuidance;
   if (n.parent !== undefined) out['parent'] = n.parent;
   if (n.expanded !== undefined) out['expanded'] = n.expanded;
   if (n.order !== undefined) out['order'] = n.order;
@@ -409,5 +418,6 @@ export function serializeMerinoDocument(doc: MerinoDocument): string {
     nodes: doc.nodes.map(serializeNode),
     edges: doc.edges.map(serializeEdge),
   };
+  if (doc.agentGuidance !== undefined) out.agentGuidance = doc.agentGuidance;
   return JSON.stringify(out, null, 2) + '\n';
 }

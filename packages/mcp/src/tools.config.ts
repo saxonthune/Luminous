@@ -1189,6 +1189,16 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           id: { type: 'described', innerType: 'string', description: "Id of the Node to fetch." },
         },
       },
+      'node/search': {
+        description: 'Find Nodes whose id, name, or text contains text (case-insensitive), without loading the complete Merino document.',
+        method: 'GET', path: '',
+        params: { path: pathParam, text: { type: 'described', innerType: 'string', description: 'Text to find in Node ids, names, or detail text.' } },
+      },
+      'node/children': {
+        description: 'Return a Node’s descendants through parent links up to depth (one level by default), without loading the complete Merino document.',
+        method: 'GET', path: '',
+        params: { path: pathParam, id: { type: 'described', innerType: 'string', description: 'Id of the parent Node.' }, 'depth?': { type: 'described', innerType: 'number', description: 'Non-negative descendant depth; defaults to 1.' } },
+      },
       'node/create': {
         description: "Add a Node with an explicit, author-chosen id on one Tab. `parent` makes it a child of another Node on the same Tab — a Subnode, or, when the parent Type is a Container, a contained child. Omit x/y to let the viewer place it; inside a `list` Container, set `order` (0-based) and leave x/y out. Fails if the id exists, the node type is unknown, or the parent is missing or on another Tab.",
         method: 'POST',
@@ -1200,7 +1210,9 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           nodeType: { type: 'described', innerType: 'string', description: "Id of a Node Type in the registry." },
           name: { type: 'described', innerType: 'string', description: "Display name for the Node." },
           'text?': { type: 'described', innerType: 'string', description: "Longer prose the Node carries — the detail a designer adds." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'Instructions or context for an agent editing this specific Node.' },
           'parent?': { type: 'described', innerType: 'string', description: "Id of the parent Node this is a child of. Must be on the same Tab." },
+          'placement?': { type: 'described', innerType: { type: 'enum', values: ['append'] }, description: 'Use append with a Container parent to let Merino place the child locally (and append it in a list), without fragile world coordinates.' },
           'order?': { type: 'described', innerType: 'number', description: "0-based position within a `list`-layout Container parent — children stack by ascending order. Ignored for other parents; leave x/y out when setting it." },
           'x?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
           'y?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
@@ -1215,8 +1227,10 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           id: { type: 'described', innerType: 'string', description: "Id of the Node to update." },
           'name?': { type: 'described', innerType: 'string', description: "New display name." },
           'text?': { type: 'described', innerType: 'string', description: "New prose text." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'New instructions or context for an agent editing this specific Node.' },
           'nodeType?': { type: 'described', innerType: 'string', description: "New Node Type id." },
           'parent?': { type: 'described', innerType: 'string', description: "New parent Node id (reparent). Must be on the same Tab and not a descendant." },
+          'placement?': { type: 'described', innerType: { type: 'enum', values: ['append'] }, description: 'With a new Container parent, clear world coordinates and append the Node in that Container; list parents receive the next order.' },
           'order?': { type: 'described', innerType: 'number', description: "New 0-based position within a `list`-layout Container parent. Ignored for other parents." },
           'x?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
           'y?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
@@ -1242,6 +1256,16 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           from: { type: 'described', innerType: 'string', description: "Id of the source Node." },
           to: { type: 'described', innerType: 'string', description: "Id of the target Node." },
         },
+      },
+      'edge/list': {
+        description: 'List Edges, optionally narrowed to a source and/or target Node, without loading the complete Merino document.',
+        method: 'GET', path: '',
+        params: { path: pathParam, 'from?': { type: 'described', innerType: 'string', description: 'Optional source Node id filter.' }, 'to?': { type: 'described', innerType: 'string', description: 'Optional target Node id filter.' } },
+      },
+      neighborhood: {
+        description: 'Return a Node, Nodes reachable through Edges within depth (one hop by default), and their connecting Edges.',
+        method: 'GET', path: '',
+        params: { path: pathParam, id: { type: 'described', innerType: 'string', description: 'Id of the center Node.' }, 'depth?': { type: 'described', innerType: 'number', description: 'Non-negative Edge-hop depth; defaults to 1.' } },
       },
       'edge/set': {
         description: "Change an existing Edge's Type.",
@@ -1272,6 +1296,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           name: { type: 'described', innerType: 'string', description: "Display name." },
           color: { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "Color token the Type is drawn in." },
           'layout?': { type: 'described', innerType: { type: 'enum', values: MERINO_CONTAINER_LAYOUTS }, description: "Makes a Node of this Type hold its children inside its box (a Container) instead of tethering them by a dotted Edge: 'container' places children freely, 'list' stacks them top-to-bottom by each child's `order`. Omit for a leaf Type. A Container accepts a child of any Type." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'Instructions that apply to every Node of this Type when an agent edits the document.' },
         },
       },
       'nodeType/set': {
@@ -1284,6 +1309,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
           'name?': { type: 'described', innerType: 'string', description: "New display name." },
           'color?': { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "New color token." },
           'layout?': { type: 'described', innerType: { type: 'enum', values: MERINO_CONTAINER_LAYOUTS }, description: "Set 'container' (freely placed children) or 'list' (a vertical ordered stack) to make this Type a Container. Clearing it back to a leaf is done from the Manage types panel, not this tool." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'Instructions that apply to every Node of this Type when an agent edits the document.' },
         },
       },
       'nodeType/remove': {
@@ -1333,7 +1359,7 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
         },
       },
       batch: {
-        description: "Apply a sequence of merino actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addNodeType' | 'setNodeType' | 'removeNodeType' | 'addEdgeType' | 'setEdgeType' | 'removeEdgeType' | 'addNode' | 'setNode' | 'removeNode' | 'connect' | 'setEdge' | 'disconnect') and that action's own fields.",
+        description: "Apply a sequence of merino actions atomically — either all apply and the document is written once, or none apply and nothing is written. Includes `setDocumentGuidance` with an `agentGuidance` string for workspace-wide instructions. Failure identifies its 1-based action index. An action with an id may add `ref`; later id fields may use `$ref:<ref>` to refer to that earlier action's id.",
         method: 'POST',
         path: '',
         params: {

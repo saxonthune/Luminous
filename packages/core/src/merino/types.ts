@@ -41,6 +41,8 @@ export interface MerinoNodeType {
    * for a vertical ordered stack. Membership is never type-restricted; either
    * flavor accepts a child of any Type. Omitted when the Type is a leaf. */
   layout?: MerinoContainerLayout;
+  /** Instructions for an agent editing any Node of this Type. */
+  agentGuidance?: string;
 }
 
 /** A user-managed Edge Type: a name plus the style every Edge of this Type is
@@ -89,6 +91,8 @@ export interface MerinoNode {
   name: string;
   /** Longer prose the Node carries — the detail a designer adds. */
   text?: string;
+  /** Instructions or context specific to this Node for an agent author. */
+  agentGuidance?: string;
   /** Set on a Subnode: the parent Node it hangs off. The dotted parent link is
    * drawn from this field, never stored as an Edge. A Subnode shares its
    * parent's Tab. */
@@ -126,6 +130,8 @@ export interface MerinoDocument {
   edgeTypes: MerinoEdgeType[];
   nodes: MerinoNode[];
   edges: MerinoEdge[];
+  /** Workspace-wide instructions for an agent author. */
+  agentGuidance?: string;
 }
 
 export interface AddNodeTypeAction {
@@ -134,6 +140,7 @@ export interface AddNodeTypeAction {
   name: string;
   color: MerinoColorToken;
   layout?: MerinoContainerLayout;
+  agentGuidance?: string;
 }
 
 export interface SetNodeTypeAction {
@@ -142,6 +149,7 @@ export interface SetNodeTypeAction {
   name?: string;
   color?: MerinoColorToken;
   layout?: MerinoContainerLayout;
+  agentGuidance?: string;
 }
 
 export interface RemoveNodeTypeAction {
@@ -181,7 +189,12 @@ export interface AddNodeAction {
   nodeType: string;
   name: string;
   text?: string;
+  agentGuidance?: string;
   parent?: string;
+  /** Semantic placement inside a Container. `append` deliberately omits stale
+   * world coordinates; freeform placement is derived by the projection and a
+   * list receives its next order. */
+  placement?: 'append';
   order?: number;
   x?: number;
   y?: number;
@@ -192,8 +205,10 @@ export interface SetNodeAction {
   id: string;
   name?: string;
   text?: string;
+  agentGuidance?: string;
   nodeType?: string;
   parent?: string | null;
+  placement?: 'append';
   expanded?: boolean;
   order?: number;
   /** Whole-record replacement of the Node's boundary Ports. Omission leaves
@@ -229,6 +244,11 @@ export interface DisconnectAction {
   id: string;
 }
 
+export interface SetDocumentGuidanceAction {
+  type: 'setDocumentGuidance';
+  agentGuidance?: string;
+}
+
 export type MerinoAction =
   | AddNodeTypeAction
   | SetNodeTypeAction
@@ -241,4 +261,10 @@ export type MerinoAction =
   | RemoveNodeAction
   | ConnectAction
   | SetEdgeAction
-  | DisconnectAction;
+  | DisconnectAction
+  | SetDocumentGuidanceAction;
+
+/** A batch action may name the id it creates.  Later actions may use
+ * `$ref:<name>` anywhere an id is accepted.  Merino ids are author-supplied,
+ * so a reference is an ordering aid, not an additional id generator. */
+export type MerinoBatchAction = MerinoAction & { ref?: string };

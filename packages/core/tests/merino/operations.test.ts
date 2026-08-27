@@ -131,6 +131,20 @@ describe('merino type registries', () => {
     expect(JSON.parse(serializeMerinoDocument(doc)).nodeTypes.find((t: { id: string }) => t.id === 'screen')).not.toHaveProperty('layout');
   });
 
+  it('round-trips agent guidance on the document, a type, and a node', () => {
+    let doc = seeded();
+    doc = { ...doc, agentGuidance: 'Keep requirement-chain rules on their Types.' };
+    doc = unwrap(addNodeType(doc, { id: 'guided', name: 'Guided', color: 'accent-1', agentGuidance: 'Use only for examples.' }));
+    doc = unwrap(addNode(doc, { id: 'instance', tab: 'requirements', nodeType: 'guided', name: 'Instance', agentGuidance: 'This one models the leaderboard.' }));
+    const parsed = parseMerinoDocument(serializeMerinoDocument(doc));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.doc.agentGuidance).toContain('requirement-chain');
+      expect(parsed.doc.nodeTypes.find(t => t.id === 'guided')?.agentGuidance).toContain('examples');
+      expect(parsed.doc.nodes[0]?.agentGuidance).toContain('leaderboard');
+    }
+  });
+
   it('stores and clears a list child order', () => {
     let doc = seeded();
     doc = unwrap(addNodeType(doc, { id: 'action', name: 'Action', color: 'accent-3', layout: 'list' }));
@@ -181,7 +195,7 @@ describe('merino type registries', () => {
     const parsed = parseMerinoDocument(v1);
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
-      expect(parsed.doc.v).toBe(2);
+      expect(parsed.doc.v).toBe(3);
       expect(parsed.doc.nodeTypes[0]?.layout).toBe('container');
       expect(parsed.doc.nodeTypes[0]).not.toHaveProperty('container');
     }
@@ -208,5 +222,20 @@ describe('merino check', () => {
       { type: 'addNode', id: 'a', tab: 'requirements', nodeType: 'event', name: 'dup' },
     ]);
     expect(r.ok).toBe(false);
+  });
+
+  it('names the failing batch action and resolves references to earlier ids', () => {
+    const doc = seeded();
+    const success = applyMerinoBatch(doc, [
+      { type: 'addNode', id: 'parent', ref: 'breakout', tab: 'requirements', nodeType: 'event', name: 'Breakout' },
+      { type: 'addNode', id: 'child', tab: 'requirements', nodeType: 'requirement', name: 'Child', parent: '$ref:breakout' },
+    ]);
+    expect(success.ok).toBe(true);
+    if (success.ok) expect(success.doc.nodes.find(n => n.id === 'child')?.parent).toBe('parent');
+
+    const failure = applyMerinoBatch(doc, [
+      { type: 'addNode', id: 'child', tab: 'requirements', nodeType: 'requirement', name: 'Child', parent: '$ref:later' },
+    ]);
+    expect(failure).toEqual({ ok: false, error: 'batch action 1 (addNode): unknown batch reference "$ref:later"' });
   });
 });

@@ -11,6 +11,7 @@ export type {
   MerinoPortPosition,
   MerinoPorts,
   MerinoAction,
+  MerinoBatchAction,
   AddNodeTypeAction,
   SetNodeTypeAction,
   RemoveNodeTypeAction,
@@ -23,6 +24,7 @@ export type {
   ConnectAction,
   SetEdgeAction,
   DisconnectAction,
+  SetDocumentGuidanceAction,
 } from './types.ts';
 export { MERINO_TABS, MERINO_DASHES, MERINO_CONTAINER_LAYOUTS, MERINO_PORT_SIDES, isMerinoTab, isMerinoDash, isMerinoContainerLayout, isMerinoPortSide } from './types.ts';
 export { MERINO_COLOR_TOKENS, isMerinoColorToken } from './colors.ts';

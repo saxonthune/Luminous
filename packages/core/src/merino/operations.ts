@@ -1,5 +1,6 @@
 import type {
   MerinoAction,
+  MerinoBatchAction,
   MerinoContainerLayout,
   MerinoDash,
   MerinoDocument,
@@ -45,26 +46,28 @@ export function descendantIds(doc: MerinoDocument, id: string): string[] {
 
 export function addNodeType(
   doc: MerinoDocument,
-  fields: { id: string; name: string; color: MerinoNodeType['color']; layout?: MerinoContainerLayout },
+  fields: { id: string; name: string; color: MerinoNodeType['color']; layout?: MerinoContainerLayout; agentGuidance?: string },
 ): MerinoResult {
   if (doc.nodeTypes.some(t => t.id === fields.id)) {
     return { ok: false, error: `node type "${fields.id}" already exists` };
   }
   const type: MerinoNodeType = { id: fields.id, name: fields.name, color: fields.color };
   if (fields.layout !== undefined) type.layout = fields.layout;
+  if (fields.agentGuidance !== undefined) type.agentGuidance = fields.agentGuidance;
   return { ok: true, doc: { ...doc, nodeTypes: [...doc.nodeTypes, type] } };
 }
 
 export function setNodeType(
   doc: MerinoDocument,
   id: string,
-  patch: { name?: string; color?: MerinoNodeType['color']; layout?: MerinoContainerLayout | null },
+  patch: { name?: string; color?: MerinoNodeType['color']; layout?: MerinoContainerLayout | null; agentGuidance?: string },
 ): MerinoResult {
   const index = doc.nodeTypes.findIndex(t => t.id === id);
   if (index === -1) return { ok: false, error: `node type "${id}" does not exist` };
   const next = { ...doc.nodeTypes[index] };
   if (patch.name !== undefined) next.name = patch.name;
   if (patch.color !== undefined) next.color = patch.color;
+  if ('agentGuidance' in patch) { if (patch.agentGuidance === undefined) delete next.agentGuidance; else next.agentGuidance = patch.agentGuidance; }
   if ('layout' in patch) {
     if (patch.layout === null || patch.layout === undefined) delete next.layout;
     else next.layout = patch.layout;
@@ -136,7 +139,7 @@ export function removeEdgeType(doc: MerinoDocument, id: string): MerinoResult {
 
 export function addNode(
   doc: MerinoDocument,
-  fields: { id: string; tab: MerinoTab; nodeType: string; name: string; text?: string; parent?: string; order?: number; x?: number; y?: number },
+  fields: { id: string; tab: MerinoTab; nodeType: string; name: string; text?: string; agentGuidance?: string; parent?: string; placement?: 'append'; order?: number; x?: number; y?: number },
 ): MerinoResult {
   if (anyIdTaken(doc, fields.id)) {
     return { ok: false, error: `id "${fields.id}" already exists` };
@@ -156,19 +159,25 @@ export function addNode(
       return { ok: false, error: `a Subnode shares its parent's Tab ("${parent.tab}")` };
     }
   }
+  if (fields.placement !== undefined && fields.placement !== 'append') return { ok: false, error: 'placement must be "append"' };
+  if (fields.placement === 'append' && fields.parent === undefined) return { ok: false, error: 'append placement requires a parent' };
   const node: MerinoNode = { id: fields.id, tab: fields.tab, type: fields.nodeType, name: fields.name };
   if (fields.text !== undefined) node.text = fields.text;
+  if (fields.agentGuidance !== undefined) node.agentGuidance = fields.agentGuidance;
   if (fields.parent !== undefined) node.parent = fields.parent;
-  if (fields.order !== undefined) node.order = fields.order;
-  if (fields.x !== undefined) node.x = fields.x;
-  if (fields.y !== undefined) node.y = fields.y;
+  const parentId = fields.parent;
+  const parentType = parentId === undefined ? undefined : doc.nodeTypes.find(t => t.id === nodeById(doc, parentId)?.type);
+  if (fields.placement === 'append' && parentType?.layout === 'list') node.order = doc.nodes.filter(n => n.parent === parentId).length;
+  else if (fields.order !== undefined) node.order = fields.order;
+  if (fields.placement !== 'append' && fields.x !== undefined) node.x = fields.x;
+  if (fields.placement !== 'append' && fields.y !== undefined) node.y = fields.y;
   return { ok: true, doc: { ...doc, nodes: [...doc.nodes, node] } };
 }
 
 export function setNode(
   doc: MerinoDocument,
   id: string,
-  patch: { name?: string; text?: string; nodeType?: string; parent?: string | null; expanded?: boolean; order?: number; ports?: MerinoPorts; width?: number; height?: number; x?: number; y?: number },
+  patch: { name?: string; text?: string; agentGuidance?: string; nodeType?: string; parent?: string | null; placement?: 'append'; expanded?: boolean; order?: number; ports?: MerinoPorts; width?: number; height?: number; x?: number; y?: number },
 ): MerinoResult {
   const index = doc.nodes.findIndex(n => n.id === id);
   if (index === -1) return { ok: false, error: `node "${id}" does not exist` };
@@ -197,6 +206,7 @@ export function setNode(
     if (patch.text === undefined) delete node.text;
     else node.text = patch.text;
   }
+  if ('agentGuidance' in patch) { if (patch.agentGuidance === undefined) delete node.agentGuidance; else node.agentGuidance = patch.agentGuidance; }
   if (patch.nodeType !== undefined) {
     if (!doc.nodeTypes.some(t => t.id === patch.nodeType)) {
       return { ok: false, error: `node type "${patch.nodeType}" does not exist` };
@@ -216,6 +226,15 @@ export function setNode(
       }
       node.parent = patch.parent;
     }
+  }
+  if (patch.placement !== undefined && patch.placement !== 'append') return { ok: false, error: 'placement must be "append"' };
+  if (patch.placement === 'append') {
+    if (node.parent === undefined) return { ok: false, error: 'append placement requires a parent' };
+    const parentId = node.parent;
+    const parentType = doc.nodeTypes.find(t => t.id === nodeById(doc, parentId)?.type);
+    delete node.x; delete node.y;
+    if (parentType?.layout === 'list') node.order = doc.nodes.filter(n => n.parent === parentId && n.id !== id).length;
+    else delete node.order;
   }
   if (('x' in patch) !== ('y' in patch)) {
     return { ok: false, error: '"x" and "y" must appear together' };
@@ -295,19 +314,44 @@ export function disconnect(doc: MerinoDocument, id: string): MerinoResult {
 
 // ── Batch ─────────────────────────────────────────────────────────────────
 
-export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoAction[]): MerinoResult {
+function resolveBatchReferences(action: MerinoBatchAction, refs: ReadonlyMap<string, string>): { action: MerinoAction } | { error: string } {
+  const resolve = (value: unknown): unknown => {
+    if (typeof value !== 'string' || !value.startsWith('$ref:')) return value;
+    const name = value.slice('$ref:'.length);
+    const id = refs.get(name);
+    return id === undefined ? undefined : id;
+  };
+  const resolved = Object.fromEntries(
+    Object.entries(action)
+      .filter(([key]) => key !== 'ref')
+      .map(([key, value]) => [key, resolve(value)]),
+  ) as unknown as MerinoAction;
+  for (const [key, value] of Object.entries(action)) {
+    if (typeof value === 'string' && value.startsWith('$ref:') && (resolved as unknown as Record<string, unknown>)[key] === undefined) {
+      return { error: `unknown batch reference "${value}"` };
+    }
+  }
+  return { action: resolved };
+}
+
+export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoBatchAction[]): MerinoResult {
   let current = doc;
-  for (const action of actions) {
-    let result: MerinoResult;
+  const refs = new Map<string, string>();
+  for (const [index, rawAction] of actions.entries()) {
+    const resolved = resolveBatchReferences(rawAction, refs);
+    if ('error' in resolved) return { ok: false, error: `batch action ${index + 1} (${rawAction.type}): ${resolved.error}` };
+    const action = resolved.action;
+    let result: MerinoResult = { ok: false, error: 'unsupported action' };
     switch (action.type) {
       case 'addNodeType':
-        result = addNodeType(current, { id: action.id, name: action.name, color: action.color, layout: action.layout });
+        result = addNodeType(current, { id: action.id, name: action.name, color: action.color, layout: action.layout, agentGuidance: action.agentGuidance });
         break;
       case 'setNodeType': {
-        const patch: { name?: string; color?: MerinoNodeType['color']; layout?: MerinoContainerLayout | null } = {};
+        const patch: { name?: string; color?: MerinoNodeType['color']; layout?: MerinoContainerLayout | null; agentGuidance?: string } = {};
         if ('name' in action) patch.name = action.name;
         if ('color' in action) patch.color = action.color;
         if ('layout' in action) patch.layout = action.layout ?? null;
+        if ('agentGuidance' in action) patch.agentGuidance = action.agentGuidance;
         result = setNodeType(current, action.id, patch);
         break;
       }
@@ -332,15 +376,17 @@ export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoAction[]): 
       case 'addNode':
         result = addNode(current, {
           id: action.id, tab: action.tab, nodeType: action.nodeType, name: action.name,
-          text: action.text, parent: action.parent, order: action.order, x: action.x, y: action.y,
+          text: action.text, agentGuidance: action.agentGuidance, parent: action.parent, placement: action.placement, order: action.order, x: action.x, y: action.y,
         });
         break;
       case 'setNode': {
-        const patch: { name?: string; text?: string; nodeType?: string; parent?: string | null; expanded?: boolean; order?: number; ports?: MerinoPorts; width?: number; height?: number; x?: number; y?: number } = {};
+        const patch: { name?: string; text?: string; agentGuidance?: string; nodeType?: string; parent?: string | null; placement?: 'append'; expanded?: boolean; order?: number; ports?: MerinoPorts; width?: number; height?: number; x?: number; y?: number } = {};
         if ('name' in action) patch.name = action.name;
         if ('text' in action) patch.text = action.text;
+        if ('agentGuidance' in action) patch.agentGuidance = action.agentGuidance;
         if ('nodeType' in action) patch.nodeType = action.nodeType;
         if ('parent' in action) patch.parent = action.parent;
+        if ('placement' in action) patch.placement = action.placement;
         if ('expanded' in action) patch.expanded = action.expanded;
         if ('order' in action) patch.order = action.order;
         if ('ports' in action) patch.ports = action.ports;
@@ -363,9 +409,16 @@ export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoAction[]): 
       case 'disconnect':
         result = disconnect(current, action.id);
         break;
+      case 'setDocumentGuidance':
+        result = { ok: true, doc: { ...current, ...(action.agentGuidance === undefined ? {} : { agentGuidance: action.agentGuidance }) } };
+        break;
     }
-    if (!result.ok) return { ok: false, error: result.error };
+    if (!result.ok) return { ok: false, error: `batch action ${index + 1} (${action.type}): ${result.error}` };
     current = result.doc;
+    if (rawAction.ref !== undefined) {
+      if (!('id' in action)) return { ok: false, error: `batch action ${index + 1} (${action.type}): this action cannot declare a ref` };
+      refs.set(rawAction.ref, action.id);
+    }
   }
   return { ok: true, doc: current };
 }

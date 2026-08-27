@@ -1,5 +1,5 @@
 {
-  "v": 2,
+  "v": 3,
   "nodeTypes": [
     {
       "id": "event",
@@ -8,9 +8,8 @@
     },
     {
       "id": "requirement",
-      "name": "Requirement",
-      "color": "accent-2",
-      "layout": "container"
+      "name": "Subrequirement",
+      "color": "accent-2"
     },
     {
       "id": "resource",
@@ -47,7 +46,7 @@
     },
     {
       "id": "event-subrequirement",
-      "name": "Event Subrequirement",
+      "name": "Event Requirement",
       "color": "accent-2",
       "layout": "container"
     },
@@ -61,6 +60,12 @@
       "id": "resources",
       "name": "Resources",
       "color": "accent-6",
+      "layout": "container"
+    },
+    {
+      "id": "requirement-container",
+      "name": "Requirement",
+      "color": "accent-2",
       "layout": "container"
     }
   ],
@@ -85,6 +90,14 @@
       "id": "navigates",
       "name": "navigates to",
       "color": "accent-8",
+      "dash": "solid",
+      "arrowHead": true,
+      "directed": true
+    },
+    {
+      "id": "satisfies",
+      "name": "satisfies",
+      "color": "accent-2",
       "dash": "solid",
       "arrowHead": true,
       "directed": true
@@ -117,8 +130,8 @@
       "parent": "ui-transition-graph",
       "width": 963.7459830656389,
       "height": 1045.5485073069,
-      "x": 2389,
-      "y": 106
+      "x": 1613.0864214216926,
+      "y": 70.73119782862733
     },
     {
       "id": "n-6",
@@ -472,14 +485,6 @@
       "order": 0
     },
     {
-      "id": "n-9",
-      "tab": "requirements",
-      "type": "event",
-      "name": "Test",
-      "parent": "act-start",
-      "order": 1
-    },
-    {
       "id": "load-landing",
       "tab": "requirements",
       "type": "on-load",
@@ -546,38 +551,36 @@
       "tab": "requirements",
       "type": "event-subrequirement",
       "name": "See Leaderboard",
-      "parent": "resources-area",
+      "parent": "requirements-area",
       "width": 472,
-      "height": 318,
-      "x": 24,
-      "y": 24
+      "height": 616,
+      "x": 1140.635737008923,
+      "y": 41.39590861546185
     },
     {
       "id": "bracket-submission-list",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Bracket Submission List",
       "parent": "subrequirement-breakout",
-      "x": 24,
-      "y": 24
+      "x": 40.30713658452959,
+      "y": 36.528429019594114
     },
     {
       "id": "tournament-status",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "TournamentStatus",
       "parent": "track-tournament-breakout",
-      "x": 24,
-      "y": 24
+      "x": 26.150884970964142,
+      "y": 60.56591097290584
     },
     {
       "id": "fifa-match-data",
       "tab": "requirements",
       "type": "resource",
       "name": "FIFA Match Data",
-      "parent": "resources-area",
-      "x": 420,
-      "y": 150
+      "parent": "resources-section"
     },
     {
       "id": "ui-transition-graph",
@@ -585,101 +588,89 @@
       "type": "ui-transition-graph",
       "name": "UI Transition Graph",
       "x": -2600,
-      "y": -300
+      "y": -296.7488052064123
     },
     {
       "id": "resources-area",
       "tab": "requirements",
       "type": "resources",
-      "name": "Resources",
-      "x": -834.4230367271857,
-      "y": 2802.121604924977
+      "name": "Requirements-Resources",
+      "width": 2063.4114549298656,
+      "height": 2993.613902248487,
+      "x": -868.8254227412442,
+      "y": 2824.381893877936
     },
     {
       "id": "bracket-submissions-data",
       "tab": "requirements",
       "type": "resource",
       "name": "Bracket Submissions Data",
-      "parent": "resources-area",
-      "x": 420,
-      "y": 24
+      "parent": "resources-section"
     },
     {
       "id": "tournament-structure",
       "tab": "requirements",
       "type": "resource",
       "name": "TournamentStructure",
-      "parent": "resources-area",
-      "x": 420,
-      "y": 276
+      "parent": "resources-section"
     },
     {
       "id": "current-standings",
       "tab": "requirements",
       "type": "resource",
       "name": "CurrentStandings",
-      "parent": "resources-area",
-      "x": 650,
-      "y": 276
+      "parent": "resources-section"
     },
     {
       "id": "team-registry",
       "tab": "requirements",
       "type": "resource",
       "name": "TeamRegistry",
-      "parent": "resources-area",
-      "x": 880,
-      "y": 276
+      "parent": "resources-section"
     },
     {
       "id": "user-bracket",
       "tab": "requirements",
       "type": "resource",
       "name": "UserBracket",
-      "parent": "resources-area",
-      "x": 420,
-      "y": 402
+      "parent": "resources-section"
     },
     {
       "id": "share-code",
       "tab": "requirements",
       "type": "resource",
       "name": "Share Code",
-      "parent": "resources-area",
-      "x": 650,
-      "y": 402
+      "parent": "resources-section"
     },
     {
       "id": "pinned-brackets-data",
       "tab": "requirements",
       "type": "resource",
       "name": "Pinned Brackets Data",
-      "parent": "resources-area",
-      "x": 880,
-      "y": 402
+      "parent": "resources-section"
     },
     {
       "id": "render-tournament-status",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Render Tournament Status",
       "parent": "track-tournament-breakout",
-      "x": 24,
-      "y": 360
+      "x": 30.452812452258925,
+      "y": 285.79265679902255
     },
     {
       "id": "grade-bracket",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Grade Bracket",
       "parent": "subrequirement-breakout",
-      "x": 24,
-      "y": 360
+      "x": 29.377369966776882,
+      "y": 230.94371156998022
     },
     {
       "id": "decode-share-code",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Decode Share Code",
       "parent": "view-bracket-breakout",
       "x": 24,
@@ -730,176 +721,180 @@
       "tab": "requirements",
       "type": "event-subrequirement",
       "name": "View Landing Page",
-      "parent": "resources-area",
-      "x": 950,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 96,
+      "y": 117
     },
     {
       "id": "build-bracket-breakout",
       "tab": "requirements",
       "type": "event-subrequirement",
       "name": "Build Bracket",
-      "parent": "resources-area",
-      "x": 196.19025942809708,
-      "y": 1243.2187197660214
+      "parent": "requirements-area",
+      "width": 216,
+      "height": 280,
+      "x": 362,
+      "y": 0
     },
     {
       "id": "track-tournament-breakout",
       "tab": "requirements",
       "type": "event-subrequirement",
       "name": "Track Tournament",
-      "parent": "resources-area",
-      "x": 950,
-      "y": 1000
+      "parent": "requirements-area",
+      "width": 254.71687471355355,
+      "height": 616,
+      "x": 762.6151990479838,
+      "y": 403.9505485655973
     },
     {
       "id": "view-bracket-breakout",
       "tab": "requirements",
       "type": "event-subrequirement",
       "name": "View Bracket",
-      "parent": "resources-area",
-      "x": 129.4666068104492,
-      "y": 1642.7052156278196
+      "parent": "requirements-area",
+      "x": 0,
+      "y": 409
     },
     {
       "id": "view-rendered-bracket-breakout",
       "tab": "requirements",
       "type": "event-subrequirement",
       "name": "View Rendered Bracket",
-      "parent": "resources-area",
-      "x": 950,
-      "y": 2000
+      "parent": "requirements-area",
+      "width": 297.7247191007836,
+      "height": 380.08975952875994,
+      "x": 221,
+      "y": 491
     },
     {
       "id": "create-bracket",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Create Bracket",
       "parent": "build-bracket-breakout",
-      "x": 24,
-      "y": 24
+      "x": 14.320781321611634,
+      "y": 19.698072518704976
     },
     {
       "id": "resolve-bracket-entries",
       "tab": "requirements",
       "type": "requirement",
       "name": "Resolve Bracket Entries",
-      "parent": "create-bracket",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 282
     },
     {
       "id": "record-bracket-picks",
       "tab": "requirements",
       "type": "requirement",
       "name": "Record Bracket Picks",
-      "parent": "create-bracket",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 349
     },
     {
       "id": "load-submitted-brackets",
       "tab": "requirements",
       "type": "requirement",
       "name": "Load Submitted Brackets",
-      "parent": "bracket-submission-list",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 415
     },
     {
       "id": "decode-submitted-brackets",
       "tab": "requirements",
       "type": "requirement",
       "name": "Decode Submitted Brackets",
-      "parent": "bracket-submission-list",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 865.3571060810453,
+      "y": 1124.6596856380984
     },
     {
       "id": "score-bracket-picks",
       "tab": "requirements",
       "type": "requirement",
       "name": "Score Bracket Picks",
-      "parent": "grade-bracket",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 631.9802577748751,
+      "y": 1157.3201415064805
     },
     {
       "id": "calculate-host-bonus",
       "tab": "requirements",
       "type": "requirement",
       "name": "Calculate Host Bonus",
-      "parent": "grade-bracket",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 858.9041360894199,
+      "y": 1450.2440198210252
     },
     {
       "id": "load-match-results",
       "tab": "requirements",
       "type": "requirement",
       "name": "Load Match Results",
-      "parent": "tournament-status",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 344.76032634392243,
+      "y": 1016.9024988179563
     },
     {
       "id": "compose-live-status",
       "tab": "requirements",
       "type": "requirement",
       "name": "Compose Live Status",
-      "parent": "tournament-status",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 337.59129373446956,
+      "y": 1114.7984286272454
     },
     {
       "id": "resolve-tournament-entries",
       "tab": "requirements",
       "type": "requirement",
       "name": "Resolve Tournament Entries",
-      "parent": "render-tournament-status",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 352.28333952784084,
+      "y": 1194.4087735204807
     },
     {
       "id": "render-tournament-matches",
       "tab": "requirements",
       "type": "requirement",
       "name": "Render Tournament Matches",
-      "parent": "render-tournament-status",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1264
     },
     {
       "id": "parse-share-code",
       "tab": "requirements",
       "type": "requirement",
       "name": "Parse Share Code",
-      "parent": "decode-share-code",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1329
     },
     {
       "id": "validate-bracket-payload",
       "tab": "requirements",
       "type": "requirement",
       "name": "Validate Bracket Payload",
-      "parent": "decode-share-code",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1394
     },
     {
       "id": "client-route-map",
       "tab": "requirements",
       "type": "resource",
       "name": "Client Route Map",
-      "parent": "resources-area",
-      "x": 880,
-      "y": 528
+      "parent": "resources-section"
     },
     {
       "id": "navigate-from-landing",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Navigate from Landing Page",
       "parent": "landing-breakout",
       "x": 24,
@@ -910,25 +905,27 @@
       "tab": "requirements",
       "type": "requirement",
       "name": "Open Bracket Builder",
-      "parent": "navigate-from-landing",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1460
     },
     {
       "id": "open-tournament-tracker",
       "tab": "requirements",
       "type": "requirement",
       "name": "Open Tournament Tracker",
-      "parent": "navigate-from-landing",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1527
     },
     {
       "id": "render-submitted-bracket",
       "tab": "requirements",
-      "type": "requirement",
+      "type": "requirement-container",
       "name": "Render Submitted Bracket",
       "parent": "view-rendered-bracket-breakout",
+      "width": 220.34035849423742,
+      "height": 155.6729946346051,
       "x": 24,
       "y": 24
     },
@@ -937,18 +934,38 @@
       "tab": "requirements",
       "type": "requirement",
       "name": "Load Submitted Bracket",
-      "parent": "render-submitted-bracket",
-      "x": 24,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1593
     },
     {
       "id": "display-submitted-bracket",
       "tab": "requirements",
       "type": "requirement",
       "name": "Display Submitted Bracket",
-      "parent": "render-submitted-bracket",
-      "x": 270,
-      "y": 24
+      "parent": "requirements-area",
+      "x": 333,
+      "y": 1661
+    },
+    {
+      "id": "requirements-area",
+      "tab": "requirements",
+      "type": "resources",
+      "name": "Requirements",
+      "parent": "resources-area",
+      "width": 1698.2126214200352,
+      "height": 1890.9607635205687,
+      "x": 249.73301653727458,
+      "y": 26.554612937386537
+    },
+    {
+      "id": "resources-section",
+      "tab": "requirements",
+      "type": "resources",
+      "name": "Resources",
+      "parent": "resources-area",
+      "x": 194.2711815032086,
+      "y": 1939.78911049212
     }
   ],
   "edges": [
@@ -1287,6 +1304,118 @@
       "type": "needs",
       "from": "display-submitted-bracket",
       "to": "team-registry"
+    },
+    {
+      "id": "resolve-bracket-entries-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "resolve-bracket-entries",
+      "to": "create-bracket"
+    },
+    {
+      "id": "record-bracket-picks-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "record-bracket-picks",
+      "to": "create-bracket"
+    },
+    {
+      "id": "load-submitted-brackets-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "load-submitted-brackets",
+      "to": "bracket-submission-list"
+    },
+    {
+      "id": "decode-submitted-brackets-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "decode-submitted-brackets",
+      "to": "bracket-submission-list"
+    },
+    {
+      "id": "score-bracket-picks-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "score-bracket-picks",
+      "to": "grade-bracket"
+    },
+    {
+      "id": "calculate-host-bonus-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "calculate-host-bonus",
+      "to": "grade-bracket"
+    },
+    {
+      "id": "load-match-results-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "load-match-results",
+      "to": "tournament-status"
+    },
+    {
+      "id": "compose-live-status-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "compose-live-status",
+      "to": "tournament-status"
+    },
+    {
+      "id": "resolve-tournament-entries-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "resolve-tournament-entries",
+      "to": "render-tournament-status"
+    },
+    {
+      "id": "render-tournament-matches-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "render-tournament-matches",
+      "to": "render-tournament-status"
+    },
+    {
+      "id": "parse-share-code-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "parse-share-code",
+      "to": "decode-share-code"
+    },
+    {
+      "id": "validate-bracket-payload-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "validate-bracket-payload",
+      "to": "decode-share-code"
+    },
+    {
+      "id": "open-bracket-builder-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "open-bracket-builder",
+      "to": "navigate-from-landing"
+    },
+    {
+      "id": "open-tournament-tracker-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "open-tournament-tracker",
+      "to": "navigate-from-landing"
+    },
+    {
+      "id": "load-submitted-bracket-view-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "load-submitted-bracket-view",
+      "to": "render-submitted-bracket"
+    },
+    {
+      "id": "display-submitted-bracket-satisfies",
+      "tab": "requirements",
+      "type": "satisfies",
+      "from": "display-submitted-bracket",
+      "to": "render-submitted-bracket"
     }
   ]
 }

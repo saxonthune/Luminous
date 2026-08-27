@@ -62,6 +62,10 @@ import {
   createMerino,
   readMerino,
   getMerinoNode,
+  searchMerinoNodes,
+  listMerinoChildren,
+  listMerinoEdges,
+  merinoNeighborhood,
   merinoNodeCreate,
   merinoNodeSet,
   merinoNodeDelete,
@@ -77,7 +81,7 @@ import {
   merinoBatch,
   merinoCheck,
 } from './merino-tools.js'
-import type { MerinoAction, MerinoColorToken, MerinoContainerLayout, MerinoDash, MerinoTab } from '@luminous/core/merino'
+import type { MerinoBatchAction, MerinoColorToken, MerinoContainerLayout, MerinoDash, MerinoTab } from '@luminous/core/merino'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -192,7 +196,9 @@ async function httpRequest(
   }
 }
 
-// Health check — must succeed before we register tools
+// The storage service is a runtime dependency, not an MCP registration
+// dependency.  Starting successfully keeps the tool list inspectable and lets
+// a client surface a useful failure at the call which needs the service.
 let serverCommit = 'unknown'
 try {
   const res = await fetch(`${serverUrl}/api/health`)
@@ -203,9 +209,8 @@ try {
   serverCommit = health.commit ?? 'unknown'
 } catch {
   process.stderr.write(
-    `Error: Cannot reach Luminous server at ${serverUrl}. Start it with: just dev\n`
+    `Warning: Luminous server at ${serverUrl} is not ready. MCP will remain available; start it with: just dev\n`
   )
-  process.exit(1)
 }
 
 const instructions = `\
@@ -410,6 +415,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       id?: string
       name?: string
       parent?: string
+      placement?: 'append'
       x?: number
       y?: number
       content?: AtlasContent
@@ -421,6 +427,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       legend?: AtlasLegend
       actions?: AtlasAction[]
       text?: string
+      agentGuidance?: string
       depth?: number
       direction?: AtlasNeighborhoodDirection
     }
@@ -636,7 +643,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       edgeType?: string
       name?: string
       text?: string
+      agentGuidance?: string
       parent?: string
+      placement?: 'append'
       color?: MerinoColorToken
       layout?: MerinoContainerLayout
       dash?: MerinoDash
@@ -647,7 +656,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       order?: number
       x?: number
       y?: number
-      actions?: MerinoAction[]
+      depth?: number
+      actions?: MerinoBatchAction[]
     }
     try {
       let result: unknown
@@ -663,6 +673,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!a.path) throw new Error("'path' is required for merino/node/get")
         if (!a.id) throw new Error("'id' is required for merino/node/get")
         result = await getMerinoNode(serverUrl, a.path, a.id)
+      } else if (a.action === 'node/search') {
+        if (!a.path) throw new Error("'path' is required for merino/node/search")
+        if (!a.text) throw new Error("'text' is required for merino/node/search")
+        result = await searchMerinoNodes(serverUrl, a.path, a.text)
+      } else if (a.action === 'node/children') {
+        if (!a.path || !a.id) throw new Error("'path' and 'id' are required for merino/node/children")
+        result = await listMerinoChildren(serverUrl, a.path, a.id, a.depth)
+      } else if (a.action === 'edge/list') {
+        if (!a.path) throw new Error("'path' is required for merino/edge/list")
+        result = await listMerinoEdges(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'neighborhood') {
+        if (!a.path || !a.id) throw new Error("'path' and 'id' are required for merino/neighborhood")
+        result = await merinoNeighborhood(serverUrl, a.path, a.id, a.depth)
       } else if (a.action === 'node/create') {
         if (!a.path) throw new Error("'path' is required for merino/node/create")
         if (!a.id) throw new Error("'id' is required for merino/node/create")
@@ -671,13 +694,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!a.name) throw new Error("'name' is required for merino/node/create")
         result = await merinoNodeCreate(serverUrl, a.path, {
           id: a.id, tab: a.tab, nodeType: a.nodeType, name: a.name,
-          text: a.text, parent: a.parent, order: a.order, x: a.x, y: a.y,
+          text: a.text, agentGuidance: a.agentGuidance, parent: a.parent, placement: a.placement, order: a.order, x: a.x, y: a.y,
         })
       } else if (a.action === 'node/set') {
         if (!a.path) throw new Error("'path' is required for merino/node/set")
         if (!a.id) throw new Error("'id' is required for merino/node/set")
         result = await merinoNodeSet(serverUrl, a.path, a.id, {
-          name: a.name, text: a.text, nodeType: a.nodeType, parent: a.parent, order: a.order, x: a.x, y: a.y,
+          name: a.name, text: a.text, agentGuidance: a.agentGuidance, nodeType: a.nodeType, parent: a.parent, placement: a.placement, order: a.order, x: a.x, y: a.y,
         })
       } else if (a.action === 'node/delete') {
         if (!a.path) throw new Error("'path' is required for merino/node/delete")
@@ -703,11 +726,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!a.id) throw new Error("'id' is required for merino/nodeType/add")
         if (!a.name) throw new Error("'name' is required for merino/nodeType/add")
         if (!a.color) throw new Error("'color' is required for merino/nodeType/add")
-        result = await merinoNodeTypeAdd(serverUrl, a.path, { id: a.id, name: a.name, color: a.color, layout: a.layout })
+        result = await merinoNodeTypeAdd(serverUrl, a.path, { id: a.id, name: a.name, color: a.color, layout: a.layout, agentGuidance: a.agentGuidance })
       } else if (a.action === 'nodeType/set') {
         if (!a.path) throw new Error("'path' is required for merino/nodeType/set")
         if (!a.id) throw new Error("'id' is required for merino/nodeType/set")
-        result = await merinoNodeTypeSet(serverUrl, a.path, a.id, { name: a.name, color: a.color, layout: a.layout })
+        result = await merinoNodeTypeSet(serverUrl, a.path, a.id, { name: a.name, color: a.color, layout: a.layout, agentGuidance: a.agentGuidance })
       } else if (a.action === 'nodeType/remove') {
         if (!a.path) throw new Error("'path' is required for merino/nodeType/remove")
         if (!a.id) throw new Error("'id' is required for merino/nodeType/remove")

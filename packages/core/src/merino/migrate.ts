@@ -1,4 +1,4 @@
-export const MERINO_CURRENT_VERSION = 2;
+export const MERINO_CURRENT_VERSION = 3;
 
 type RawDocument = Record<string, unknown>;
 
@@ -20,6 +20,7 @@ function migrateV1toV2(raw: RawDocument): RawDocument {
  * v:n+1. */
 const MIGRATIONS: Record<number, (raw: RawDocument) => RawDocument> = {
   1: migrateV1toV2,
+  2: (raw) => ({ ...raw, v: 3 }),
 };
 
 export function migrateMerinoDocument(raw: RawDocument): RawDocument {

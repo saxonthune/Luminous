@@ -189,6 +189,18 @@ section states what an agent can do through it, not the individual verbs.
 - **M7.** The system shall route every agent mutation through the same write path
   the browser uses, so an agent's edits and the user's edits reach the Document
   the same way.
+- **M8.** The system shall let an agent search Nodes and inspect a Node's
+  descendants, incident Edges, or bounded Edge neighborhood without loading the
+  complete Document.
+- **M9.** When an agent batch fails, the system shall report the failing action's
+  position and reason. A batch shall let a later action refer to an earlier
+  action's explicit id by a local reference name.
+- **M10.** The system shall store optional agent guidance on the Document, a
+  Node Type, and an individual Node, and shall return it to an agent reading or
+  editing the Document.
+- **M11.** The system shall let an agent append a Node to a Container by intent,
+  without supplying canvas coordinates; a list Container shall assign its next
+  order and a freeform Container shall derive a local child position.
 
 ## Input-command bindings
 
