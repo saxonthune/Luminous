@@ -9,6 +9,8 @@
     "./graph": "./src/graph.ts",
     "./dataflow": "./src/dataflow/index.ts",
     "./atlas": "./src/atlas/index.ts",
+    "./linen": "./src/linen/index.ts",
+    "./merino": "./src/merino/index.ts",
     "./view": "./src/view.ts",
     "./query": "./src/query.ts",
     "./primitive-descriptors": "./src/render/primitive-descriptors.ts"

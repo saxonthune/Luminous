@@ -13,6 +13,8 @@ export interface Action {
 
 export type MenuItem =
   | { type: 'action'; action: Action }
+  /** A split row: its main action is clickable and its chevron opens `items`. */
+  | { type: 'action-submenu'; action: Action; items: MenuItem[] }
   | { type: 'submenu'; label: string; items: MenuItem[] }
   | { type: 'custom'; id: string; render: () => JSX.Element }
   | { type: 'divider' };

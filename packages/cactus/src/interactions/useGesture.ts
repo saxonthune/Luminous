@@ -37,9 +37,9 @@ export interface ConnectionPayload {
 export const DRAG_THRESHOLD = 3;
 
 export interface GestureCallbacks {
-  onDragStart?: (nodeId: string) => void;
-  onDrag?: (nodeId: string, dx: number, dy: number) => void;
-  onDragEnd?: (nodeId: string, dx: number, dy: number) => void;
+  onDragStart?: (nodeId: string, nodeIds: ReadonlyArray<string>) => void;
+  onDrag?: (nodeId: string, dx: number, dy: number, nodeIds: ReadonlyArray<string>) => void;
+  onDragEnd?: (nodeId: string, dx: number, dy: number, nodeIds: ReadonlyArray<string>) => void;
   onResizeStart?: (nodeId: string, direction: ResizeDirection) => void;
   onResize?: (nodeId: string, deltaWidth: number, deltaHeight: number, direction: ResizeDirection) => void;
   onResizeEnd?: (nodeId: string) => void;
@@ -49,6 +49,9 @@ export interface UseGestureOptions {
   /** Current zoom scale — accessor for reactive updates */
   zoomScale: () => number;
   callbacks: GestureCallbacks;
+  /** Resolves the Nodes that share a drag with the pressed Node. The gesture
+   * remains domain-agnostic; hosts choose selection or containment semantics. */
+  dragGroup?: (nodeId: string) => ReadonlyArray<string>;
   /** When provided, wires the marquee (box-select) lifecycle: a plain-left or
       shift-left press on the pan surface starts a `marquee` gesture. */
   boxSelect?: {
@@ -56,6 +59,9 @@ export interface UseGestureOptions {
     transform: () => Transform;
     /** Container element accessor — the marquee listener binds here */
     containerEl: () => HTMLElement | undefined;
+    /** Converts viewport-relative pointer coordinates through the active
+        camera so marquee hit-testing shares the Canvas coordinate path. */
+    screenToCanvas?: (screenX: number, screenY: number) => { x: number; y: number };
     /** Returns current node rects in canvas coordinates for hit-testing */
     getNodeRects: () => NodeRect[];
     /** 'shift-drag' (default) needs Shift held; 'drag' marquees on plain
@@ -93,6 +99,9 @@ export interface UseGestureResult {
   isDraggingNode: (nodeId: string) => boolean;
   /** The active drag delta, canvas-space, `{0,0}` when idle */
   dragDelta: () => { dx: number; dy: number };
+  /** Node ids moving in the active drag; contains only the pressed Node when
+   * no `dragGroup` resolver was provided. */
+  draggedNodeIds: () => ReadonlyArray<string>;
   /** Start a connection drag from a source handle */
   beginConnect: (sourceNodeId: string, sourceHandle: string | null, clientX: number, clientY: number) => void;
   /** Start a resize drag on a node from a resize handle */
@@ -103,6 +112,12 @@ const IDLE: Gesture = { kind: 'idle' };
 
 export function useGesture(options: UseGestureOptions): UseGestureResult {
   const [gesture, setGesture] = createSignal<Gesture>(IDLE);
+  const [draggedNodeIds, setDraggedNodeIds] = createSignal<ReadonlyArray<string>>([]);
+  // Temporary coordinate probe. Enable with `?cactusDebug=1` in a Vite dev
+  // session; it reports the pointer, containing block, expected and measured
+  // marquee box, camera, and canvas-space selection rect.
+  const debugMarquee = import.meta.env.DEV
+    && new URLSearchParams(window.location.search).has('cactusDebug');
 
   const draggingId = () => {
     const g = gesture();
@@ -135,25 +150,28 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
 
       if (g.kind === 'pressing') {
         if (Math.hypot(rawDx, rawDy) < DRAG_THRESHOLD) return;
+        const group = options.dragGroup?.(nodeId) ?? [nodeId];
+        setDraggedNodeIds(group.length > 0 ? [...group] : [nodeId]);
         setGesture({ kind: 'draggingNode', nodeId, startX, startY, dx: rawDx / k, dy: rawDy / k });
         target?.setPointerCapture?.(event.pointerId);
         captured = true;
-        options.callbacks.onDragStart?.(nodeId);
+        options.callbacks.onDragStart?.(nodeId, draggedNodeIds());
         return;
       }
 
       const dx = rawDx / k;
       const dy = rawDy / k;
       setGesture({ kind: 'draggingNode', nodeId, startX, startY, dx, dy });
-      options.callbacks.onDrag?.(nodeId, dx, dy);
+      options.callbacks.onDrag?.(nodeId, dx, dy, draggedNodeIds());
     };
 
     const handlePointerUp = () => {
       const g = gesture();
       if (g.kind === 'draggingNode') {
-        options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy);
+        options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy, draggedNodeIds());
       }
       setGesture(IDLE);
+      setDraggedNodeIds([]);
       if (captured) target?.releasePointerCapture?.(event.pointerId);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
@@ -392,12 +410,19 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
           };
           setGesture({ kind: 'marquee', startX, startY, rect });
 
+          const screenToCanvas = boxSelect.screenToCanvas;
           const t = boxSelect.transform();
+          const canvasStart = screenToCanvas
+            ? screenToCanvas(startX, startY)
+            : { x: (startX - containerRect.left - t.x) / t.k, y: (startY - containerRect.top - t.y) / t.k };
+          const canvasEnd = screenToCanvas
+            ? screenToCanvas(currentX, currentY)
+            : { x: (currentX - containerRect.left - t.x) / t.k, y: (currentY - containerRect.top - t.y) / t.k };
           const canvasRect = {
-            x: (rect.x - t.x) / t.k,
-            y: (rect.y - t.y) / t.k,
-            width: rect.width / t.k,
-            height: rect.height / t.k,
+            x: Math.min(canvasStart.x, canvasEnd.x),
+            y: Math.min(canvasStart.y, canvasEnd.y),
+            width: Math.abs(canvasEnd.x - canvasStart.x),
+            height: Math.abs(canvasEnd.y - canvasStart.y),
           };
 
           // A node whose box contains the whole marquee is not a hit — a
@@ -408,6 +433,55 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
             .filter((nr) => rectsIntersect(canvasRect, nr) && !rectContainsRect(nr, canvasRect))
             .map((nr) => nr.id);
           boxSelect.onBoxSelectHits?.(hits);
+
+          if (debugMarquee) {
+            requestAnimationFrame(() => {
+              const overlay = container.querySelector<HTMLElement>('[data-cactus-marquee]');
+              const actual = overlay?.getBoundingClientRect();
+              const describeElement = (el: HTMLElement | null) => {
+                if (!el) return null;
+                const bounds = el.getBoundingClientRect();
+                const style = getComputedStyle(el);
+                return {
+                  tag: el.tagName.toLowerCase(),
+                  class: el.className || undefined,
+                  bounds: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height },
+                  position: style.position,
+                  transform: style.transform,
+                  overflow: style.overflow,
+                  scrollLeft: el.scrollLeft,
+                  scrollTop: el.scrollTop,
+                };
+              };
+              console.debug('[cactus marquee]', {
+                pointer: { x: currentX, y: currentY },
+                canvasBounds: {
+                  left: containerRect.left,
+                  top: containerRect.top,
+                  width: containerRect.width,
+                  height: containerRect.height,
+                },
+                marqueeLocal: rect,
+                expectedOverlay: {
+                  left: containerRect.left + rect.x,
+                  top: containerRect.top + rect.y,
+                  width: rect.width,
+                  height: rect.height,
+                },
+                actualOverlay: actual && {
+                  left: actual.left,
+                  top: actual.top,
+                  width: actual.width,
+                  height: actual.height,
+                },
+                overlayParent: describeElement(overlay?.parentElement ?? null),
+                overlayOffsetParent: describeElement(overlay?.offsetParent as HTMLElement | null),
+                transform: t,
+                canvasRect,
+                hitIds: hits,
+              });
+            });
+          }
         };
 
         const handlePointerUp = () => {
@@ -429,5 +503,5 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
     });
   }
 
-  return { gesture, beginPress, isDraggingNode, dragDelta, beginConnect, beginResize };
+  return { gesture, beginPress, isDraggingNode, dragDelta, draggedNodeIds, beginConnect, beginResize };
 }

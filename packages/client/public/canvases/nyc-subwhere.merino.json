@@ -1,0 +1,249 @@
+{
+  "v": 1,
+  "nodeTypes": [
+    {
+      "id": "event",
+      "name": "Event",
+      "color": "accent-4"
+    },
+    {
+      "id": "requirement",
+      "name": "Requirement",
+      "color": "accent-2"
+    },
+    {
+      "id": "resource",
+      "name": "Resource",
+      "color": "accent-6"
+    },
+    {
+      "id": "deployment",
+      "name": "Deployment",
+      "color": "accent-1"
+    }
+  ],
+  "edgeTypes": [
+    {
+      "id": "triggers",
+      "name": "triggers",
+      "color": "accent-4",
+      "dash": "solid",
+      "arrowHead": true,
+      "directed": true
+    },
+    {
+      "id": "needs",
+      "name": "needs",
+      "color": "accent-6",
+      "dash": "solid",
+      "arrowHead": true,
+      "directed": true
+    }
+  ],
+  "nodes": [
+    {
+      "id": "on-load",
+      "tab": "requirements",
+      "type": "event",
+      "name": "On load",
+      "x": -90.53527447301806,
+      "y": 19.917650081074143
+    },
+    {
+      "id": "on-bike-toggle",
+      "tab": "requirements",
+      "type": "event",
+      "name": "On bike-toggle",
+      "x": -92.49993896484375,
+      "y": 305
+    },
+    {
+      "id": "req-map",
+      "tab": "requirements",
+      "type": "requirement",
+      "name": "Map loads",
+      "x": 300,
+      "y": 20
+    },
+    {
+      "id": "req-train-station",
+      "tab": "requirements",
+      "type": "requirement",
+      "name": "Train & station data load",
+      "x": 300,
+      "y": 120
+    },
+    {
+      "id": "req-ui",
+      "tab": "requirements",
+      "type": "requirement",
+      "name": "UI loads",
+      "x": 300,
+      "y": 216.66665649414062
+    },
+    {
+      "id": "req-bike",
+      "tab": "requirements",
+      "type": "requirement",
+      "name": "Bike data loads",
+      "text": "The quick brown fox jumps over the lazy dog\n",
+      "expanded": true,
+      "x": 300,
+      "y": 360
+    },
+    {
+      "id": "res-camera",
+      "tab": "requirements",
+      "type": "resource",
+      "name": "Map camera geometry",
+      "x": 613.3333740234375,
+      "y": 8.333343505859375
+    },
+    {
+      "id": "res-train-trips",
+      "tab": "requirements",
+      "type": "resource",
+      "name": "Train trips",
+      "x": 603.333251953125,
+      "y": 119.16665649414062
+    },
+    {
+      "id": "res-station-records",
+      "tab": "requirements",
+      "type": "resource",
+      "name": "Station records",
+      "x": 620,
+      "y": 200
+    },
+    {
+      "id": "res-menu",
+      "tab": "requirements",
+      "type": "resource",
+      "name": "Menu (bike toggle, load indicator)",
+      "expanded": true,
+      "x": 781.6666870117188,
+      "y": 376.66668701171875
+    },
+    {
+      "id": "res-station-format",
+      "tab": "requirements",
+      "type": "resource",
+      "name": "format: line; id, position",
+      "text": "The shape a station record takes, detailed enough for an agent to write the parser.",
+      "parent": "res-station-records",
+      "x": 900,
+      "y": 200
+    },
+    {
+      "id": "dep-web",
+      "tab": "deployments",
+      "type": "deployment",
+      "name": "Web page",
+      "x": -45.00006103515625,
+      "y": 238.33331298828125
+    },
+    {
+      "id": "dep-api",
+      "tab": "deployments",
+      "type": "deployment",
+      "name": "REST API",
+      "x": 320,
+      "y": 40
+    },
+    {
+      "id": "dep-kv",
+      "tab": "deployments",
+      "type": "deployment",
+      "name": "Key-value store",
+      "x": 679.1666259765625,
+      "y": 147.5
+    },
+    {
+      "id": "dep-job",
+      "tab": "deployments",
+      "type": "deployment",
+      "name": "Scheduled job (MTA feeds)",
+      "x": 350.83331298828125,
+      "y": 356.66668701171875
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "on-load",
+      "to": "req-map"
+    },
+    {
+      "id": "e2",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "on-load",
+      "to": "req-train-station"
+    },
+    {
+      "id": "e3",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "on-load",
+      "to": "req-ui"
+    },
+    {
+      "id": "e4",
+      "tab": "requirements",
+      "type": "triggers",
+      "from": "on-bike-toggle",
+      "to": "req-bike"
+    },
+    {
+      "id": "e5",
+      "tab": "requirements",
+      "type": "needs",
+      "from": "req-map",
+      "to": "res-camera"
+    },
+    {
+      "id": "e6",
+      "tab": "requirements",
+      "type": "needs",
+      "from": "req-train-station",
+      "to": "res-train-trips"
+    },
+    {
+      "id": "e7",
+      "tab": "requirements",
+      "type": "needs",
+      "from": "req-train-station",
+      "to": "res-station-records"
+    },
+    {
+      "id": "e8",
+      "tab": "requirements",
+      "type": "needs",
+      "from": "req-ui",
+      "to": "res-menu"
+    },
+    {
+      "id": "d1",
+      "tab": "deployments",
+      "type": "needs",
+      "from": "dep-web",
+      "to": "dep-api"
+    },
+    {
+      "id": "d2",
+      "tab": "deployments",
+      "type": "needs",
+      "from": "dep-api",
+      "to": "dep-kv"
+    },
+    {
+      "id": "d3",
+      "tab": "deployments",
+      "type": "needs",
+      "from": "dep-job",
+      "to": "dep-kv"
+    }
+  ]
+}

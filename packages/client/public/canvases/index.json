@@ -1,6 +1,16 @@
 {
-  "canvases": [
+  "documents": [
     { "path": "sample-primitives.graph.json", "name": "Sample Primitives", "root": "demos" },
-    { "path": "stress-773.graph.json", "name": "Stress Test (773 nodes / 1642 edges)", "root": "demos" }
+    { "path": "stress-773.graph.json", "name": "Stress Test (773 nodes / 1642 edges)", "root": "demos" },
+    { "path": "fifa-test.merino.json", "name": "FIFA", "root": "demos" },
+    { "path": "nyc-subwhere.merino.json", "name": "NYC Subwhere", "root": "demos" },
+    { "path": "braincrawl.atlas.json", "name": "braincrawl", "root": "demos" },
+    { "path": "luminous.dataflow.json", "name": "Luminous", "root": "demos" },
+    { "path": "sample.dataflow.json", "name": "Sample", "root": "demos" },
+    { "path": "fifa-part-1.dataflow.json", "name": "FIFA — Part 1", "root": "demos" },
+    { "path": "fifa-part-2.dataflow.json", "name": "FIFA — Part 2", "root": "demos" },
+    { "path": "fifa-part-3.dataflow.json", "name": "FIFA — Part 3", "root": "demos" },
+    { "path": "fifa-part-4.dataflow.json", "name": "FIFA — Part 4", "root": "demos" },
+    { "path": "nyc-subwhere.linen.json", "name": "NYC Subwhere", "root": "demos" }
   ]
 }

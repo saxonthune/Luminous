@@ -12,6 +12,12 @@ export interface Transform {
 export interface UseViewportOptions {
   minZoom?: number; // default 0.15
   maxZoom?: number; // default 2
+  /** Transform to restore when this viewport mounts. It remains transient: the
+      host decides whether and where to retain later transforms. */
+  initialTransform?: Transform;
+  /** Receives each settled viewport transform so a host can retain it outside
+      a Canvas instance. */
+  onTransformChange?: (transform: Transform) => void;
   /** Pan on plain left-button drag. Default true; hosts that bind left-drag
       to box selection disable it — middle-drag still pans. */
   leftDragPan?: boolean;
@@ -54,53 +60,86 @@ export interface UseViewportResult {
     padding?: number,
     animate?: boolean
   ) => void;
+  /** Center one canvas-space rect while retaining the current zoom level. */
+  centerView: (rect: { x: number; y: number; width: number; height: number }, animate?: boolean) => void;
+  /** Move the camera to an exact transform. Scale is clamped to the viewport extent. */
+  setView: (transform: Transform, animate?: boolean) => void;
+  /** Center one canvas-space rect at a requested zoom level. */
+  focusView: (rect: { x: number; y: number; width: number; height: number }, zoom: number, animate?: boolean) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
 }
 
+/** The camera transform that places `rect` at the viewport center without
+ * changing the current scale. Kept pure so hosts can rely on the no-zoom
+ * invariant independently of d3. */
+export function centerTransform(
+  current: Transform,
+  viewport: { width: number; height: number },
+  rect: { x: number; y: number; width: number; height: number },
+): Transform {
+  return {
+    x: viewport.width / 2 - (rect.x + rect.width / 2) * current.k,
+    y: viewport.height / 2 - (rect.y + rect.height / 2) * current.k,
+    k: current.k,
+  };
+}
+
+/** The camera transform that places `rect` at the viewport center at `zoom`. */
+export function focusTransform(
+  viewport: { width: number; height: number },
+  rect: { x: number; y: number; width: number; height: number },
+  zoom: number,
+): Transform {
+  return {
+    x: viewport.width / 2 - (rect.x + rect.width / 2) * zoom,
+    y: viewport.height / 2 - (rect.y + rect.height / 2) * zoom,
+    k: zoom,
+  };
+}
+
 export function useViewport(options: UseViewportOptions = {}): UseViewportResult {
   const { minZoom = 0.15, maxZoom = 2, leftDragPan = true } = options;
 
-  const [transform, setTransform] = createSignal<Transform>({ x: 0, y: 0, k: 1 });
+  const initialTransform = options.initialTransform ?? { x: 0, y: 0, k: 1 };
+  const [transform, setTransform] = createSignal<Transform>(initialTransform);
   let container: HTMLDivElement | undefined;
   let zoomBehavior: ZoomBehavior<HTMLDivElement, unknown> | null = null;
 
-  // d3-zoom emits per pointer event; propagating each one repaints the whole
-  // canvas more often than the display can show. Coalesce to one signal set
-  // per animation frame — the transform signal lags d3's internal transform
-  // by at most a frame, which nothing observes across.
-  let pendingTransform: Transform | null = null;
-  let transformRafId = 0;
-  const flushTransform = () => {
-    transformRafId = 0;
-    if (pendingTransform) {
-      setTransform(pendingTransform);
-      pendingTransform = null;
-    }
-  };
-
   const setContainerRef = (el: HTMLDivElement) => {
     container = el;
+    // A canvas clips its infinite scene; it must never become a scroll
+    // container. Browsers may otherwise scroll it to reveal a focused editor,
+    // shifting overlays and the apparent camera independently of d3-zoom.
+    el.scrollLeft = 0;
+    el.scrollTop = 0;
 
     const zb = d3Zoom<HTMLDivElement, unknown>()
       .scaleExtent([minZoom, maxZoom])
       .filter((event) => shouldViewportPan(event, { leftDragPan }))
       .on('zoom', (event) => {
-        pendingTransform = {
+        const next = {
           x: event.transform.x,
           y: event.transform.y,
           k: event.transform.k,
         };
-        if (!transformRafId) transformRafId = requestAnimationFrame(flushTransform);
+        // The rendered layers and every pointer conversion must observe the
+        // same camera. Deferring this signal made D3's private transform one
+        // frame newer than the CSS transform, which can offset marquee hits and
+        // restore an earlier camera during another interaction.
+        setTransform(next);
+        options.onTransformChange?.(next);
       });
 
     zoomBehavior = zb;
-    select(el).call(zb);
+    const sel = select(el);
+    sel.call(zb);
+    const restored = transform();
+    sel.call(zb.transform, zoomIdentity.translate(restored.x, restored.y).scale(restored.k));
   };
 
   onCleanup(() => {
-    if (transformRafId) cancelAnimationFrame(transformRafId);
     if (container) select(container).on('.zoom', null);
   });
 
@@ -145,6 +184,37 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     }
   };
 
+  const centerView = (
+    rect: { x: number; y: number; width: number; height: number },
+    animate = true,
+  ) => {
+    if (!container || !zoomBehavior) return;
+    const next = centerTransform(transform(), container.getBoundingClientRect(), rect);
+    const newTransform = zoomIdentity.translate(next.x, next.y).scale(next.k);
+    const selection = select(container);
+    if (animate) selection.transition().duration(300).call(zoomBehavior.transform, newTransform);
+    else selection.call(zoomBehavior.transform, newTransform);
+  };
+
+  const setView = (next: Transform, animate = true) => {
+    if (!container || !zoomBehavior) return;
+    const clamped = { ...next, k: Math.min(maxZoom, Math.max(minZoom, next.k)) };
+    const target = zoomIdentity.translate(clamped.x, clamped.y).scale(clamped.k);
+    const selection = select(container);
+    if (animate) selection.transition().duration(300).call(zoomBehavior.transform, target);
+    else selection.call(zoomBehavior.transform, target);
+  };
+
+  const focusView = (
+    rect: { x: number; y: number; width: number; height: number },
+    zoom: number,
+    animate = true,
+  ) => {
+    if (!container) return;
+    const clampedZoom = Math.min(maxZoom, Math.max(minZoom, zoom));
+    setView(focusTransform(container.getBoundingClientRect(), rect, clampedZoom), animate);
+  };
+
   const zoomBy = (factor: number) => {
     if (!container || !zoomBehavior) return;
     select(container).transition().duration(200).call(zoomBehavior.scaleBy, factor);
@@ -153,6 +223,8 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
   const screenToCanvas = (screenX: number, screenY: number): { x: number; y: number } => {
     if (!container) return { x: screenX, y: screenY };
     const rect = container.getBoundingClientRect();
+    // This is the same transform that drives the rendered canvas layers.
+    // Keeping one authoritative camera avoids a pointer/visual mismatch.
     const t = transform();
     return {
       x: (screenX - rect.left - t.x) / t.k,
@@ -165,6 +237,9 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     setContainerRef,
     containerEl: () => container,
     fitView,
+    centerView,
+    setView,
+    focusView,
     zoomIn: () => zoomBy(1.15),
     zoomOut: () => zoomBy(1 / 1.15),
     screenToCanvas,

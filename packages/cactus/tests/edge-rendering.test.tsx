@@ -105,6 +105,28 @@ describe('Canvas edge rendering', () => {
     cleanup();
   });
 
+  it('renders a dotted cubic Bézier when requested by edge styling', () => {
+    const edges: EdgeDeclaration[] = [{
+      id: 'curved',
+      sourceId: 'node-a',
+      targetId: 'node-b',
+      styling: { curve: 'bezier', dash: 'dotted' },
+    }];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 0} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 80} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const visiblePath = container.querySelector('[data-cactus-edge-layer-lines] path:not([data-edge-id])');
+    expect(visiblePath?.getAttribute('d')).toContain(' C ');
+    expect(visiblePath?.getAttribute('stroke-dasharray')).toBeTruthy();
+
+    cleanup();
+  });
+
   it('renders an arrowhead path when arrowHead: true', () => {
     const edges: EdgeDeclaration[] = [
       {
@@ -256,6 +278,32 @@ describe('Canvas edge rendering', () => {
     expect(hitLine).not.toBeNull();
     expect(hitLine!.getAttribute('stroke')).toBe('transparent');
     expect(Number(hitLine!.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(12);
+
+    cleanup();
+  });
+
+  it('counter-scales edge strokes, dashes, arrowheads, and hit targets while zooming out', () => {
+    let canvasRef: CanvasRef | undefined;
+    const edges: EdgeDeclaration[] = [
+      { id: 'e1', sourceId: 'node-a', targetId: 'node-b', styling: { width: 1.5, dash: 'dashed', arrowHead: true } },
+    ];
+
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas ref={(ref) => { canvasRef = ref; }} edges={edges}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    canvasRef!.setView({ x: 0, y: 0, k: 0.2 }, false);
+    const visibleLine = container.querySelector('[data-cactus-edge-layer-lines] polyline')!;
+    const hitLine = container.querySelector('[data-cactus-edge-layer-lines] line[data-edge-id="e1"]')!;
+    const arrow = container.querySelector('[data-cactus-edge-layer-lines] path')!;
+
+    expect(Number(visibleLine.getAttribute('stroke-width')) * 0.2).toBeCloseTo(0.85);
+    expect(Number(hitLine.getAttribute('stroke-width')) * 0.2).toBeCloseTo(12);
+    expect(visibleLine.getAttribute('stroke-dasharray')).toBe('17 8.5');
+    expect(arrow.getAttribute('d')).toContain('L ');
 
     cleanup();
   });

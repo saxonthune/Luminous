@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch, type JSX } from 'solid-js';
+import { createSignal, For, Match, onCleanup, Show, Switch, type JSX } from 'solid-js';
 import { ToggleGroup } from '@kobalte/core/toggle-group';
 import { ToggleButton } from '@kobalte/core/toggle-button';
 import { DropdownMenu } from '@kobalte/core/dropdown-menu';
@@ -142,6 +142,35 @@ function MenuItemRenderer(props: { item: MenuItem } & OnActionProp): JSX.Element
           );
         }}
       </Match>
+      <Match when={props.item.type === 'action-submenu' && props.item}>
+        {(item) => {
+          const split = () => item() as Extract<MenuItem, { type: 'action-submenu' }>;
+          return (
+            <DropdownMenu.Sub overlap gutter={4} shift={-8}>
+              <div class="cactus-chrome-menu-split-item">
+                <DropdownMenu.Item
+                  class="cactus-chrome-menu-item"
+                  disabled={split().action.enabled === false}
+                  data-tone={split().action.tone}
+                  onSelect={() => props.onAction?.(split().action.id, split().action.payload)}
+                >
+                  <span>{split().action.label}</span>
+                </DropdownMenu.Item>
+                <DropdownMenu.SubTrigger class="cactus-chrome-menu-split-trigger" aria-label={`${split().action.label} options`}>
+                  <span aria-hidden>›</span>
+                </DropdownMenu.SubTrigger>
+              </div>
+              <DropdownMenu.Portal>
+                <DropdownMenu.SubContent class="cactus-chrome-menu-content" style={{ 'z-index': '1000' }}>
+                  <For each={split().items}>
+                    {(child) => <MenuItemRenderer item={child} onAction={props.onAction} />}
+                  </For>
+                </DropdownMenu.SubContent>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Sub>
+          );
+        }}
+      </Match>
       <Match when={props.item.type === 'action' && props.item}>
         {(item) => {
           const action = () => (item() as Extract<MenuItem, { type: 'action' }>).action;
@@ -167,6 +196,79 @@ function MenuItemRenderer(props: { item: MenuItem } & OnActionProp): JSX.Element
         }}
       </Match>
     </Switch>
+  );
+}
+
+/** A compact split button whose primary action is immediate and whose chevron
+ * reveals the same MenuItem list on hover or focus. It is useful for canvas
+ * chrome that needs a direct default plus a destination chooser. */
+export function SplitMenuButton(props: {
+  action: Action;
+  items: MenuItem[];
+  class?: string;
+  primaryClass?: string;
+  triggerClass?: string;
+  title?: string;
+} & OnActionProp): JSX.Element {
+  const [open, setOpen] = createSignal(false);
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  const keepOpen = () => {
+    if (closeTimer !== undefined) clearTimeout(closeTimer);
+    setOpen(true);
+  };
+  // The list is portalled, so a tiny delay bridges the pointer's trip from the
+  // button to it. Leaving both surfaces still closes the menu promptly.
+  const closeAfterLeave = () => {
+    closeTimer = setTimeout(() => setOpen(false), 80);
+  };
+  onCleanup(() => {
+    if (closeTimer !== undefined) clearTimeout(closeTimer);
+  });
+  const stopPointer = (event: PointerEvent) => event.stopPropagation();
+  return (
+    <div
+      class={props.class}
+      title={props.title}
+      onPointerEnter={keepOpen}
+      onPointerLeave={closeAfterLeave}
+    >
+      <button
+        type="button"
+        data-no-pan="true"
+        class={props.primaryClass}
+        aria-label={props.title ?? props.action.label}
+        disabled={props.action.enabled === false}
+        on:pointerdown={stopPointer}
+        onClick={(event) => {
+          event.stopPropagation();
+          props.onAction?.(props.action.id, props.action.payload);
+        }}
+      >
+        {props.action.label}
+      </button>
+      <DropdownMenu open={open()} onOpenChange={setOpen}>
+        <DropdownMenu.Trigger
+          data-no-pan="true"
+          class={props.triggerClass}
+          aria-label={`${props.action.label} options`}
+          on:pointerdown={stopPointer}
+        >
+          <span aria-hidden>›</span>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            class="cactus-chrome-menu-content"
+            style={{ 'z-index': '1000' }}
+            onPointerEnter={keepOpen}
+            onPointerLeave={closeAfterLeave}
+          >
+            <For each={props.items}>
+              {(item) => <MenuItemRenderer item={item} onAction={props.onAction} />}
+            </For>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu>
+    </div>
   );
 }
 

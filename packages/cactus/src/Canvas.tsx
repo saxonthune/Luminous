@@ -7,7 +7,7 @@ import { useSelection } from './interactions/useSelection.js';
 import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
-import { EdgeLayer } from './EdgeLayer.js';
+import { EdgeLayer, type EdgeLodPolicy } from './EdgeLayer.js';
 import { routeEdges, type EdgeGeometry } from './edgeRouting.js';
 import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
 import { computeBounds } from './geometry/geometry.js';
@@ -16,6 +16,8 @@ import { ChromeSlots } from './chrome/ChromeSlots.js';
 import { MenuRoot } from './chrome/ChromePrimitives.js';
 import { useHotkeys } from './chrome/useHotkeys.js';
 import { createLayoutOverrides } from './interactions/createLayoutOverrides.js';
+import { VisualLodLayer } from './VisualLodLayer.js';
+import type { VisualLodDeclaration } from './visualLod.js';
 
 export interface ConnectionPreviewCoords {
   sourceNodeId: string;
@@ -24,6 +26,14 @@ export interface ConnectionPreviewCoords {
   startY: number;
   currentX: number;
   currentY: number;
+}
+
+/** Cursor position for a canvas context menu, in viewport and canvas space. */
+export interface CanvasContextMenuPosition {
+  clientX: number;
+  clientY: number;
+  canvasX: number;
+  canvasY: number;
 }
 
 /**
@@ -50,13 +60,24 @@ export interface CanvasProps {
     }) => void;
   };
   boxSelect?: {
-    getNodeRects: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
+    /** Defaults to the measured rectangles registered by NodeContainer. Supply
+     * this only to filter or replace the selectable geometry. */
+    getNodeRects?: () => Array<{ id: string; x: number; y: number; width: number; height: number }>;
     /** 'shift-drag' (default) or 'drag' — plain left-drag marquees and left-drag
         panning is disabled (middle-drag still pans). */
     trigger?: 'shift-drag' | 'drag';
   };
   /** Edges to draw. Cactus computes straight-line geometry from registered node rects. */
   edges?: EdgeDeclaration[];
+  /** Visual treatment for Edges incident to the selected Nodes. Unselected
+   * Edges dim by default; hosts can retain their opacity and thicken selected
+   * Edges instead. */
+  edgeEmphasis?: {
+    dimUnselected?: boolean;
+    selectedWidthMultiplier?: number;
+  };
+  /** Host semantic policy for zoom-dependent Edge opacity and label disclosure. */
+  edgeLod?: EdgeLodPolicy;
   /** Maps the current selection to the node IDs whose incident Edges should be
    * emphasized. Hosts can project domain relationships such as containment;
    * by default only the literally selected node IDs are used. */
@@ -66,6 +87,9 @@ export interface CanvasProps {
   freezeEdgeRouting?: () => boolean;
   /** Clusters to draw as a tinted underlay behind their member nodes. */
   clusters?: ClusterDeclaration[];
+  /** Screen-space host components anchored to graph Nodes and coordinated by
+   * cactus for measurement, collision placement, stacking, and visibility. */
+  visualLod?: VisualLodDeclaration[];
   renderConnectionPreview?: (coords: ConnectionPreviewCoords, transform: Transform) => JSX.Element;
   class?: string;
   children: JSX.Element;
@@ -85,7 +109,7 @@ export interface CanvasProps {
   /** Returns a MenuSchema for a node right-click, or undefined for no menu. */
   nodeContextMenu?: (nodeId: string) => MenuSchema | undefined;
   /** Returns a MenuSchema for a background right-click, or undefined for no menu. */
-  backgroundContextMenu?: () => MenuSchema | undefined;
+  backgroundContextMenu?: (position: CanvasContextMenuPosition) => MenuSchema | undefined;
   /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
   edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
   /** Fires whenever the selection changes (click, marquee, clear). */
@@ -94,6 +118,12 @@ export interface CanvasProps {
 
 export interface CanvasRef {
   fitView: (rects: Array<{ x: number; y: number; width: number; height: number }>, padding?: number) => void;
+  /** Center a rect without changing the current zoom level. */
+  centerView: (rect: { x: number; y: number; width: number; height: number }) => void;
+  /** Move to an exact camera transform. */
+  setView: (transform: Transform, animate?: boolean) => void;
+  /** Center a rect at a requested zoom level. */
+  focusView: (rect: { x: number; y: number; width: number; height: number }, zoom: number, animate?: boolean) => void;
   screenToCanvas: (screenX: number, screenY: number) => { x: number; y: number };
   getTransform: () => Transform;
   zoomIn: () => void;
@@ -319,7 +349,7 @@ export function Canvas(props: CanvasProps) {
   // Canvas configuration (viewportOptions, connectionDrag, boxSelect, ref) is read once at mount;
   // parents are expected to remount Canvas if the configuration changes.
   /* eslint-disable solid/reactivity */
-  const { transform, setContainerRef, containerEl, fitView, screenToCanvas, zoomIn, zoomOut } = useViewport(
+  const { transform, setContainerRef, containerEl, fitView, centerView, setView, focusView, screenToCanvas, zoomIn, zoomOut } = useViewport(
     props.boxSelect?.trigger === 'drag'
       ? { ...props.viewportOptions, leftDragPan: false }
       : props.viewportOptions
@@ -428,6 +458,10 @@ export function Canvas(props: CanvasProps) {
   const edgeEmphasisNodeIds = createMemo(() =>
     props.edgeEmphasisNodeIds?.(selectedIds()) ?? selectedIds(),
   );
+  const edgeEmphasisStyle = {
+    dimUnselected: props.edgeEmphasis?.dimUnselected ?? true,
+    selectedWidthMultiplier: props.edgeEmphasis?.selectedWidthMultiplier ?? 1,
+  };
 
   const { layoutOverride, setLayoutOverride, layoutApply } = createLayoutOverrides();
 
@@ -437,7 +471,19 @@ export function Canvas(props: CanvasProps) {
     boxSelect: {
       transform,
       containerEl,
-      getNodeRects: props.boxSelect?.getNodeRects ?? (() => []),
+      screenToCanvas,
+      // NodeContainer's measured rectangles are the canvas's authoritative
+      // geometry. Falling back to them keeps marquee selection aligned with
+      // the rendered nodes at every zoom level.
+      getNodeRects: props.boxSelect?.getNodeRects ?? (() => {
+        return [...getNodeRects().entries()].map(([id, rect]) => ({
+          id,
+          x: rect.x,
+          y: rect.y,
+          width: rect.w,
+          height: rect.h,
+        }));
+      }),
       trigger: props.boxSelect?.trigger,
       onBoxSelectHits: props.boxSelect ? selection.mergeBoxSelection : undefined,
     },
@@ -496,6 +542,9 @@ export function Canvas(props: CanvasProps) {
 
   props.ref?.({
     fitView,
+    centerView,
+    setView,
+    focusView,
     screenToCanvas,
     getTransform: () => transform(),
     zoomIn,
@@ -555,7 +604,13 @@ export function Canvas(props: CanvasProps) {
         }
       }
       if (props.backgroundContextMenu) {
-        const schema = props.backgroundContextMenu();
+        const canvasPoint = screenToCanvas(clientX, clientY);
+        const schema = props.backgroundContextMenu({
+          clientX,
+          clientY,
+          canvasX: canvasPoint.x,
+          canvasY: canvasPoint.y,
+        });
         if (schema && schema.items.length > 0) {
           setCtxMenuState({ x: clientX, y: clientY, schema });
           return;
@@ -580,7 +635,7 @@ export function Canvas(props: CanvasProps) {
       <div
         ref={setContainerRef}
         class={props.class}
-        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
+        style={{ width: '100%', height: '100%', position: 'relative', overflow: 'clip', "user-select": 'none', background: 'var(--cactus-canvas-bg, #ffffff)' }}
         onPointerDown={(e) => {
           swallowContextMenu = false; // any fresh pointer interaction clears a stale swallow from a prior gesture
           if (e.button === 2) {
@@ -652,6 +707,8 @@ export function Canvas(props: CanvasProps) {
                       edges={props.edges!}
                       routes={routedEdges}
                       emphasisNodeIds={edgeEmphasisNodeIds}
+                      emphasisStyle={edgeEmphasisStyle}
+                      lod={props.edgeLod}
                       layer="lines"
                       routeBand={band}
                       zoom={() => transform().k}
@@ -683,9 +740,17 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
+              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} lod={props.edgeLod} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
+        </Show>
+
+        <Show when={(props.visualLod?.length ?? 0) > 0}>
+          <VisualLodLayer
+            items={props.visualLod!}
+            getNodeRects={getNodeRects}
+            transform={transform}
+          />
         </Show>
 
         <Show when={connectionDragState() && props.renderConnectionPreview}>
@@ -713,6 +778,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={marqueeRect()}>
           {(rect) => (
             <div
+              data-cactus-marquee
               style={{
                 position: 'absolute',
                 left: `${rect().x}px`,

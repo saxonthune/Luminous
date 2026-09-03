@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldViewportPan } from '../src/interactions/useViewport';
+import { centerTransform, shouldViewportPan } from '../src/interactions/useViewport';
 
 function buildDom() {
   const panSurface = document.createElement('div');
@@ -97,5 +97,16 @@ describe('shouldViewportPan', () => {
     expect(
       shouldViewportPan({ type: 'touchstart', target: panSurface }, { leftDragPan: true })
     ).toBe(true);
+  });
+});
+
+describe('centerTransform', () => {
+  it('centers the target rect without changing zoom', () => {
+    const next = centerTransform(
+      { x: 12, y: 24, k: 1.5 },
+      { width: 900, height: 600 },
+      { x: 100, y: 200, width: 80, height: 40 },
+    );
+    expect(next).toEqual({ x: 240, y: -30, k: 1.5 });
   });
 });

@@ -1,4 +1,6 @@
 import { ATLAS_COLOR_TOKENS } from '@luminous/core/atlas'
+import { TRACE_NODE_KINDS } from '@luminous/core/linen'
+import { MERINO_COLOR_TOKENS, MERINO_CONTAINER_LAYOUTS, MERINO_DASHES, MERINO_TABS } from '@luminous/core/merino'
 
 export type ParamType =
   | 'string'
@@ -874,6 +876,506 @@ export const toolConfig: Record<string, ToolGroupConfig> = {
             description: "Ordered array of atlas actions to apply atomically.",
           },
         },
+      },
+    },
+  },
+  linen: {
+    description:
+      "Author Linen documents — .linen.json Traces of what happens when a program runs. A Document holds Modules (nestable containers, the ownership boundaries control passes across), Contracts (declared data shapes), Trace Nodes (typed steps drawn as Glyphs: entry, filter, switch, transformation, type, pass, return, release-control), and Edges (trace-node -> trace-node carries control and Trace order; node-or-module -> contract is an Edge to a Contract). Ids are author-supplied and meaningful. Trace order and the format a Trace resumes with after a Pass are derived, never stored — use `trace` to walk a Trace end to end with the derived resume Contracts, and `manifest` for a Module's computed outbound summary.",
+    local: true,
+    actions: {
+      list: {
+        description: "Return the paths of all linen documents (files ending '.linen.json') in the workspace.",
+        method: 'GET',
+        path: '',
+        params: {},
+      },
+      create: {
+        description: "Create a new empty linen document at path. Fails if path does not end '.linen.json'.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: {
+            type: 'described',
+            innerType: 'string',
+            description: "Filename to create, must end '.linen.json', e.g. 'nyc-subwhere.linen.json'.",
+          },
+        },
+      },
+      read: {
+        description: "Load the complete linen document (modules, contracts, nodes, edges) plus its current check issues.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      'node/get': {
+        description: "Fetch a single Trace Node by its exact id. Throws if the id does not exist.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to fetch.",
+          },
+        },
+      },
+      'node/create': {
+        description: "Add a new Trace Node with an explicit, author-chosen id. A 'pass' node must name the Module passed to via `to`; a 'type' node may name a Contract via `contract`. Fails if the id already exists or the module does not exist. The result includes check issues — a warning that a Pass's target Module has no Contract connected means the resume format cannot be derived yet.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new Trace Node, e.g. 'poll.decode'. Must not already exist.",
+          },
+          kind: {
+            type: 'described',
+            innerType: { type: 'enum', values: TRACE_NODE_KINDS },
+            description: "Trace Node type from the descriptor table.",
+          },
+          module: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the containing Module. Must already exist.",
+          },
+          'annotation?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Selected-node prose: what happens here.",
+          },
+          'to?': {
+            type: 'described',
+            innerType: 'string',
+            description: "For a 'pass' node only (required there): id of the Module passed to.",
+          },
+          'contract?': {
+            type: 'described',
+            innerType: 'string',
+            description: "For a 'type' node only: id of the Contract naming its format.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Manual position inside the Module, overriding the derived slot. x and y must appear together.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "Manual position inside the Module, overriding the derived slot. x and y must appear together.",
+          },
+        },
+      },
+      'node/set': {
+        description: "Update an existing Trace Node's annotation, position, pass target, or type contract. Only fields provided are changed.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to update.",
+          },
+          'annotation?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New annotation text.",
+          },
+          'to?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New target Module for a 'pass' node.",
+          },
+          'contract?': {
+            type: 'described',
+            innerType: 'string',
+            description: "New Contract for a 'type' node.",
+          },
+          'x?': {
+            type: 'described',
+            innerType: 'number',
+            description: "New position. x and y must appear together.",
+          },
+          'y?': {
+            type: 'described',
+            innerType: 'number',
+            description: "New position. x and y must appear together.",
+          },
+        },
+      },
+      'node/delete': {
+        description: "Remove a Trace Node along with any Edges touching it.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to remove.",
+          },
+        },
+      },
+      'module/create': {
+        description: "Add a new Module. `parent` nests it inside another Module (a Deployment is a Module containing Modules).",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new Module, e.g. 'feed-poller'. Must not already exist.",
+          },
+          name: {
+            type: 'described',
+            innerType: 'string',
+            description: "Human-readable name for the Module.",
+          },
+          'parent?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the containing Module, if nested. Must already exist.",
+          },
+        },
+      },
+      'contract/create': {
+        description: "Add a new Contract — a declared data shape, owned by one Module and shared to its consumers. Connect it to a Module with edge/connect so Passes into that Module can derive their resume format.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: {
+            type: 'described',
+            innerType: 'string',
+            description: "Explicit id for the new Contract, e.g. 'render-snapshot'. Must not already exist.",
+          },
+          name: {
+            type: 'described',
+            innerType: 'string',
+            description: "Human-readable name for the Contract, e.g. 'RenderSnapshot'.",
+          },
+          'owner?': {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Module that owns this Contract.",
+          },
+          'text?': {
+            type: 'described',
+            innerType: 'string',
+            description: "The declared data shape, in the described system's notation, trimmed to what the Trace needs.",
+          },
+        },
+      },
+      'edge/connect': {
+        description: "Add an Edge. Two legal shapes: trace-node -> trace-node (a control Edge, carrying Trace order) or trace-node-or-module -> contract (an Edge to a Contract). Duplicates are rejected.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the source (a Trace Node, or a Module when connecting to a Contract).",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the target (a Trace Node, or a Contract).",
+          },
+        },
+      },
+      'edge/disconnect': {
+        description: "Remove the Edge from one endpoint to another.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          from: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Edge's source.",
+          },
+          to: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Edge's target.",
+          },
+        },
+      },
+      batch: {
+        description: "Apply a sequence of linen actions atomically — either all apply and the document is written once, or none apply and nothing is written. Each action is an object with a `type` field ('addModule' | 'addContract' | 'addNode' | 'setNode' | 'removeNode' | 'connect' | 'disconnect' | 'setAnnotation') and that action's own fields (see the matching single actions above).",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          actions: {
+            type: 'described',
+            innerType: { type: 'array', items: { type: 'object', properties: {} } },
+            description: "Ordered array of linen actions to apply atomically.",
+          },
+        },
+      },
+      check: {
+        description: "Validate the document and return issues: errors (dangling Edge endpoints, illegal endpoint combinations, a terminating node with an outgoing control Edge, a Filter without exactly one continuing exit, an Entry with incoming control Edges) and warnings (a Pass whose target Module has no Contract connected — the resume format cannot be derived; a node unreachable from any Entry). Warnings never block a write.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      trace: {
+        description: "Walk the Trace from an Entry: the ordered steps (depth-first over control Edges), each with its kind, term, Module, and annotation, and at each Pass the target Module plus the derived resume Contract (the return rule) — computed, never stored.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          entry: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Trace Node to start from (normally an 'entry' node).",
+          },
+        },
+      },
+      manifest: {
+        description: "A Module's computed Manifest: the Edges leaving its subtree, the Contracts among their targets, and the Passes out of it with their derived resume Contracts. Computed, never authored.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          module: {
+            type: 'described',
+            innerType: 'string',
+            description: "Id of the Module whose Manifest to compute.",
+          },
+        },
+      },
+    },
+  },
+
+  merino: {
+    description:
+      "Author Merino documents — .merino.json node-and-edge graphs for software design. A Document has two Tabs (requirements, deployments); every Node and Edge belongs to one Tab, and an Edge never crosses between them. Nodes carry a user-managed Node Type (drawn in a Color). A Node with a `parent` is read by the parent Type's `layout`: when the parent is a Container it sits inside the parent's box (freely placed for `container`, or stacked top-to-bottom by each child's `order` for `list`); otherwise it is a Subnode, drawn joined to its parent by a dotted link (never stored as an Edge). A Container accepts a child of any Type. Edges carry a user-managed Edge Type (Color, dash, arrowhead). Node Types and Edge Types are registries kept in the Document; a Type still in use cannot be removed. Ids are author-supplied and meaningful. Every write returns the document's check issues alongside.",
+    local: true,
+    actions: {
+      list: {
+        description: "Return the paths of all merino documents (files ending '.merino.json') in the workspace.",
+        method: 'GET',
+        path: '',
+        params: {},
+      },
+      create: {
+        description: "Create a new merino document at path, seeded with starter Node Types (event, requirement, resource, deployment) and Edge Types (triggers, needs). Fails if path does not end '.merino.json'.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: { type: 'described', innerType: 'string', description: "Filename to create, must end '.merino.json'." },
+        },
+      },
+      read: {
+        description: "Load the complete merino document (node types, edge types, nodes, edges) plus its current check issues.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
+      },
+      'node/get': {
+        description: "Fetch a single Node by its exact id. Throws if the id does not exist.",
+        method: 'GET',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node to fetch." },
+        },
+      },
+      'node/search': {
+        description: 'Find Nodes whose id, name, or text contains text (case-insensitive), without loading the complete Merino document.',
+        method: 'GET', path: '',
+        params: { path: pathParam, text: { type: 'described', innerType: 'string', description: 'Text to find in Node ids, names, or detail text.' } },
+      },
+      'node/children': {
+        description: 'Return a Node’s descendants through parent links up to depth (one level by default), without loading the complete Merino document.',
+        method: 'GET', path: '',
+        params: { path: pathParam, id: { type: 'described', innerType: 'string', description: 'Id of the parent Node.' }, 'depth?': { type: 'described', innerType: 'number', description: 'Non-negative descendant depth; defaults to 1.' } },
+      },
+      'node/create': {
+        description: "Add a Node with an explicit, author-chosen id on one Tab. `parent` makes it a child of another Node on the same Tab — a Subnode, or, when the parent Type is a Container, a contained child. Omit x/y to let the viewer place it; inside a `list` Container, set `order` (0-based) and leave x/y out. Fails if the id exists, the node type is unknown, or the parent is missing or on another Tab.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Node, e.g. 'on-load'. Must not already exist." },
+          tab: { type: 'described', innerType: { type: 'enum', values: MERINO_TABS }, description: "Which Tab the Node lives on." },
+          nodeType: { type: 'described', innerType: 'string', description: "Id of a Node Type in the registry." },
+          name: { type: 'described', innerType: 'string', description: "Display name for the Node." },
+          'text?': { type: 'described', innerType: 'string', description: "Longer prose the Node carries — the detail a designer adds." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'Instructions or context for an agent editing this specific Node.' },
+          'parent?': { type: 'described', innerType: 'string', description: "Id of the parent Node this is a child of. Must be on the same Tab." },
+          'placement?': { type: 'described', innerType: { type: 'enum', values: ['append'] }, description: 'Use append with a Container parent to let Merino place the child locally (and append it in a list), without fragile world coordinates.' },
+          'order?': { type: 'described', innerType: 'number', description: "0-based position within a `list`-layout Container parent — children stack by ascending order. Ignored for other parents; leave x/y out when setting it." },
+          'x?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
+          'y?': { type: 'described', innerType: 'number', description: "Manual position. x and y must appear together." },
+        },
+      },
+      'node/set': {
+        description: "Update a Node's name, text, node type, parent (reparenting the child), list order, or position. Only provided fields change.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node to update." },
+          'name?': { type: 'described', innerType: 'string', description: "New display name." },
+          'text?': { type: 'described', innerType: 'string', description: "New prose text." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'New instructions or context for an agent editing this specific Node.' },
+          'nodeType?': { type: 'described', innerType: 'string', description: "New Node Type id." },
+          'parent?': { type: 'described', innerType: 'string', description: "New parent Node id (reparent). Must be on the same Tab and not a descendant." },
+          'placement?': { type: 'described', innerType: { type: 'enum', values: ['append'] }, description: 'With a new Container parent, clear world coordinates and append the Node in that Container; list parents receive the next order.' },
+          'order?': { type: 'described', innerType: 'number', description: "New 0-based position within a `list`-layout Container parent. Ignored for other parents." },
+          'x?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
+          'y?': { type: 'described', innerType: 'number', description: "New position. x and y must appear together." },
+        },
+      },
+      'node/delete': {
+        description: "Remove a Node together with its Subnodes and every Edge touching the removed subtree.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node to remove." },
+        },
+      },
+      'edge/connect': {
+        description: "Add a typed Edge between two Nodes on the same Tab. Fails if the id exists, the edge type is unknown, either Node is missing, or the Nodes are on different Tabs.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Edge. Must not already exist." },
+          edgeType: { type: 'described', innerType: 'string', description: "Id of an Edge Type in the registry." },
+          from: { type: 'described', innerType: 'string', description: "Id of the source Node." },
+          to: { type: 'described', innerType: 'string', description: "Id of the target Node." },
+        },
+      },
+      'edge/list': {
+        description: 'List Edges, optionally narrowed to a source and/or target Node, without loading the complete Merino document.',
+        method: 'GET', path: '',
+        params: { path: pathParam, 'from?': { type: 'described', innerType: 'string', description: 'Optional source Node id filter.' }, 'to?': { type: 'described', innerType: 'string', description: 'Optional target Node id filter.' } },
+      },
+      neighborhood: {
+        description: 'Return a Node, Nodes reachable through Edges within depth (one hop by default), and their connecting Edges.',
+        method: 'GET', path: '',
+        params: { path: pathParam, id: { type: 'described', innerType: 'string', description: 'Id of the center Node.' }, 'depth?': { type: 'described', innerType: 'number', description: 'Non-negative Edge-hop depth; defaults to 1.' } },
+      },
+      'edge/set': {
+        description: "Change an existing Edge's Type.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge to retype." },
+          edgeType: { type: 'described', innerType: 'string', description: "Id of the new Edge Type." },
+        },
+      },
+      'edge/disconnect': {
+        description: "Remove an Edge by its id.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge to remove." },
+        },
+      },
+      'nodeType/add': {
+        description: "Add a Node Type to the registry.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Node Type." },
+          name: { type: 'described', innerType: 'string', description: "Display name." },
+          color: { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "Color token the Type is drawn in." },
+          'layout?': { type: 'described', innerType: { type: 'enum', values: MERINO_CONTAINER_LAYOUTS }, description: "Makes a Node of this Type hold its children inside its box (a Container) instead of tethering them by a dotted Edge: 'container' places children freely, 'list' stacks them top-to-bottom by each child's `order`. Omit for a leaf Type. A Container accepts a child of any Type." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'Instructions that apply to every Node of this Type when an agent edits the document.' },
+        },
+      },
+      'nodeType/set': {
+        description: "Rename, recolor, or set a Node Type's Container layout. Only provided fields change.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node Type to update." },
+          'name?': { type: 'described', innerType: 'string', description: "New display name." },
+          'color?': { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "New color token." },
+          'layout?': { type: 'described', innerType: { type: 'enum', values: MERINO_CONTAINER_LAYOUTS }, description: "Set 'container' (freely placed children) or 'list' (a vertical ordered stack) to make this Type a Container. Clearing it back to a leaf is done from the Manage types panel, not this tool." },
+          'agentGuidance?': { type: 'described', innerType: 'string', description: 'Instructions that apply to every Node of this Type when an agent edits the document.' },
+        },
+      },
+      'nodeType/remove': {
+        description: "Remove a Node Type. Fails if any Node still uses it — reassign those Nodes first.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Node Type to remove." },
+        },
+      },
+      'edgeType/add': {
+        description: "Add an Edge Type to the registry, with its drawing style.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Explicit id for the new Edge Type." },
+          name: { type: 'described', innerType: 'string', description: "Display name." },
+          color: { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "Color token." },
+          dash: { type: 'described', innerType: { type: 'enum', values: MERINO_DASHES }, description: "Line style." },
+          arrowHead: { type: 'described', innerType: 'boolean', description: "Whether to draw an arrowhead at the target." },
+          directed: { type: 'described', innerType: 'boolean', description: "Whether the Edge means a direction rather than a plain association." },
+        },
+      },
+      'edgeType/set': {
+        description: "Change an Edge Type's name or style. Only provided fields change.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge Type to update." },
+          'name?': { type: 'described', innerType: 'string', description: "New display name." },
+          'color?': { type: 'described', innerType: { type: 'enum', values: MERINO_COLOR_TOKENS }, description: "New color token." },
+          'dash?': { type: 'described', innerType: { type: 'enum', values: MERINO_DASHES }, description: "New line style." },
+          'arrowHead?': { type: 'described', innerType: 'boolean', description: "New arrowhead setting." },
+          'directed?': { type: 'described', innerType: 'boolean', description: "New directed setting." },
+        },
+      },
+      'edgeType/remove': {
+        description: "Remove an Edge Type. Fails if any Edge still uses it — reassign those Edges first.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          id: { type: 'described', innerType: 'string', description: "Id of the Edge Type to remove." },
+        },
+      },
+      batch: {
+        description: "Apply a sequence of merino actions atomically — either all apply and the document is written once, or none apply and nothing is written. Includes `setDocumentGuidance` with an `agentGuidance` string for workspace-wide instructions. Failure identifies its 1-based action index. An action with an id may add `ref`; later id fields may use `$ref:<ref>` to refer to that earlier action's id.",
+        method: 'POST',
+        path: '',
+        params: {
+          path: pathParam,
+          actions: {
+            type: 'described',
+            innerType: { type: 'array', items: { type: 'object', properties: {} } },
+            description: "Ordered array of merino actions to apply atomically.",
+          },
+        },
+      },
+      check: {
+        description: "Validate the document and return issues: errors (an Edge naming a missing Node, a Node or Edge whose Type is not in the registry, an Edge crossing between Tabs, a Subnode on a different Tab than its parent, a parent cycle, duplicate ids) and warnings (a Node Type or Edge Type defined but unused). Warnings never block a write.",
+        method: 'GET',
+        path: '',
+        params: { path: pathParam },
       },
     },
   },

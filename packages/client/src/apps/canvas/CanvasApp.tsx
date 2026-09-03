@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Match, Switch, onMount, Show } from 'solid-js';
+import { createSignal, Match, Switch, onMount, Show } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { loadGraphFromText, resetRegistry, type Graph } from '@luminous/core';
 import { loadAndRegisterSiblingPack } from '../../pack/siblingLoader';
@@ -92,8 +92,8 @@ export function CanvasApp() {
   }
 
   function boot() {
-    const fetchSources = __GITHUB_PAGES__
-      ? fetchStaticSources
+    const fetchSources = __STATIC__
+      ? () => fetchStaticSources('.graph.json')
       : () => fetchServerSources('.graph.json');
     fetchSources()
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
@@ -111,11 +111,6 @@ export function CanvasApp() {
         setShell({ kind: 'fatalError', reason });
       });
   }
-
-  createEffect(() => {
-    const label = sourceLabel();
-    document.title = label ? `${label} — Luminous` : 'Luminous';
-  });
 
   onMount(() => {
     boot();

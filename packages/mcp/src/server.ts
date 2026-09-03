@@ -39,6 +39,49 @@ import {
 } from './atlas-tools.js'
 import type { AtlasNeighborhoodDirection } from './atlas-tools.js'
 import type { AtlasAction, AtlasColorToken, AtlasContent, AtlasLegend } from '@luminous/core/atlas'
+import {
+  listLinens,
+  createLinen,
+  readLinen,
+  getLinenNode,
+  linenNodeCreate,
+  linenNodeSet,
+  linenNodeDelete,
+  linenModuleCreate,
+  linenContractCreate,
+  linenConnect,
+  linenDisconnect,
+  linenBatch,
+  linenCheck,
+  linenTrace,
+  linenManifest,
+} from './linen-tools.js'
+import type { LinenAction } from '@luminous/core/linen'
+import {
+  listMerinos,
+  createMerino,
+  readMerino,
+  getMerinoNode,
+  searchMerinoNodes,
+  listMerinoChildren,
+  listMerinoEdges,
+  merinoNeighborhood,
+  merinoNodeCreate,
+  merinoNodeSet,
+  merinoNodeDelete,
+  merinoConnect,
+  merinoSetEdge,
+  merinoDisconnect,
+  merinoNodeTypeAdd,
+  merinoNodeTypeSet,
+  merinoNodeTypeRemove,
+  merinoEdgeTypeAdd,
+  merinoEdgeTypeSet,
+  merinoEdgeTypeRemove,
+  merinoBatch,
+  merinoCheck,
+} from './merino-tools.js'
+import type { MerinoBatchAction, MerinoColorToken, MerinoContainerLayout, MerinoDash, MerinoTab } from '@luminous/core/merino'
 
 const serverUrl = process.env.LUMINOUS_SERVER_URL ?? 'http://localhost:4080'
 
@@ -153,7 +196,9 @@ async function httpRequest(
   }
 }
 
-// Health check — must succeed before we register tools
+// The storage service is a runtime dependency, not an MCP registration
+// dependency.  Starting successfully keeps the tool list inspectable and lets
+// a client surface a useful failure at the call which needs the service.
 let serverCommit = 'unknown'
 try {
   const res = await fetch(`${serverUrl}/api/health`)
@@ -164,9 +209,8 @@ try {
   serverCommit = health.commit ?? 'unknown'
 } catch {
   process.stderr.write(
-    `Error: Cannot reach Luminous server at ${serverUrl}. Start it with: just dev\n`
+    `Warning: Luminous server at ${serverUrl} is not ready. MCP will remain available; start it with: just dev\n`
   )
-  process.exit(1)
 }
 
 const instructions = `\
@@ -192,7 +236,7 @@ All mutations go through the same API that the browser canvas uses — there is 
 
 Prefer the canvas-batch tool for multi-step operations. It executes actions atomically (fail-fast, no rollback), supports ID references via $ref:<name> for chaining creates, and reduces round-trips. Example: add a node with ref "n1", then add an edge using "$ref:n1" as the from ID.
 
-Tool groups: canvas-pack (describe — inspect kind catalog), canvas (list/read/create documents), canvas-node (add/setProps/setTags/delete), canvas-edge (add/setProps/setTags/remove), canvas-batch (atomic multi-action sequences), canvas-query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), canvas-view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/get/node/search/node/children/edge/list/neighborhood/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/legend/set/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges, plus a Legend recording what each color means; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated; node/get/node/search/node/children/edge/list/neighborhood are focused, read-only queries that skip loading the whole Document).`
+Tool groups: canvas-pack (describe — inspect kind catalog), canvas (list/read/create documents), canvas-node (add/setProps/setTags/delete), canvas-edge (add/setProps/setTags/remove), canvas-batch (atomic multi-action sequences), canvas-query (getNode/listNodes/listEdges/neighborhood — local read-only queries, no server write path), canvas-view (list/project — inspect views and project the canvas through one; project returns visible structure — spatial/latent nodes, arrows, summary chips, containment tree — not pixel positions or the user's live zoom), dataflow (list/create/read/addBox/set/connect/disconnect/removeBox/check/batch — author .dataflow.json diagrams of Boxes and Flows, a separate document kind from the v3 canvas with no pack), atlas (list/create/read/node/get/node/search/node/children/edge/list/neighborhood/node/create/node/set/node/reparent/node/delete/edge/connect/edge/disconnect/edge/bisect/legend/set/batch — author .atlas.json documents: Nodes with optional Markdown/code Content, nesting via parent, and free x/y placement, connected by directed Edges, plus a Legend recording what each color means; a separate document kind from the v3 canvas with no pack, whose node ids are meaningful and author-supplied rather than generated; node/get/node/search/node/children/edge/list/neighborhood are focused, read-only queries that skip loading the whole Document), linen (list/create/read/node/get/node/create/node/set/node/delete/module/create/contract/create/edge/connect/edge/disconnect/batch/check/trace/manifest — author .linen.json Traces of what happens when a program runs: Modules contain typed Trace Nodes drawn as Glyphs, Edges carry control order or connect to Contracts; trace walks a Trace end to end with each Pass's derived resume Contract, and manifest computes a Module's outbound summary — both derived, never stored), merino (list/create/read/node/get/node/create/node/set/node/delete/edge/connect/edge/set/edge/disconnect/nodeType/add/nodeType/set/nodeType/remove/edgeType/add/edgeType/set/edgeType/remove/batch/check — author .merino.json node-and-edge graphs for software design across two Tabs, requirements and deployments; Nodes carry a user-managed Node Type and may hang off a parent — inside the parent's box when its Type's layout is a Container (freely placed) or a list (a vertical ordered stack keyed by each child's order), else as a dotted Subnode, Edges carry a user-managed Edge Type and never cross between Tabs, and both Type sets are registries kept in the Document).`
 
 const server = new Server(
   { name: 'luminous-mcp', version: `0.1.0+${serverCommit}` },
@@ -371,6 +415,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       id?: string
       name?: string
       parent?: string
+      placement?: 'append'
       x?: number
       y?: number
       content?: AtlasContent
@@ -382,6 +427,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       legend?: AtlasLegend
       actions?: AtlasAction[]
       text?: string
+      agentGuidance?: string
       depth?: number
       direction?: AtlasNeighborhoodDirection
     }
@@ -468,6 +514,258 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } else {
         return {
           content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'atlas'` }],
+          isError: true,
+        }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
+  if (name === 'linen') {
+    const a = args as {
+      action: string
+      path?: string
+      id?: string
+      kind?: string
+      module?: string
+      name?: string
+      parent?: string
+      owner?: string
+      text?: string
+      annotation?: string
+      to?: string
+      contract?: string
+      x?: number
+      y?: number
+      from?: string
+      entry?: string
+      actions?: LinenAction[]
+    }
+    try {
+      let result: unknown
+      if (a.action === 'list') {
+        result = await listLinens(serverUrl)
+      } else if (a.action === 'create') {
+        if (!a.path) throw new Error("'path' is required for linen/create")
+        result = await createLinen(serverUrl, a.path)
+      } else if (a.action === 'read') {
+        if (!a.path) throw new Error("'path' is required for linen/read")
+        result = await readLinen(serverUrl, a.path)
+      } else if (a.action === 'node/get') {
+        if (!a.path) throw new Error("'path' is required for linen/node/get")
+        if (!a.id) throw new Error("'id' is required for linen/node/get")
+        result = await getLinenNode(serverUrl, a.path, a.id)
+      } else if (a.action === 'node/create') {
+        if (!a.path) throw new Error("'path' is required for linen/node/create")
+        if (!a.id) throw new Error("'id' is required for linen/node/create")
+        if (!a.kind) throw new Error("'kind' is required for linen/node/create")
+        if (!a.module) throw new Error("'module' is required for linen/node/create")
+        result = await linenNodeCreate(serverUrl, a.path, {
+          id: a.id,
+          kind: a.kind,
+          module: a.module,
+          annotation: a.annotation,
+          x: a.x,
+          y: a.y,
+          to: a.to,
+          contract: a.contract,
+        })
+      } else if (a.action === 'node/set') {
+        if (!a.path) throw new Error("'path' is required for linen/node/set")
+        if (!a.id) throw new Error("'id' is required for linen/node/set")
+        result = await linenNodeSet(serverUrl, a.path, a.id, {
+          annotation: a.annotation,
+          x: a.x,
+          y: a.y,
+          to: a.to,
+          contract: a.contract,
+        })
+      } else if (a.action === 'node/delete') {
+        if (!a.path) throw new Error("'path' is required for linen/node/delete")
+        if (!a.id) throw new Error("'id' is required for linen/node/delete")
+        result = await linenNodeDelete(serverUrl, a.path, a.id)
+      } else if (a.action === 'module/create') {
+        if (!a.path) throw new Error("'path' is required for linen/module/create")
+        if (!a.id) throw new Error("'id' is required for linen/module/create")
+        if (!a.name) throw new Error("'name' is required for linen/module/create")
+        result = await linenModuleCreate(serverUrl, a.path, { id: a.id, name: a.name, parent: a.parent })
+      } else if (a.action === 'contract/create') {
+        if (!a.path) throw new Error("'path' is required for linen/contract/create")
+        if (!a.id) throw new Error("'id' is required for linen/contract/create")
+        if (!a.name) throw new Error("'name' is required for linen/contract/create")
+        result = await linenContractCreate(serverUrl, a.path, { id: a.id, name: a.name, owner: a.owner, text: a.text })
+      } else if (a.action === 'edge/connect') {
+        if (!a.path) throw new Error("'path' is required for linen/edge/connect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for linen/edge/connect")
+        result = await linenConnect(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'edge/disconnect') {
+        if (!a.path) throw new Error("'path' is required for linen/edge/disconnect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for linen/edge/disconnect")
+        result = await linenDisconnect(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'batch') {
+        if (!a.path) throw new Error("'path' is required for linen/batch")
+        if (!a.actions) throw new Error("'actions' is required for linen/batch")
+        result = await linenBatch(serverUrl, a.path, a.actions)
+      } else if (a.action === 'check') {
+        if (!a.path) throw new Error("'path' is required for linen/check")
+        result = await linenCheck(serverUrl, a.path)
+      } else if (a.action === 'trace') {
+        if (!a.path) throw new Error("'path' is required for linen/trace")
+        if (!a.entry) throw new Error("'entry' is required for linen/trace")
+        result = await linenTrace(serverUrl, a.path, a.entry)
+      } else if (a.action === 'manifest') {
+        if (!a.path) throw new Error("'path' is required for linen/manifest")
+        if (!a.module) throw new Error("'module' is required for linen/manifest")
+        result = await linenManifest(serverUrl, a.path, a.module)
+      } else {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'linen'` }],
+          isError: true,
+        }
+      }
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true }
+    }
+  }
+
+  if (name === 'merino') {
+    const a = args as {
+      action: string
+      path?: string
+      id?: string
+      tab?: MerinoTab
+      nodeType?: string
+      edgeType?: string
+      name?: string
+      text?: string
+      agentGuidance?: string
+      parent?: string
+      placement?: 'append'
+      color?: MerinoColorToken
+      layout?: MerinoContainerLayout
+      dash?: MerinoDash
+      arrowHead?: boolean
+      directed?: boolean
+      from?: string
+      to?: string
+      order?: number
+      x?: number
+      y?: number
+      depth?: number
+      actions?: MerinoBatchAction[]
+    }
+    try {
+      let result: unknown
+      if (a.action === 'list') {
+        result = await listMerinos(serverUrl)
+      } else if (a.action === 'create') {
+        if (!a.path) throw new Error("'path' is required for merino/create")
+        result = await createMerino(serverUrl, a.path)
+      } else if (a.action === 'read') {
+        if (!a.path) throw new Error("'path' is required for merino/read")
+        result = await readMerino(serverUrl, a.path)
+      } else if (a.action === 'node/get') {
+        if (!a.path) throw new Error("'path' is required for merino/node/get")
+        if (!a.id) throw new Error("'id' is required for merino/node/get")
+        result = await getMerinoNode(serverUrl, a.path, a.id)
+      } else if (a.action === 'node/search') {
+        if (!a.path) throw new Error("'path' is required for merino/node/search")
+        if (!a.text) throw new Error("'text' is required for merino/node/search")
+        result = await searchMerinoNodes(serverUrl, a.path, a.text)
+      } else if (a.action === 'node/children') {
+        if (!a.path || !a.id) throw new Error("'path' and 'id' are required for merino/node/children")
+        result = await listMerinoChildren(serverUrl, a.path, a.id, a.depth)
+      } else if (a.action === 'edge/list') {
+        if (!a.path) throw new Error("'path' is required for merino/edge/list")
+        result = await listMerinoEdges(serverUrl, a.path, a.from, a.to)
+      } else if (a.action === 'neighborhood') {
+        if (!a.path || !a.id) throw new Error("'path' and 'id' are required for merino/neighborhood")
+        result = await merinoNeighborhood(serverUrl, a.path, a.id, a.depth)
+      } else if (a.action === 'node/create') {
+        if (!a.path) throw new Error("'path' is required for merino/node/create")
+        if (!a.id) throw new Error("'id' is required for merino/node/create")
+        if (!a.tab) throw new Error("'tab' is required for merino/node/create")
+        if (!a.nodeType) throw new Error("'nodeType' is required for merino/node/create")
+        if (!a.name) throw new Error("'name' is required for merino/node/create")
+        result = await merinoNodeCreate(serverUrl, a.path, {
+          id: a.id, tab: a.tab, nodeType: a.nodeType, name: a.name,
+          text: a.text, agentGuidance: a.agentGuidance, parent: a.parent, placement: a.placement, order: a.order, x: a.x, y: a.y,
+        })
+      } else if (a.action === 'node/set') {
+        if (!a.path) throw new Error("'path' is required for merino/node/set")
+        if (!a.id) throw new Error("'id' is required for merino/node/set")
+        result = await merinoNodeSet(serverUrl, a.path, a.id, {
+          name: a.name, text: a.text, agentGuidance: a.agentGuidance, nodeType: a.nodeType, parent: a.parent, placement: a.placement, order: a.order, x: a.x, y: a.y,
+        })
+      } else if (a.action === 'node/delete') {
+        if (!a.path) throw new Error("'path' is required for merino/node/delete")
+        if (!a.id) throw new Error("'id' is required for merino/node/delete")
+        result = await merinoNodeDelete(serverUrl, a.path, a.id)
+      } else if (a.action === 'edge/connect') {
+        if (!a.path) throw new Error("'path' is required for merino/edge/connect")
+        if (!a.id) throw new Error("'id' is required for merino/edge/connect")
+        if (!a.edgeType) throw new Error("'edgeType' is required for merino/edge/connect")
+        if (!a.from || !a.to) throw new Error("'from' and 'to' are required for merino/edge/connect")
+        result = await merinoConnect(serverUrl, a.path, { id: a.id, edgeType: a.edgeType, from: a.from, to: a.to })
+      } else if (a.action === 'edge/set') {
+        if (!a.path) throw new Error("'path' is required for merino/edge/set")
+        if (!a.id) throw new Error("'id' is required for merino/edge/set")
+        if (!a.edgeType) throw new Error("'edgeType' is required for merino/edge/set")
+        result = await merinoSetEdge(serverUrl, a.path, a.id, a.edgeType)
+      } else if (a.action === 'edge/disconnect') {
+        if (!a.path) throw new Error("'path' is required for merino/edge/disconnect")
+        if (!a.id) throw new Error("'id' is required for merino/edge/disconnect")
+        result = await merinoDisconnect(serverUrl, a.path, a.id)
+      } else if (a.action === 'nodeType/add') {
+        if (!a.path) throw new Error("'path' is required for merino/nodeType/add")
+        if (!a.id) throw new Error("'id' is required for merino/nodeType/add")
+        if (!a.name) throw new Error("'name' is required for merino/nodeType/add")
+        if (!a.color) throw new Error("'color' is required for merino/nodeType/add")
+        result = await merinoNodeTypeAdd(serverUrl, a.path, { id: a.id, name: a.name, color: a.color, layout: a.layout, agentGuidance: a.agentGuidance })
+      } else if (a.action === 'nodeType/set') {
+        if (!a.path) throw new Error("'path' is required for merino/nodeType/set")
+        if (!a.id) throw new Error("'id' is required for merino/nodeType/set")
+        result = await merinoNodeTypeSet(serverUrl, a.path, a.id, { name: a.name, color: a.color, layout: a.layout, agentGuidance: a.agentGuidance })
+      } else if (a.action === 'nodeType/remove') {
+        if (!a.path) throw new Error("'path' is required for merino/nodeType/remove")
+        if (!a.id) throw new Error("'id' is required for merino/nodeType/remove")
+        result = await merinoNodeTypeRemove(serverUrl, a.path, a.id)
+      } else if (a.action === 'edgeType/add') {
+        if (!a.path) throw new Error("'path' is required for merino/edgeType/add")
+        if (!a.id) throw new Error("'id' is required for merino/edgeType/add")
+        if (!a.name) throw new Error("'name' is required for merino/edgeType/add")
+        if (!a.color) throw new Error("'color' is required for merino/edgeType/add")
+        if (!a.dash) throw new Error("'dash' is required for merino/edgeType/add")
+        if (a.arrowHead === undefined) throw new Error("'arrowHead' is required for merino/edgeType/add")
+        if (a.directed === undefined) throw new Error("'directed' is required for merino/edgeType/add")
+        result = await merinoEdgeTypeAdd(serverUrl, a.path, {
+          id: a.id, name: a.name, color: a.color, dash: a.dash, arrowHead: a.arrowHead, directed: a.directed,
+        })
+      } else if (a.action === 'edgeType/set') {
+        if (!a.path) throw new Error("'path' is required for merino/edgeType/set")
+        if (!a.id) throw new Error("'id' is required for merino/edgeType/set")
+        result = await merinoEdgeTypeSet(serverUrl, a.path, a.id, {
+          name: a.name, color: a.color, dash: a.dash, arrowHead: a.arrowHead, directed: a.directed,
+        })
+      } else if (a.action === 'edgeType/remove') {
+        if (!a.path) throw new Error("'path' is required for merino/edgeType/remove")
+        if (!a.id) throw new Error("'id' is required for merino/edgeType/remove")
+        result = await merinoEdgeTypeRemove(serverUrl, a.path, a.id)
+      } else if (a.action === 'batch') {
+        if (!a.path) throw new Error("'path' is required for merino/batch")
+        if (!a.actions) throw new Error("'actions' is required for merino/batch")
+        result = await merinoBatch(serverUrl, a.path, a.actions)
+      } else if (a.action === 'check') {
+        if (!a.path) throw new Error("'path' is required for merino/check")
+        result = await merinoCheck(serverUrl, a.path)
+      } else {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown action '${a.action}' for tool 'merino'` }],
           isError: true,
         }
       }

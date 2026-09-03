@@ -15,12 +15,12 @@ try {
 }
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES ? '/Luminous/' : '/',
+  base: '/',
   plugins: [solidPlugin(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __GIT_COMMIT__: JSON.stringify(gitCommit),
-    __GITHUB_PAGES__: JSON.stringify(!!process.env.GITHUB_PAGES),
+    __STATIC__: JSON.stringify(!!process.env.STATIC_BUILD),
   },
   server: {
     port: Number(process.env.CLIENT_PORT ?? 5200),

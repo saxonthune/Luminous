@@ -19,5 +19,8 @@ deps: []
 | doc01.06 | Cactus | group (1) | — | — |
 | doc01.07 | Atlas | group (6) | — | — |
 | doc01.08 | Canvas | group (1) | — | — |
+| doc01.09 | Linen | group (2) | — | — |
+| doc01.10 | Merino | group (2) | — | — |
+| doc01.11 | Rayon | group (1) | — | — |
 
 Topics: ai-context, apps, architecture, background, canvas, history, platform, rhidoc, software-design, split, vision, visualization

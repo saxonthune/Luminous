@@ -5,6 +5,21 @@ import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
 
 export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
 
+export interface EdgeLodState {
+  zoom: number;
+  emphasis: EdgeEmphasis;
+}
+
+export interface EdgeLodStyle {
+  /** Multiplied with selection emphasis opacity. */
+  opacity?: number;
+  /** False withdraws the label while retaining the Edge line and hit target. */
+  labelVisible?: boolean;
+}
+
+/** Host-owned semantic policy; cactus owns applying its visual result. */
+export type EdgeLodPolicy = (edge: EdgeDeclaration, state: EdgeLodState) => EdgeLodStyle;
+
 export function edgeEmphasis(
   edge: { sourceId: string; targetId: string },
   selectedIds: ReadonlyArray<string>,
@@ -16,11 +31,30 @@ export function edgeEmphasis(
 }
 
 const DIMMED_OPACITY = 0.15;
+const MIN_EDGE_SCREEN_WIDTH = 0.85;
+const MIN_ARROW_SCREEN_SIZE = 5;
+const MIN_HIT_SCREEN_WIDTH = 12;
+
+/** Keep a canvas-space metric at least this large after the camera transform.
+ * The metric still grows naturally when zooming in; only zoom-out shrinkage is
+ * resisted. */
+export function counterScaledEdgeMetric(
+  canvasValue: number,
+  zoom: number,
+  minScreenValue: number,
+): number {
+  return Math.max(canvasValue, minScreenValue / Math.max(zoom, 0.001));
+}
 
 interface EdgeLayerProps {
   edges: EdgeDeclaration[];
   routes: () => ReadonlyMap<string, EdgeGeometry>;
   emphasisNodeIds: () => ReadonlyArray<string>;
+  emphasisStyle: {
+    dimUnselected: boolean;
+    selectedWidthMultiplier: number;
+  };
+  lod?: EdgeLodPolicy;
   /** Required only by the label layer for label/node collision checks. */
   getNodeRects?: () => ReadonlyMap<string, NodeRect>;
   layer: 'lines' | 'labels';
@@ -52,6 +86,14 @@ function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8)
   const baseX2 = x2 - size * Math.cos(angle + Math.PI / 6);
   const baseY2 = y2 - size * Math.sin(angle + Math.PI / 6);
   return `M ${x2} ${y2} L ${baseX1} ${baseY1} L ${baseX2} ${baseY2} Z`;
+}
+
+/** Horizontal-tangent cubic used for freeform relationship cards. The handle
+ * direction follows the segment when a target moves past its source. */
+export function bezierSegmentPath(x1: number, y1: number, x2: number, y2: number): string {
+  const direction = x2 >= x1 ? 1 : -1;
+  const handle = Math.max(40, Math.abs(x2 - x1) * 0.5);
+  return `M ${x1} ${y1} C ${x1 + direction * handle} ${y1}, ${x2 - direction * handle} ${y2}, ${x2} ${y2}`;
 }
 
 // Slide label along its edge to dodge unrelated nodes. Candidates are offsets
@@ -192,15 +234,47 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           });
 
           const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
-          const opacity = createMemo(() => (emphasis() === 'dimmed' ? DIMMED_OPACITY : 1));
+          const lodStyle = createMemo(() => props.lod?.(edge, {
+            zoom: props.zoom(),
+            emphasis: emphasis(),
+          }) ?? {});
+          const opacity = createMemo(() => {
+            const selectionOpacity = props.emphasisStyle.dimUnselected && emphasis() === 'dimmed'
+              ? DIMMED_OPACITY
+              : 1;
+            return selectionOpacity * Math.min(1, Math.max(0, lodStyle().opacity ?? 1));
+          });
 
           const dash = edge.styling?.dash;
-          const strokeDasharray =
-            dash === 'dashed' ? '6 3' : dash === 'dotted' ? '2 3' : undefined;
           const color = edge.styling?.colorToken
             ? `var(--${edge.styling.colorToken})`
             : 'var(--cactus-fg-muted, #6b7280)';
-          const width = edge.styling?.width ?? 1.5;
+          const baseWidth = createMemo(() =>
+            (edge.styling?.width ?? 1.5) *
+            (emphasis() === 'incident' ? props.emphasisStyle.selectedWidthMultiplier : 1),
+          );
+          const width = createMemo(() => counterScaledEdgeMetric(
+            baseWidth(),
+            props.zoom(),
+            MIN_EDGE_SCREEN_WIDTH,
+          ));
+          const metricScale = createMemo(() => width() / baseWidth());
+          const strokeDasharray = createMemo(() => {
+            const scale = metricScale();
+            return dash === 'dashed' ? `${6 * scale} ${3 * scale}`
+              : dash === 'dotted' ? `${2 * scale} ${3 * scale}`
+              : undefined;
+          });
+          const arrowSize = createMemo(() => counterScaledEdgeMetric(
+            8,
+            props.zoom(),
+            MIN_ARROW_SCREEN_SIZE,
+          ));
+          const hitWidth = createMemo(() => counterScaledEdgeMetric(
+            Math.max(12, width()),
+            props.zoom(),
+            MIN_HIT_SCREEN_WIDTH,
+          ));
           const arrowHead = edge.styling?.arrowHead ?? false;
 
           // TODO(routing): straight-line routing only. Curve/avoid-containers routing is a follow-up.
@@ -212,39 +286,64 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                     <For each={pts().points.slice(1)}>
                       {(end, index) => {
                         const start = () => pts().points[index()];
+                        const curved = () => edge.styling?.curve === 'bezier';
                         const segmentBand = () => pts().segmentLayers[index()] ?? 0;
                         const isFinal = () => index() === pts().points.length - 2;
                         return (
                           <Show when={props.routeBand === undefined || segmentBand() === props.routeBand}>
-                            <polyline
-                              points={`${start().x},${start().y} ${end.x},${end.y}`}
-                              stroke={color}
-                              stroke-width={width}
-                              stroke-dasharray={strokeDasharray}
-                              stroke-linecap="round"
-                              fill="none"
-                              opacity={opacity()}
-                            />
-                            <Show when={arrowHead && isFinal()}>
-                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y)} fill={color} opacity={opacity()} />
+                            <Show when={curved()} fallback={(
+                              <polyline
+                                points={`${start().x},${start().y} ${end.x},${end.y}`}
+                                stroke={color}
+                                stroke-width={width()}
+                                stroke-dasharray={strokeDasharray()}
+                                stroke-linecap="round"
+                                fill="none"
+                                opacity={opacity()}
+                              />
+                            )}>
+                              <path
+                                d={bezierSegmentPath(start().x, start().y, end.x, end.y)}
+                                stroke={color}
+                                stroke-width={width()}
+                                stroke-dasharray={strokeDasharray()}
+                                stroke-linecap="round"
+                                fill="none"
+                                opacity={opacity()}
+                              />
                             </Show>
-                            <line
-                              x1={start().x}
-                              y1={start().y}
-                              x2={end.x}
-                              y2={end.y}
-                              stroke="transparent"
-                              stroke-width={Math.max(12, width)}
-                              data-edge-id={edge.id}
-                              data-route-segment={index()}
-                              style={{ 'pointer-events': 'stroke' }}
-                            />
+                            <Show when={arrowHead && isFinal()}>
+                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y, arrowSize())} fill={color} opacity={opacity()} />
+                            </Show>
+                            <Show when={curved()} fallback={(
+                              <line
+                                x1={start().x}
+                                y1={start().y}
+                                x2={end.x}
+                                y2={end.y}
+                                stroke="transparent"
+                                stroke-width={hitWidth()}
+                                data-edge-id={edge.id}
+                                data-route-segment={index()}
+                                style={{ 'pointer-events': 'stroke' }}
+                              />
+                            )}>
+                              <path
+                                d={bezierSegmentPath(start().x, start().y, end.x, end.y)}
+                                stroke="transparent"
+                                stroke-width={hitWidth()}
+                                fill="none"
+                                data-edge-id={edge.id}
+                                data-route-segment={index()}
+                                style={{ 'pointer-events': 'stroke' }}
+                              />
+                            </Show>
                           </Show>
                         );
                       }}
                     </For>
                   </Show>
-                  <Show when={props.layer === 'labels' && !!(edge.labelText || edge.label)}>
+                  <Show when={props.layer === 'labels' && lodStyle().labelVisible !== false && !!(edge.labelText || edge.label)}>
                     <Show when={labelBox()}>
                       {(box) => (
                         <rect

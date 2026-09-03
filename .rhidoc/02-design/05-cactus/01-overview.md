@@ -18,9 +18,39 @@ Cactus is "domain-agnostic" in a precise sense: it has no opinion about a "node 
 
 **Nodes.** `<NodeContainer nodeId x y w h>{ children }</NodeContainer>` — `nodeId` is an opaque string, `x/y/w/h` are signal accessors in canvas coordinates, `children` is opaque JSX that cactus never inspects. Containment, schemas, content, titles, and any domain-specific fields live entirely above this boundary — the host computes geometry from whatever data model it owns and passes the result through props.
 
-**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label?, routeBuilder? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it receives. Direction is a visual hint (arrowhead on target) not a semantic constraint.
+**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label?, routeBuilder? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it receives. Direction is a visual hint (arrowhead on target) not a semantic constraint. Styling may retain straight route segments or render them as cubic Bézier curves.
 
 **Routes.** A Route is transient geometry for one Edge. A host may derive a Route from registered node rectangles and return ordered points with one visual band per segment. Cactus computes the geometry once for all visual layers, draws those segments, keeps their hit targets under the Edge's original id, places the arrowhead on the final segment, and places labels by the full Route length. A host assigns the meaning of a visual band; cactus only orders bands with Nodes that supply a matching `visualBand`. A host may temporarily freeze that shared geometry during an interaction and let it catch up afterward.
+
+**Visual LOD Items.** `visualLod?: VisualLodDeclaration[]` on `<Canvas>` lets a
+host supply screen-space Solid components anchored to registered Nodes. The
+host owns each item's content, zoom range, and semantic priority. Cactus
+measures the rendered unit, derives its screen anchor from the Node rectangle
+and camera, tries alternate positions to avoid other Items in its collision
+group, optionally searches within a host-declared screen-pixel displacement,
+and then either draws it behind higher-priority Items or hides it when too
+little remains visible. These Items are transient projections, never graph
+or document data. A host may group Items into ranked admission cohorts when
+deeper detail should appear only after every Item in the prior rank survives
+placement. A host may provide a screen-size estimator so camera motion
+uses an optimistic no-layout placement; cactus reconciles the actual rendered
+size after motion settles. Cactus treats camera motion as an interaction
+transaction: committed Items retain their candidate and displacement while the
+camera moves, their presentation zoom and dimensions remain frozen, hidden
+Items remain unmounted and do not enter temporary vacancies, and only severe
+collisions suppress another Item. Zoom gates have distinct entry and exit
+boundaries. Once input stops, cactus retains still-valid committed placements,
+then admits new Items and reconciles exact measurements in one settled layout.
+
+**Local counter-scaling.** `<CounterScale>` lets a host wrap a small subtree of
+ordinary Node content and resist camera shrinkage with a bounded inverse CSS
+transform. It reads the camera from Canvas context, so app components need no
+zoom prop chain. `<CounterScaleSlot>` adds a declared or measured layout
+allocation and a projected screen-size floor, so the host can retain one
+semantic unit while it fits and withdraw it without opacity once it does not.
+`<ScreenSpaceAnchor>` attaches fixed-screen interaction chrome to a canvas-space
+point outside Node clipping. Visual LOD remains the mechanism for semantic
+visuals that must compete for shared screen space.
 
 **Hit-testing and styling.** Cactus uses DOM data attributes (see [DOM Attribute Conventions](#dom-attribute-conventions)). Hosts and pack renderers may stamp additional attributes for CSS targeting; cactus only reads the ones it owns.
 
@@ -34,15 +64,19 @@ If new code in cactus starts reading domain fields, interpreting schema names, o
 
 **DOM-based hit-testing.** Rather than maintaining a spatial index, cactus uses `document.elementsFromPoint()` and data attributes for hit-testing. This is simpler, naturally respects CSS z-order, and means the DOM is the source of truth for what's clickable.
 
-**Render props for extensibility.** Edges, connection previews, and backgrounds are render props on `Canvas`. The engine renders the structural layers; the domain layer fills in the content.
+**Render props for extensibility.** Edges, Visual LOD Items, connection previews,
+and backgrounds accept host rendering. The engine renders and coordinates the
+structural layers; the domain layer fills in the content.
 
 ## Architecture Layers
 
-The canvas renders four DOM layers, stacked with absolute positioning:
+The canvas renders five conceptual DOM layers, stacked with absolute positioning:
 
 ```
 ┌─────────────────────────────────────────┐
-│  4. Overlays (box-select rect)          │  Screen coords
+│  5. Chrome                              │  Screen coords
+├─────────────────────────────────────────┤
+│  4. Visual LOD Items / box selection    │  Container-local screen px
 ├─────────────────────────────────────────┤
 │  3. Connection preview SVG              │  Container-local coords
 ├─────────────────────────────────────────┤
@@ -52,7 +86,7 @@ The canvas renders four DOM layers, stacked with absolute positioning:
 └─────────────────────────────────────────┘
 ```
 
-Route bands and Nodes share the same `translate(x, y) scale(k)` transform, keeping nodes and edges aligned. Cactus orders route bands as siblings of Nodes, so a host can draw a route above a container shell and below its children. The connection preview uses container-local pixel coordinates because it mixes a zoom-stable anchor (start point, derived from canvas coords) with a raw cursor position (current point, in screen coords).
+Route bands and Nodes share the same `translate(x, y) scale(k)` transform, keeping nodes and edges aligned. Cactus orders route bands as siblings of Nodes, so a host can draw a route above a container shell and below its children. Edge geometry remains in canvas space, while cactus counter-scales stroke width, dash cadence, arrowheads, and hit targets to minimum screen-space sizes as the camera zooms out; the host still owns semantic opacity and label disclosure. The connection preview uses container-local pixel coordinates because it mixes a zoom-stable anchor (start point, derived from canvas coords) with a raw cursor position (current point, in screen coords).
 
 ## Coordinate Systems
 
@@ -62,9 +96,9 @@ Three coordinate spaces are in play:
 |-------|--------|---------|------------|
 | **Canvas** | Top-left of infinite canvas | Node positions, edge endpoints, geometry utilities | Zoom-invariant |
 | **Screen** | Top-left of browser viewport | Pointer events, cursor tracking | `screenToCanvas(x, y)` |
-| **Container-local** | Top-left of Canvas container div | Connection preview, box-select overlay | `screen - containerRect` |
+| **Container-local** | Top-left of Canvas container div | Visual LOD Items, connection preview, box-select overlay | `screen - containerRect` |
 
-The `screenToCanvas` function (from `useViewport`, returns signal Accessors) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
+The `screenToCanvas` function (from `useViewport`, returns signal Accessors) handles the screen-to-canvas conversion, accounting for the current pan/zoom transform. It and the rendered layers read the same viewport transform; D3 is the input source, not a second coordinate source. The transform object `{ x, y, k }` represents: translate by `(x, y)` pixels, then scale by `k`.
 
 ## DOM Attribute Conventions
 

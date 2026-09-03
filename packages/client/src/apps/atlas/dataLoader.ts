@@ -21,7 +21,9 @@ export function atlasDataPathFor(sourceId: string): string {
  */
 export async function loadAtlasData(sourceId: string): Promise<AtlasData | undefined> {
   const path = atlasDataPathFor(sourceId);
-  const url = `/api/atlasdata/${encodeURIComponent(path)}`;
+  const url = __STATIC__
+    ? `${import.meta.env.BASE_URL}canvases/${path}`
+    : `/api/atlasdata/${encodeURIComponent(path)}`;
   let text: string | null = null;
 
   try {

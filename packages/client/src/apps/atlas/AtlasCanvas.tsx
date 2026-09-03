@@ -29,6 +29,7 @@ import { nodeContextMenu, backgroundContextMenu, buildChrome, type AtlasMenuDeps
 import { buildArrangeAsColumnActions, buildArrangeAsRowActions, buildRemoveOverlapActions, sameParent } from './arrange.ts';
 import { buildGrowOnlyActions, sizeTouchedIds } from './growOnly.ts';
 import { useAtlasHistory } from './history.ts';
+import { transientViewportOptions } from '../../canvas-tools/transientViewport.ts';
 
 // Scoped styling for the rendered markdown Content — mirrors dataflow's
 // BoxContent MD_STYLES but scoped under its own class.
@@ -45,6 +46,8 @@ const ATLAS_NODE_MD_STYLES = `
 
 export interface AtlasCanvasProps {
   doc: AtlasDocument;
+  /** Stable source identity for retaining a transient viewport. */
+  sourceId?: string;
   /** The Atlas Data File resolved for this Document, if one exists —
    * `undefined` is the normal case for most Atlas documents. */
   data?: AtlasData;
@@ -497,6 +500,9 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
       <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
         <Canvas
           ref={(r) => { canvasRef = r; }}
+          viewportOptions={transientViewportOptions(
+            props.sourceId ? `luminous:atlas:viewport:${props.sourceId}` : undefined,
+          )}
           edges={edges()}
           edgeEmphasisNodeIds={(ids) => selectionSubtreeIds(props.doc, ids)}
           freezeEdgeRouting={edgeRoutingFrozen}
@@ -507,7 +513,6 @@ export function AtlasCanvas(props: AtlasCanvasProps): JSX.Element {
           onSelectionChange={(ids) => setSelectedCount(ids.length)}
           boxSelect={{
             trigger: 'drag',
-            getNodeRects: () => nodes().map((rn) => ({ id: rn.node.id, x: rn.x, y: rn.y, width: rn.w, height: rn.h })),
           }}
           connectionDrag={{
             onConnect,

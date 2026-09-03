@@ -3,8 +3,8 @@
   "title": "Luminous",
   "description": "",
   "externalRefPaths": [
-    "CLAUDE.md",
-    ".claude/skills/**/*.md",
+    "AGENTS.md",
+    ".agents/skills/**/*.md",
     ".cursor/**/*.md"
   ]
 }

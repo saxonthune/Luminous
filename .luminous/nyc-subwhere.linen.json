@@ -1,0 +1,295 @@
+{
+  "v": 1,
+  "modules": [
+    {
+      "id": "worker",
+      "name": "Cloudflare Worker"
+    },
+    {
+      "id": "feed-poller",
+      "name": "FeedPoller (Durable Object)",
+      "parent": "worker"
+    },
+    {
+      "id": "api",
+      "name": "/api/trips route",
+      "parent": "worker"
+    },
+    {
+      "id": "kv",
+      "name": "KV namespace SNAPSHOT"
+    },
+    {
+      "id": "browser",
+      "name": "Browser client"
+    },
+    {
+      "id": "mta",
+      "name": "MTA GTFS-realtime feeds"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "feed-message",
+      "name": "FeedMessage",
+      "owner": "mta",
+      "text": "transit_realtime.FeedMessage (GTFS-rt protobuf): entity[] each carrying tripUpdate { trip, stopTimeUpdate[] } and/or vehicle { trip, stopId, currentStatus }"
+    },
+    {
+      "id": "render-snapshot",
+      "name": "RenderSnapshot",
+      "text": "{ asOf: EpochMs, trips: TripState[] } — TripState { tripId, routeId, direction, lastKnownStop: { stopId, at }, upcoming: StopArrival[], status: \"progressing\" | \"stalled\" }"
+    },
+    {
+      "id": "train-pose",
+      "name": "TrainPose[]",
+      "owner": "browser",
+      "text": "Per-rAF interpolated positions handed to networkLayer.setTrains — one pose per live Trip on its Track segment"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "alarm",
+      "kind": "entry",
+      "module": "feed-poller",
+      "annotation": "FeedPoller.alarm() fires (worker/src/index.ts:135). Loads TripMemory (cross-poll history) from DO storage."
+    },
+    {
+      "id": "fetch-feeds",
+      "kind": "pass",
+      "module": "feed-poller",
+      "to": "mta",
+      "annotation": "Promise.allSettled over the 8 GTFS-rt feed URLs (worker/src/poll.ts:32). Fan-out and barrier: 8 fetches in flight at once; control resumes only when every one has settled."
+    },
+    {
+      "id": "any-feed-ok",
+      "kind": "filter",
+      "module": "feed-poller",
+      "annotation": "Guard: zero successful feeds -> pollSnapshot returns null and the caller keeps the last good KV frame (poll.ts:44, index.ts:140)."
+    },
+    {
+      "id": "all-feeds-failed",
+      "kind": "return",
+      "module": "feed-poller",
+      "annotation": "Total outage: no write this cycle; memory left un-pruned so the outage does not forget every trip."
+    },
+    {
+      "id": "decode",
+      "kind": "transformation",
+      "module": "feed-poller",
+      "annotation": "transit_realtime.FeedMessage.decode(buf) per fulfilled response (poll.ts:40): protobuf bytes -> FeedMessage."
+    },
+    {
+      "id": "assigned-only",
+      "kind": "filter",
+      "module": "feed-poller",
+      "annotation": "Per-entity guard: needs tripUpdate.trip and nyct.isAssigned — live tracked trains only (worker/src/reshape.ts:96-100)."
+    },
+    {
+      "id": "skip-unassigned",
+      "kind": "return",
+      "module": "feed-poller",
+      "annotation": "Entity skipped: not an assigned trip."
+    },
+    {
+      "id": "usable-stops",
+      "kind": "filter",
+      "module": "feed-poller",
+      "annotation": "Per-trip guard: stop times without a usable arrival/departure keyframe are dropped; a trip with zero arrivals is skipped (reshape.ts:106-116)."
+    },
+    {
+      "id": "skip-no-keyframe",
+      "kind": "return",
+      "module": "feed-poller",
+      "annotation": "Trip skipped: nothing renderable."
+    },
+    {
+      "id": "motion",
+      "kind": "switch",
+      "module": "feed-poller",
+      "annotation": "Branch on motion (reshape.ts:150-179): observed STOPPED_AT / approaching from a known departed stop / committed arrival overrun by >45s.",
+      "x": 526.8799947650807,
+      "y": 360.4317757967214
+    },
+    {
+      "id": "anchor-at-stop",
+      "kind": "transformation",
+      "module": "feed-poller",
+      "annotation": "Observed AT the front stop: anchor there, glide toward the stops ahead.",
+      "x": 527.8560509060941,
+      "y": 415.12000523491923
+    },
+    {
+      "id": "dead-reckon",
+      "kind": "transformation",
+      "module": "feed-poller",
+      "annotation": "Dead-reckon the departed->front segment; arrival to front sent fresh each poll so the client bends pace instead of snapping."
+    },
+    {
+      "id": "stall-hold",
+      "kind": "transformation",
+      "module": "feed-poller",
+      "annotation": "Stalled: runway truncated at the front stop so the client holds the train there and blinks."
+    },
+    {
+      "id": "snapshot-shape",
+      "kind": "type",
+      "module": "feed-poller",
+      "contract": "render-snapshot",
+      "annotation": "The merged frame across all 8 feeds: { asOf, trips }."
+    },
+    {
+      "id": "write-kv",
+      "kind": "pass",
+      "module": "feed-poller",
+      "to": "kv",
+      "annotation": "SNAPSHOT.put('trips:snapshot', JSON.stringify(snap)) (worker/src/index.ts:141). A write: nothing meaningful comes back."
+    },
+    {
+      "id": "rearm",
+      "kind": "release-control",
+      "module": "feed-poller",
+      "annotation": "finally: setAlarm(now + 30s) re-arms the loop unconditionally (index.ts:146). Control leaves the drawn system until the next alarm."
+    },
+    {
+      "id": "poll-tick",
+      "kind": "entry",
+      "module": "browser",
+      "annotation": "poll() on load, then every 30s (web/src/main.ts:776-777)."
+    },
+    {
+      "id": "fetch-trips",
+      "kind": "pass",
+      "module": "browser",
+      "to": "api",
+      "annotation": "fetch('/api/trips'). The worker serves the KV blob verbatim and kicks the poller awake, fire-and-forget (worker/src/index.ts:38-62)."
+    },
+    {
+      "id": "clock-skew",
+      "kind": "transformation",
+      "module": "browser",
+      "annotation": "clockSkew = snapshot.asOf - Date.now() (main.ts:742): rebase onto the worker clock so the re-base time matches the frame loop."
+    },
+    {
+      "id": "estimator-ingest",
+      "kind": "transformation",
+      "module": "browser",
+      "annotation": "estimator.ingest(snapshot, tracks, now + skew) (web/src/trains.ts:339): forward-only reconciliation — fromDist clamped so a revised ETA bends the remaining pace, never snaps position back."
+    },
+    {
+      "id": "pose-shape",
+      "kind": "type",
+      "module": "browser",
+      "contract": "train-pose",
+      "annotation": "Interpolated poses, recomputed per requestAnimationFrame."
+    },
+    {
+      "id": "render-frame",
+      "kind": "release-control",
+      "module": "browser",
+      "annotation": "frame(): networkLayer.setTrains(poses) (main.ts:761-764). Control leaves to the GPU layer; the train moves on screen."
+    }
+  ],
+  "edges": [
+    {
+      "from": "mta",
+      "to": "feed-message"
+    },
+    {
+      "from": "api",
+      "to": "render-snapshot"
+    },
+    {
+      "from": "browser",
+      "to": "train-pose"
+    },
+    {
+      "from": "alarm",
+      "to": "fetch-feeds"
+    },
+    {
+      "from": "fetch-feeds",
+      "to": "any-feed-ok"
+    },
+    {
+      "from": "any-feed-ok",
+      "to": "all-feeds-failed"
+    },
+    {
+      "from": "any-feed-ok",
+      "to": "decode"
+    },
+    {
+      "from": "decode",
+      "to": "assigned-only"
+    },
+    {
+      "from": "assigned-only",
+      "to": "skip-unassigned"
+    },
+    {
+      "from": "assigned-only",
+      "to": "usable-stops"
+    },
+    {
+      "from": "usable-stops",
+      "to": "skip-no-keyframe"
+    },
+    {
+      "from": "usable-stops",
+      "to": "motion"
+    },
+    {
+      "from": "motion",
+      "to": "anchor-at-stop"
+    },
+    {
+      "from": "motion",
+      "to": "dead-reckon"
+    },
+    {
+      "from": "motion",
+      "to": "stall-hold"
+    },
+    {
+      "from": "anchor-at-stop",
+      "to": "snapshot-shape"
+    },
+    {
+      "from": "dead-reckon",
+      "to": "snapshot-shape"
+    },
+    {
+      "from": "stall-hold",
+      "to": "snapshot-shape"
+    },
+    {
+      "from": "snapshot-shape",
+      "to": "write-kv"
+    },
+    {
+      "from": "write-kv",
+      "to": "rearm"
+    },
+    {
+      "from": "poll-tick",
+      "to": "fetch-trips"
+    },
+    {
+      "from": "fetch-trips",
+      "to": "clock-skew"
+    },
+    {
+      "from": "clock-skew",
+      "to": "estimator-ingest"
+    },
+    {
+      "from": "estimator-ingest",
+      "to": "pose-shape"
+    },
+    {
+      "from": "pose-shape",
+      "to": "render-frame"
+    }
+  ]
+}

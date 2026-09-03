@@ -15,6 +15,8 @@ const recentWrites = new Map<string, number>()
 const DATAFLOW_SUFFIX = ".dataflow.json"
 const ATLAS_SUFFIX = ".atlas.json"
 const ATLASDATA_SUFFIX = ".atlasdata.json"
+const LINEN_SUFFIX = ".linen.json"
+const MERINO_SUFFIX = ".merino.json"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
@@ -24,9 +26,17 @@ export function isAtlasPath(relativePath: string): boolean {
   return relativePath.endsWith(ATLAS_SUFFIX)
 }
 
+export function isLinenPath(relativePath: string): boolean {
+  return relativePath.endsWith(LINEN_SUFFIX)
+}
+
+export function isMerinoPath(relativePath: string): boolean {
+  return relativePath.endsWith(MERINO_SUFFIX)
+}
+
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
-  return isDataflowPath(relativePath) || isAtlasPath(relativePath)
+  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath)
 }
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
@@ -214,7 +224,7 @@ export async function applyAction(
   params: Record<string, unknown>
 ): Promise<ActionResult> {
   if (isRawDocPath(relativePath)) {
-    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json)" }
+    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json)" }
   }
   const doc = await getDocument(relativePath)
   const result = applyActionToDoc(doc, action, params)
@@ -230,7 +240,7 @@ export async function applyBatch(
   actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
 ): Promise<Array<ActionResult & { ref?: string }>> {
   if (isRawDocPath(relativePath)) {
-    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json)" }]
+    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json)" }]
   }
   const doc = await getDocument(relativePath)
   const refs = new Map<string, string>()
@@ -329,6 +339,30 @@ export function watchDocuments(
   watchRoots: { name: string; dir: string }[],
   onChange: (relativePath: string) => void
 ): void {
+  // Native fs.watch commonly emits multiple events for one completed write.
+  // Coalescing by resolved path makes one external write one client reload;
+  // it also makes overlapping configured roots harmless for the same file.
+  const pendingChanges = new Map<string, ReturnType<typeof setTimeout>>()
+  const CHANGE_COALESCE_MS = 50
+
+  const scheduleChange = (docPath: string, absPath: string) => {
+    const previous = pendingChanges.get(absPath)
+    if (previous !== undefined) clearTimeout(previous)
+    const timer = setTimeout(() => {
+      pendingChanges.delete(absPath)
+      // writeRawDocument marks its own writes after the filesystem call. Check
+      // here, rather than at event receipt, so an early watcher notification
+      // cannot echo a server-originated write back to its client.
+      const lastWrite = recentWrites.get(absPath)
+      if (lastWrite !== undefined && Date.now() - lastWrite < 3000) return
+      recentWrites.delete(absPath)
+      cache.delete(docPath)
+      rawCache.delete(docPath)
+      onChange(docPath)
+    }, CHANGE_COALESCE_MS)
+    pendingChanges.set(absPath, timer)
+  }
+
   for (const root of watchRoots) {
     try {
       const watcher = watch(root.dir, { recursive: true }, (_event, filename) => {
@@ -338,20 +372,15 @@ export function watchDocuments(
           !normalized.endsWith(".graph.json") &&
           !normalized.endsWith(DATAFLOW_SUFFIX) &&
           !normalized.endsWith(ATLAS_SUFFIX) &&
-          !normalized.endsWith(ATLASDATA_SUFFIX)
+          !normalized.endsWith(ATLASDATA_SUFFIX) &&
+          !normalized.endsWith(LINEN_SUFFIX) &&
+          !normalized.endsWith(MERINO_SUFFIX)
         ) {
           return
         }
         const docPath = root.name ? `${root.name}/${normalized}` : normalized
         const absPath = resolve(root.dir, normalized)
-        const lastWrite = recentWrites.get(absPath)
-        if (lastWrite !== undefined && Date.now() - lastWrite < 3000) {
-          return
-        }
-        recentWrites.delete(absPath)
-        cache.delete(docPath)
-        rawCache.delete(docPath)
-        onChange(docPath)
+        scheduleChange(docPath, absPath)
       })
       // Recursive watch on a large repo can exhaust inotify watches; degrade
       // gracefully (live-reload off for this root) rather than crash.
