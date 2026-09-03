@@ -1,14 +1,57 @@
 name: Deploy demo
+
+# The version in package.json is the single source of truth. A push to main that
+# carries a version not yet tagged is a release: this workflow tags it and deploys
+# the demo. A push that does not change the version matches no new tag and does
+# nothing. workflow_dispatch redeploys the current version without tagging.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths: ['**/package.json']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      fresh: ${{ steps.resolve.outputs.fresh }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: resolve
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.fresh == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - if: needs.check.outputs.fresh == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "v$VERSION"
+          git push origin "v$VERSION"
+          gh release create "v$VERSION" --title "v$VERSION" --generate-notes
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
