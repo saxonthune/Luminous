@@ -144,8 +144,8 @@
       "parent": "ui-transition-graph",
       "width": 577.2193210314199,
       "height": 498.3359926174494,
-      "x": 2768.1619949155715,
-      "y": 1357.8190569795165
+      "x": 2791.5109911673535,
+      "y": 1214.3897790552346
     },
     {
       "id": "n-7",
@@ -168,32 +168,6 @@
       "height": 726.0894538961797,
       "x": 1093.8093871016617,
       "y": 1742.809858805535
-    },
-    {
-      "id": "act-signin",
-      "tab": "requirements",
-      "type": "action",
-      "name": "Sign in",
-      "parent": "n-3",
-      "x": 19.43291616301866,
-      "y": 32.00712402110655
-    },
-    {
-      "id": "act-browse",
-      "tab": "requirements",
-      "type": "action",
-      "name": "Browse tournaments",
-      "parent": "act-start",
-      "order": 0
-    },
-    {
-      "id": "act-start",
-      "tab": "requirements",
-      "type": "action",
-      "name": "Start a bracket",
-      "parent": "n-3",
-      "x": 60.343739097968864,
-      "y": 213.1233143937858
     },
     {
       "id": "act-seed",
@@ -230,76 +204,6 @@
       "height": 674.6690545333468,
       "x": 2314.5144069040825,
       "y": 1688.8383585546699
-    },
-    {
-      "id": "a-home-build",
-      "tab": "requirements",
-      "type": "action",
-      "name": "Build a Bracket",
-      "parent": "n-3",
-      "x": 194.85158428382425,
-      "y": 28.577748937652245
-    },
-    {
-      "id": "t-home-build",
-      "tab": "requirements",
-      "type": "ui-transition",
-      "name": "→ Build a Bracket",
-      "parent": "a-home-build",
-      "order": 0
-    },
-    {
-      "id": "a-home-standings",
-      "tab": "requirements",
-      "type": "action",
-      "name": "Tournament Standings",
-      "parent": "n-3",
-      "width": 236.92649713024073,
-      "height": 197.29989409795203,
-      "x": 328.4479256921827,
-      "y": 214.6880777468134
-    },
-    {
-      "id": "t-home-standings",
-      "tab": "requirements",
-      "type": "ui-transition",
-      "name": "Tournament Standings",
-      "parent": "a-home-standings",
-      "order": 0
-    },
-    {
-      "id": "a-home-leaderboard",
-      "tab": "requirements",
-      "type": "action",
-      "name": "View Leaderboard",
-      "parent": "n-3",
-      "x": 408.37462164688486,
-      "y": 488.007422103579
-    },
-    {
-      "id": "t-home-leaderboard",
-      "tab": "requirements",
-      "type": "ui-transition",
-      "name": "→ View Bracket Leaderboard",
-      "parent": "a-home-leaderboard",
-      "order": 0
-    },
-    {
-      "id": "a-home-view",
-      "tab": "requirements",
-      "type": "action",
-      "name": "View a bracket",
-      "parent": "n-3",
-      "x": 404.7103166643624,
-      "y": 756.0725122334752
-    },
-    {
-      "id": "t-home-view",
-      "tab": "requirements",
-      "type": "ui-transition",
-      "name": "→ View a Bracket",
-      "parent": "a-home-view",
-      "order": 0
     },
     {
       "id": "a-builder-pick",
@@ -596,8 +500,8 @@
       "name": "UI Transition Graph",
       "width": 3494.21932103142,
       "height": 2745.0894538961797,
-      "x": -2814.1418717388888,
-      "y": -886.4342252699294
+      "x": -3197.9652376194736,
+      "y": -1409.0245984962182
     },
     {
       "id": "resources-area",
@@ -607,8 +511,8 @@
       "agentGuidance": "This is the top-level separation of requirements from resources. It has exactly two containment children: Requirements and Resources.",
       "width": 4097.558737578804,
       "height": 4155.2575150383145,
-      "x": -3458.0598895474022,
-      "y": 2527.314510459758
+      "x": 1729.1997861578811,
+      "y": -1601.2485722168167
     },
     {
       "id": "bracket-submissions-data",
@@ -846,10 +750,10 @@
           "offset": 0.7749129863166331
         }
       },
-      "width": 3889.31032901535,
-      "height": 3548,
-      "x": 184.24840856345327,
-      "y": 124.69761631267875
+      "width": 3668.8803702211844,
+      "height": 3448.491543215278,
+      "x": 167.04093494732388,
+      "y": 308.60277120205774
     },
     {
       "id": "resources-section",
@@ -943,6 +847,34 @@
       "parent": "requirements-area",
       "x": 1300,
       "y": 1260
+    },
+    {
+      "id": "n-1",
+      "tab": "requirements",
+      "type": "ui-transition",
+      "name": "Go to Bracket Builder",
+      "parent": "n-3"
+    },
+    {
+      "id": "n-5",
+      "tab": "requirements",
+      "type": "ui-transition",
+      "name": "Go to Tournament Standings",
+      "parent": "n-3"
+    },
+    {
+      "id": "n-9",
+      "tab": "requirements",
+      "type": "ui-transition",
+      "name": "Go to Bracket Leaderboard",
+      "parent": "n-3"
+    },
+    {
+      "id": "n-11",
+      "tab": "requirements",
+      "type": "ui-transition",
+      "name": "Go to Bracket Viewer",
+      "parent": "n-3"
     }
   ],
   "edges": [
@@ -973,34 +905,6 @@
       "type": "triggers",
       "from": "n-3",
       "to": "n-8"
-    },
-    {
-      "id": "nav-home-build",
-      "tab": "requirements",
-      "type": "navigates",
-      "from": "t-home-build",
-      "to": "load-builder"
-    },
-    {
-      "id": "nav-home-standings",
-      "tab": "requirements",
-      "type": "navigates",
-      "from": "t-home-standings",
-      "to": "load-standings"
-    },
-    {
-      "id": "nav-home-leaderboard",
-      "tab": "requirements",
-      "type": "navigates",
-      "from": "t-home-leaderboard",
-      "to": "load-leaderboard"
-    },
-    {
-      "id": "nav-home-view",
-      "tab": "requirements",
-      "type": "navigates",
-      "from": "t-home-view",
-      "to": "load-view-bracket"
     },
     {
       "id": "nav-builder-home",
@@ -1178,5 +1082,14 @@
       "to": "req-render-submitted-bracket"
     }
   ],
-  "agentGuidance": "Keep the UI Transition Graph separate from Requirements-Resources. Requirements-Resources contains exactly two child containers: Requirements holds the requirement tree and linked Subrequirements; Resources holds flat Resource nodes. Preserve semantic edges: Events trigger Event Requirements, Subrequirements satisfy Requirement containers, and leaf Subrequirements need Resources. Do not turn these semantic links into containment."
+  "agentGuidance": "Keep the UI Transition Graph separate from Requirements-Resources. Requirements-Resources contains exactly two child containers: Requirements holds the requirement tree and linked Subrequirements; Resources holds flat Resource nodes. Preserve semantic edges: Events trigger Event Requirements, Subrequirements satisfy Requirement containers, and leaf Subrequirements need Resources. Do not turn these semantic links into containment.",
+  "overview": {
+    "requirements": {
+      "rootNodeIds": [
+        "ui-transition-graph",
+        "resources-section",
+        "requirements-area"
+      ]
+    }
+  }
 }

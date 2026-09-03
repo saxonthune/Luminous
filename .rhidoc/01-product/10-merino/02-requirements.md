@@ -18,12 +18,14 @@ Container, Port — name Merino's constructs (doc01.10.01).
 
 Merino is one Document with two Tabs. Both Tabs are the same node-and-edge
 canvas with the same authoring vocabulary; they differ only in what the user
-draws on them.
+draws on them. Each Tab can be presented through more than one View. The Edit
+View is the authoring canvas; the Overview View is reserved for a summary
+presentation of the same Tab.
 
 - **C1.** The system shall present two Tabs, Requirements and Deployments, and
   shall allow the user to switch between them.
-- **C2.** The system shall draw each Tab as the same node-and-edge canvas with
-  the same authoring vocabulary.
+- **C2.** In the Edit View, the system shall draw each Tab as the same
+  node-and-edge canvas with the same authoring vocabulary.
 - **C3.** The system shall store which Tab each Node and Edge belongs to in the
   Document.
 - **C4.** The system shall allow the user to add a Node from the canvas
@@ -47,6 +49,87 @@ draws on them.
   user center the viewport on a downstream Node without changing the current
   zoom level; where several downstream Nodes exist, it shall offer a list of
   their distinct destinations.
+- **C11.** The system shall present an Overview/Edit View switcher beside the
+  Requirements and Deployments Tabs, and shall allow the user to switch Views
+  without writing the selected View to the Document.
+- **C12.** The Edit View shall contain the existing node-and-edge authoring
+  canvas.
+- **C13.** On the Requirements Tab, the Overview View shall present the existing
+  UI Transition Graph and Resources Nodes as light-background root
+  Cards on a fixed-scale freeform canvas, without an outer section around either
+  Card and without storing a separate overview projection in the Document. Each
+  root Card's header shall show its title and Node Type, and its tall, vertically
+  scrollable body shall list its direct children without losing its scroll
+  position when the Card is moved. The user shall be able to resize any Card's
+  child list vertically. Selecting any child shall open
+  a darker-background Card to the right whose body lists its direct children or
+  identifies that it has none. The open Cards shall remain transient UI state.
+- **C14.** Each opened child Card in the Overview View shall show the first line
+  of that Node's existing detail text in its header above its child count,
+  or identify that no description exists. Clicking the description shall expand
+  or collapse the full text without changing the Document. Double-clicking it
+  shall open an inline editor for the same detail field used by the Edit View;
+  leaving the editor or pressing the platform primary modifier with Enter shall
+  save, and Escape shall cancel.
+- **C15.** The Overview View shall allow the user to drag each Card freely while
+  keeping the camera scale fixed. It shall connect every opened child Card's
+  header to its parent Card's header with a dotted Bézier Edge. Selecting a
+  different child shall close the replaced unpinned branch. The user shall be
+  able to pin an opened Card so that Card and the ancestor chain needed to reach
+  it remain open when another branch is selected; unpinning a Card that is not
+  on the active branch shall close it unless a pinned descendant still requires
+  it. Pin, position, disclosure, and camera state shall stay out of the
+  Document; the system retains them for the browser tab's life (C24).
+- **C16.** While the Overview View is active, the system shall present an
+  In/Out zoom switcher beside the View switcher. The In level shall present the
+  interactive Overview Cards. The Out level shall present the same disclosed
+  Cards as substantially smaller, spatially compressed, read-only identities
+  containing only each Node's legible title and Node Type. Switching levels
+  shall preserve the point at the center of the viewport rather than resetting
+  the camera. At the Out level, the user shall be able to pan
+  the canvas and return to the In level, but shall not be able to open, move,
+  resize, pin, or edit Cards. Changing levels shall preserve the transient
+  disclosure and Card state and shall not change the Document.
+- **C17.** In the Edit View, a Node's context menu shall allow the user to pin
+  that Node to, or remove it from, the Requirements Overview root list by its
+  stable Node identifier. The newly
+  pinned root shall appear without closing or resetting existing Overview
+  Cards. The ordered root list shall persist with the Document. A Document
+  without a stored list shall use the product's default roots until the user
+  first changes the list. A Node shall not appear twice, and deleting a pinned
+  Node or its ancestor shall remove the deleted identifiers from the list.
+- **C18.** In the Overview View at the In level, the system shall let the user
+  edit a Card's title from its header — on a root Card and on an opened child
+  Card — and shall write the change to the Node's name.
+- **C19.** In the Overview View at the In level, the system shall let the user
+  change a Card's Node Type from its header through a menu that shows every Node
+  Type in its Color. When the Card's Node has children, the menu shall offer
+  only Container Types as selectable and shall show the others disabled (N30).
+- **C20.** In the Overview View at the In level, when a Card's Node Type is a
+  Container, the system shall let the user add a child Node to that Card. The
+  new child shall take its parent's Node Type, append to the parent (the next
+  order in a list, a derived slot in a freeform Container), and open as a new
+  Card.
+- **C21.** In the Overview View at the In level, right-clicking a Card shall open
+  a context menu whose Delete option names the Card's Node, and right-clicking
+  one of its child-list rows shall open a context menu that names that row's Node
+  and offers Clone (C22) and Delete. Deleting removes the named Node, its
+  Subnodes, and every Edge that touches a removed Node (N7), and closes that
+  Node's Card and every Card disclosed beneath it.
+- **C22.** In the Overview View at the In level, cloning a child-list row's Node
+  shall create a sibling Node under the same parent with the same Node Type and
+  description, name the sibling from the row Node's name with " (copy N)"
+  appended, copy none of the row Node's Subnodes, and open the sibling as a new
+  Card.
+- **C23.** In the Overview View at the In level, each child-list row shall show
+  its Node's Type through the same Color menu the Card header uses (C19) and
+  shall obey the same Container rule (N30).
+- **C24.** The system shall retain, for the life of the browser tab and
+  separately for each open Document, the selected Tab, the selected View, the
+  Overview zoom level, the opened Overview Cards with their positions and pins,
+  and each View's camera. Leaving Merino and returning, and a development
+  reload, shall restore them. None of this is written to the Document.
+- **C25.** The system shall offer the Manage types control in every View.
 
 ## Nodes
 
@@ -69,12 +152,14 @@ Container accepts a child of any Type — it never restricts which Types it hold
 - **N5.** When the user right-clicks a Node, the system shall open a context menu
   offering Copy, Paste, Add subnode, a Type submenu, and Delete; a Node with an
   outbound Edge shall also offer downstream navigation.
-- **N6.** When the user adds a Subnode, the system shall create a child Node
-  joined to its parent by a dotted Edge.
+- **N6.** When the user adds a Subnode, the system shall create a child Node of
+  the same Node Type as its parent, joined to its parent by a dotted Edge when
+  the parent is not a Container.
 - **N7.** When the user deletes a Node, the system shall remove the Node, its
   Subnodes, and every Edge that touches a removed Node.
 - **N8.** The Node context menu's Type submenu shall list the Document's Node
   Types and an option to create a new Type; selecting a Type retypes the Node.
+  A Type that N30 forbids for this Node shall be shown disabled.
 - **N9.** The system shall allow the user to copy selected Nodes and paste them
   through the context menu or the platform primary copy and paste shortcuts. A
   paste shall create fresh Nodes, preserve copied parent links and Edges whose
@@ -148,24 +233,25 @@ Container accepts a child of any Type — it never restricts which Types it hold
   its children.
 - **N27.** Before the overview presentation replaces ordinary Node content, the
   system shall keep each Node's title and Node Type badge readable as one bounded
-  identity while the surrounding Node continues to scale geometrically. The
-  ordinary identity shall hand off as a unit to the overview identity.
-- **N28.** At the structural viewing scale, the system shall preserve Node and
-  Container geometry while withdrawing secondary detail, editing and navigation
-  controls, Container layout controls, resize handles, and idle boundary Ports.
-  Hovering or selecting a Node shall restore that Node's secondary content in
-  place without changing the surrounding layout.
+  identity while the surrounding Node continues to scale geometrically and the
+  identity's allocated header area remains useful on screen. The ordinary
+  identity shall hand off as a unit when the overview identity becomes eligible.
+- **N28.** As a Node's allocated areas become smaller on screen, the system shall
+  counter-scale related controls as units and withdraw a unit when its area can
+  no longer retain a useful screen size. It shall withdraw secondary detail and
+  controls before Node identity. A resize-enabled Container whose projected
+  geometry remains useful shall retain a screen-sized resize handle regardless
+  of the camera's semantic viewing scale. Editing a detail body remains an
+  editing-scale interaction.
 - **N29.** At the structural and overview viewing scales, the system shall let
   the user focus a Node at an editing scale by double-clicking its visible
   identity or pressing Enter while it is selected. After such a focus, Escape
   shall restore the camera position and scale from before the first focus.
-- **N30.** At the overview viewing scale, the system shall not leave an ordinary
-  Node card visible after withdrawing the card's identity. It shall preserve a
-  Container as a Type-tinted structural region, replace a sufficiently large
-  leaf Node with a Type-colored mark, and hide a leaf whose projected footprint
-  is too small to communicate useful structure. A Container's overview identity
-  shall report its number of directly contained Nodes.
-
+- **N30.** When a Node has children, the system shall not retype it to a Node
+  Type that is not a Container. A list Container and a freeform Container remain
+  interchangeable for such a Node. This holds wherever a Type is chosen — the
+  Edit View Type submenu, the Overview View's Card-header and child-row Type
+  menus, and an agent mutation.
 ## Edges
 
 An Edge connects two Nodes and carries a user-managed Edge Type. The dotted Edge
@@ -214,8 +300,8 @@ typed Edge.
 - **E14.** At the structural viewing scale, the system shall retain Edges as
   subdued relationship context and withdraw their labels. Selecting a Node
   shall restore the prominence and labels of its incident Edges. At the
-  overview viewing scale, Edge lines shall become quieter and detailed Edge
-  labels shall remain withdrawn.
+  overview viewing scale, Edge lines shall become quieter but remain discernible
+  as relationship structure, while detailed Edge labels remain withdrawn.
 
 ## Types
 
@@ -251,7 +337,7 @@ section states what an agent can do through it, not the individual verbs.
 - **M1.** The system shall allow an agent to create a Merino Document and to read
   its Nodes, Edges, and Type registries.
 - **M2.** The system shall allow an agent to add, rename, retype, reparent, and
-  remove Nodes and Subnodes.
+  remove Nodes and Subnodes. A retype is subject to N30.
 - **M3.** The system shall allow an agent to connect and disconnect Nodes with
   typed Edges, and to change an Edge's Type.
 - **M4.** The system shall allow an agent to manage the Node Type and Edge Type
@@ -288,6 +374,25 @@ baseline navigation with no assigned requirement yet.
 | Target | Interaction | Action | Req |
 |---|---|---|---|
 | Tab (Requirements / Deployments) | left click | Switch to that Tab | C1 |
+| View (Overview / Edit) | left click | Switch the current Tab's presentation | C11, C12 |
+| Overview zoom (In / Out) | left click | Switch between the interactive Cards and read-only identity projection | C16 |
+| Edit View Node | right click, then Pin to Overview | Persist the Node's stable identifier in the Requirements Overview root list | C17 |
+| Edit View Node | right click, then Remove from Overview | Remove the Node's stable identifier from the Requirements Overview root list | C17 |
+| Overview child | left click | Open the child as a Card to the right, including when it has no children | C13, C15 |
+| Overview Card header | left click + drag | Move the Card on the freeform canvas | C15 |
+| Overview Card bottom edge | left click + vertical drag | Resize the Card's child list vertically | C13 |
+| Overview Card Pin / Pinned control | left click | Keep the Card open when its branch loses focus, or release it | C15 |
+| Overview Card description | left click | Expand or collapse the full description | C14 |
+| Overview Card description | double left click | Edit the Node's detail text inline | C14, N3 |
+| Overview description editor | blur or Ctrl/Cmd+Enter | Save the Node's detail text | C14, N3 |
+| Overview description editor | Escape | Cancel the in-progress edit | C14 |
+| Overview Card title | double left click | Edit the Node's name inline; Enter or blur saves, Escape cancels | C18, N3 |
+| Overview Card Type badge | left click | Open the Node Type menu, each Type shown in its Color | C19, N30 |
+| Overview Card Add child control | left click | Add a child of the parent's Node Type and open its Card | C20, N6 |
+| Overview Card | right click, then Delete | Delete the Card's Node and its subtree, closing the Card and its disclosed branch | C21, N7 |
+| Overview child row | right click, then Clone | Duplicate the row's Node as a sibling and open its Card | C22 |
+| Overview child row | right click, then Delete | Delete the row's Node and its subtree | C21, N7 |
+| Overview child row Type badge | left click | Open the Node Type menu, each Type shown in its Color | C23, N30 |
 | Canvas background | right click | Context menu: Add Node | C4, N1 |
 | Canvas or Node | middle click + drag | Pan the camera | C5 |
 | Canvas background | scroll wheel | Zoom the camera | C5 |
@@ -316,7 +421,7 @@ baseline navigation with no assigned requirement yet.
 | Canvas background | right click | Context menu: Paste | N9 |
 | Canvas | Ctrl/Cmd+C | Copy selected Nodes | N9 |
 | Canvas | Ctrl/Cmd+V | Paste copied Nodes | N9 |
-| Add subnode (context menu) | left click | Create a Subnode joined by a dotted Edge | N6 |
+| Add subnode (context menu) | left click | Create a Subnode of the parent's Node Type, joined by a dotted Edge | N6 |
 | Type ▸ (Node context menu) | hover | Open the Node Type submenu (Types + New type…) | N8, T5 |
 | Node Type (submenu) | left click | Set the Node's Type | N8 |
 | New type… (Node Type submenu) | left click | Create a Node Type and apply it to the Node | T2, T5 |
@@ -327,5 +432,5 @@ baseline navigation with no assigned requirement yet.
 | Type ▸ (Edge context menu) | hover | Open the Edge Type submenu (Types + New type…) | E4, T5 |
 | Edge Type (submenu) | left click | Set the Edge's Type | E4 |
 | Delete (context menu) | left click | Remove the Node (with its Subnodes and Edges) or the Edge | N7, E5 |
-| Manage types control | left click | Open the Manage types panel | T7 |
+| Manage types control (any View) | left click | Open the Manage types panel | T7, C25 |
 | Node Type layout select (Manage types) | change | Set the Node Type's layout — nothing, a container, or a list | T8 |

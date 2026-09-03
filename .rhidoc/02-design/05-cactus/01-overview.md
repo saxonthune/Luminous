@@ -18,7 +18,7 @@ Cactus is "domain-agnostic" in a precise sense: it has no opinion about a "node 
 
 **Nodes.** `<NodeContainer nodeId x y w h>{ children }</NodeContainer>` — `nodeId` is an opaque string, `x/y/w/h` are signal accessors in canvas coordinates, `children` is opaque JSX that cactus never inspects. Containment, schemas, content, titles, and any domain-specific fields live entirely above this boundary — the host computes geometry from whatever data model it owns and passes the result through props.
 
-**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label?, routeBuilder? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it receives. Direction is a visual hint (arrowhead on target) not a semantic constraint.
+**Edges.** `edges?: EdgeDeclaration[]` on `<Canvas>`, where each entry is `{ id, sourceId, targetId, styling?, label?, routeBuilder? }`. `sourceId`/`targetId` must match registered `nodeId`s. Cactus filters nothing — the host decides which edges exist; cactus draws what it receives. Direction is a visual hint (arrowhead on target) not a semantic constraint. Styling may retain straight route segments or render them as cubic Bézier curves.
 
 **Routes.** A Route is transient geometry for one Edge. A host may derive a Route from registered node rectangles and return ordered points with one visual band per segment. Cactus computes the geometry once for all visual layers, draws those segments, keeps their hit targets under the Edge's original id, places the arrowhead on the final segment, and places labels by the full Route length. A host assigns the meaning of a visual band; cactus only orders bands with Nodes that supply a matching `visualBand`. A host may temporarily freeze that shared geometry during an interaction and let it catch up afterward.
 
@@ -45,9 +45,12 @@ then admits new Items and reconciles exact measurements in one settled layout.
 **Local counter-scaling.** `<CounterScale>` lets a host wrap a small subtree of
 ordinary Node content and resist camera shrinkage with a bounded inverse CSS
 transform. It reads the camera from Canvas context, so app components need no
-zoom prop chain. Counter-scaling remains inside the Node and does not alter
-layout or coordinate collisions; Visual LOD remains the mechanism for visuals
-that must escape the Node and compete for shared screen space.
+zoom prop chain. `<CounterScaleSlot>` adds a declared or measured layout
+allocation and a projected screen-size floor, so the host can retain one
+semantic unit while it fits and withdraw it without opacity once it does not.
+`<ScreenSpaceAnchor>` attaches fixed-screen interaction chrome to a canvas-space
+point outside Node clipping. Visual LOD remains the mechanism for semantic
+visuals that must compete for shared screen space.
 
 **Hit-testing and styling.** Cactus uses DOM data attributes (see [DOM Attribute Conventions](#dom-attribute-conventions)). Hosts and pack renderers may stamp additional attributes for CSS targeting; cactus only reads the ones it owns.
 
@@ -83,7 +86,7 @@ The canvas renders five conceptual DOM layers, stacked with absolute positioning
 └─────────────────────────────────────────┘
 ```
 
-Route bands and Nodes share the same `translate(x, y) scale(k)` transform, keeping nodes and edges aligned. Cactus orders route bands as siblings of Nodes, so a host can draw a route above a container shell and below its children. The connection preview uses container-local pixel coordinates because it mixes a zoom-stable anchor (start point, derived from canvas coords) with a raw cursor position (current point, in screen coords).
+Route bands and Nodes share the same `translate(x, y) scale(k)` transform, keeping nodes and edges aligned. Cactus orders route bands as siblings of Nodes, so a host can draw a route above a container shell and below its children. Edge geometry remains in canvas space, while cactus counter-scales stroke width, dash cadence, arrowheads, and hit targets to minimum screen-space sizes as the camera zooms out; the host still owns semantic opacity and label disclosure. The connection preview uses container-local pixel coordinates because it mixes a zoom-stable anchor (start point, derived from canvas coords) with a raw cursor position (current point, in screen coords).
 
 ## Coordinate Systems
 

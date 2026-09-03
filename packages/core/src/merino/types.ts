@@ -124,12 +124,23 @@ export interface MerinoEdge {
   to: string;
 }
 
+export interface MerinoOverviewRequirements {
+  /** Ordered stable Node ids shown as root Cards in the Requirements Overview. */
+  rootNodeIds: string[];
+}
+
+export interface MerinoOverviewConfig {
+  requirements?: MerinoOverviewRequirements;
+}
+
 export interface MerinoDocument {
   v: number;
   nodeTypes: MerinoNodeType[];
   edgeTypes: MerinoEdgeType[];
   nodes: MerinoNode[];
   edges: MerinoEdge[];
+  /** Persisted membership and ordering for Merino's semantic Overview. */
+  overview?: MerinoOverviewConfig;
   /** Workspace-wide instructions for an agent author. */
   agentGuidance?: string;
 }
@@ -249,6 +260,11 @@ export interface SetDocumentGuidanceAction {
   agentGuidance?: string;
 }
 
+export interface SetOverviewRequirementsRootsAction {
+  type: 'setOverviewRequirementsRoots';
+  rootNodeIds: string[];
+}
+
 export type MerinoAction =
   | AddNodeTypeAction
   | SetNodeTypeAction
@@ -262,6 +278,7 @@ export type MerinoAction =
   | ConnectAction
   | SetEdgeAction
   | DisconnectAction
+  | SetOverviewRequirementsRootsAction
   | SetDocumentGuidanceAction;
 
 /** A batch action may name the id it creates.  Later actions may use

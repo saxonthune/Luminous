@@ -21,7 +21,9 @@ beforeAll(() => {
 });
 import { ConnectionHandle } from '../src/ConnectionHandle';
 import { NodeContainer } from '../src/NodeContainer';
-import { counterScaleFactor } from '../src/CounterScale';
+import { counterScaleFactor, counterScaleSlotState } from '../src/CounterScale';
+import { ScreenSpaceAnchor, screenSpaceAnchorOffset } from '../src/ScreenSpaceAnchor';
+import { ResizeHandle } from '../src/ResizeHandle';
 import { CanvasContext } from '../src/CanvasContext';
 import type { CanvasContextValue } from '../src/CanvasContext';
 
@@ -172,6 +174,111 @@ describe('counterScaleFactor', () => {
 
   it('normalizes reversed bounds', () => {
     expect(counterScaleFactor(0.5, 1, 3, 1)).toBe(2);
+  });
+});
+
+describe('counterScaleSlotState', () => {
+  it('derives projected capacity and inverse scale without measuring during zoom', () => {
+    expect(counterScaleSlotState({ zoom: 0.5, width: 200, height: 80 })).toEqual({
+      scale: 2,
+      screenWidth: 100,
+      screenHeight: 40,
+      visible: true,
+    });
+  });
+
+  it('hides a unit whose projected allocation cannot meet its screen floor', () => {
+    expect(counterScaleSlotState({
+      zoom: 0.5,
+      width: 80,
+      height: 30,
+      minScreenWidth: 48,
+      minScreenHeight: 18,
+    }).visible).toBe(false);
+  });
+
+  it('uses separate exit and re-entry boundaries', () => {
+    const common = {
+      zoom: 1,
+      width: 49,
+      height: 20,
+      minScreenWidth: 50,
+      minScreenHeight: 20,
+      hysteresis: 2,
+    };
+    expect(counterScaleSlotState({ ...common, wasVisible: true }).visible).toBe(true);
+    expect(counterScaleSlotState({ ...common, wasVisible: false }).visible).toBe(false);
+  });
+});
+
+describe('screenSpaceAnchorOffset', () => {
+  it('pins a bottom-right visual around its world anchor', () => {
+    expect(screenSpaceAnchorOffset(16, 20, 'right', 'bottom')).toEqual({
+      left: -16,
+      top: -20,
+      origin: 'right bottom',
+    });
+  });
+
+  it('centers a visual around its world anchor', () => {
+    expect(screenSpaceAnchorOffset(16, 20)).toEqual({
+      left: -8,
+      top: -10,
+      origin: 'center center',
+    });
+  });
+});
+
+describe('ScreenSpaceAnchor', () => {
+  it('pins an inversely scaled visual to a canvas point', () => {
+    const zoomedContext: CanvasContextValue = {
+      ...mockCanvasCtx,
+      transform: () => ({ x: 0, y: 0, k: 0.5 }),
+    };
+    const { container, cleanup } = renderIntoContainer(() => (
+      <CanvasContext.Provider value={zoomedContext}>
+        <ScreenSpaceAnchor
+          x={() => 100}
+          y={() => 200}
+          width={16}
+          height={16}
+          horizontal="right"
+          vertical="bottom"
+        >
+          <span>handle</span>
+        </ScreenSpaceAnchor>
+      </CanvasContext.Provider>
+    ));
+    const anchor = container.querySelector('[data-cactus-screen-space-anchor]') as HTMLElement;
+    const visual = container.querySelector('[data-cactus-counter-scale]') as HTMLElement;
+    expect(anchor.style.left).toBe('100px');
+    expect(anchor.style.top).toBe('200px');
+    expect(visual.style.left).toBe('-16px');
+    expect(visual.style.top).toBe('-16px');
+    expect(visual.style.transform).toBe('scale(2)');
+    cleanup();
+  });
+
+  it('renders an anchored ResizeHandle outside Node content', () => {
+    const onResize = vi.fn();
+    const { container, cleanup } = renderNodeContainer(() => (
+      <ResizeHandle
+        nodeId="container"
+        rect={() => ({ x: 10, y: 20, w: 100, h: 80 })}
+        onResizePointerDown={onResize}
+      />
+    ));
+    const anchor = container.querySelector('[data-cactus-screen-space-anchor]') as HTMLElement;
+    const handle = container.querySelector('[data-cactus-resize-handle]') as HTMLElement;
+    expect(anchor.style.left).toBe('110px');
+    expect(anchor.style.top).toBe('100px');
+    handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    expect(onResize).toHaveBeenCalledWith(
+      'container',
+      { horizontal: 'right', vertical: 'bottom' },
+      expect.any(PointerEvent),
+    );
+    cleanup();
   });
 });
 

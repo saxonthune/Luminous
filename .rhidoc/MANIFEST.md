@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -104,7 +104,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.09.00 | `09-linen/00-index.md` |  |  | — | — | — |
-| doc01.09.01 | `09-linen/01-idea.md` | A canvas app that answers "what happens when this runs" — nested modules drawn as symbol sequences of control flow and data transformation, annotated on selection | linen, apps, control-flow, symbols, contracts | doc01.04, doc01.09.02 | doc01.09.02 | — |
+| doc01.09.01 | `09-linen/01-idea.md` | A canvas app that answers "what happens when this runs" — nested modules drawn as symbol sequences of control flow and data transformation, annotated on selection | linen, apps, control-flow, symbols, contracts | doc01.04, doc01.09.02 | doc01.09.02, doc01.11.01 | — |
 | doc01.09.02 | `09-linen/02-glossary.md` | The Linen controlled vocabulary — the terms Linen docs use exactly, in the entry kinds of doc00.05 | glossary, vocabulary, linen | doc01.09.01 | doc01.09.01 | — |
 
 ### Merino
@@ -115,6 +115,14 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.10.00 | `10-merino/00-index.md` |  |  | — | — | — |
 | doc01.10.01 | `10-merino/01-idea.md` | A general-purpose node-and-edge app for designing a program as event-driven requirements and their deployments, grown by attaching detail subnodes until an agent has enough to change source code | merino, apps, requirements, deployments, differentiation | doc01.04 | doc01.10.02 | — |
 | doc01.10.02 | `10-merino/02-requirements.md` | Merino's capabilities as a controlled, EARS-like list of shall-statements, prefixed per section, plus an agent-capabilities section for MCP and the input-command bindings table | merino, ui, requirements, mcp | doc01.10.01 | — | — |
+
+### Rayon
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.11.00 | `11-rayon/00-index.md` |  |  | — | — | — |
+| doc01.11.01 | `11-rayon/01-idea.md` | A visual debugger that shows a live network of instructions and data transforming external impulses into program behavior. | rayon, debugger, execution, runtime, visualization | doc01.04, doc01.09.01, doc02.17 | — | — |
 
 ## 02-design — Design
 
@@ -135,7 +143,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.14 | `14-pack-contract.md` | A pack is JSON data owned by the domain it describes, co-located with its graph as a sibling file. What a pack declares, how a graph names it, and how Canvas resolves it. Packs are Canvas's alone — Dataflow and Atlas have none. | pack, contract, schema, data, co-location, canvas | doc02.11, doc02.16, doc01.08 | doc01.08.01, doc02.15, doc02.16, doc02.17, doc02.18, doc02.19, doc02.20, doc03.08 | — |
 | doc02.15 | `15-mcp-iterative-graph-building.md` | Tool surface for AI agents to build and query property graphs iteratively — six tiers from CRUD to pack authoring, with layout policy and sync strategy. | mcp, ai, tools, graph, iteration | doc02.04, doc02.11, doc02.14 | — | — |
 | doc02.16 | `16-renderer-engine.md` | Renderers are JSON over a primitive vocabulary; the engine interprets them; custom primitives are the code escape hatch. Pack-driven, so Canvas's alone — Dataflow and Atlas draw their nodes with hand-written components. | renderer, primitives, pack, rendering, canvas | doc02.14, doc02.11, doc01.08 | doc02.14, doc02.18 | — |
-| doc02.17 | `17-projection-and-identity.md` | Node identity persists across projections; decoration layers above projection; contain-per-view; animation between views falls out of identity stability. Views and roles are pack machinery, so Canvas's alone. | projection, identity, view, animation, decoration, canvas | doc02.11, doc02.14, doc01.08 | doc02.18, doc02.19 | — |
+| doc02.17 | `17-projection-and-identity.md` | Node identity persists across projections; decoration layers above projection; contain-per-view; animation between views falls out of identity stability. Views and roles are pack machinery, so Canvas's alone. | projection, identity, view, animation, decoration, canvas | doc02.11, doc02.14, doc01.08 | doc01.11.01, doc02.18, doc02.19 | — |
 | doc02.18 | `18-pack-examples.md` | RTP, flowchart, Solid app, React app, Rust app — what each pack declares, what views each wants, and what falls out as the universal contract Canvas holds for all packs. | pack, examples, reference, contract, canvas | doc02.14, doc02.16, doc02.17, doc01.08 | — | — |
 | doc02.19 | `19-canvas-component-tree.md` | What lives inside the Canvas app's viewport — toolbars, view switcher, layer toolbar, context menus — derived from inventories of state, mutation rate, and ownership boundary. The black box doc02.13 mounts. | canvas, chrome, component-tree, boundaries | doc02.13, doc02.14, doc02.17, doc01.08 | doc02.20 | — |
 | doc02.20 | `20-chrome-schema.md` | Action records, menu and toolbar schemas, chrome slots; cactus owns chrome rendering, the host app owns the schema producers, packs stay unchanged. The record types are an engine contract; the pack-fed producers are Canvas's. | chrome, api, actions, menus, cactus, boundary | doc02.14, doc02.19, doc01.08 | — | — |
@@ -258,6 +266,7 @@ Quick lookup for file-path→doc mapping:
 | `data` | doc02.14 |
 | `data-model` | doc03.03 |
 | `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc01.07.01, doc01.07.02, doc02.21.01, doc02.21.02, doc02.21.03 |
+| `debugger` | doc01.11.01 |
 | `decoration` | doc02.17 |
 | `deployments` | doc01.10.01 |
 | `derivation` | doc02.13 |
@@ -274,6 +283,7 @@ Quick lookup for file-path→doc mapping:
 | `edges` | doc01.07.06, doc02.08 |
 | `engine` | doc02.05.01 |
 | `examples` | doc02.10.01, doc02.10.02, doc02.10.03, doc02.18 |
+| `execution` | doc01.11.01 |
 | `facts` | doc00.05 |
 | `fifa-bracketing` | doc01.05.02 |
 | `formalization` | doc02.02, doc03.02 |
@@ -337,6 +347,7 @@ Quick lookup for file-path→doc mapping:
 | `property-graph` | doc01.08.01, doc02.10.03, doc02.11 |
 | `qt` | doc01.06.01.08 |
 | `qwik` | doc03.05 |
+| `rayon` | doc01.11.01 |
 | `react` | doc02.06.01 |
 | `react-flow` | doc01.06.01.02 |
 | `reactive` | doc03.01 |
@@ -353,6 +364,7 @@ Quick lookup for file-path→doc mapping:
 | `roadmap` | doc01.03.01 |
 | `routing` | doc01.07.06 |
 | `rtp` | doc02.10.03 |
+| `runtime` | doc01.11.01 |
 | `scene-graph` | doc01.06.01.04, doc01.06.01.08 |
 | `schema` | doc02.06.02, doc02.14, doc02.21.01, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
@@ -385,7 +397,7 @@ Quick lookup for file-path→doc mapping:
 | `view` | doc02.17 |
 | `views` | doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
-| `visualization` | doc01.01, doc03.04 |
+| `visualization` | doc01.01, doc01.11.01, doc03.04 |
 | `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc03.02 |
 | `web-library` | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07 |
 | `whiteboard` | doc01.06.01.03 |

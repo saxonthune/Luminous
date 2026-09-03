@@ -82,7 +82,7 @@ interface CanvasProps {
 }
 ```
 
-`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). Box selection uses those same measured rectangles by default, so its hit-testing follows the rendered Nodes. A host may supply `boxSelect.getNodeRects` only when it needs a different selectable set or geometry. `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `edgeLod` lets the host map an Edge plus the current zoom and emphasis state to visual opacity and label visibility. The host therefore retains semantic disclosure decisions while cactus applies them consistently to its Edge layers. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
+`edges` is declarative: cactus computes straight-line geometry from registered node rects (see [Edge geometry](#edge-geometry) and [EdgeDeclaration](#edgedeclaration)). Box selection uses those same measured rectangles by default, so its hit-testing follows the rendered Nodes. A host may supply `boxSelect.getNodeRects` only when it needs a different selectable set or geometry. Cactus preserves minimum screen-space sizes for Edge strokes, dash cadence, arrowheads, and hit targets during zoom-out while allowing them to grow naturally during zoom-in. `edgeEmphasis` controls the generic selection treatment: unrelated Edges dim by default; a host can retain their opacity and multiply the stroke width of selected Nodes' incident Edges. `edgeLod` lets the host map an Edge plus the current zoom and emphasis state to visual opacity and label visibility. The host therefore retains semantic disclosure decisions while cactus applies them consistently to its Edge layers. `chrome` renders screen-space toolbars/menus in slots above the canvas; `onAction` dispatches action ids from chrome controls and registered hotkeys. `nodeContextMenu` and `backgroundContextMenu` return `MenuSchema` for right-click menus — return `undefined` to suppress. The background producer receives the cursor in both viewport coordinates (`clientX`, `clientY`) and pan/zoom-adjusted canvas coordinates (`canvasX`, `canvasY`), so an action can preserve the point that opened its menu.
 
 `onBackgroundContextMenu` fires only when the right-click target is **not** inside a `data-container-id` element (i.e. genuine background). `preventDefault()` is called for you. Right-clicks on nodes bubble naturally — handle them on the node renderer's `onContextMenu`.
 
@@ -116,7 +116,6 @@ interface NodeContainerProps {
   w: () => number              // applied as min-width
   h: () => number              // applied as min-height
   visualBand?: () => number    // optional route-band ordering number
-  interactive?: () => boolean // false removes pointer hit-testing but preserves geometry
   onPointerDown?: (e: PointerEvent) => void
   onContextMenu?: (e: MouseEvent) => void
   children?: JSX.Element
@@ -126,9 +125,7 @@ interface NodeContainerProps {
 Sizing model: `w` and `h` define the Node's canvas-space dimensions. The Node
 registers that rectangle for Edges and other geometry consumers. `visualBand`
 lets a host place a Node between route bands; cactus assigns no domain meaning
-to the number. Setting `interactive` to false removes the Node from pointer
-hit-testing without unregistering its rectangle, allowing a host to cull a
-visual representation without destabilizing Edge geometry.
+to the number.
 
 ### NodeShell
 
@@ -175,17 +172,22 @@ Consumer controls all styling. Any additional `style` props merge over the compu
 
 ### ResizeHandle
 
-A corner/edge handle that stamps `data-resize-handle` and forwards `onPointerDown` to `useNodeResize.onResizePointerDown`. Pair the two for full resize behavior.
+A corner/edge handle that stamps `data-cactus-resize-handle` and forwards `onPointerDown` to `useNodeResize.onResizePointerDown`. Pair the two for full resize behavior.
 
 ```typescript
 interface ResizeHandleProps {
   nodeId: string
-  direction: ResizeDirection
+  direction?: ResizeDirection
+  rect?: () => { x: number; y: number; w: number; h: number }
+  visible?: () => boolean
+  zIndex?: number | (() => number)
   onResizePointerDown: (nodeId: string, direction: ResizeDirection, event: PointerEvent) => void
-  class?: string
-  style?: JSX.CSSProperties
 }
 ```
+
+Without `rect`, the handle retains its legacy position inside the nearest
+positioned Node. With `rect`, it uses `ScreenSpaceAnchor` at the rectangle's
+bottom-right corner, remains a fixed screen size, and escapes Node clipping.
 
 ### DotGrid
 
@@ -290,7 +292,62 @@ interface CounterScaleProps {
 The transform changes pixels, not layout geometry: it does not enlarge the
 Node's registered rectangle, reserve room around the Item, or avoid collisions.
 Hosts use it for modest, bounded resistance to shrinking within a Node. Content
-that must escape Node clipping or coordinate globally belongs in Visual LOD.
+that must escape Node clipping uses `ScreenSpaceAnchor` for pinned interaction
+chrome or Visual LOD for globally coordinated semantic information.
+
+### CounterScaleSlot
+
+`CounterScaleSlot` gives one semantic content unit a layout allocation and a
+minimum projected screen size. It applies the same bounded inverse transform as
+`CounterScale`, retains its layout allocation while hidden, and changes
+visibility without opacity. Separate exit and re-entry thresholds prevent
+flicker.
+
+```typescript
+interface CounterScaleSlotProps extends CounterScaleProps {
+  minScreenWidth?: number
+  minScreenHeight?: number
+  hysteresis?: number
+  capacity?: () => { width: number; height: number }
+  active?: () => boolean
+  clip?: boolean
+  class?: string
+  style?: JSX.CSSProperties
+  contentClass?: string
+  contentStyle?: JSX.CSSProperties
+}
+```
+
+When `capacity` is absent, the Slot observes its own untransformed layout box.
+Camera motion reads only the cached or declared capacity. The host declares the
+semantic unit and its screen-size floor; cactus owns scaling and visibility.
+The Slot does not perform global collision placement.
+
+### ScreenSpaceAnchor
+
+`ScreenSpaceAnchor` keeps a visual at a fixed screen size while attaching its
+declared alignment point to a canvas-space coordinate. It renders in the graph
+layer but outside a Node, so the visual follows camera translation without
+being clipped by Node content.
+
+```typescript
+interface ScreenSpaceAnchorProps {
+  x: () => number
+  y: () => number
+  width: number | (() => number)
+  height: number | (() => number)
+  horizontal?: 'left' | 'center' | 'right'
+  vertical?: 'top' | 'center' | 'bottom'
+  zIndex?: number | (() => number)
+  visible?: () => boolean
+  class?: string
+  style?: JSX.CSSProperties
+  children?: JSX.Element
+}
+```
+
+This primitive is for pinned interaction chrome. Unlike a Visual LOD Item, an
+Anchor does not move, compete for label space, or participate in admission.
 
 ### Visual LOD
 
@@ -416,12 +473,13 @@ interface EdgeStyling {
   dash?: 'solid' | 'dashed' | 'dotted'
   width?: number           // default 1.5
   arrowHead?: boolean      // default false — triangle on target end
+  curve?: 'straight' | 'bezier' // default straight
 }
 ```
 
 ### Edge geometry
 
-Without a `routeBuilder`, cactus renders a straight route between the source and target borders. It bundles parallel direct routes and calculates their labels from the direct route length.
+Without a `routeBuilder`, cactus derives a direct route between the source and target borders. It bundles parallel direct routes and calculates their labels from the direct route length. Edge styling renders each derived or host-supplied route segment as a straight line by default, or as a horizontal-tangent cubic Bézier when `curve: 'bezier'` is requested.
 
 ```
 x1 = src.x + src.w / 2     x2 = tgt.x + tgt.w / 2

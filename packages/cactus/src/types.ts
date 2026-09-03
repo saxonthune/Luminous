@@ -43,6 +43,8 @@ export interface EdgeStyling {
   width?: number;
   /** Show an arrowhead triangle on the target end. Default false. */
   arrowHead?: boolean;
+  /** Draw each route segment as a straight line (default) or a cubic Bézier. */
+  curve?: 'straight' | 'bezier';
 }
 
 /**

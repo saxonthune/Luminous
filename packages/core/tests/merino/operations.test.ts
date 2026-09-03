@@ -5,6 +5,7 @@ import {
   serializeMerinoDocument,
   addNode,
   setNode,
+  cloneNode,
   removeNode,
   connect,
   setEdge,
@@ -14,6 +15,7 @@ import {
   removeNodeType,
   checkMerinoDocument,
   applyMerinoBatch,
+  setOverviewRequirementsRoots,
 } from '../../src/merino/index.ts';
 import type { MerinoDocument } from '../../src/merino/index.ts';
 
@@ -43,6 +45,17 @@ describe('merino document', () => {
     expect(parsed.ok).toBe(true);
     if (parsed.ok) expect(parsed.doc).toEqual(doc);
   });
+
+  it('persists the ordered Requirements Overview root ids', () => {
+    let doc = seeded();
+    doc = unwrap(addNode(doc, { id: 'first', tab: 'requirements', nodeType: 'event', name: 'First' }));
+    doc = unwrap(addNode(doc, { id: 'second', tab: 'requirements', nodeType: 'requirement', name: 'Second' }));
+    doc = unwrap(setOverviewRequirementsRoots(doc, ['second', 'first']));
+
+    const parsed = parseMerinoDocument(serializeMerinoDocument(doc));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.doc.overview?.requirements?.rootNodeIds).toEqual(['second', 'first']);
+  });
 });
 
 describe('merino nodes and subnodes', () => {
@@ -56,6 +69,43 @@ describe('merino nodes and subnodes', () => {
     doc = unwrap(removeNode(doc, 'a'));
     expect(doc.nodes.map(n => n.id)).toEqual(['c']);
     expect(doc.edges).toEqual([]);
+  });
+
+  it('removing a subtree also removes its pinned Overview roots', () => {
+    let doc = seeded();
+    doc = unwrap(addNode(doc, { id: 'a', tab: 'requirements', nodeType: 'event', name: 'A' }));
+    doc = unwrap(addNode(doc, { id: 'b', tab: 'requirements', nodeType: 'requirement', name: 'B', parent: 'a' }));
+    doc = unwrap(setOverviewRequirementsRoots(doc, ['a', 'b']));
+    doc = unwrap(removeNode(doc, 'a'));
+    expect(doc.overview?.requirements?.rootNodeIds).toEqual([]);
+  });
+
+  it('rejects duplicate, missing, and cross-Tab Overview roots', () => {
+    let doc = seeded();
+    doc = unwrap(addNode(doc, { id: 'a', tab: 'requirements', nodeType: 'event', name: 'A' }));
+    doc = unwrap(addNode(doc, { id: 'deployment', tab: 'deployments', nodeType: 'deployment', name: 'Deployment' }));
+    expect(setOverviewRequirementsRoots(doc, ['a', 'a']).ok).toBe(false);
+    expect(setOverviewRequirementsRoots(doc, ['missing']).ok).toBe(false);
+    expect(setOverviewRequirementsRoots(doc, ['deployment']).ok).toBe(false);
+  });
+
+  it('clones a node as a sibling without copying its subnodes', () => {
+    let doc = seeded();
+    doc = unwrap(addNodeType(doc, { id: 'list', name: 'List', color: 'accent-1', layout: 'list' }));
+    doc = unwrap(addNode(doc, { id: 'box', tab: 'requirements', nodeType: 'list', name: 'Box' }));
+    doc = unwrap(addNode(doc, { id: 'src', tab: 'requirements', nodeType: 'event', name: 'Sign in', text: 'foo', parent: 'box' }));
+    doc = unwrap(addNode(doc, { id: 'src-kid', tab: 'requirements', nodeType: 'event', name: 'Kid', parent: 'src' }));
+
+    doc = unwrap(cloneNode(doc, 'src', 'copy'));
+    const clone = doc.nodes.find(n => n.id === 'copy')!;
+    expect(clone).toMatchObject({ name: 'Sign in (copy 1)', type: 'event', text: 'foo', parent: 'box' });
+    expect(doc.nodes.some(n => n.parent === 'copy')).toBe(false);
+
+    doc = unwrap(cloneNode(doc, 'src', 'copy2'));
+    expect(doc.nodes.find(n => n.id === 'copy2')?.name).toBe('Sign in (copy 2)');
+
+    doc = unwrap(cloneNode(doc, 'copy2', 'copy3'));
+    expect(doc.nodes.find(n => n.id === 'copy3')?.name).toBe('Sign in (copy 3)');
   });
 
   it('rejects a subnode whose parent is on another tab', () => {
@@ -129,6 +179,26 @@ describe('merino type registries', () => {
     doc = unwrap(setNodeType(doc, 'screen', { layout: null }));
     expect(doc.nodeTypes.find(t => t.id === 'screen')).not.toHaveProperty('layout');
     expect(JSON.parse(serializeMerinoDocument(doc)).nodeTypes.find((t: { id: string }) => t.id === 'screen')).not.toHaveProperty('layout');
+  });
+
+  it('refuses to retype a node with children away from a Container Type, but allows list <-> container', () => {
+    let doc = seeded();
+    doc = unwrap(addNodeType(doc, { id: 'freeform', name: 'Freeform', color: 'accent-1', layout: 'container' }));
+    doc = unwrap(addNodeType(doc, { id: 'ordered', name: 'Ordered', color: 'accent-2', layout: 'list' }));
+    doc = unwrap(addNode(doc, { id: 'box', tab: 'requirements', nodeType: 'freeform', name: 'Box' }));
+    doc = unwrap(addNode(doc, { id: 'child', tab: 'requirements', nodeType: 'event', name: 'Child', parent: 'box' }));
+
+    expect(setNode(doc, 'box', { nodeType: 'event' }).ok).toBe(false);
+    doc = unwrap(setNode(doc, 'box', { nodeType: 'ordered' }));
+    expect(doc.nodes.find(n => n.id === 'box')?.type).toBe('ordered');
+  });
+
+  it('allows retyping a childless node away from a Container Type', () => {
+    let doc = seeded();
+    doc = unwrap(addNodeType(doc, { id: 'freeform', name: 'Freeform', color: 'accent-1', layout: 'container' }));
+    doc = unwrap(addNode(doc, { id: 'box', tab: 'requirements', nodeType: 'freeform', name: 'Box' }));
+    doc = unwrap(setNode(doc, 'box', { nodeType: 'event' }));
+    expect(doc.nodes.find(n => n.id === 'box')?.type).toBe('event');
   });
 
   it('round-trips agent guidance on the document, a type, and a node', () => {

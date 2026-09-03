@@ -1,7 +1,7 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount, type JSX } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, type JSX } from 'solid-js';
 import type { MerinoAction, MerinoColorToken, MerinoDocument, MerinoPortPosition, MerinoPorts, MerinoTab } from '@luminous/core/merino';
-import { MERINO_TABS, applyMerinoBatch, descendantIds } from '@luminous/core/merino';
-import { BoundaryHandle, Canvas, ConnectionPreview, CounterScale, NodeContainer, ResizeHandle, SplitMenuButton, isOverContainerInterior, useCanvasContext, useGesture } from '@luminous/cactus';
+import { MERINO_TABS, applyMerinoBatch, cloneNode, descendantIds } from '@luminous/core/merino';
+import { BoundaryHandle, Canvas, ConnectionPreview, CounterScaleSlot, NodeContainer, ResizeHandle, SplitMenuButton, isOverContainerInterior, useCanvasContext, useGesture } from '@luminous/cactus';
 import type { CanvasRef, Transform, VisualLodDeclaration, VisualLodSize } from '@luminous/cactus';
 import { CONTAINER_PADDING, DEFAULT_ENTRY_PORT, DEFAULT_EXIT_PORT, LIST_GAP, NODE_HEADER_HEIGHT, NODE_HEIGHT, NODE_WIDTH, childAreaOrigin, findContainerAtPoint, growOnlyContainerActions, listInsertionIndex, merinoPortDimensions, nodeHeight, nodeTypeById, projectMerino, tokenVar, type MerinoRenderNode } from './projection.ts';
 import { downstreamMenuItems, downstreamNodes, nodeContextMenu, backgroundContextMenu, edgeContextMenu, type MerinoMenuDeps } from './menus.tsx';
@@ -9,7 +9,10 @@ import { ManageTypesPanel } from './ManageTypesPanel.tsx';
 import { copyMerinoSelection, pasteMerinoSelection, type MerinoClipboard } from './clipboard.ts';
 import { buildFlowLayoutActions, buildRemoveOverlapActions } from './tidy.ts';
 import { transientViewportOptions } from '../../canvas-tools/transientViewport.ts';
-import { MERINO_OVERVIEW_ZOOM, MERINO_STRUCTURAL_ZOOM, merinoNodeRepresentation, merinoSecondaryContentVisible } from './semanticZoom.ts';
+import { MERINO_OVERVIEW_ZOOM, MERINO_STRUCTURAL_ZOOM, merinoSecondaryContentVisible } from './semanticZoom.ts';
+import { MERINO_OVERVIEW_ROOT_IDS, MerinoOverview, initialCards, reconcileMerinoOverviewRoots } from './MerinoOverview.tsx';
+import type { MerinoOverviewDisclosureState, MerinoOverviewZoom } from './MerinoOverview.tsx';
+import { MERINO_VIEWS, isMerinoOverviewDisclosureState, readMerinoViewState, writeMerinoViewState, type MerinoView } from './viewState.ts';
 
 const EDGE_TAB_SIZE = 18;
 /** Below this camera scale, names move into a screen-readable overview layer. */
@@ -19,6 +22,10 @@ const TITLE_SCREEN_FONT_SIZE = 12;
 const TITLE_OUTERMOST_BONUS = 6;
 const TITLE_OVERVIEW_MAX_WIDTH = 220;
 const TITLE_OVERVIEW_MAX_DISPLACEMENT = 72;
+const IDENTITY_MIN_SCREEN_WIDTH = 48;
+const IDENTITY_MIN_SCREEN_HEIGHT = 24;
+const CONTROL_MIN_SCREEN_HEIGHT = 16;
+const SLOT_HYSTERESIS = 2;
 
 /** A smooth 0→1 blend as the camera moves from the close view to overview. */
 function overviewProgress(zoom: number): number {
@@ -81,6 +88,9 @@ export function blurFocusedDetailsEditor(target: EventTarget | null): void {
 }
 
 const TAB_LABELS: Record<MerinoTab, string> = { requirements: 'Requirements', deployments: 'Deployments' };
+const VIEW_LABELS: Record<MerinoView, string> = { overview: 'Overview', edit: 'Edit' };
+const MERINO_OVERVIEW_ZOOMS = ['in', 'out'] as const satisfies readonly MerinoOverviewZoom[];
+const OVERVIEW_ZOOM_LABELS: Record<MerinoOverviewZoom, string> = { out: 'Out', in: 'In' };
 
 export interface MerinoCanvasProps {
   doc: MerinoDocument;
@@ -110,7 +120,39 @@ const NEW_TYPE_COLORS: MerinoColorToken[] = ['accent-1', 'accent-2', 'accent-3',
 
 export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
-  const [tab, setTab] = createSignal<MerinoTab>('requirements');
+
+  // Which Tab, View, Overview zoom, and opened Overview Cards the user was last
+  // looking at, retained for the browser tab's life so a development reload or a
+  // trip to another app does not reset the workspace.
+  const persisted = readMerinoViewState(props.sourceId);
+  const [tab, setTab] = createSignal<MerinoTab>(
+    persisted?.tab !== undefined && MERINO_TABS.includes(persisted.tab) ? persisted.tab : 'requirements');
+  const [view, setView] = createSignal<MerinoView>(
+    persisted?.view === 'overview' || persisted?.view === 'edit' ? persisted.view : 'edit');
+  const [overviewZoom, setOverviewZoom] = createSignal<MerinoOverviewZoom>(
+    persisted?.overviewZoom === 'in' || persisted?.overviewZoom === 'out' ? persisted.overviewZoom : 'in');
+  const overviewRootIds = createMemo<readonly string[]>(() =>
+    props.doc.overview?.requirements?.rootNodeIds ?? MERINO_OVERVIEW_ROOT_IDS);
+
+  // The opened Overview Cards. Held here, not inside MerinoOverview, so they
+  // survive switching to the Edit View and back. The Tab-change reset and the
+  // Overview-root reconcile that used to live in MerinoOverview run here for the
+  // same reason — a pin made from the Edit View must still take effect.
+  const [disclosure, setDisclosure] = createSignal<MerinoOverviewDisclosureState>(
+    isMerinoOverviewDisclosureState(persisted?.disclosure)
+      ? persisted.disclosure
+      : { cards: initialCards(props.doc, tab(), overviewRootIds()), activeChildByParent: {} });
+  createEffect(on(tab, (nextTab) => {
+    setDisclosure({ cards: initialCards(props.doc, nextTab, overviewRootIds()), activeChildByParent: {} });
+  }, { defer: true }));
+  createEffect(on(overviewRootIds, () => {
+    setDisclosure((state) => reconcileMerinoOverviewRoots(state, props.doc, tab(), overviewRootIds()));
+  }, { defer: true }));
+  createEffect(() => {
+    writeMerinoViewState(props.sourceId, {
+      tab: tab(), view: view(), overviewZoom: overviewZoom(), disclosure: disclosure(),
+    });
+  });
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
   const [managing, setManaging] = createSignal(false);
   let focusReturnView: Transform | undefined;
@@ -146,14 +188,6 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
   const edges = createMemo(() => projection().edges);
   const typesById = createMemo(() => nodeTypeById(props.doc));
   const maxDepth = createMemo(() => Math.max(0, ...renderNodes().map((node) => node.depth)));
-  const directChildCounts = createMemo(() => {
-    const counts = new Map<string, number>();
-    for (const renderNode of renderNodes()) {
-      if (!renderNode.contained || renderNode.node.parent === undefined) continue;
-      counts.set(renderNode.node.parent, (counts.get(renderNode.node.parent) ?? 0) + 1);
-    }
-    return counts;
-  });
   const visualLod = createMemo<VisualLodDeclaration[]>(() => {
     const deepest = maxDepth();
     const typeMap = typesById();
@@ -172,10 +206,6 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     return renderNodes().map((renderNode) => {
       const type = typeMap.get(renderNode.node.type);
       const typeName = type?.name ?? renderNode.node.type;
-      const directChildCount = directChildCounts().get(renderNode.node.id) ?? 0;
-      const overviewTypeLabel = directChildCount === 0
-        ? typeName
-        : `${typeName} · ${directChildCount} ${directChildCount === 1 ? 'item' : 'items'}`;
       return {
         id: `merino-identity:${renderNode.node.id}`,
         anchor: {
@@ -205,10 +235,10 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
           allowOcclusion: false,
         },
         size: {
-          key: `${renderNode.node.name}\u0000${overviewTypeLabel}\u0000${renderNode.depth}/${deepest}`,
+          key: `${renderNode.node.name}\u0000${typeName}\u0000${renderNode.depth}/${deepest}`,
           estimate: (zoom) => estimatedOverviewIdentitySize(
             renderNode.node.name,
-            overviewTypeLabel,
+            typeName,
             renderNode.depth,
             deepest,
             zoom,
@@ -218,7 +248,6 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
           <MerinoOverviewIdentity
             name={renderNode.node.name}
             typeName={typeName}
-            directChildCount={directChildCount}
             typeColor={type ? tokenVar(type.color) : 'var(--border)'}
             depth={renderNode.depth}
             maxDepth={deepest}
@@ -266,7 +295,7 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     dispatchAction([{ type: 'setNode', id: nodeId, ports }]);
   }
 
-  const menuDeps: MerinoMenuDeps = { doc: () => props.doc, recentTypeIds };
+  const menuDeps: MerinoMenuDeps = { doc: () => props.doc, recentTypeIds, overviewRootIds };
 
   function dispatchAction(actions: MerinoAction[]): void {
     if (actions.length === 0) return;
@@ -535,6 +564,42 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     setSelectedId(id);
   }
 
+  // Add a child to a Container Card in the Overview. The child takes its
+  // parent's Node Type by default (N6) and appends — a list gets the next order,
+  // a freeform Container derives the slot. Returns the new id so the Overview
+  // can open its Card.
+  function addOverviewChild(parentId: string): string | undefined {
+    const parentType = props.doc.nodes.find((n) => n.id === parentId)?.type;
+    if (parentType === undefined) return undefined;
+    const id = uniqueId(props.doc, 'n');
+    const result = applyMerinoBatch(props.doc, [
+      { type: 'addNode', id, tab: tab(), nodeType: parentType, name: 'New node', parent: parentId, placement: 'append' },
+    ]);
+    if (!result.ok) {
+      props.onRefused?.(result.error);
+      return undefined;
+    }
+    props.dispatchDoc(result.doc);
+    touchType(parentType);
+    return id;
+  }
+
+  // Clone a Node from the Overview as a sibling under the same parent — same
+  // Node Type and description, name suffixed " (copy N)", no Subnodes copied.
+  // Returns the new id so the Overview can open its Card.
+  function cloneOverviewNode(nodeId: string): string | undefined {
+    const id = uniqueId(props.doc, 'n');
+    const result = cloneNode(props.doc, nodeId, id);
+    if (!result.ok) {
+      props.onRefused?.(result.error);
+      return undefined;
+    }
+    props.dispatchDoc(result.doc);
+    const clonedType = props.doc.nodes.find((n) => n.id === nodeId)?.type;
+    if (clonedType !== undefined) touchType(clonedType);
+    return id;
+  }
+
   function newNodeTypeApplied(nodeId: string) {
     const id = uniqueId(props.doc, 'type');
     const color = NEW_TYPE_COLORS[props.doc.nodeTypes.length % NEW_TYPE_COLORS.length];
@@ -570,7 +635,24 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
         addNodeAt(parent, typeof p.nodeType === 'string' ? p.nodeType : undefined, position);
         break;
       }
-      case 'node.addSubnode': addNodeAt(typeof p.parent === 'string' ? p.parent : undefined); break;
+      case 'node.addSubnode': {
+        const parent = typeof p.parent === 'string' ? p.parent : undefined;
+        addNodeAt(parent, parent === undefined ? undefined : props.doc.nodes.find((n) => n.id === parent)?.type);
+        break;
+      }
+      case 'node.pinToOverview':
+        if (typeof p.id === 'string' && props.doc.nodes.some((node) => node.id === p.id)) {
+          dispatchAction([{ type: 'setOverviewRequirementsRoots', rootNodeIds: [...overviewRootIds(), p.id] }]);
+        }
+        break;
+      case 'node.removeFromOverview':
+        if (typeof p.id === 'string') {
+          dispatchAction([{
+            type: 'setOverviewRequirementsRoots',
+            rootNodeIds: overviewRootIds().filter((id) => id !== p.id),
+          }]);
+        }
+        break;
       case 'node.viewDownstream': if (typeof p.targetId === 'string') centerNode(p.targetId); break;
       case 'node.setType': {
         if (typeof p.id !== 'string' || typeof p.typeId !== 'string') break;
@@ -633,6 +715,12 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
     dispatchAction(buildFlowLayoutActions(props.doc, id, 'horizontal'));
   }
 
+  function selectView(next: MerinoView): void {
+    if (view() === 'edit') canvasRef?.clearSelection();
+    setView(next);
+    setSelectedId(null);
+  }
+
   return (
     <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0, display: 'flex', 'flex-direction': 'column' }}>
       <div class="flex items-center gap-1 border-b border-border bg-surface px-3 py-1">
@@ -640,12 +728,48 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
           {(t) => (
             <button
               class={`rounded px-3 py-1 text-sm ${tab() === t ? 'bg-accent text-on-accent' : 'text-fg-muted hover:bg-surface-alt hover:text-fg'}`}
-              onClick={() => { setTab(t); canvasRef?.clearSelection(); setSelectedId(null); }}
+              onClick={() => { setTab(t); if (view() === 'edit') canvasRef?.clearSelection(); setSelectedId(null); }}
             >
               {TAB_LABELS[t]}
             </button>
           )}
         </For>
+        <div
+          class="ml-2 flex items-center gap-0.5 border-l border-border pl-2"
+          role="group"
+          aria-label="View"
+        >
+          <For each={MERINO_VIEWS}>
+            {(item) => (
+              <button
+                class={`rounded px-3 py-1 text-sm ${view() === item ? 'bg-surface-alt font-medium text-fg shadow-sm' : 'text-fg-muted hover:bg-surface-alt hover:text-fg'}`}
+                aria-pressed={view() === item}
+                onClick={() => selectView(item)}
+              >
+                {VIEW_LABELS[item]}
+              </button>
+            )}
+          </For>
+        </div>
+        <Show when={view() === 'overview'}>
+          <div
+            class="ml-2 flex items-center gap-0.5 border-l border-border pl-2"
+            role="group"
+            aria-label="Overview zoom"
+          >
+            <For each={MERINO_OVERVIEW_ZOOMS}>
+              {(item) => (
+                <button
+                  class={`rounded px-3 py-1 text-sm ${overviewZoom() === item ? 'bg-surface-alt font-medium text-fg shadow-sm' : 'text-fg-muted hover:bg-surface-alt hover:text-fg'}`}
+                  aria-pressed={overviewZoom() === item}
+                  onClick={() => setOverviewZoom(item)}
+                >
+                  {OVERVIEW_ZOOM_LABELS[item]}
+                </button>
+              )}
+            </For>
+          </div>
+        </Show>
         <button
           class="ml-auto rounded px-2 py-1 text-xs text-fg-muted hover:bg-surface-alt hover:text-fg"
           onClick={() => setManaging(true)}
@@ -655,7 +779,28 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
       </div>
 
       <div style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
-        <Canvas
+        <Show
+          when={view() === 'edit'}
+          fallback={(
+            <MerinoOverview
+              doc={props.doc}
+              zoom={overviewZoom()}
+              sourceId={props.sourceId}
+              disclosure={disclosure}
+              setDisclosure={setDisclosure}
+              onSetText={(nodeId, text) => dispatchAction([{ type: 'setNode', id: nodeId, text }])}
+              onRename={(nodeId, name) => dispatchAction([{ type: 'setNode', id: nodeId, name }])}
+              onSetType={(nodeId, typeId) => {
+                dispatchAction([{ type: 'setNode', id: nodeId, nodeType: typeId }]);
+                touchType(typeId);
+              }}
+              onAddChild={addOverviewChild}
+              onClone={cloneOverviewNode}
+              onDelete={(nodeId) => dispatchAction([{ type: 'removeNode', id: nodeId }])}
+            />
+          )}
+        >
+          <Canvas
           ref={(r) => { canvasRef = r; }}
           viewportOptions={transientViewportOptions(`luminous:merino:viewport:${props.sourceId}`)}
           edges={edges()}
@@ -666,7 +811,7 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
             const incident = state.emphasis === 'incident';
             const overview = state.zoom < TITLE_OVERVIEW_START_ZOOM;
             return {
-              opacity: incident ? 1 : overview ? 0.12 : 0.38,
+              opacity: incident ? 1 : overview ? 0.28 : 0.38,
               labelVisible: !overview && incident,
             };
           }}
@@ -712,7 +857,8 @@ export function MerinoCanvas(props: MerinoCanvasProps): JSX.Element {
             portUsed={(nodeId, kind) => usedPorts().has(`${nodeId}:${kind}`)}
             previewPorts={previewPorts}
           />
-        </Canvas>
+          </Canvas>
+        </Show>
 
         <Show when={managing()}>
           <ManageTypesPanel
@@ -949,18 +1095,25 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
           const preview = resizePreview();
           return preview?.nodeId === id ? preview : { width: rn.w, height: rn.h };
         };
-        const representation = () => merinoNodeRepresentation({
-          zoom: ctx.transform().k,
-          screenWidth: size().width * ctx.transform().k,
-          screenHeight: size().height * ctx.transform().k,
-          isContainer: rn.isContainer,
-          focused: focused(),
-        });
         const tabVisible = () => secondaryContentVisible() && (hovered() || isEdgeSource());
         const offsetY = () => delta().dy + listShift(rn);
         const color = () => props.typeColor(rn.node.type);
         const stopDrag = (e: PointerEvent) => e.stopPropagation();
         const downstream = () => props.downstreamOf(id);
+        const headerActionWidth = () => 20 + (downstream().length === 0 ? 0 : downstream().length === 1 ? 20 : 32);
+        const identityCapacity = () => ({
+          width: Math.max(0, size().width - headerActionWidth() - 22),
+          height: NODE_HEADER_HEIGHT,
+        });
+        const headerActionCapacity = () => ({ width: headerActionWidth(), height: NODE_HEADER_HEIGHT });
+        const containerControlCapacity = () => ({
+          width: Math.max(0, size().width - 2 * CONTAINER_PADDING),
+          height: Math.max(0, size().height - nodeHeight(rn.node) - 2 * CONTAINER_PADDING),
+        });
+        const detailCapacity = () => ({ width: Math.max(0, size().width - 20), height: size().height });
+        const resizeHandleVisible = () => rn.isContainer
+          && size().width * ctx.transform().k >= 48
+          && size().height * ctx.transform().k >= 48;
         const downstreamAction = () => ({
           id: 'node.viewDownstream',
           label: '→',
@@ -1012,7 +1165,6 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
               w={() => size().width}
               h={() => size().height}
               visualBand={() => 2 * rn.depth}
-              interactive={() => representation() !== 'hidden'}
               onPointerDown={(e) => {
                 // A left-press on a Container's empty interior starts a box-select
                 // over its children instead of moving the Container: leave the
@@ -1030,38 +1182,34 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                   display: 'flex',
                   'flex-direction': 'column',
                   height: '100%',
-                  background: representation() === 'mark'
-                    ? rn.isContainer
-                      ? `color-mix(in oklch, ${color()} 7%, transparent)`
-                      : `color-mix(in oklch, ${color()} 38%, var(--canvas))`
-                    : 'var(--surface)',
-                  border: representation() === 'hidden'
-                    ? '1px solid transparent'
-                    : ctx.isSelected(id)
-                      ? '3px solid var(--accent)'
-                      : representation() === 'mark'
-                        ? `1px solid color-mix(in oklch, ${color()} 65%, var(--border))`
-                        : '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  border: ctx.isSelected(id) ? '3px solid var(--accent)' : '1px solid var(--border)',
                   'border-radius': '6px',
                   color: 'var(--fg)',
                   cursor: 'grab',
                   overflow: 'hidden',
-                  opacity: representation() === 'hidden' ? '0' : '1',
-                  'pointer-events': representation() === 'hidden' ? 'none' : 'auto',
                 }}
               >
-                <div style={{ display: representation() === 'mark' ? 'none' : 'flex', 'align-items': 'center', gap: '4px', height: `${NODE_HEADER_HEIGHT}px`, 'flex-shrink': '0', padding: '0 4px 0 10px' }}>
-                  <CounterScale
+                <div style={{ display: 'flex', 'align-items': 'center', gap: '4px', height: `${NODE_HEADER_HEIGHT}px`, 'flex-shrink': '0', padding: '0 4px 0 10px' }}>
+                  <CounterScaleSlot
+                    capacity={identityCapacity}
+                    minScreenWidth={IDENTITY_MIN_SCREEN_WIDTH}
+                    minScreenHeight={IDENTITY_MIN_SCREEN_HEIGHT}
+                    hysteresis={SLOT_HYSTERESIS}
                     maxScale={1.5}
                     origin="left center"
+                    active={() => ctx.transform().k >= TITLE_OVERVIEW_START_ZOOM}
                     style={{
+                      height: '100%',
+                      flex: '1 1 auto',
+                    }}
+                    contentStyle={{
                       display: 'flex',
                       'flex-direction': 'column',
                       'justify-content': 'center',
                       gap: '2px',
                       'min-width': '0',
-                      flex: '1 1 auto',
-                      opacity: ctx.transform().k < TITLE_OVERVIEW_START_ZOOM ? '0' : '1',
+                      'max-width': '100%',
                     }}
                   >
                     <Show
@@ -1122,8 +1270,19 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                     >
                       {props.typeName(rn.node.type)}
                     </span>
-                  </CounterScale>
-                  <Show when={secondaryContentVisible()}>
+                  </CounterScaleSlot>
+                  <CounterScaleSlot
+                    capacity={headerActionCapacity}
+                    minScreenWidth={headerActionWidth() * 0.72}
+                    minScreenHeight={CONTROL_MIN_SCREEN_HEIGHT}
+                    hysteresis={SLOT_HYSTERESIS}
+                    maxScale={1.5}
+                    origin="right center"
+                    active={() => ctx.transform().k >= TITLE_OVERVIEW_START_ZOOM}
+                    clip={false}
+                    style={{ width: `${headerActionWidth()}px`, height: '100%', 'flex-shrink': '0' }}
+                    contentStyle={{ display: 'flex', 'align-items': 'center', 'justify-content': 'flex-end' }}
+                  >
                     <button
                       data-no-pan="true"
                       title={rn.node.expanded ? 'Collapse detail' : 'Expand detail'}
@@ -1170,12 +1329,22 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                         }}
                       />
                     </Show>
-                  </Show>
+                  </CounterScaleSlot>
                 </div>
-                <Show when={secondaryContentVisible()}>
-                  <Show
-                    when={rn.node.expanded}
-                    fallback={
+                <Show
+                  when={rn.node.expanded && secondaryContentVisible()}
+                  fallback={
+                    <CounterScaleSlot
+                      capacity={detailCapacity}
+                      minScreenWidth={72}
+                      minScreenHeight={38}
+                      hysteresis={SLOT_HYSTERESIS}
+                      maxScale={1.5}
+                      origin="left top"
+                      clip={false}
+                      style={{ height: `${NODE_HEIGHT - NODE_HEADER_HEIGHT}px`, 'flex-shrink': '0' }}
+                      contentStyle={{ display: 'block', width: '100%' }}
+                    >
                       <div
                         style={{
                           height: `${NODE_HEIGHT - NODE_HEADER_HEIGHT}px`,
@@ -1192,8 +1361,9 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                       >
                         {rn.node.text ? rn.node.text.split('\n')[0] : 'No detail yet'}
                       </div>
-                    }
-                  >
+                    </CounterScaleSlot>
+                  }
+                >
                     <div data-merino-details-editor style={{ height: `${nodeHeight(rn.node) - NODE_HEADER_HEIGHT}px`, 'flex-shrink': '0', padding: '0 8px 8px' }}>
                       <textarea
                         data-merino-details-editor="true"
@@ -1213,7 +1383,6 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                         onChange={(e) => props.onSetText(id, e.currentTarget.value)}
                       />
                     </div>
-                  </Show>
                 </Show>
                 <Show when={rn.isContainer}>
                   <div
@@ -1226,82 +1395,93 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
                       'border-radius': '2px',
                     }}
                   >
-                    <Show when={secondaryContentVisible()}>
-                    <div style={{ display: 'flex', 'align-items': 'center', gap: '4px', padding: '3px 6px' }}>
-                      <span
-                        style={{
-                          'font-size': '9px',
-                          'font-weight': '600',
-                          'line-height': '10px',
-                          color: 'var(--fg-muted)',
-                          'text-align': 'left',
-                        }}
-                      >
-                        {rn.isList ? 'List Container' : 'Freeform Container'}
-                      </span>
-                      <Show when={!rn.isList}>
-                        {(() => {
-                          const chipStyle = {
-                            'flex-shrink': '0',
-                            height: '16px',
-                            padding: '0 6px',
-                            display: 'flex',
-                            'align-items': 'center',
-                            gap: '3px',
-                            'border-radius': '4px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--surface)',
-                            color: 'var(--fg-muted)',
+                    <CounterScaleSlot
+                      capacity={containerControlCapacity}
+                      minScreenWidth={rn.isList ? 58 : 136}
+                      minScreenHeight={CONTROL_MIN_SCREEN_HEIGHT}
+                      hysteresis={SLOT_HYSTERESIS}
+                      maxScale={3}
+                      origin="left top"
+                      clip={false}
+                      style={{ height: '22px', width: '100%' }}
+                      contentStyle={{ display: 'flex', 'align-items': 'center', gap: '4px', padding: '3px 6px', 'white-space': 'nowrap' }}
+                    >
+                        <span
+                          style={{
                             'font-size': '9px',
                             'font-weight': '600',
-                            'line-height': '1',
-                            cursor: 'pointer',
-                          } as const;
-                          return (
-                            <>
-                              <button
-                                data-no-pan="true"
-                                title="Tidy — push overlapping nodes apart"
-                                style={chipStyle}
-                                on:pointerdown={stopDrag}
-                                onClick={(e) => { e.stopPropagation(); props.onTidy(id); }}
-                              >
-                                ⤡ Tidy
-                              </button>
-                              <button
-                                data-no-pan="true"
-                                title="Flow down — stack children into rows so directed edges flow downward"
-                                style={chipStyle}
-                                on:pointerdown={stopDrag}
-                                onClick={(e) => { e.stopPropagation(); props.onFlow(id); }}
-                              >
-                                ↓ Flow
-                              </button>
-                              <button
-                                data-no-pan="true"
-                                title="Flow right — stack children into columns so directed edges flow rightward"
-                                style={chipStyle}
-                                on:pointerdown={stopDrag}
-                                onClick={(e) => { e.stopPropagation(); props.onFlowHorizontal(id); }}
-                              >
-                                → Flow
-                              </button>
-                            </>
-                          );
-                        })()}
-                      </Show>
-                    </div>
-                    </Show>
+                            'line-height': '10px',
+                            color: 'var(--fg-muted)',
+                            'text-align': 'left',
+                          }}
+                        >
+                          {rn.isList ? 'List Container' : 'Freeform Container'}
+                        </span>
+                        <Show when={!rn.isList}>
+                          {(() => {
+                            const chipStyle = {
+                              'flex-shrink': '0',
+                              height: '16px',
+                              padding: '0 6px',
+                              display: 'flex',
+                              'align-items': 'center',
+                              gap: '3px',
+                              'border-radius': '4px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--surface)',
+                              color: 'var(--fg-muted)',
+                              'font-size': '9px',
+                              'font-weight': '600',
+                              'line-height': '1',
+                              cursor: 'pointer',
+                            } as const;
+                            return (
+                              <>
+                                <button
+                                  data-no-pan="true"
+                                  title="Tidy — push overlapping nodes apart"
+                                  style={chipStyle}
+                                  on:pointerdown={stopDrag}
+                                  onClick={(e) => { e.stopPropagation(); props.onTidy(id); }}
+                                >
+                                  ⤡ Tidy
+                                </button>
+                                <button
+                                  data-no-pan="true"
+                                  title="Flow down — stack children into rows so directed edges flow downward"
+                                  style={chipStyle}
+                                  on:pointerdown={stopDrag}
+                                  onClick={(e) => { e.stopPropagation(); props.onFlow(id); }}
+                                >
+                                  ↓ Flow
+                                </button>
+                                <button
+                                  data-no-pan="true"
+                                  title="Flow right — stack children into columns so directed edges flow rightward"
+                                  style={chipStyle}
+                                  on:pointerdown={stopDrag}
+                                  onClick={(e) => { e.stopPropagation(); props.onFlowHorizontal(id); }}
+                                >
+                                  → Flow
+                                </button>
+                              </>
+                            );
+                          })()}
+                        </Show>
+                    </CounterScaleSlot>
                   </div>
                 </Show>
               </div>
-              <Show when={rn.isContainer && secondaryContentVisible()}>
-                <ResizeHandle
-                  nodeId={id}
-                  onResizePointerDown={(nodeId, direction, event) => gesture.beginResize(nodeId, direction, event)}
-                />
-              </Show>
             </NodeContainer>
+            <Show when={rn.isContainer}>
+              <ResizeHandle
+                nodeId={id}
+                rect={portRect}
+                visible={resizeHandleVisible}
+                zIndex={() => 1000 + rn.depth}
+                onResizePointerDown={(nodeId, direction, event) => gesture.beginResize(nodeId, direction, event)}
+              />
+            </Show>
             <div
               data-no-pan="true"
               title="Drag to connect"
@@ -1382,7 +1562,6 @@ function MerinoNodeLayer(props: MerinoNodeLayerProps): JSX.Element {
 function MerinoOverviewIdentity(props: {
   name: string;
   typeName: string;
-  directChildCount: number;
   typeColor: string;
   depth: number;
   maxDepth: number;
@@ -1446,9 +1625,6 @@ function MerinoOverviewIdentity(props: {
         }}
       >
         {props.typeName}
-        <Show when={props.directChildCount > 0}>
-          {' · '}{props.directChildCount} {props.directChildCount === 1 ? 'item' : 'items'}
-        </Show>
       </span>
     </div>
   );

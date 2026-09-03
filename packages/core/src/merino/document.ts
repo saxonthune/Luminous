@@ -7,6 +7,7 @@ import type {
   MerinoEdgeType,
   MerinoNode,
   MerinoNodeType,
+  MerinoOverviewConfig,
   MerinoPortPosition,
   MerinoPorts,
 } from './types.ts';
@@ -41,7 +42,9 @@ export function emptyMerinoDocument(): MerinoDocument {
   };
 }
 
-const TOP_LEVEL_FIELDS = new Set(['v', 'nodeTypes', 'edgeTypes', 'nodes', 'edges', 'agentGuidance']);
+const TOP_LEVEL_FIELDS = new Set(['v', 'nodeTypes', 'edgeTypes', 'nodes', 'edges', 'overview', 'agentGuidance']);
+const OVERVIEW_FIELDS = new Set(['requirements']);
+const OVERVIEW_REQUIREMENTS_FIELDS = new Set(['rootNodeIds']);
 const NODE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'layout', 'agentGuidance']);
 const EDGE_TYPE_FIELDS = new Set(['id', 'name', 'color', 'dash', 'arrowHead', 'directed']);
 const NODE_FIELDS = new Set(['id', 'tab', 'type', 'name', 'text', 'agentGuidance', 'parent', 'expanded', 'order', 'ports', 'width', 'height', 'x', 'y']);
@@ -346,6 +349,44 @@ export function parseMerinoDocument(text: string): ParseMerinoDocumentResult {
   });
   issues.push(...parentCycleIssues(nodes));
 
+  let overview: MerinoOverviewConfig | undefined;
+  if (obj['overview'] !== undefined) {
+    const overviewObject = asObject(obj['overview'], 'overview', 'overview', issues);
+    if (overviewObject !== undefined) {
+      issues.push(...unknownFieldIssues(overviewObject, OVERVIEW_FIELDS, 'overview'));
+      overview = {};
+      if (overviewObject['requirements'] !== undefined) {
+        const requirements = asObject(overviewObject['requirements'], 'overview.requirements', 'requirements overview', issues);
+        if (requirements !== undefined) {
+          issues.push(...unknownFieldIssues(requirements, OVERVIEW_REQUIREMENTS_FIELDS, 'overview.requirements'));
+          const rawIds = requirements['rootNodeIds'];
+          if (!Array.isArray(rawIds)) {
+            issues.push('overview.requirements.rootNodeIds: must be an array');
+          } else {
+            const rootNodeIds: string[] = [];
+            const seen = new Set<string>();
+            rawIds.forEach((value, index) => {
+              if (typeof value !== 'string') {
+                issues.push(`overview.requirements.rootNodeIds[${index}]: must be a string`);
+                return;
+              }
+              if (seen.has(value)) {
+                issues.push(`overview.requirements.rootNodeIds[${index}]: duplicate node id "${value}"`);
+                return;
+              }
+              seen.add(value);
+              const node = nodes.find((candidate) => candidate.id === value);
+              if (!node) issues.push(`overview.requirements.rootNodeIds[${index}]: references unknown node id "${value}"`);
+              else if (node.tab !== 'requirements') issues.push(`overview.requirements.rootNodeIds[${index}]: node "${value}" is not on the requirements Tab`);
+              rootNodeIds.push(value);
+            });
+            overview.requirements = { rootNodeIds };
+          }
+        }
+      }
+    }
+  }
+
   const edges: MerinoEdge[] = [];
   const edgeIds = new Set<string>();
   if (!Array.isArray(obj['edges'])) {
@@ -369,6 +410,7 @@ export function parseMerinoDocument(text: string): ParseMerinoDocumentResult {
     return { ok: false, issues };
   }
   const doc: MerinoDocument = { v: obj['v'] as number, nodeTypes, edgeTypes, nodes, edges };
+  if (overview !== undefined) doc.overview = overview;
   if (obj['agentGuidance'] !== undefined) doc.agentGuidance = obj['agentGuidance'] as string;
   return { ok: true, doc };
 }
@@ -419,5 +461,12 @@ export function serializeMerinoDocument(doc: MerinoDocument): string {
     edges: doc.edges.map(serializeEdge),
   };
   if (doc.agentGuidance !== undefined) out.agentGuidance = doc.agentGuidance;
+  if (doc.overview !== undefined) {
+    const overview: Record<string, unknown> = {};
+    if (doc.overview.requirements !== undefined) {
+      overview.requirements = { rootNodeIds: [...doc.overview.requirements.rootNodeIds] };
+    }
+    out.overview = overview;
+  }
   return JSON.stringify(out, null, 2) + '\n';
 }

@@ -10,6 +10,8 @@ export type {
   MerinoPortSide,
   MerinoPortPosition,
   MerinoPorts,
+  MerinoOverviewConfig,
+  MerinoOverviewRequirements,
   MerinoAction,
   MerinoBatchAction,
   AddNodeTypeAction,
@@ -24,6 +26,7 @@ export type {
   ConnectAction,
   SetEdgeAction,
   DisconnectAction,
+  SetOverviewRequirementsRootsAction,
   SetDocumentGuidanceAction,
 } from './types.ts';
 export { MERINO_TABS, MERINO_DASHES, MERINO_CONTAINER_LAYOUTS, MERINO_PORT_SIDES, isMerinoTab, isMerinoDash, isMerinoContainerLayout, isMerinoPortSide } from './types.ts';
@@ -47,10 +50,12 @@ export {
   removeEdgeType,
   addNode,
   setNode,
+  cloneNode,
   removeNode,
   connect,
   setEdge,
   disconnect,
+  setOverviewRequirementsRoots,
   applyMerinoBatch,
   descendantIds,
 } from './operations.ts';

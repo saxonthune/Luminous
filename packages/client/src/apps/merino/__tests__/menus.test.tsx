@@ -22,7 +22,7 @@ function findAction(items: MenuItem[], id: string): Action | undefined {
 describe('Merino background context menu', () => {
   it('carries the canvas-space click position into Add Node actions', () => {
     const doc = emptyMerinoDocument();
-    const deps: MerinoMenuDeps = { doc: () => doc, recentTypeIds: () => [] };
+    const deps: MerinoMenuDeps = { doc: () => doc, recentTypeIds: () => [], overviewRootIds: () => [] };
     const menu = backgroundContextMenu(deps, {
       clientX: 900,
       clientY: 500,
@@ -51,7 +51,7 @@ describe('Merino downstream navigation', () => {
         { id: 'e3', type: base.edgeTypes[0].id, from: 'source', to: 'second', tab: 'requirements' as const },
       ],
     };
-    const deps: MerinoMenuDeps = { doc: () => doc, recentTypeIds: () => [] };
+    const deps: MerinoMenuDeps = { doc: () => doc, recentTypeIds: () => [], overviewRootIds: () => [] };
 
     expect(downstreamNodes(doc, 'source')).toEqual([
       { id: 'second', name: 'Second' },
@@ -72,8 +72,30 @@ describe('Merino downstream navigation', () => {
     const doc = emptyMerinoDocument();
     const node = { id: 'leaf', tab: 'requirements' as const, type: doc.nodeTypes[0].id, name: 'Leaf', x: 0, y: 0 };
     const withNode = { ...doc, nodes: [node] };
-    const deps: MerinoMenuDeps = { doc: () => withNode, recentTypeIds: () => [] };
+    const deps: MerinoMenuDeps = { doc: () => withNode, recentTypeIds: () => [], overviewRootIds: () => [] };
 
     expect(nodeContextMenu(deps, 'leaf')?.items.some((item) => item.type === 'action-submenu')).toBe(false);
+  });
+
+  it('offers stable Node ids as transient Overview roots', () => {
+    const doc = emptyMerinoDocument();
+    const node = { id: 'overview-root', tab: 'requirements' as const, type: doc.nodeTypes[0].id, name: 'Root', x: 0, y: 0 };
+    const deps: MerinoMenuDeps = {
+      doc: () => ({ ...doc, nodes: [node] }),
+      recentTypeIds: () => [],
+      overviewRootIds: () => [],
+    };
+
+    expect(findAction(nodeContextMenu(deps, node.id)!.items, 'node.pinToOverview')).toMatchObject({
+      label: 'Pin to Overview',
+      payload: { id: 'overview-root' },
+    });
+
+    const pinnedDeps = { ...deps, overviewRootIds: () => ['overview-root'] };
+    expect(findAction(nodeContextMenu(pinnedDeps, node.id)!.items, 'node.removeFromOverview')).toMatchObject({
+      label: 'Remove from Overview',
+      selected: true,
+      payload: { id: 'overview-root' },
+    });
   });
 });

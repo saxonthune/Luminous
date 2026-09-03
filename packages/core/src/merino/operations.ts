@@ -208,8 +208,17 @@ export function setNode(
   }
   if ('agentGuidance' in patch) { if (patch.agentGuidance === undefined) delete node.agentGuidance; else node.agentGuidance = patch.agentGuidance; }
   if (patch.nodeType !== undefined) {
-    if (!doc.nodeTypes.some(t => t.id === patch.nodeType)) {
+    const nextType = doc.nodeTypes.find(t => t.id === patch.nodeType);
+    if (nextType === undefined) {
       return { ok: false, error: `node type "${patch.nodeType}" does not exist` };
+    }
+    const currentType = doc.nodeTypes.find(t => t.id === node.type);
+    const hasChildren = doc.nodes.some(n => n.parent === id);
+    if (hasChildren && currentType?.layout !== undefined && nextType.layout === undefined) {
+      return {
+        ok: false,
+        error: `node "${id}" has children; its Type must stay a Container (a list and a freeform Container are interchangeable)`,
+      };
     }
     node.type = patch.nodeType;
   }
@@ -253,17 +262,70 @@ export function setNode(
   return { ok: true, doc: { ...doc, nodes } };
 }
 
+/** Duplicate a node as a sibling: same Tab, Node Type, description, and parent.
+ * The source's Subnodes are not copied. The clone's name is the source name
+ * with any trailing " (copy)" or " (copy N)" removed and " (copy N)" appended,
+ * N the lowest positive integer that no existing node name already uses. */
+export function cloneNode(doc: MerinoDocument, id: string, newId: string): MerinoResult {
+  const source = nodeById(doc, id);
+  if (source === undefined) return { ok: false, error: `node "${id}" does not exist` };
+  if (anyIdTaken(doc, newId)) return { ok: false, error: `id "${newId}" already exists` };
+  const base = source.name.replace(/ \(copy(?: \d+)?\)$/, '');
+  const taken = new Set(doc.nodes.map(n => n.name));
+  let n = 1;
+  while (taken.has(`${base} (copy ${n})`)) n += 1;
+  return addNode(doc, {
+    id: newId,
+    tab: source.tab,
+    nodeType: source.type,
+    name: `${base} (copy ${n})`,
+    text: source.text,
+    parent: source.parent,
+    placement: source.parent === undefined ? undefined : 'append',
+  });
+}
+
 export function removeNode(doc: MerinoDocument, id: string): MerinoResult {
   if (!doc.nodes.some(n => n.id === id)) {
     return { ok: false, error: `node "${id}" does not exist` };
   }
   const removed = new Set(descendantIds(doc, id));
+  const overview = doc.overview === undefined ? undefined : {
+    ...doc.overview,
+    ...(doc.overview.requirements === undefined ? {} : {
+      requirements: {
+        rootNodeIds: doc.overview.requirements.rootNodeIds.filter((rootId) => !removed.has(rootId)),
+      },
+    }),
+  };
   return {
     ok: true,
     doc: {
       ...doc,
       nodes: doc.nodes.filter(n => !removed.has(n.id)),
       edges: doc.edges.filter(e => !removed.has(e.from) && !removed.has(e.to)),
+      ...(overview === undefined ? {} : { overview }),
+    },
+  };
+}
+
+export function setOverviewRequirementsRoots(doc: MerinoDocument, rootNodeIds: readonly string[]): MerinoResult {
+  const seen = new Set<string>();
+  for (const id of rootNodeIds) {
+    if (seen.has(id)) return { ok: false, error: `overview requirements root node id "${id}" is duplicated` };
+    seen.add(id);
+    const node = nodeById(doc, id);
+    if (!node) return { ok: false, error: `overview requirements root node "${id}" does not exist` };
+    if (node.tab !== 'requirements') return { ok: false, error: `overview requirements root node "${id}" is not on the requirements Tab` };
+  }
+  return {
+    ok: true,
+    doc: {
+      ...doc,
+      overview: {
+        ...doc.overview,
+        requirements: { rootNodeIds: [...rootNodeIds] },
+      },
     },
   };
 }
@@ -408,6 +470,9 @@ export function applyMerinoBatch(doc: MerinoDocument, actions: MerinoBatchAction
         break;
       case 'disconnect':
         result = disconnect(current, action.id);
+        break;
+      case 'setOverviewRequirementsRoots':
+        result = setOverviewRequirementsRoots(current, action.rootNodeIds);
         break;
       case 'setDocumentGuidance':
         result = { ok: true, doc: { ...current, ...(action.agentGuidance === undefined ? {} : { agentGuidance: action.agentGuidance }) } };

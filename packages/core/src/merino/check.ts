@@ -14,6 +14,15 @@ export function checkMerinoDocument(doc: MerinoDocument): MerinoCheckIssue[] {
   const edgeTypeIds = new Set(doc.edgeTypes.map(t => t.id));
   const nodesById = new Map(doc.nodes.map(n => [n.id, n]));
 
+  const seenOverviewRoots = new Set<string>();
+  for (const id of doc.overview?.requirements?.rootNodeIds ?? []) {
+    if (seenOverviewRoots.has(id)) issues.push({ severity: 'error', message: `duplicate requirements Overview root node id "${id}"` });
+    seenOverviewRoots.add(id);
+    const node = nodesById.get(id);
+    if (!node) issues.push({ severity: 'error', message: `requirements Overview root references unknown node id "${id}"` });
+    else if (node.tab !== 'requirements') issues.push({ severity: 'error', message: `requirements Overview root "${id}" is on ${node.tab}` });
+  }
+
   const seenNodeTypes = new Set<string>();
   for (const t of doc.nodeTypes) {
     if (seenNodeTypes.has(t.id)) issues.push({ severity: 'error', message: `duplicate node type id "${t.id}"` });

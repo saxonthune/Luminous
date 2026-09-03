@@ -6,6 +6,8 @@ export interface MerinoMenuDeps {
   doc: () => MerinoDocument;
   /** Node Type ids in most-recently-used-first order (session state). */
   recentTypeIds: () => string[];
+  /** Stable Node ids currently presented as Overview roots. */
+  overviewRootIds: () => readonly string[];
 }
 
 export interface MerinoDownstreamNode {
@@ -48,11 +50,18 @@ function addTypedItem(t: MerinoNodeType, position: CanvasContextMenuPosition): M
 }
 
 function nodeTypeSubmenu(doc: MerinoDocument, currentTypeId: string, nodeId: string): MenuItem {
+  const currentType = doc.nodeTypes.find((t) => t.id === currentTypeId);
+  const hasChildren = doc.nodes.some((n) => n.parent === nodeId);
+  // A Node with children must keep a Container Type — offer the others disabled
+  // so the reason the option is unavailable is visible (mirrors operations.setNode).
+  const wouldOrphanChildren = (t: MerinoNodeType): boolean =>
+    hasChildren && currentType?.layout !== undefined && t.layout === undefined;
   const typeItems: MenuItem[] = doc.nodeTypes.map((t) => ({
     type: 'action',
     action: {
       id: 'node.setType',
       label: t.id === currentTypeId ? `● ${t.name}` : t.name,
+      enabled: !wouldOrphanChildren(t),
       payload: { id: nodeId, typeId: t.id },
     },
   }));
@@ -90,6 +99,15 @@ export function nodeContextMenu(deps: MerinoMenuDeps, nodeId: string): MenuSchem
       { type: 'action', action: { id: 'selection.paste', label: 'Paste', payload: {} } },
       { type: 'divider' },
       { type: 'action', action: { id: 'node.addSubnode', label: 'Add subnode', payload: { parent: nodeId } } },
+      {
+        type: 'action',
+        action: {
+          id: deps.overviewRootIds().includes(nodeId) ? 'node.removeFromOverview' : 'node.pinToOverview',
+          label: deps.overviewRootIds().includes(nodeId) ? 'Remove from Overview' : 'Pin to Overview',
+          selected: deps.overviewRootIds().includes(nodeId),
+          payload: { id: nodeId },
+        },
+      },
       nodeTypeSubmenu(doc, node.type, nodeId),
       ...(downstreamItem ? [downstreamItem] : []),
       { type: 'divider' },
