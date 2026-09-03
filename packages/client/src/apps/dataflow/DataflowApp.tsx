@@ -6,6 +6,7 @@ import { DocumentPicker } from '../../DocumentPicker';
 import { ToastTray, type Toast } from '../../ToastTray';
 import {
   fetchServerSources,
+  fetchStaticSources,
   copyDocument,
   moveDocument,
   deleteDocument,
@@ -167,12 +168,10 @@ export function DataflowApp() {
   }
 
   function boot() {
-    if (__GITHUB_PAGES__) {
-      setSources([]);
-      setShell({ kind: 'picker' });
-      return;
-    }
-    fetchServerSources('.dataflow.json')
+    const fetchSources = __STATIC__
+      ? () => fetchStaticSources('.dataflow.json')
+      : () => fetchServerSources('.dataflow.json');
+    fetchSources()
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);
@@ -240,16 +239,10 @@ export function DataflowApp() {
                 sources={sources() ?? []}
                 onSelect={onSelect}
                 loadingId={shell().kind === 'loadingDoc' ? sourceId() : null}
-                onRename={(s) => setRenaming(s)}
-                onDuplicate={handleDuplicate}
-                onDelete={(s) => setDeleting(s)}
+                onRename={__STATIC__ ? undefined : (s) => setRenaming(s)}
+                onDuplicate={__STATIC__ ? undefined : handleDuplicate}
+                onDelete={__STATIC__ ? undefined : (s) => setDeleting(s)}
               />
-              <Show when={__GITHUB_PAGES__}>
-                <p class="pb-4 text-center text-xs text-fg-subtle">
-                  Dataflow documents are served by the local Luminous server — not available on
-                  this static site.
-                </p>
-              </Show>
             </div>
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>

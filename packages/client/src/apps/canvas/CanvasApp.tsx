@@ -92,8 +92,8 @@ export function CanvasApp() {
   }
 
   function boot() {
-    const fetchSources = __GITHUB_PAGES__
-      ? fetchStaticSources
+    const fetchSources = __STATIC__
+      ? () => fetchStaticSources('.graph.json')
       : () => fetchServerSources('.graph.json');
     fetchSources()
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads

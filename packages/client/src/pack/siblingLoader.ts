@@ -12,7 +12,7 @@ const BUILTINS: Record<string, () => import('@luminous/core').Pack> = {
  * Static: co-located in public/canvases/ under BASE_URL.
  * Server: served via /api/pack/.
  */
-export function siblingPackUrl(sourceId: string, packName: string, isStatic = __GITHUB_PAGES__): string {
+export function siblingPackUrl(sourceId: string, packName: string, isStatic = __STATIC__): string {
   const lastSlash = sourceId.lastIndexOf('/');
   const dir = lastSlash !== -1 ? sourceId.slice(0, lastSlash + 1) : '';
   if (isStatic) {

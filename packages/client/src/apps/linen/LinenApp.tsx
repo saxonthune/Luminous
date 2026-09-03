@@ -4,7 +4,7 @@ import type { LinenDocument } from '@luminous/core/linen';
 import { parseLinenDocument, serializeLinenDocument } from '@luminous/core/linen';
 import { DocumentPicker } from '../../DocumentPicker';
 import { ToastTray, type Toast } from '../../ToastTray';
-import { fetchServerSources, writeDocument, type CanvasSource } from '../../sources';
+import { fetchServerSources, fetchStaticSources, writeDocument, type CanvasSource } from '../../sources';
 import { readParam, writeParam } from '../../urlState';
 import { watchDocuments } from '../../ws/watchClient';
 import { LinenCanvas } from './LinenCanvas.tsx';
@@ -102,12 +102,10 @@ export function LinenApp() {
   }
 
   function boot() {
-    if (__GITHUB_PAGES__) {
-      setSources([]);
-      setShell({ kind: 'picker' });
-      return;
-    }
-    fetchServerSources('.linen.json')
+    const fetchSources = __STATIC__
+      ? () => fetchStaticSources('.linen.json')
+      : () => fetchServerSources('.linen.json');
+    fetchSources()
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);
@@ -176,12 +174,6 @@ export function LinenApp() {
                 onSelect={onSelect}
                 loadingId={shell().kind === 'loadingDoc' ? sourceId() : null}
               />
-              <Show when={__GITHUB_PAGES__}>
-                <p class="pb-4 text-center text-xs text-fg-subtle">
-                  Linen documents are served by the local Luminous server — not available on
-                  this static site.
-                </p>
-              </Show>
             </div>
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>

@@ -15,7 +15,7 @@ describe('fetchStaticSources', () => {
       if (url === '/canvases/index.json') {
         return Promise.resolve({
           json: () => Promise.resolve({
-            canvases: [
+            documents: [
               { path: 'sample-primitives.graph.json', name: 'Sample Primitives', root: 'demos' },
               { path: 'foo/bar.graph.json', name: 'Bar Canvas', root: 'foo' },
             ],
@@ -35,12 +35,32 @@ describe('fetchStaticSources', () => {
     expect(sources[1].root).toBe('foo');
   });
 
+  it('filters the manifest by document-kind suffix', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url === '/canvases/index.json') {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            documents: [
+              { path: 'sample.graph.json', name: 'A Graph', root: 'demos' },
+              { path: 'fifa.merino.json', name: 'A Merino', root: 'demos' },
+            ],
+          }),
+        });
+      }
+      return Promise.reject(new Error('unexpected fetch: ' + url));
+    }));
+
+    const sources = await fetchStaticSources('.merino.json');
+    expect(sources).toHaveLength(1);
+    expect(sources[0].id).toBe('fifa.merino.json');
+  });
+
   it("each source's load() fetches from BASE_URL/canvases/<path> and returns text", async () => {
     const mockFetch = vi.fn((url: string) => {
       if (url === '/canvases/index.json') {
         return Promise.resolve({
           json: () => Promise.resolve({
-            canvases: [
+            documents: [
               { path: 'sample-primitives.graph.json', name: 'Sample Primitives', root: 'demos' },
             ],
           }),

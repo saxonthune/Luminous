@@ -4,7 +4,7 @@ import type { AtlasData, AtlasDocument } from '@luminous/core/atlas';
 import { parseAtlasDocument, serializeAtlasDocument } from '@luminous/core/atlas';
 import { DocumentPicker } from '../../DocumentPicker';
 import { ToastTray, type Toast } from '../../ToastTray';
-import { fetchServerSources, writeDocument, type CanvasSource } from '../../sources';
+import { fetchServerSources, fetchStaticSources, writeDocument, type CanvasSource } from '../../sources';
 import { readParam, writeParam } from '../../urlState';
 import { watchDocuments } from '../../ws/watchClient';
 import { AtlasCanvas } from './AtlasCanvas.tsx';
@@ -128,12 +128,10 @@ export function AtlasApp() {
   }
 
   function boot() {
-    if (__GITHUB_PAGES__) {
-      setSources([]);
-      setShell({ kind: 'picker' });
-      return;
-    }
-    fetchServerSources('.atlas.json')
+    const fetchSources = __STATIC__
+      ? () => fetchStaticSources('.atlas.json')
+      : () => fetchServerSources('.atlas.json');
+    fetchSources()
       // eslint-disable-next-line solid/reactivity -- async continuation; setters are not reactive reads
       .then((list) => {
         setSources(list);
@@ -207,12 +205,6 @@ export function AtlasApp() {
                 onSelect={onSelect}
                 loadingId={shell().kind === 'loadingDoc' ? sourceId() : null}
               />
-              <Show when={__GITHUB_PAGES__}>
-                <p class="pb-4 text-center text-xs text-fg-subtle">
-                  Atlas documents are served by the local Luminous server — not available on
-                  this static site.
-                </p>
-              </Show>
             </div>
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>

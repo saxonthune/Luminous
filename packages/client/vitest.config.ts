@@ -4,7 +4,7 @@ import solidPlugin from 'vite-plugin-solid';
 export default defineConfig({
   plugins: [solidPlugin()],
   define: {
-    __GITHUB_PAGES__: 'false',
+    __STATIC__: 'false',
   },
   test: {
     globals: true,

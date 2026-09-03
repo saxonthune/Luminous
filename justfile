@@ -38,6 +38,11 @@ build-client:
     pnpm -C packages/client exec tsc -b
     pnpm -C packages/client exec vite build
 
+# build the client as a static, no-backend demo site (bundles public/canvases/)
+build-static:
+    pnpm -C packages/client exec tsc -b
+    STATIC_BUILD=true pnpm -C packages/client exec vite build
+
 # ---- test ----
 
 # run all unit tests
@@ -94,6 +99,10 @@ dev:
 # run the canvas client only
 dev-client:
     pnpm -C packages/client exec vite
+
+# run the client in static (no-backend) mode against the bundled demo docs
+dev-static:
+    STATIC_BUILD=true pnpm -C packages/client exec vite
 
 # run the storage server only
 dev-server:
