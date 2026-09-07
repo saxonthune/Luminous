@@ -74,6 +74,10 @@ See `.rhidoc/02-design/01-pdr-unfolding-architecture.md` for full details. Key d
 - **Polymorphic nodes.** Notes are the primary node type, but the data model is a discriminated union — portals, pipeline-generated nodes (components, signals), and future types share base properties (position, size, nesting) and differ by `type` field.
 - **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
 - **Server is storage, client is intelligence.** Server serves files and broadcasts file-change notifications over WebSocket. Client owns all domain logic.
+  **Nylon exception:** UI and CLI submit revision-checked actions to the server,
+  which runs the shared Nylon executor and keeps bounded session undo/redo history.
+  The static demo runs that same executor locally. Nylon prepares geometry;
+  cactus owns layout algorithms. Direct file edits clear Nylon history.
 - **Diagram pipelines.** Scripts that read source code via static analysis and emit `.canvas.json`. The pipeline is the reusable artifact — shareable across projects and communities. Each pipeline defines its own node types from the forces of its domain; we don't pre-build a universal schema of typed nodes.
 - **Willing to delete.** No backward compatibility with features nobody uses.
 
@@ -149,6 +153,13 @@ to see all recipes. Common ones: `just build`, `just test`, `just typecheck`,
 `just lint`, `just dev`, `just mcp` (regenerate the MCP server bundle).
 
 Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
+
+### Development server ports
+
+Before starting a development server, probe the ports that the user says are running and
+the configured default ports. Reuse a reachable storage server instead of starting a
+duplicate process. The client port does not serve the storage API; pass the reachable
+storage-server port to app CLI commands.
 
 ### E2E tests
 

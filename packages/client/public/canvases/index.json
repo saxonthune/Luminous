@@ -11,6 +11,8 @@
     { "path": "fifa-part-2.dataflow.json", "name": "FIFA — Part 2", "root": "demos" },
     { "path": "fifa-part-3.dataflow.json", "name": "FIFA — Part 3", "root": "demos" },
     { "path": "fifa-part-4.dataflow.json", "name": "FIFA — Part 4", "root": "demos" },
-    { "path": "nyc-subwhere.linen.json", "name": "NYC Subwhere", "root": "demos" }
+    { "path": "nyc-subwhere.linen.json", "name": "NYC Subwhere", "root": "demos" },
+    { "path": "dotnet-customers.nylon.json", "name": ".NET Customers API", "root": "demos" },
+    { "path": "nyc-subwhere-train-pose.nylon.json", "name": "NYC Subwhere Train Pose", "root": "demos" }
   ]
 }

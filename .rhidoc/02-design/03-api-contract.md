@@ -27,6 +27,71 @@ HTTP + WebSocket API for `@luminous/server` (`packages/server`). The server is a
 
 ## Mutation Endpoints
 
+### Nylon actions
+
+Nylon uses a shared action executor in the server and static demo. The other
+action endpoints below describe the older Canvas API.
+
+`GET /api/nylon/document/:path` returns `{ ok: true, snapshot }`. The snapshot
+contains `document`, `revision`, `undo`, and `redo`. Each history entry contains
+`actionId`, `label`, `origin`, and the target `document` for that undo or redo;
+the last entry is the next undo or redo. These bounded target snapshots let
+the client preview history changes without a server round trip.
+
+`POST /api/nylon/action` accepts:
+
+```json
+{
+  "path": "system.nylon.json",
+  "actionId": "unique-request-id",
+  "baseRevision": "revision-from-read",
+  "origin": "api",
+  "action": {
+    "op": "layout.dag",
+    "id": "parent",
+    "direction": "LR",
+    "context": { "collapsed": [], "covered": [] }
+  }
+}
+```
+
+The executor accepts Nylon batch operations, `batch`, `selection.move`,
+`layout.dag`, `layout.space`, `container.expand`, `document.replace`, `doctor`,
+`undo`, and `redo`. `dryRun: true` returns the calculated Document without
+committing it or changing history. Origin is `ui`, `cli`, or `api`; it labels
+history and is not an authentication claim.
+
+Successful responses contain `{ ok: true, snapshot, changed }`. A duplicate
+request also includes `replayed: true` and returns the current snapshot.
+Failures contain `{ ok: false, error }`; stale revisions return HTTP 409 with
+`conflict: true`. Other refused actions return HTTP 400. Retrying a request
+preserves its action ID, revision, and payload. A different payload cannot
+reuse an action ID.
+
+Each canonical document path has one serialized history session. Only a
+successful storage commit advances history. Reads and actions compare current
+file content with the session's content; external edits clear both history
+branches. Saves publish complete files by atomic rename and check for changed
+content before publishing. File watching refreshes sessions and notifies
+clients; it does not suppress Nylon external edits during an own-write window.
+
+The client action controller retains confirmed state and pending Actions. It
+applies Actions locally for immediate display, sends them sequentially against
+confirmed revisions, and retains later previews as earlier Actions are
+confirmed. Display revisions track the predicted Document so gestures can
+detect intervening changes without treating an identical confirmation as a
+change. A refusal or divergent result discards dependent previews and refreshes
+authoritative state. The static demo uses the same controller with a local adapter.
+
+Nylon changes do not use `POST /api/document/write`; whole-document imports
+use `document.replace`. Server restart discards session history. Static demos
+use browser memory with the same executor and history rules. See doc01.12.04
+for user-visible requirements.
+
+Nylon notifications have `{ event: "changed", path, revision, actionId }` when
+the action ID is known, and omit the action ID for filesystem changes. Clients
+refresh after reconnecting and reject outdated asynchronous loads.
+
 All mutations use `POST` with a JSON body containing `path` (the canvas file) and action-specific params. Response envelope: `{ ok: true, id?: string }` on success, `{ ok: false, error: string }` on failure.
 
 ### Single action

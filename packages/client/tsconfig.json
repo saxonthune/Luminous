@@ -12,7 +12,8 @@
     "skipLibCheck": true,
     "types": ["vite/client"],
     "paths": {
-      "@luminous/cactus": ["../cactus/src/index.ts"]
+      "@luminous/cactus": ["../cactus/src/index.ts"],
+      "@luminous/cactus/layout": ["../cactus/src/layout-public.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

@@ -1,12 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "declaration": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "paths": {
+      "@luminous/cactus/layout": ["../cactus/src/layout-public.ts"]
+    },
     "strict": true
   },
-  "include": ["src"]
+  "include": ["src", "../../scripts/luminous-cli.ts"]
 }

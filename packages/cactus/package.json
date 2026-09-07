@@ -9,6 +9,10 @@
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
+    "./layout": {
+      "types": "./dist/layout-public.d.ts",
+      "default": "./src/layout-public.ts"
+    },
     "./chrome-types": {
       "default": "./src/chrome/types.ts"
     },

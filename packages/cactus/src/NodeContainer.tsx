@@ -12,6 +12,10 @@ export interface NodeContainerProps {
   /** Generic scene ordering number. Hosts may interleave nodes with route bands. */
   visualBand?: () => number;
   softContainer?: () => boolean;
+  /** Host-supplied soft-container colors. */
+  containerTint?: () => string;
+  containerBorder?: () => string;
+  containerBorderWidth?: () => number;
   /** Inset of the soft-container box from this Node's own edges (top/left/
    * right/bottom, in px) — when absent, the box fills the Node at `inset:0`
    * as before (Canvas, Dataflow). Atlas supplies this to draw the container
@@ -105,8 +109,8 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
             right: `${props.containerInset?.().right ?? 0}px`,
             bottom: `${props.containerInset?.().bottom ?? 0}px`,
             'z-index': '-1',
-            background: 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
-            border: '1px solid var(--cactus-container-border, var(--cactus-border-subtle, #f3f4f6))',
+            background: props.containerTint?.() ?? 'var(--cactus-container-tint, rgba(0,0,0,0.04))',
+            border: `${props.containerBorderWidth?.() ?? 1}px solid ${props.containerBorder?.() ?? 'var(--cactus-container-border, var(--cactus-border-subtle, #f3f4f6))'}`,
             'border-radius': '8px',
             'pointer-events': 'none',
           }}

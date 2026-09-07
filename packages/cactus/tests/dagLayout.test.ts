@@ -70,3 +70,19 @@ describe('dagLayout clusters', () => {
     expect(result.get('c')).toBeDefined()
   })
 })
+
+describe('dagLayout direction', () => {
+  const nodes: TidyNode[] = [node('source'), node('target')]
+  const edges: LayoutEdge[] = [{ source: 'source', target: 'target' }]
+
+  it.each([
+    ['TD', 'y', 1],
+    ['DT', 'y', -1],
+    ['LR', 'x', 1],
+    ['RL', 'x', -1],
+  ] as const)('orders an edge in the %s direction', (direction, axis, sign) => {
+    const result = dagLayout(nodes, edges, { direction })
+    const delta = result.get('target')![axis] - result.get('source')![axis]
+    expect(Math.sign(delta)).toBe(sign)
+  })
+})

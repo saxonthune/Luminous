@@ -9,7 +9,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -20,4 +20,5 @@ jobs:
       - run: just build
       - run: just test-cactus
       - run: just test-server
+      - run: just test-nylon
       - run: just check-skill-reference

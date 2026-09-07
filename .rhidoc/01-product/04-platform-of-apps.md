@@ -17,4 +17,6 @@ Luminous. Its siblings are the Dataflow Designer (doc01.05), which reads
 dataflow documents; Atlas (doc01.07), which holds a whole program on one
 canvas; Linen (doc01.09), which draws what happens when a piece of software
 runs; and Merino (doc01.10), a general node-and-edge app for designing a
-program as event-driven requirements and their deployments.
+program as event-driven requirements and their deployments. Nylon (doc01.12)
+draws an alternating network of data Contracts and the Transformations that
+act on them.

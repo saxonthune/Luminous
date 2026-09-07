@@ -1,0 +1,774 @@
+{
+  "v": 1,
+  "transformations": [
+    {
+      "id": "customers-api",
+      "name": "Customers API",
+      "prose": "Accepts one HTTP request for GET /customers/{id} and returns one JSON response. Its differentiated detail is organized around the controller, service, and repository classes.",
+      "needs": [
+        "HTTP request",
+        "Customer result"
+      ],
+      "contractPair": {
+        "input": "http-request",
+        "output": "http-response"
+      },
+      "x": 8,
+      "y": -169.31104466680154
+    },
+    {
+      "id": "customer-controller-class",
+      "name": "CustomerController.cs",
+      "prose": "Owns the HTTP boundary: admission, request mapping and validation, creation of the service request, and response serialization.",
+      "needs": [
+        "HTTP request",
+        "Customer result"
+      ],
+      "parent": "customers-api",
+      "x": 98.53712842598466,
+      "y": 79.99999999999999
+    },
+    {
+      "id": "rate-limit",
+      "name": "Rate limit policy",
+      "prose": "Owns the mutually exclusive admitted and rejected paths for the HTTP request.",
+      "needs": [
+        "HTTP request caller",
+        "endpoint rate-limit policy"
+      ],
+      "parent": "customer-controller-class",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "evaluate-rate-limit",
+      "name": "Evaluate rate limit",
+      "prose": "Reads the caller and endpoint policy and produces one rate-limit decision.",
+      "needs": [
+        "HTTP request caller",
+        "endpoint rate-limit policy"
+      ],
+      "parent": "rate-limit",
+      "x": 42,
+      "y": 160.00000000000006
+    },
+    {
+      "id": "admit-under-limit",
+      "name": "Admit under limit",
+      "prose": "When the decision is under the limit, preserves the request for controller mapping.",
+      "needs": [
+        "rate-limit decision with allowed: true"
+      ],
+      "parent": "rate-limit",
+      "x": 505.02850556440796,
+      "y": 80
+    },
+    {
+      "id": "reject-over-limit",
+      "name": "Reject over limit",
+      "prose": "When the decision is over the limit, creates the data required for an HTTP 429 response.",
+      "needs": [
+        "rate-limit decision with allowed: false"
+      ],
+      "parent": "rate-limit",
+      "x": 505.02850556440796,
+      "y": 319.99999999999994
+    },
+    {
+      "id": "serialize-rate-limit-failure",
+      "name": "Serialize 429 response",
+      "prose": "Turns the rejected rate-limit outcome into a ProblemDetails HTTP response.",
+      "needs": [
+        "rate-limit failure"
+      ],
+      "parent": "customer-controller-class",
+      "x": 313.11646870400773,
+      "y": 656.7957576644847
+    },
+    {
+      "id": "json-to-request-model",
+      "name": "JSON to request model",
+      "prose": "Reads the route id and request metadata into the controller's C# request model.",
+      "needs": [
+        "admitted route and request metadata"
+      ],
+      "parent": "customer-controller-class",
+      "x": 547.028505564408,
+      "y": 640.0869091720646
+    },
+    {
+      "id": "controller-guards",
+      "name": "Controller guards",
+      "prose": "Checks that the route id is present and syntactically valid before the controller invokes application behavior.",
+      "needs": [
+        "GetCustomerRequest"
+      ],
+      "parent": "customer-controller-class",
+      "x": 988.9476413980043,
+      "y": 632.4107172247881
+    },
+    {
+      "id": "prepare-service-request",
+      "name": "Create service request",
+      "prose": "Transforms the valid controller request into the business-facing CustomerLookup contract passed to CustomerService.cs.",
+      "needs": [
+        "validated GetCustomerRequest"
+      ],
+      "parent": "customer-controller-class",
+      "x": 1452.9355743243668,
+      "y": 637.2083459765134
+    },
+    {
+      "id": "map-customer-response",
+      "name": "Customer to response model",
+      "prose": "Maps the CustomerService result into the API response model, including the not-found case.",
+      "needs": [
+        "Customer or not-found result"
+      ],
+      "parent": "customer-controller-class",
+      "x": 1246.932792202585,
+      "y": 1066.1608689556685
+    },
+    {
+      "id": "serialize-response",
+      "name": "Serialize JSON response",
+      "prose": "Serializes the response model and selects the final HTTP status.",
+      "needs": [
+        "GetCustomerResponse or ProblemDetails"
+      ],
+      "parent": "customer-controller-class",
+      "x": 718.1526355384366,
+      "y": 1080.7700878281423
+    },
+    {
+      "id": "customer-service-class",
+      "name": "CustomerService.cs",
+      "prose": "Owns customer lookup behavior and its business guard, then translates the repository result into a business result.",
+      "needs": [
+        "CustomerLookup",
+        "customer database result"
+      ],
+      "contractPair": {
+        "input": "service-request",
+        "output": "customer-result"
+      },
+      "parent": "customers-api",
+      "x": 2266.1042452656425,
+      "y": 731.8552582356157
+    },
+    {
+      "id": "customer-service",
+      "name": "Apply customer lookup",
+      "prose": "Applies the customer lookup behavior to the business-facing service request.",
+      "needs": [
+        "CustomerLookup business model"
+      ],
+      "parent": "customer-service-class",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "service-guard",
+      "name": "Service guard",
+      "prose": "Checks the business lookup rules before calling CustomerRepository.cs.",
+      "needs": [
+        "candidate customer query",
+        "customer lookup rules"
+      ],
+      "parent": "customer-service-class",
+      "x": 518.9973205483493,
+      "y": 87.70781274986007
+    },
+    {
+      "id": "map-customer-result",
+      "name": "Row to Customer result",
+      "prose": "Transforms the persistence row or null into the business Customer result returned to CustomerController.cs.",
+      "needs": [
+        "CustomerRow or null"
+      ],
+      "parent": "customer-service-class",
+      "x": 688.1260047943688,
+      "y": 390.5093780807772
+    },
+    {
+      "id": "customer-repository-class",
+      "name": "CustomerRepository.cs",
+      "prose": "Owns persistence behavior and uses Entity Framework Core to turn a customer query into a customer database result.",
+      "needs": [
+        "Customer query contract",
+        "Entity Framework DbContext"
+      ],
+      "contractPair": {
+        "input": "customer-query",
+        "output": "customer-row"
+      },
+      "parent": "customers-api",
+      "x": 3600,
+      "y": 739.3110446668015
+    },
+    {
+      "id": "build-ef-query",
+      "name": "Build EF query",
+      "prose": "Builds an AsNoTracking customer query against the Entity Framework DbContext.",
+      "needs": [
+        "customer id",
+        "Customer DbSet"
+      ],
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "prepare-sql-query",
+      "name": "Prepare SQL query",
+      "prose": "Uses Entity Framework Core to translate the composed query into the SQL command sent to the customer database.",
+      "needs": [
+        "composed EF Core query",
+        "database connection"
+      ],
+      "parent": "customer-repository-class",
+      "x": 482,
+      "y": 80
+    },
+    {
+      "id": "map-customer-row",
+      "name": "Materialize CustomerRow",
+      "prose": "Maps the database entity or null into the repository's CustomerRow result.",
+      "needs": [
+        "CustomerEntity or null"
+      ],
+      "parent": "customer-repository-class",
+      "x": 922,
+      "y": 80
+    },
+    {
+      "id": "application-startup",
+      "name": "Application startup",
+      "prose": "Builds the application's configuration from ordered providers, binds typed options, and leaves the API ready to accept requests.",
+      "needs": [
+        "application host",
+        "configuration providers"
+      ],
+      "contractPair": {
+        "input": "application-starting",
+        "output": "application-configured"
+      },
+      "parent": "customers-api",
+      "x": 270,
+      "y": 1739.3110446668015
+    },
+    {
+      "id": "begin-configuration",
+      "name": "Begin configuration",
+      "prose": "Starts the ordered configuration-provider pipeline for the application host.",
+      "needs": [
+        "application starting"
+      ],
+      "parent": "application-startup",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "environment-variables",
+      "name": "Environment variables provider",
+      "prose": "Reads the process environment and contributes matching configuration keys.",
+      "needs": [
+        "environment read request",
+        "process environment"
+      ],
+      "contractPair": {
+        "input": "environment-read-request",
+        "output": "environment-settings"
+      },
+      "parent": "application-startup",
+      "x": 522,
+      "y": 80
+    },
+    {
+      "id": "prepare-secrets-request",
+      "name": "Prepare secrets request",
+      "prose": "Uses the environment-derived deployment identity and secret name to request application secrets.",
+      "needs": [
+        "environment settings"
+      ],
+      "parent": "application-startup",
+      "x": 1002,
+      "y": 80
+    },
+    {
+      "id": "aws-secrets-manager",
+      "name": "AWS Secrets Manager provider",
+      "prose": "Retrieves the named secret and contributes its values to application configuration.",
+      "needs": [
+        "secrets read request",
+        "AWS Secrets Manager"
+      ],
+      "contractPair": {
+        "input": "secrets-read-request",
+        "output": "secret-settings"
+      },
+      "parent": "application-startup",
+      "x": 1482,
+      "y": 80
+    },
+    {
+      "id": "prepare-app-options-request",
+      "name": "Prepare AppOptions request",
+      "prose": "Builds the request used to load application-owned settings from the AppOptions table.",
+      "needs": [
+        "secret-enriched configuration"
+      ],
+      "parent": "application-startup",
+      "x": 1962,
+      "y": 80
+    },
+    {
+      "id": "app-options-provider",
+      "name": "AppOptions table provider",
+      "prose": "Fetches application-owned settings from the external customer database and contributes the returned values.",
+      "needs": [
+        "AppOptions read request",
+        "AppOptions table"
+      ],
+      "contractPair": {
+        "input": "app-options-read-request",
+        "output": "app-options-settings"
+      },
+      "parent": "application-startup",
+      "x": 2442,
+      "y": 80
+    },
+    {
+      "id": "bind-options",
+      "name": "Bind and validate IOptions",
+      "prose": "Composes provider values by precedence, binds typed options classes, validates them, and registers them for dependency injection.",
+      "needs": [
+        "environment settings",
+        "secret settings",
+        "AppOptions settings"
+      ],
+      "parent": "application-startup",
+      "x": 2922,
+      "y": 80
+    },
+    {
+      "id": "customer-database",
+      "name": "Customer database",
+      "prose": "Executes SQL queries for customer lookup and exposes the AppOptions table used during application startup.",
+      "needs": [
+        "SQL query",
+        "database connection"
+      ],
+      "contractPair": {
+        "input": "sql-query",
+        "output": "sql-result"
+      },
+      "x": 5220,
+      "y": 760
+    }
+  ],
+  "contracts": [
+    {
+      "id": "http-request",
+      "name": "HTTP request",
+      "text": "GET /customers/{id}\nAccept: application/json\n\n{\n  \"route\": { \"id\": \"customer-id\" },\n  \"caller\": \"client-id\"\n}",
+      "x": -463.47510466115034,
+      "y": 197.37092997770964
+    },
+    {
+      "id": "application-starting",
+      "name": "Application starting",
+      "kind": "lifecycle",
+      "text": "WebApplicationBuilder created\nHost configuration available",
+      "parent": "customers-api",
+      "x": 42,
+      "y": 1854.3110446668015
+    },
+    {
+      "id": "environment-read-request",
+      "name": "Environment read request",
+      "kind": "environment-settings",
+      "text": "prefixes: ConnectionStrings__, RateLimit__, CustomerApi__",
+      "parent": "application-startup",
+      "x": 282,
+      "y": 115
+    },
+    {
+      "id": "environment-settings",
+      "name": "Environment settings",
+      "kind": "environment-settings",
+      "text": "ConnectionStrings__Customers\nRateLimit__RequestsPerMinute\nCustomerApi__DefaultPageSize",
+      "parent": "application-startup",
+      "x": 762,
+      "y": 115
+    },
+    {
+      "id": "secrets-read-request",
+      "name": "Secrets read request",
+      "kind": "environment-settings",
+      "text": "secretId: customers-api/production\nAWS region and workload identity",
+      "parent": "application-startup",
+      "x": 1242,
+      "y": 115
+    },
+    {
+      "id": "secret-settings",
+      "name": "Secret settings",
+      "kind": "environment-settings",
+      "text": "databasePassword: secret\napiKey: secret",
+      "parent": "application-startup",
+      "x": 1722,
+      "y": 115
+    },
+    {
+      "id": "app-options-read-request",
+      "name": "AppOptions read request",
+      "kind": "environment-settings",
+      "text": "table: AppOptions\nenvironment: Production",
+      "parent": "application-startup",
+      "x": 2202,
+      "y": 115
+    },
+    {
+      "id": "app-options-settings",
+      "name": "AppOptions settings",
+      "kind": "environment-settings",
+      "text": "RateLimit.RequestsPerMinute: 120\nCustomerApi.DefaultPageSize: 50",
+      "parent": "application-startup",
+      "x": 2682,
+      "y": 115
+    },
+    {
+      "id": "application-configured",
+      "name": "Configured application",
+      "kind": "lifecycle",
+      "text": "Validated options registered\nAPI ready to build and run",
+      "parent": "customers-api",
+      "x": 3472,
+      "y": 1854.3110446668015
+    },
+    {
+      "id": "app-options-table",
+      "name": "AppOptions table",
+      "kind": "environment-settings",
+      "text": "Key | Value\nRateLimit.RequestsPerMinute | 120\nCustomerApi.DefaultPageSize | 50",
+      "x": 5530,
+      "y": 1010
+    },
+    {
+      "id": "database-options",
+      "name": "IOptions<DatabaseOptions>",
+      "kind": "options",
+      "text": "ConnectionString: string\nCommandTimeoutSeconds: int",
+      "parent": "customers-api",
+      "x": 1012,
+      "y": 1829.3110446668015
+    },
+    {
+      "id": "rate-limit-options",
+      "name": "IOptions<RateLimitOptions>",
+      "kind": "options",
+      "text": "RequestsPerMinute: int\nBurst: int",
+      "parent": "customers-api",
+      "x": 1012,
+      "y": 1989.3110446668015
+    },
+    {
+      "id": "customer-api-options",
+      "name": "IOptions<CustomerApiOptions>",
+      "kind": "options",
+      "text": "DefaultPageSize: int\nIncludeInactive: boolean",
+      "parent": "customers-api",
+      "x": 1012,
+      "y": 2149.3110446668015
+    },
+    {
+      "id": "rate-limit-decision",
+      "name": "Rate limit decision",
+      "text": "allowed: boolean\nretryAfterSeconds?: number",
+      "parent": "rate-limit",
+      "x": 262,
+      "y": 195.00000000000006
+    },
+    {
+      "id": "admitted-request",
+      "name": "Admitted request",
+      "text": "caller: string\ncustomerId: string",
+      "parent": "customer-controller-class",
+      "x": 767.028505564408,
+      "y": 195.00000000000003
+    },
+    {
+      "id": "rate-limit-failure",
+      "name": "Rate limit failure",
+      "text": "status: 429\ntitle: Too Many Requests\nretryAfterSeconds: number",
+      "parent": "customer-controller-class",
+      "x": 767.028505564408,
+      "y": 434.99999999999994
+    },
+    {
+      "id": "controller-request-model",
+      "name": "GetCustomerRequest",
+      "text": "public sealed record GetCustomerRequest(Guid CustomerId);",
+      "parent": "customer-controller-class",
+      "x": 746.878563195551,
+      "y": 672.2083811152244
+    },
+    {
+      "id": "guarded-controller-request",
+      "name": "Valid controller request",
+      "text": "GetCustomerRequest\nCustomerId is a non-empty Guid",
+      "parent": "customer-controller-class",
+      "x": 1197.4332480609569,
+      "y": 688.5202275104429
+    },
+    {
+      "id": "service-request",
+      "name": "CustomerLookup",
+      "text": "Business request passed between classes\n\nCustomerLookup\n  customerId: CustomerId",
+      "parent": "customers-api",
+      "x": 1884.2006994229087,
+      "y": 859.9152301022062
+    },
+    {
+      "id": "candidate-query",
+      "name": "Candidate customer query",
+      "text": "customerId: CustomerId\nincludeInactive: false",
+      "parent": "customer-service-class",
+      "x": 262,
+      "y": 115
+    },
+    {
+      "id": "customer-query",
+      "name": "Customer query contract",
+      "text": "Repository input\n{ customerId: CustomerId }",
+      "parent": "customers-api",
+      "x": 3307.9904238199674,
+      "y": 873.142534491459
+    },
+    {
+      "id": "ef-query",
+      "name": "Composed EF query",
+      "text": "IQueryable<CustomerEntity>\nAsNoTracking()\nWhere(customerId)",
+      "parent": "customer-repository-class",
+      "x": 262,
+      "y": 115
+    },
+    {
+      "id": "sql-query",
+      "name": "SQL query",
+      "text": "SELECT Id, DisplayName, Status\nFROM Customers\nWHERE Id = @customerId",
+      "x": 4930,
+      "y": 805
+    },
+    {
+      "id": "sql-result",
+      "name": "SQL result",
+      "text": "Customer record | null\n{ Id, DisplayName, Status }",
+      "x": 5510,
+      "y": 805
+    },
+    {
+      "id": "customer-row",
+      "name": "Customer database result",
+      "text": "CustomerRow | null\n{ id, displayName, status }",
+      "parent": "customers-api",
+      "x": 3359.7862761141982,
+      "y": 1135.7290795349752
+    },
+    {
+      "id": "customer-result",
+      "name": "Customer result",
+      "text": "Business result passed between classes\n\nCustomer { id, displayName }\nor NotFound",
+      "parent": "customers-api",
+      "x": 1882.5616652398617,
+      "y": 1010.6737846330614
+    },
+    {
+      "id": "response-model",
+      "name": "GetCustomerResponse",
+      "text": "{\n  \"id\": \"customer-id\",\n  \"displayName\": \"Ada Lovelace\"\n}\nor ProblemDetails",
+      "parent": "customer-controller-class",
+      "x": 979.7331568958303,
+      "y": 1114.6463144240488
+    },
+    {
+      "id": "http-response",
+      "name": "HTTP JSON response",
+      "text": "200 application/json + Customer\nor 400 / 404 / 429 + ProblemDetails",
+      "x": -455.52834624774937,
+      "y": 788.2487035513583
+    }
+  ],
+  "arcs": [
+    {
+      "from": "environment-variables",
+      "to": "bind-startup-configuration"
+    },
+    {
+      "from": "aws-secrets-manager",
+      "to": "bind-startup-configuration"
+    },
+    {
+      "from": "customer-database",
+      "to": "app-options-table"
+    },
+    {
+      "from": "app-options-table",
+      "to": "bind-startup-configuration"
+    },
+    {
+      "from": "bind-startup-configuration",
+      "to": "database-options"
+    },
+    {
+      "from": "bind-startup-configuration",
+      "to": "rate-limit-options"
+    },
+    {
+      "from": "bind-startup-configuration",
+      "to": "customer-api-options"
+    },
+    {
+      "from": "database-options",
+      "to": "prepare-sql-query"
+    },
+    {
+      "from": "rate-limit-options",
+      "to": "evaluate-rate-limit"
+    },
+    {
+      "from": "customer-api-options",
+      "to": "controller-guards"
+    },
+    {
+      "from": "http-request",
+      "to": "evaluate-rate-limit"
+    },
+    {
+      "from": "evaluate-rate-limit",
+      "to": "rate-limit-decision"
+    },
+    {
+      "from": "rate-limit-decision",
+      "to": "admit-under-limit"
+    },
+    {
+      "from": "admit-under-limit",
+      "to": "admitted-request"
+    },
+    {
+      "from": "rate-limit-decision",
+      "to": "reject-over-limit"
+    },
+    {
+      "from": "reject-over-limit",
+      "to": "rate-limit-failure"
+    },
+    {
+      "from": "rate-limit-failure",
+      "to": "serialize-rate-limit-failure"
+    },
+    {
+      "from": "serialize-rate-limit-failure",
+      "to": "http-response"
+    },
+    {
+      "from": "admitted-request",
+      "to": "json-to-request-model"
+    },
+    {
+      "from": "json-to-request-model",
+      "to": "controller-request-model"
+    },
+    {
+      "from": "controller-request-model",
+      "to": "controller-guards"
+    },
+    {
+      "from": "controller-guards",
+      "to": "guarded-controller-request"
+    },
+    {
+      "from": "guarded-controller-request",
+      "to": "prepare-service-request"
+    },
+    {
+      "from": "prepare-service-request",
+      "to": "service-request"
+    },
+    {
+      "from": "service-request",
+      "to": "customer-service"
+    },
+    {
+      "from": "customer-service",
+      "to": "candidate-query"
+    },
+    {
+      "from": "candidate-query",
+      "to": "service-guard"
+    },
+    {
+      "from": "service-guard",
+      "to": "customer-query"
+    },
+    {
+      "from": "customer-query",
+      "to": "build-ef-query"
+    },
+    {
+      "from": "build-ef-query",
+      "to": "ef-query"
+    },
+    {
+      "from": "ef-query",
+      "to": "prepare-sql-query"
+    },
+    {
+      "from": "prepare-sql-query",
+      "to": "sql-query"
+    },
+    {
+      "from": "sql-query",
+      "to": "customer-database"
+    },
+    {
+      "from": "customer-database",
+      "to": "sql-result"
+    },
+    {
+      "from": "sql-result",
+      "to": "map-customer-row"
+    },
+    {
+      "from": "map-customer-row",
+      "to": "customer-row"
+    },
+    {
+      "from": "customer-row",
+      "to": "map-customer-result"
+    },
+    {
+      "from": "map-customer-result",
+      "to": "customer-result"
+    },
+    {
+      "from": "customer-result",
+      "to": "map-customer-response"
+    },
+    {
+      "from": "map-customer-response",
+      "to": "response-model"
+    },
+    {
+      "from": "response-model",
+      "to": "serialize-response"
+    },
+    {
+      "from": "serialize-response",
+      "to": "http-response"
+    }
+  ],
+  "title": ".NET GET /customers/{id}"
+}

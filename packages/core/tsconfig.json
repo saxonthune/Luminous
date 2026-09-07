@@ -19,6 +19,7 @@
     "noUncheckedSideEffectImports": true,
     "resolveJsonModule": true,
     "paths": {
+      "@luminous/cactus/layout": ["../cactus/src/layout-public.ts"],
       "@luminous/cactus/chrome-types": ["../cactus/src/chrome/types.ts"]
     }
   },

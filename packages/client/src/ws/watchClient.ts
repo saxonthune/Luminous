@@ -3,6 +3,8 @@ const RECONNECT_DELAY_MS = 1000;
 interface ChangedMessage {
   event: 'changed';
   path: string;
+  revision?: string;
+  actionId?: string;
 }
 
 function parseChangedMessage(data: string): string | null {
@@ -23,7 +25,7 @@ function parseChangedMessage(data: string): string | null {
  * reports a document changed. Reconnects on close; never opens a socket in
  * static mode, where there is no server to watch.
  */
-export function watchDocuments(onChange: (path: string) => void): () => void {
+export function watchDocuments(onChange: (path: string, message?: ChangedMessage) => void, onConnect?: () => void): () => void {
   let disposed = false;
   let socket: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -32,9 +34,10 @@ export function watchDocuments(onChange: (path: string) => void): () => void {
     if (disposed || __STATIC__) return;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${window.location.host}/ws/watch`);
+    socket.addEventListener('open', () => onConnect?.());
     socket.addEventListener('message', (event) => {
       const path = parseChangedMessage(event.data);
-      if (path !== null) onChange(path);
+      if (path !== null) onChange(path, JSON.parse(event.data) as ChangedMessage);
     });
     socket.addEventListener('close', () => {
       socket = null;

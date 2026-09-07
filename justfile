@@ -21,10 +21,9 @@ build: build-cactus build-server build-mcp build-client
 build-cactus:
     pnpm -C packages/cactus exec tsc -p tsconfig.build.json
 
-# build the storage server
+# build the server and its environment-independent Nylon executor
 build-server:
-    pnpm -C packages/server exec rimraf dist
-    pnpm -C packages/server exec tsc
+    pnpm -C packages/server exec esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js
 
 # build (regenerate) the MCP server bundle
 build-mcp:
@@ -60,6 +59,11 @@ test-mcp:
 test-client:
     pnpm -C packages/client exec vitest run
 
+# Nylon action/history and projection checks, without browser E2E tests
+test-nylon:
+    pnpm -C packages/core exec vitest run tests/nylon
+    pnpm -C packages/client exec vitest run src/apps/nylon/__tests__ src/ws/__tests__
+
 test-server:
     pnpm -C packages/server exec vitest run
 
@@ -70,7 +74,10 @@ test-e2e:
 # ---- typecheck ----
 
 # typecheck all packages
-typecheck: typecheck-core typecheck-cactus typecheck-mcp typecheck-client
+typecheck: typecheck-core typecheck-cactus typecheck-mcp typecheck-client typecheck-server
+
+typecheck-server:
+    pnpm -C packages/server exec tsgo --noEmit
 
 typecheck-core:
     pnpm -C packages/core exec tsgo --noEmit
@@ -111,6 +118,10 @@ dev-server:
 # run the MCP server from source over stdio
 dev-mcp:
     pnpm -C packages/mcp exec tsx src/server.ts
+
+# call an app CLI against the storage server, e.g. `just cli nylon list`
+cli *args:
+    pnpm exec tsx scripts/luminous-cli.ts {{args}}
 
 # preview the production client build
 preview:

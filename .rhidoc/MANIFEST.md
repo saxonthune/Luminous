@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -124,6 +124,19 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.11.00 | `11-rayon/00-index.md` |  |  | — | — | — |
 | doc01.11.01 | `11-rayon/01-idea.md` | A visual debugger that shows a live network of instructions and data transforming external impulses into program behavior. | rayon, debugger, execution, runtime, visualization | doc01.04, doc01.09.01, doc02.17 | — | — |
 
+### Nylon
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.12.00 | `12-nylon/00-index.md` |  |  | — | — | — |
+| doc01.12.01 | `12-nylon/01-principles.md` | High-level principles for helping a user construct the view they need to understand a software system | nylon, principles, views, hierarchy, software-understanding | doc01.04 | — | — |
+| doc01.12.02 | `12-nylon/02-idea.md` | A canvas app for differentiating software behavior into a bipartite network of Transformations and Contracts | nylon, apps, behavior, transformations, contracts, differentiation | doc01.04, doc01.12.03, doc01.12.04 | doc01.12.03, doc01.12.04, doc01.12.05 | — |
+| doc01.12.03 | `12-nylon/03-glossary.md` | Nylon's controlled vocabulary for Nodes, Arcs, Contract Pairs, containment, and differentiation | nylon, glossary, vocabulary, nodes, arcs, transformations, contracts | doc01.12.02 | doc01.12.02, doc01.12.04, doc01.12.05, doc01.12.06 | — |
+| doc01.12.04 | `12-nylon/04-requirements.md` | Nylon's UI, document, differentiation, and command-line capabilities as a controlled list of requirements | nylon, ui, cli, requirements, differentiation | doc01.12.02, doc01.12.03 | doc01.12.02 | — |
+| doc01.12.05 | `12-nylon/05-nylon-formalization.md` | Nylon's formal rules and the semantic rules being tested as Transformations are differentiated | nylon, formalization, bipartite, transformations, contracts, arcs | doc01.12.02, doc01.12.03 | doc01.12.06 | — |
+| doc01.12.06 | `12-nylon/06-authoring-guidelines.md` | Practical guidance for ordering and differentiating behavior in a Nylon network | nylon, authoring, guidelines, differentiation, ordering | doc01.12.03, doc01.12.05 | — | — |
+
 ## 02-design — Design
 
 | Ref | File | Summary | Tags | Deps | Refs | Attachments |
@@ -156,7 +169,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc02.05.00 | `05-cactus/00-index.md` |  |  | — | — | — |
 | doc02.05.01 | `05-cactus/01-overview.md` | Architecture of the cactus canvas engine — layers, coordinate systems, DOM conventions, and design principles | cactus, canvas, engine, architecture, overview | doc02.01 | doc01.06.01.01, doc01.07.06, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.06.02, doc02.08, doc03.03 | — |
 | doc02.05.02 | `05-cactus/02-api-contract.md` | Complete public API reference for the cactus canvas engine — components, hooks, types, and geometry utilities | cactus, canvas, api, components, hooks, types | doc02.05.01 | — | — |
-| doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each | cactus, layout, algorithms | doc02.05.01 | doc02.05.04, doc02.05.06 | — |
+| doc02.05.03 | `05-cactus/03-layout-primitives.md` | The layout algorithms cactus ships for trees, DAGs, containment, flat spacing, and overlap removal | cactus, layout, algorithms | doc02.05.01 | doc02.05.04, doc02.05.06 | — |
 | doc02.05.04 | `05-cactus/04-layout-engine-contract.md` | The LayoutEngine interface and mental model — how the domain layer produces constraints and cactus suggests positions | cactus, layout, architecture | doc02.05.01, doc02.05.03 | — | — |
 | doc02.05.05 | `05-cactus/05-theme-token-contract.md` | The --cactus-* CSS custom property contract — the named slots cactus declares, its two shipped themes, and how consumers bring their own | cactus, theming, css, contract | doc02.05.01 | — | — |
 | doc02.05.06 | `05-cactus/06-clusters.md` | The cluster — cactus's envelope over a member set — its declaration API, the laminar and annotation tiers, and how nesting decomposes into cluster plus coordinate ownership | cactus, clusters, groups, layout, underlay | doc02.05.01, doc02.05.03, doc01.06.01.01, doc02.21.01 | — | — |
@@ -227,11 +240,15 @@ Quick lookup for file-path→doc mapping:
 | `allen` | doc01.07.05 |
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
-| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc02.21.03 |
+| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.12.02, doc02.21.03 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
+| `arcs` | doc01.12.03, doc01.12.05 |
 | `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04, doc01.07.06 |
+| `authoring` | doc01.12.06 |
 | `background` | doc01.02 |
+| `behavior` | doc01.12.02 |
 | `bevy` | doc03.03 |
+| `bipartite` | doc01.12.05 |
 | `blender` | doc01.06.01.10 |
 | `blueprints` | doc01.06.01.09 |
 | `boundaries` | doc02.19 |
@@ -243,7 +260,7 @@ Quick lookup for file-path→doc mapping:
 | `canvas-engine` | doc02.11 |
 | `case-study` | doc01.05.02, doc01.07.02 |
 | `chrome` | doc02.19, doc02.20 |
-| `cli` | doc01.07.02 |
+| `cli` | doc01.07.02, doc01.12.04 |
 | `cli-grammar` | doc03.08 |
 | `client` | doc02.21.03 |
 | `clusters` | doc02.05.06 |
@@ -256,7 +273,7 @@ Quick lookup for file-path→doc mapping:
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `containment` | doc01.07.06 |
 | `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21.01 |
-| `contracts` | doc01.09.01 |
+| `contracts` | doc01.09.01, doc01.12.02, doc01.12.03, doc01.12.05 |
 | `control-flow` | doc01.09.01 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
@@ -273,7 +290,7 @@ Quick lookup for file-path→doc mapping:
 | `design` | doc01.05.01, doc02.02, doc02.08 |
 | `desktop-library` | doc01.06.01.08 |
 | `diagram-engine` | doc01.06.01.06 |
-| `differentiation` | doc01.10.01 |
+| `differentiation` | doc01.10.01, doc01.12.02, doc01.12.04, doc01.12.06 |
 | `disclosure` | doc02.11 |
 | `discriminant` | doc02.06.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04, doc00.05 |
@@ -286,15 +303,17 @@ Quick lookup for file-path→doc mapping:
 | `execution` | doc01.11.01 |
 | `facts` | doc00.05 |
 | `fifa-bracketing` | doc01.05.02 |
-| `formalization` | doc02.02, doc03.02 |
+| `formalization` | doc01.12.05, doc02.02, doc03.02 |
 | `format` | doc02.21.01 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03 |
 | `gojs` | doc01.06.01.06 |
 | `graph` | doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
 | `groups` | doc02.05.06 |
+| `guidelines` | doc01.12.06 |
+| `hierarchy` | doc01.12.01 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
 | `houdini` | doc01.06.01.11 |
@@ -324,10 +343,12 @@ Quick lookup for file-path→doc mapping:
 | `node` | doc02.09 |
 | `node-and-edge` | doc01.06.01.02 |
 | `node-editor` | doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
-| `nodes` | doc03.03 |
+| `nodes` | doc01.12.03, doc03.03 |
 | `notion` | doc03.03 |
+| `nylon` | doc01.12.01, doc01.12.02, doc01.12.03, doc01.12.04, doc01.12.05, doc01.12.06 |
 | `openapi` | doc02.10.02 |
 | `operations` | doc02.21.02 |
+| `ordering` | doc01.12.06 |
 | `overview` | doc01.06.01.01, doc02.05.01 |
 | `pack` | doc02.14, doc02.16, doc02.18 |
 | `packs` | doc01.08.01, doc02.11, doc03.08 |
@@ -341,6 +362,7 @@ Quick lookup for file-path→doc mapping:
 | `platform` | doc01.04, doc02.22.01 |
 | `ports` | doc01.07.06 |
 | `primitives` | doc02.09, doc02.16 |
+| `principles` | doc01.12.01 |
 | `prior-art` | doc01.06.01.01, doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
 | `product` | doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
 | `projection` | doc02.17 |
@@ -358,7 +380,7 @@ Quick lookup for file-path→doc mapping:
 | `relations` | doc01.07.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.21.03, doc03.05 |
-| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02 |
+| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
@@ -372,6 +394,7 @@ Quick lookup for file-path→doc mapping:
 | `server` | doc02.03 |
 | `shell` | doc02.12, doc02.22.01 |
 | `software-design` | doc01.01 |
+| `software-understanding` | doc01.12.01 |
 | `solid` | doc02.06.01, doc02.07, doc02.10.01, doc03.01, doc03.05 |
 | `spatial` | doc01.07.05 |
 | `split` | doc01.02 |
@@ -387,18 +410,19 @@ Quick lookup for file-path→doc mapping:
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc01.06.01.03, doc03.03 |
 | `tools` | doc02.04, doc02.15, doc02.21.02 |
+| `transformations` | doc01.12.02, doc01.12.03, doc01.12.05 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
-| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc02.12, doc02.22.01 |
+| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc01.12.04, doc02.12, doc02.22.01 |
 | `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `unreal` | doc01.06.01.09 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
-| `views` | doc02.11 |
+| `views` | doc01.12.01, doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc01.11.01, doc03.04 |
-| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc03.02 |
+| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc03.02 |
 | `web-library` | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07 |
 | `whiteboard` | doc01.06.01.03 |
 | `workbench` | doc03.08 |

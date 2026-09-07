@@ -5,6 +5,7 @@ import { AtlasApp } from './atlas/AtlasApp';
 import { LinenApp } from './linen/LinenApp';
 import { MerinoApp } from './merino/MerinoApp';
 import { RayonApp } from './rayon/RayonApp';
+import { NylonApp } from './nylon/NylonApp';
 
 export interface LuminousApp {
   id: string;
@@ -19,4 +20,5 @@ export const APPS: LuminousApp[] = [
   { id: 'linen', label: 'Linen', component: LinenApp },
   { id: 'merino', label: 'Merino', component: MerinoApp },
   { id: 'rayon', label: 'Rayon', component: RayonApp },
+  { id: 'nylon', label: 'Nylon', component: NylonApp },
 ];

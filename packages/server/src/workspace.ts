@@ -39,7 +39,7 @@ async function walk(dir: string): Promise<string[]> {
       results.push(...(await walk(join(dir, entry.name))))
     } else if (
       entry.isFile() &&
-      (entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json") || entry.name.endsWith(".atlas.json") || entry.name.endsWith(".linen.json") || entry.name.endsWith(".merino.json"))
+      (entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json") || entry.name.endsWith(".atlas.json") || entry.name.endsWith(".linen.json") || entry.name.endsWith(".merino.json") || entry.name.endsWith(".nylon.json"))
     ) {
       results.push(join(dir, entry.name))
     }
@@ -94,10 +94,11 @@ function stripDocSuffix(fileName: string): string {
   if (fileName.endsWith(".atlas.json")) return basename(fileName, ".atlas.json")
   if (fileName.endsWith(".linen.json")) return basename(fileName, ".linen.json")
   if (fileName.endsWith(".merino.json")) return basename(fileName, ".merino.json")
+  if (fileName.endsWith(".nylon.json")) return basename(fileName, ".nylon.json")
   return fileName
 }
 
-/** Scan every root for *.graph.json, *.dataflow.json, *.atlas.json, *.linen.json, and *.merino.json files, namespacing paths by root name. */
+/** Scan every root for recognized Luminous documents, namespacing paths by root name. */
 export async function scanDocuments(roots: WorkspaceRoot[]): Promise<DocumentMeta[]> {
   const metas: DocumentMeta[] = []
   for (const root of roots) {
