@@ -1,4 +1,5 @@
 export { dagLayout } from './dagLayout.js';
+export { computeBounds } from './geometry/geometry.js';
 export { computeExpansionTranslations } from './geometry/expansion.js';
 export type { DagLayoutOptions } from './dagLayout.js';
 export { resolveRectangleOverlaps, spaceRectangles } from './geometry/spacing.js';

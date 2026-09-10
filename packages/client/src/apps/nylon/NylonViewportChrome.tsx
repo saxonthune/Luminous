@@ -29,12 +29,26 @@ export function NylonViewportChrome(props: {
   viewport: ViewportSize;
   onNavigate: (x: number, y: number) => void;
   onNavigateNode: (node: NylonRenderNode) => void;
+  view?: import('@luminous/core/nylon/projection').NylonViewDefinition;
+  onOpenView?: (focusId: string | null) => void;
 }): JSX.Element {
   const items = createMemo(() => new Map([
     ...props.doc.transformations.map((item) => [item.id, item] as const),
     ...props.doc.contracts.map((item) => [item.id, item] as const),
   ]));
   const transformations = createMemo(() => new Map(props.doc.transformations.map((item) => [item.id, item])));
+  const focusPath = createMemo(() => {
+    const path: { id: string | null; name: string }[] = [];
+    let id = props.view?.kind === 'standard' ? props.view.focusId : null;
+    const seen = new Set<string>();
+    while (id !== null && !seen.has(id)) {
+      seen.add(id);
+      const item = transformations().get(id);
+      path.unshift({ id, name: item?.name ?? id });
+      id = item?.parent ?? null;
+    }
+    return [{ id: null, name: 'Document root' }, ...path];
+  });
 
   const selectedPath = createMemo(() => {
     if (!props.selectedId || !items().has(props.selectedId)) return null;
@@ -90,6 +104,7 @@ export function NylonViewportChrome(props: {
         </span>
         <span style={{ color: 'var(--fg-muted)' }}>·</span>
         <div style={{ display: 'flex', 'align-items': 'center', gap: '7px', overflow: 'hidden' }}>
+          <Show when={props.view?.kind === 'standard'} fallback={
           <For each={contextPath()}>
             {(part, index) => (
               <>
@@ -98,6 +113,18 @@ export function NylonViewportChrome(props: {
               </>
             )}
           </For>
+          }>
+            <span class="shrink-0 text-fg-muted">Standard View ·</span>
+            <nav aria-label="Focus Transformation ancestry" style={{ display: 'flex', gap: '5px', overflow: 'auto', 'pointer-events': 'auto' }}>
+              <For each={focusPath()}>{(part, index) => (
+                <>
+                  <Show when={index() > 0}><span aria-hidden="true">›</span></Show>
+                  <button type="button" class="shrink-0 hover:underline" title={part.id ?? 'Document root'}
+                    onClick={() => props.onOpenView?.(part.id)}>{part.name}</button>
+                </>
+              )}</For>
+            </nav>
+          </Show>
         </div>
       </div>
 

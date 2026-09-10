@@ -1,7 +1,7 @@
 ---
 title: Requirements
-summary: Nylon's UI, document, differentiation, and command-line capabilities as a controlled list of requirements
-tags: [nylon, ui, cli, requirements, differentiation]
+summary: Nylon's Standard View, Tabs, Continuous View, document actions, differentiation, and command-line requirements
+tags: [nylon, ui, cli, requirements, differentiation, views, tabs]
 deps: [doc01.12.02, doc01.12.03]
 ---
 
@@ -61,14 +61,22 @@ Nylon constructs from doc01.12.03.
 
 ## Canvas
 
+The subsections retain the stable C-identifiers. Disclosure, expansion spacing,
+and selection-dependent boundary projections (C2, C5, C9, C15–C18, C26–C32,
+C48–C51, C53–C64) describe Continuous View. Standard View follows the
+V-requirements below. Shared selection, inspection, camera, and Document
+actions apply to both Views.
+
+### Nodes and Contract Pairs
+
 - **C1.** The system shall list the available Documents and open the Document
   selected by the user.
 - **C2.** The system shall draw each leaf Transformation as a square.
 - **C3.** The system shall draw each Contract as an oval or a box with strongly
   rounded corners.
 - **C4.** The system shall draw each Arc as a directed connection.
-- **C5.** The system shall draw the Children of a Parent Transformation inside a
-  labelled container.
+- **C5.** The system shall draw the visible Children of a Parent Transformation
+  inside a labelled container.
 - **C6.** The system shall allow the user to pan and zoom the canvas.
 - **C7.** The system shall allow the user to select a Transformation or Contract
   and inspect its full prose or text.
@@ -88,6 +96,8 @@ Nylon constructs from doc01.12.03.
   half, the system shall move only that Contract as it would any other Node.
 - **C14.** The system shall identify a non-default Contract Kind with both a
   distinct color treatment and visible text.
+### Continuous View disclosure
+
 - **C15.** Each Parent Transformation shall provide expand, collapse, and Cover buttons
   at the top right of its container.
 - **C16.** When the user collapses a Parent Transformation, the system shall
@@ -98,6 +108,8 @@ Nylon constructs from doc01.12.03.
   endpoint again.
 - **C18.** An expanded Parent Transformation shall enclose all of its visible
   descendants, including expanded Parent Transformations nested within it.
+### Off-screen Contracts
+
 - **C19.** When a leaf Transformation is selected, the system shall show a
   Ghost Node for each directly connected incoming Contract that is outside the
   viewport.
@@ -115,6 +127,8 @@ Nylon constructs from doc01.12.03.
   visible or is no longer relevant to the selection.
 - **C25.** Showing, removing, or activating a Ghost Node shall not add a Node or
   change an Arc in the Document.
+### Continuous View expansion geometry
+
 - **C26.** The system shall compose a Node's stored coordinates with its
   ancestors to calculate its rendered canvas position. Expand and collapse
   state shall change descendant visibility and Parent Transformation size.
@@ -136,6 +150,8 @@ Nylon constructs from doc01.12.03.
 - **C33.** For spacing and collision behavior, a Contract Pair shall act as one
   container whose bounds enclose its two Contract Nodes. Translating that
   container shall translate both Contracts by the same amount.
+### Selection and viewport
+
 - **C34.** The Node inspector shall provide a close button. Closing the
   inspector shall deselect the selected Node.
 - **C35.** A left click on empty canvas background shall deselect the selected
@@ -146,9 +162,9 @@ Nylon constructs from doc01.12.03.
   Node's stored size or position.
 - **C38.** A screen-space bar below the application header shall show the
   current camera zoom and a breadcrumb for the current canvas context.
-- **C39.** When a Node is selected, the breadcrumb shall show its Parent
+- **C39.** In Continuous View, when a Node is selected, the breadcrumb shall show its Parent
   Transformation ancestry followed by the selected Node.
-- **C40.** When no Node is selected, the breadcrumb shall show the Parent
+- **C40.** In Continuous View, when no Node is selected, the breadcrumb shall show the Parent
   Transformation at the camera center whose Relative Zoom identifies it as
   the current context, preceded by its immediate parent. When no Parent
   Transformation qualifies, the breadcrumb shall identify the Document
@@ -170,6 +186,8 @@ Nylon constructs from doc01.12.03.
 - **C47.** When the user drags a selected Node, the system shall move every
   selected Node. A selected descendant whose ancestor is also selected shall
   move once with that ancestor.
+### Ordering
+
 - **C48.** Each expanded Parent Transformation shall provide an ordering
   button to the left of its expand and collapse buttons. The system shall hide
   the ordering button while the Parent Transformation is collapsed or covered.
@@ -187,6 +205,8 @@ Nylon constructs from doc01.12.03.
   Document change.
 - **C52.** The system shall give Node names and kinds enough visual weight to
   remain legible before secondary prose and data at the same camera zoom.
+### Continuous View boundary projections
+
 - **C53.** When an external Contract Pair connects an outgoing Transformation
   and a returning Transformation inside the same Parent Transformation, the
   system shall draw a dotted connection between those Transformations while
@@ -207,6 +227,8 @@ Nylon constructs from doc01.12.03.
 - **C57.** A DAG layout shall treat each boundary projection as a geometry unit
   between its outgoing and returning Transformations. The layout shall reserve
   space for that unit and shall save positions only for Document Nodes.
+### Spacing
+
 - **C58.** Each expanded Parent Transformation shall provide a spacing button
   beside its ordering button. The system shall hide the spacing button while
   the Parent Transformation is collapsed or covered.
@@ -218,6 +240,8 @@ Nylon constructs from doc01.12.03.
   between the changed Parent Transformation and its siblings, then repeat that
   sibling check through each ancestor level. The system shall save all changed
   positions as one Document change.
+### Continuous View Cover
+
 - **C61.** Cover shall hide an expanded Parent Transformation's descendants
   without changing its container bounds or any Node's stored position.
 - **C62.** A Parent Transformation shall be exactly one of expanded, covered,
@@ -232,9 +256,116 @@ Nylon constructs from doc01.12.03.
 - **C64.** A covered Parent Transformation shall retain its header at the top
   and act as one Transformation for selection and dragging. Clicking its body
   or header shall select it and open its data in the Node inspector.
+### Control density
+
 - **C65.** The UI shall use screen space efficiently. Controls and panels shall
   use compact padding and spacing while keeping text legible and controls
   usable. Container controls shall use consistent label sizes.
+
+## Standard View
+
+- **V1.** Opening a Document without a retained Tab session shall activate a
+  Standard View at the Document root. A retained session shall restore its
+  active Tab. The deprecated Continuous View shall remain the first Tab.
+- **V2.** A Standard View shall draw its Focus Parent Transformation as a
+  labelled container enclosing its immediate Children, or show the root Nodes
+  when focused at the Document root. Child Parent
+  Transformations shall remain compact without expand, collapse, or Cover controls.
+- **V3.** For every Arc entering or leaving the Focus Transformation or any
+  descendant, Standard View shall show the external endpoint as a Context Node.
+  It shall not add further Nodes through the Context Node's other connections.
+- **V4.** An Arc attached to a hidden descendant shall appear at its visible
+  Child ancestor. Inspection shall identify the Arc's declared endpoints.
+  Internal Arcs with both ends represented by the same Child shall be hidden.
+- **V5.** Context Nodes shall remain represented regardless of selection. Each
+  shall identify its external role and allow inspection of its source Node.
+  A Contract Pair frame shall appear only when both Contracts are represented.
+- **V6.** Each Transformation containing Transformations or Contracts shall
+  provide an Open contents control that identifies the contents and opens its
+  Standard View. A simple Transformation shall be visually distinguishable.
+  The inspector shall allow any Transformation to open in a Tab.
+- **V7.** Standard View shall show a navigable breadcrumb from the Document
+  root through the Focus Transformation's full ancestry. Selection and camera
+  movement shall not change the focus.
+- **V8.** Moving Children or arranging the Focus Transformation's Children
+  shall save their positions in the shared Document. Other Views shall reflect
+  those positions while retaining their own camera and selection.
+- **V9.** Context Nodes shall be placed around the focused detail. Their
+  placement shall not change stored positions. Context inspection and
+  navigation shall remain available without dragging Context Nodes.
+- **V10.** Opening, closing, or activating a View shall not change the
+  Document, its bipartite rules, its Differentiation rules, or its History.
+- **V11.** When the Focus Transformation no longer exists, its Tab shall
+  explain the absence and provide navigation to the Document root. Restoring
+  the Transformation shall restore the View's content.
+
+### Transformation cards and workspace
+
+- **V12.** Standard View shall draw each Transformation as a card with a
+  prominent name and a short excerpt of its existing prose. A simple
+  Transformation shall show its data needs without a contents schematic or
+  Open contents control.
+- **V13.** Each card with Children shall show a miniature schematic of its
+  immediate Children and their connections. Transformations and Contracts
+  shall use distinct shapes; nested Parent Transformations shall have a
+  contents indicator. The schematic shall omit Node labels and shall not
+  change stored positions or add Nodes or Arcs.
+- **V14.** A card with Children shall show their Transformation and Contract
+  counts beside its Open contents control, including Contracts-only contents.
+- **V15.** The workspace heading shall show the Focus Transformation's name,
+  a short prose excerpt, an Inspect control, and arrangement and camera
+  controls. The focused Parent Transformation's canvas container shall have
+  a visible name and boundary, with no expand, collapse, Cover, or Open contents
+  controls. The boundary shall enclose the immediate Children and their Contract
+  Pair frames, with Context Nodes outside it. Its bounds shall follow Child
+  arrangements without changing stored positions. A simple Focus Transformation shall remain drawn
+  as a card to connect its Arcs.
+- **V16.** Arrange children shall compact the immediate Children or root Nodes
+  using their displayed card and Contract Pair sizes. It shall preserve each
+  Contract Pair's internal arrangement and deeper descendant positions, and
+  save the changed Child positions as one undoable Document action. Opening
+  a View shall not automatically arrange its Nodes.
+- **V17.** Opening a new Standard View and activating Readable zoom shall keep
+  card text readable, even when the complete network does not fit on screen.
+  Fit view shall show the complete View. Arranging Children shall also frame
+  the result at a readable zoom.
+- **V18.** External Contracts shall be grouped by Contract Pair when both
+  halves are represented and ordered by their connections to the focused
+  detail. Their display positions shall remain outside Document history.
+
+## Tabs
+
+- **T1.** A Tab shall identify its View by the Focus Transformation's name or
+  the Document root, and identify Continuous View as deprecated. Its full
+  ancestry and Node identifier shall distinguish repeated names.
+- **T2.** Opening a Transformation or the Document root shall activate its
+  existing Standard View Tab or create and activate a new Tab.
+- **T3.** Switching Tabs shall retain each Tab's camera and selection and
+  Continuous View's disclosure. Node arrangements and History shall remain
+  shared across Tabs of the Document.
+- **T4.** The user shall be able to close a Standard View Tab. Closing the
+  active Tab shall activate an adjacent Tab. Continuous View shall remain
+  available as the first Tab.
+- **T5.** The user shall be able to reopen the most recently closed Tab with
+  its retained camera and selection. Opening a closed View through navigation
+  shall also restore its retained context.
+- **T6.** Tabs, their order, the active Tab, and retained contexts shall survive
+  hot reloads, page refreshes, and leaving and reopening the same Document
+  within the browser tab's session. Closing the browser tab may discard them.
+  Each Document source shall retain its own Tab session.
+- **T7.** The Tab strip shall support keyboard activation and movement between
+  Tabs, and shall indicate the active Tab.
+- **T8.** Each Tab shall own its camera position, zoom, selection, and
+  Continuous View disclosure independently. Activating an existing Tab shall
+  restore its camera exactly; opening a new Tab shall frame its own contents.
+  Node arrangements shall remain shared Document state.
+- **T9.** The active Tab's context shall be retained as it changes, including
+  when a reload occurs before the user switches Tabs. Closed Tabs shall remain
+  available to reopen after a reload within the browser tab's session.
+- **T10.** Missing or unusable retained context shall not prevent opening a
+  Document. The system shall use the default Tabs when the retained session
+  cannot be read. Browser session retention shall not change the Document or
+  its History.
 
 ## Actions and history
 
@@ -373,6 +504,20 @@ one input to the command it performs and the requirement it serves.
 | Target | Interaction | Action | Req |
 |---|---|---|---|
 | File selector entry | left click | Open the Document | C1 |
+| Tab | left click or Enter/Space | Activate the View | T2, T3, T7 |
+| Tab | Left/Right arrow, Home/End | Activate the adjacent, first, or last Tab | T7 |
+| Standard View Tab close button | left click | Close the Tab | T4 |
+| Reopen closed tab button | left click | Restore the most recently closed Tab | T5 |
+| Document root button | left click | Open the root Standard View | V1, T2 |
+| Transformation Open contents control | left click | Open the Transformation's Standard View | V6, T2 |
+| Transformation inspector Open in new tab button | left click | Open the Transformation's Standard View | V6, T2 |
+| Standard View breadcrumb | left click | Open the identified ancestor or Document root | V7, T2 |
+| Context Node | left click | Inspect the represented Node | V5, V9 |
+| Standard View heading Inspect button | left click | Inspect the Focus Transformation | V15 |
+| Standard View focus container header | left click | Select and inspect the Focus Transformation | V15, C7 |
+| Standard View Arrange children button | left click | Compact and save immediate Child positions, then frame the result | V16, V17 |
+| Standard View Fit view button | left click | Fit the complete View on screen | V17 |
+| Standard View Readable zoom button | left click | Frame the View at a readable zoom | V17 |
 | Canvas | middle click + drag | Pan the camera | C6 |
 | Canvas background | scroll wheel | Zoom the camera | C6 |
 | Canvas background | left click | Deselect the selected Node and close its inspector | C35 |

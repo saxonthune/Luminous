@@ -11,7 +11,7 @@ import { readNylonSnapshot, sendNylonAction } from './actionClient.ts';
 import { createNylonActionController, type NylonActionView } from './actionController.ts';
 import { readParam, writeParam } from '../../urlState.ts';
 import { watchDocuments } from '../../ws/watchClient.ts';
-import { NylonCanvas } from './NylonCanvas.tsx';
+import { NylonTabs } from './NylonTabs.tsx';
 
 type NylonAppState =
   | { kind: 'booting' }
@@ -197,7 +197,7 @@ export function NylonApp() {
             <DocumentPicker heading="Nylon documents" sources={sources()} onSelect={onSelect} loadingId={shell().kind === 'loadingDoc' ? sourceId() : null} />
           </Match>
           <Match when={shell().kind === 'mounted' && doc()}>
-            <NylonCanvas doc={doc()!} revision={snapshot()!.revision} blocked={blocked()} onAction={dispatchAction} />
+            <NylonTabs sourceId={`${__STATIC__ ? 'static' : 'server'}:${sourceId()!}`} doc={doc()!} revision={snapshot()!.revision} blocked={blocked()} onAction={dispatchAction} />
           </Match>
           <Match when={shell().kind === 'error'}>
             <div class="flex flex-1 flex-col items-center justify-center gap-4 text-fg">

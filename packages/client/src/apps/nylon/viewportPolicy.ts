@@ -16,6 +16,7 @@ export type RelativeZoomTier = 'overview' | 'working' | 'close';
 
 /** Nylon's zoom-driven behavior lives here so prototype tuning stays local. */
 export const NYLON_VIEW_POLICY = {
+  standardMinReadableZoom: 0.85,
   contextMinRelativeZoom: 0.18,
   closeRelativeZoom: 0.92,
   secondaryMinScreenWidth: 92,

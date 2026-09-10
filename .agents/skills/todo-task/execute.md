@@ -2,13 +2,17 @@
 
 Launch a headless agent to implement a triaged plan.
 
+This mode is the **headless** route only. To implement a spec in the current
+conversation instead, do not use `execute` — implement the plan directly, let the user
+commit, then run `archive.sh --merged {slug}` (see `triage.md` Step 7 and `REFERENCE.md`).
+
 **Input**: `$ARGUMENTS[1]` is the task slug. If empty, list pending tasks and ask. Supports `--no-merge` and `--chain`.
 
 ## Single plan execution
 
 1. **Select** — If no slug, list available plans:
    ```bash
-   bash .agents/skills/todo-task/list-pending.sh
+   bash .claude/skills/todo-task/list-pending.sh
    ```
    Ask the user which plan to execute.
 
@@ -17,7 +21,7 @@ Launch a headless agent to implement a triaged plan.
 3. **Launch** — Run `launch.sh`. It validates preconditions synchronously (plan exists, clean tree, correct branch) and only backgrounds the real run if validation passes. Do NOT manually run `execute-plan.sh --validate-only` or hand-roll `nohup` — `launch.sh` handles both.
 
    ```bash
-   bash .agents/skills/todo-task/launch.sh {slug}
+   bash .claude/skills/todo-task/launch.sh {slug}
    ```
 
    If the command exits non-zero, validation failed — show the error to the user and tell them what to fix. Do NOT retry.
@@ -25,7 +29,7 @@ Launch a headless agent to implement a triaged plan.
 4. **Auto-watch** — Immediately after a successful launch, start `wait.sh {slug}` as a
    background process:
    ```bash
-   bash .agents/skills/todo-task/wait.sh {slug}
+   bash .claude/skills/todo-task/wait.sh {slug}
    ```
    `wait.sh` blocks polling `report.sh` until the run reaches a terminal state, then exits
    0 on success or non-zero otherwise. Run it with whatever backgrounding your harness
@@ -44,14 +48,14 @@ Launch a headless agent to implement a triaged plan.
 
 - `--no-merge` — leave branch for manual review instead of auto-merging:
   ```bash
-  bash .agents/skills/todo-task/launch.sh {slug} --no-merge
+  bash .claude/skills/todo-task/launch.sh {slug} --no-merge
   ```
 
 ## Chain execution
 
 If `--chain` is passed with multiple slugs, call `launch-chain.sh`:
 ```bash
-bash .agents/skills/todo-task/launch-chain.sh {chain-name} {slug1} {slug2} ...
+bash .claude/skills/todo-task/launch-chain.sh {chain-name} {slug1} {slug2} ...
 ```
 
 Then **auto-watch the whole chain** the same way as a single plan: start
@@ -61,7 +65,7 @@ entire chain — you do not watch phases individually. When it exits, report the
 
 To queue a chain to start after a running or pending standalone task completes and merges, pass `--after <predecessor-slug>`:
 ```bash
-bash .agents/skills/todo-task/launch-chain.sh {chain-name} {slug1} {slug2} ... --after {predecessor-slug}
+bash .claude/skills/todo-task/launch-chain.sh {chain-name} {slug1} {slug2} ... --after {predecessor-slug}
 ```
 
 The predecessor must be a standalone task (not part of the chain). It merges to trunk independently; the chain waits for it to complete and merge successfully before cutting its worktree from the now-updated trunk. If the predecessor fails or does not produce a result, the chain aborts. The predecessor slug must exist in pending, running, or done at launch time.

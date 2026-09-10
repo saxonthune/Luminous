@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, type JSX } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import type { NylonContract, NylonDocument, NylonTransformation } from '@luminous/core/nylon';
 import type { NylonAction } from '@luminous/core/nylon/actions';
@@ -20,11 +20,15 @@ import {
   type NylonContractFrame,
   type NylonRenderNode,
   type NylonContainerState,
+  type NylonViewDefinition,
 } from '@luminous/core/nylon/projection';
 import type { NylonDagDirection } from '@luminous/core/nylon/dagArrange';
 import { nylonSelectionRoots } from '@luminous/core/nylon/dragSelection';
 import { NylonViewportChrome } from './NylonViewportChrome.tsx';
+import { NylonTransformationCard } from './NylonTransformationCard.tsx';
+import { NylonFocusContainer } from './NylonFocusContainer.tsx';
 import {
+  NYLON_VIEW_POLICY,
   containerDragLocked,
   showsSecondaryNodeContent,
   type ViewportSize,
@@ -35,6 +39,16 @@ export interface NylonCanvasProps {
   revision: string;
   blocked: boolean;
   onAction: (action: NylonAction, viewRevision?: string) => boolean;
+  view?: NylonViewDefinition;
+  initialState?: NylonCanvasState;
+  onState?: (state: NylonCanvasState) => void;
+  onOpenView?: (focusId: string | null) => void;
+}
+
+export interface NylonCanvasState {
+  camera: Transform;
+  selection: string[];
+  containerStates: ReadonlyMap<string, NylonContainerState>;
 }
 
 const containerButtonStyle: JSX.CSSProperties = {
@@ -48,14 +62,32 @@ const containerButtonStyle: JSX.CSSProperties = {
 export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
   let hostEl!: HTMLDivElement;
-  const [selectedId, setSelectedId] = createSignal<string | null>(null);
-  const [selectedRenderIds, setSelectedRenderIds] = createSignal<ReadonlyArray<string>>([]);
-  const [containerStates, setContainerStates] = createSignal<ReadonlyMap<string, NylonContainerState>>(new Map());
-  const collapsedIds = createMemo(() => new Set([...containerStates()].filter(([, state]) => state === 'collapsed').map(([id]) => id)));
-  const coveredIds = createMemo(() => new Set([...containerStates()].filter(([, state]) => state === 'covered').map(([id]) => id)));
-  const [camera, setCamera] = createSignal<Transform>({ x: 0, y: 0, k: 1 });
+  const initial = untrack(() => props.initialState);
+  const [selectedId, setSelectedId] = createSignal<string | null>(initial?.selection[0] ?? null);
+  const [selectedRenderIds, setSelectedRenderIds] = createSignal<ReadonlyArray<string>>(initial?.selection ?? []);
+  const [containerStates, setContainerStates] = createSignal<ReadonlyMap<string, NylonContainerState>>(initial?.containerStates ?? new Map());
+  const standard = () => props.view?.kind === 'standard';
+  const focusId = () => props.view?.kind === 'standard' ? props.view.focusId : null;
+  const focus = () => props.doc.transformations.find((item) => item.id === focusId());
+  const collapsedIds = createMemo(() => {
+    if (!standard()) return new Set([...containerStates()].filter(([, state]) => state === 'collapsed').map(([id]) => id));
+    // The action executor sees the same compact Children, with ancestors open
+    // so the Focus Transformation remains available for shared layout actions.
+    const transformations = new Map(props.doc.transformations.map((item) => [item.id, item]));
+    const expanded = new Set<string>();
+    let id = focusId();
+    while (id !== null && !expanded.has(id)) {
+      expanded.add(id);
+      id = transformations.get(id)?.parent ?? null;
+    }
+    return new Set([...props.doc.transformations, ...props.doc.contracts]
+      .flatMap((item) => item.parent && !expanded.has(item.parent) ? [item.parent] : []));
+  });
+  const coveredIds = createMemo(() => standard() ? new Set<string>()
+    : new Set([...containerStates()].filter(([, state]) => state === 'covered').map(([id]) => id)));
+  const [camera, setCamera] = createSignal<Transform>(initial?.camera ?? { x: 0, y: 0, k: 1 });
   const [viewportSize, setViewportSize] = createSignal<ViewportSize>({ width: 1, height: 1 });
-  const baseProjection = createMemo(() => projectNylon(props.doc, collapsedIds(), undefined, undefined, coveredIds()));
+  const baseProjection = createMemo(() => projectNylon(props.doc, collapsedIds(), undefined, undefined, coveredIds(), props.view));
   const canvasViewport = createMemo(() => {
     const transform = camera();
     const viewport = viewportSize();
@@ -72,13 +104,24 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
     new Set(selectedRenderIds()),
     canvasViewport(),
     coveredIds(),
+    props.view,
   ));
 
   onMount(() => {
     const nodes = baseProjection().nodes;
-    if (!canvasRef || nodes.length === 0) return;
-    canvasRef.fitView(nodes.map((node) => ({ x: node.x, y: node.y, width: node.w, height: node.h })), 72);
+    if (!canvasRef) return;
+    if (initial) canvasRef.setView(initial.camera, false);
+    else if (standard()) frameReadable();
+    else if (nodes.length > 0) canvasRef.fitView(nodes.map((node) => ({ x: node.x, y: node.y, width: node.w, height: node.h })), 72);
+    const visible = new Set(projection().nodes.map((node) => node.renderId));
+    const selected = (initial?.selection ?? []).filter((id) => visible.has(id));
+    canvasRef.setSelectedIds(selected);
+    selectionChanged(selected);
   });
+
+  createEffect(() => props.onState?.({
+    camera: camera(), selection: [...selectedRenderIds()], containerStates: containerStates(),
+  }));
 
   onMount(() => {
     const measure = () => {
@@ -128,8 +171,14 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
 
   function dragRoots(id: string): string[] {
     const selected = canvasRef?.getSelectedIds() ?? [];
-    const semanticIds = (selected.includes(id) ? selected : [id]).map(semanticNodeId);
+    const semanticIds = (selected.includes(id) ? selected : [id]).filter(canMove).map(semanticNodeId);
     return nylonSelectionRoots(props.doc, [...new Set(semanticIds)]);
+  }
+
+  function canMove(id: string): boolean {
+    if (!standard()) return true;
+    const node = projection().nodes.find((item) => item.renderId === id);
+    return !!node && !node.context && node.item.id !== focusId();
   }
 
   function dragGroup(id: string): string[] {
@@ -143,7 +192,7 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
     const transformations = new Map(props.doc.transformations.map((item) => [item.id, item]));
     return projection().nodes
       .filter((node) => {
-        if (node.kind === 'contract' && node.boundaryContainerId) return false;
+        if (node.context || (node.kind === 'contract' && node.boundaryContainerId)) return false;
         if (roots.has(node.item.id)) return true;
         const seen = new Set<string>();
         let parent = node.item.parent;
@@ -229,17 +278,54 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
     canvasRef?.centerView({ x: node.x, y: node.y, width: node.w, height: node.h });
   }
 
+  function frameReadable(): void {
+    const nodes = baseProjection().nodes;
+    if (!canvasRef || nodes.length === 0) return;
+    const bounds = hostEl.getBoundingClientRect();
+    const left = Math.min(...nodes.map((node) => node.x));
+    const top = Math.min(...nodes.map((node) => node.y));
+    const width = Math.max(...nodes.map((node) => node.x + node.w)) - left;
+    const height = Math.max(...nodes.map((node) => node.y + node.h)) - top;
+    const fit = Math.min(1, (bounds.width - 144) / width, (bounds.height - 144) / height);
+    const k = Math.max(NYLON_VIEW_POLICY.standardMinReadableZoom, fit);
+    const first = nodes.find((node) => !node.context && !(node.kind === 'container' && node.expanded)) ?? nodes[0];
+    const center = fit < NYLON_VIEW_POLICY.standardMinReadableZoom ? { x: first.x + first.w / 2, y: first.y + first.h / 2 }
+      : { x: left + width / 2, y: top + height / 2 };
+    canvasRef.setView({ x: bounds.width / 2 - center.x * k, y: bounds.height / 2 - center.y * k, k }, false);
+  }
+
+  function arrangeChildren(): void {
+    if (props.onAction({ op: 'layout.standard', focusId: focusId() })) frameReadable();
+  }
+
   return (
+    <>
+      <Show when={standard()}>
+        <div class="flex shrink-0 items-center gap-4 border-b border-border-subtle bg-surface px-3 py-2 text-fg">
+          <div class="min-w-0 flex-1">
+            <strong class="text-base">{focus()?.name ?? props.doc.title ?? 'Document root'}</strong>
+            <Show when={focus()?.prose}><p class="m-0 line-clamp-2 text-sm text-fg-muted">{focus()?.prose}</p></Show>
+          </div>
+          <Show when={focus()}><button type="button" class="text-xs" onClick={() => setSelectedId(focusId())}>Inspect</button></Show>
+          <button type="button" class="shrink-0 rounded border border-border-subtle px-2 py-1 text-sm disabled:opacity-40"
+            disabled={props.blocked} onClick={arrangeChildren}>Arrange children</button>
+          <button type="button" class="shrink-0 text-xs" onClick={() => canvasRef?.fitView(
+            baseProjection().nodes.map((node) => ({ x: node.x, y: node.y, width: node.w, height: node.h })), 72,
+          )}>Fit view</button>
+          <button type="button" class="shrink-0 text-xs" onClick={frameReadable}>Readable zoom</button>
+        </div>
+      </Show>
     <div ref={hostEl} style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
       <Canvas
         ref={(ref) => { canvasRef = ref; }}
-        viewportOptions={{ onTransformChange: setCamera }}
+        viewportOptions={{ initialTransform: initial?.camera, onTransformChange: setCamera }}
         edges={projection().edges}
         edgeEmphasis={{ dimUnselected: false, selectedWidthMultiplier: 1.5 }}
         boxSelect={{ trigger: 'drag' }}
         onSelectionChange={selectionChanged}
       >
         <NylonNodeLayer
+          doc={props.doc}
           nodes={() => projection().nodes}
           contractFrames={() => projection().contractFrames}
           viewportSize={viewportSize}
@@ -252,6 +338,9 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
           onCover={cover}
           onArrange={arrange}
           onSpace={space}
+          standard={standard()}
+          canMove={canMove}
+          onOpenView={props.onOpenView}
         />
       </Canvas>
       <NylonViewportChrome
@@ -262,18 +351,23 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
         viewport={viewportSize()}
         onNavigate={navigateMinimap}
         onNavigateNode={navigateNode}
+        view={props.view}
+        onOpenView={props.onOpenView}
       />
       <NylonInspector
         doc={props.doc}
         selectedId={selectedId()}
         onClose={clearSelection}
         onDifferentiate={differentiate}
+        onOpenView={props.onOpenView}
       />
     </div>
+    </>
   );
 }
 
 function NylonNodeLayer(props: {
+  doc: NylonDocument;
   nodes: () => NylonRenderNode[];
   contractFrames: () => NylonContractFrame[];
   viewportSize: () => ViewportSize;
@@ -286,6 +380,9 @@ function NylonNodeLayer(props: {
   onCover: (id: string) => void;
   onArrange: (id: string, direction: NylonDagDirection) => void;
   onSpace: (id: string) => void;
+  standard: boolean;
+  canMove: (id: string) => boolean;
+  onOpenView?: (id: string | null) => void;
 }): JSX.Element {
   const ctx = useCanvasContext();
   const gesture = useGesture({
@@ -304,7 +401,8 @@ function NylonNodeLayer(props: {
     <>
       <For each={props.contractFrames()}>
         {(frame) => {
-          const dragLocked = () => containerDragLocked(frame, ctx.transform().k, props.viewportSize());
+          const dragLocked = () => !props.canMove(frame.inputRenderId) || !props.canMove(frame.outputRenderId)
+            || containerDragLocked(frame, ctx.transform().k, props.viewportSize());
           const delta = () => [frame.inputRenderId, frame.outputRenderId]
             .every((id) => gesture.draggedNodeIds().includes(id))
             ? gesture.dragDelta()
@@ -357,8 +455,9 @@ function NylonNodeLayer(props: {
       </For>
       <For each={props.nodes()}>
         {(node) => {
-          const dragLocked = () => node.kind === 'container'
-            && containerDragLocked(node, ctx.transform().k, props.viewportSize());
+          const focusContainer = () => props.standard && node.kind === 'container' && node.expanded;
+          const dragLocked = () => !props.canMove(node.renderId) || (node.kind === 'container'
+            && containerDragLocked(node, ctx.transform().k, props.viewportSize()));
           const showSecondary = () => showsSecondaryNodeContent(node, ctx.transform().k);
           const delta = () => dragDelta(node.renderId);
           const containerTint = () => node.depth % 2 === 0
@@ -397,8 +496,8 @@ function NylonNodeLayer(props: {
           y={() => node.y + delta().dy}
           w={() => node.w}
           h={() => node.h}
-          visualBand={() => node.kind === 'container' ? node.depth : LEAF_VISUAL_BAND + node.depth}
-          softContainer={() => node.kind === 'container'}
+          visualBand={() => node.kind === 'container' && (!props.standard || focusContainer()) ? node.depth : LEAF_VISUAL_BAND + node.depth}
+          softContainer={() => node.kind === 'container' && (!props.standard || focusContainer())}
           containerTint={containerTint}
           containerBorder={containerBorder}
           containerBorderWidth={() => 2}
@@ -413,7 +512,17 @@ function NylonNodeLayer(props: {
             if (!props.blocked && !dragLocked()) gesture.beginPress(node.renderId, event);
           }}
         >
-          <Show when={node.kind === 'container'}>
+          <Show when={node.context}>
+            <span class="absolute -top-5 left-1 text-xs font-semibold text-fg-muted">Context</span>
+          </Show>
+          <Show when={focusContainer()}>
+            <NylonFocusContainer name={node.item.name} selected={ctx.isSelected(node.renderId)} />
+          </Show>
+          <Show when={props.standard && node.kind !== 'contract' && !focusContainer() ? node : null}>
+            {(card) => <NylonTransformationCard doc={props.doc} item={card().item as NylonTransformation}
+              selected={ctx.isSelected(node.renderId)} onOpen={props.onOpenView} />}
+          </Show>
+          <Show when={node.kind === 'container' && !props.standard}>
             <div style={{
               height: node.kind === 'container' && node.state === 'collapsed' ? '100%' : '38px',
               padding: '0 4px', display: 'flex', 'align-items': 'center', gap: '4px',
@@ -423,7 +532,8 @@ function NylonNodeLayer(props: {
               background: containerTint(),
               cursor: dragLocked() ? 'not-allowed' : gesture.isDraggingNode(node.renderId) ? 'grabbing' : 'grab',
             }}>
-              <span style={{ overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}>
+              <span title={node.item.name} style={{ overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap',
+                'max-width': '100%', 'flex-shrink': 1 }}>
                 {node.item.name}
               </span>
               <div style={{ 'margin-left': 'auto', display: 'flex', gap: '2px', 'flex-shrink': 0 }} data-no-pan>
@@ -444,6 +554,7 @@ function NylonNodeLayer(props: {
                     onArrange={(direction) => props.onArrange(node.item.id, direction)}
                   />
                 </Show>
+                <Show when={!props.standard}>
                 <button
                   type="button"
                   aria-label={`Expand ${node.item.name}`}
@@ -489,10 +600,11 @@ function NylonNodeLayer(props: {
                     opacity: node.kind === 'container' && !node.expanded ? 0.38 : 1,
                   }}
                 >Cover</button>
+                </Show>
               </div>
             </div>
           </Show>
-          <Show when={node.kind === 'transformation'}>
+          <Show when={node.kind === 'transformation' && !props.standard}>
             <div style={{
               width: '100%', height: '100%', padding: '16px', display: 'flex',
               'flex-direction': 'column', 'justify-content': 'center', gap: '10px',
@@ -651,6 +763,7 @@ function NylonInspector(props: {
   selectedId: string | null;
   onClose: () => void;
   onDifferentiate: (id: string) => void;
+  onOpenView?: (id: string | null) => void;
 }): JSX.Element {
   const selected = createMemo(() => {
     if (props.selectedId === null) return null;
@@ -660,11 +773,30 @@ function NylonInspector(props: {
     return contract ? { kind: 'contract' as const, item: contract } : null;
   });
   const hasChildren = (id: string) => [...props.doc.transformations, ...props.doc.contracts].some((item) => item.parent === id);
+  const connections = createMemo(() => {
+    const id = props.selectedId;
+    if (!id) return [];
+    const items = new Map([...props.doc.transformations, ...props.doc.contracts].map((item) => [item.id, item]));
+    const inside = (nodeId: string) => {
+      let current: string | undefined = nodeId;
+      const seen = new Set<string>();
+      while (current !== undefined && !seen.has(current)) {
+        if (current === id) return true;
+        seen.add(current);
+        current = items.get(current)?.parent;
+      }
+      return false;
+    };
+    return props.doc.arcs.filter((arc) => inside(arc.from) !== inside(arc.to)).map((arc) => ({
+      from: `${items.get(arc.from)?.name ?? arc.from} (${arc.from})`,
+      to: `${items.get(arc.to)?.name ?? arc.to} (${arc.to})`,
+    }));
+  });
 
   return (
     <Show when={selected()}>
       {(selection) => (
-        <aside class="absolute right-3 top-12 z-40 flex w-80 flex-col gap-3 rounded-lg border border-border-subtle bg-surface p-4 text-sm shadow-md">
+        <aside class="absolute right-3 top-12 bottom-3 z-40 flex w-80 flex-col gap-3 overflow-auto rounded-lg border border-border-subtle bg-surface p-4 text-sm shadow-md">
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="text-[10px] uppercase tracking-wider text-fg-muted">{selection().kind}</div>
@@ -688,6 +820,10 @@ function NylonInspector(props: {
           >
             {(transformation) => (
               <>
+                <Show when={props.onOpenView}>
+                  <button type="button" class="rounded border border-border-subtle px-2 py-1 text-xs text-fg"
+                    onClick={() => props.onOpenView?.(transformation().id)}>Open in new tab</button>
+                </Show>
                 <p class="whitespace-pre-wrap text-xs leading-5 text-fg">{transformation().prose}</p>
                 <div>
                   <div class="mb-1 text-[10px] uppercase tracking-wider text-fg-muted">Data needed</div>
@@ -729,6 +865,14 @@ function NylonInspector(props: {
                 <pre class="max-h-80 overflow-auto whitespace-pre-wrap rounded bg-surface-alt p-3 text-xs text-fg">{contract().text}</pre>
               </>
             )}
+          </Show>
+          <Show when={connections().length}>
+            <div class="flex flex-col gap-2 text-xs text-fg">
+              <strong>Connections · declared endpoints</strong>
+              <For each={connections()}>{(arc) => (
+                <div class="break-words rounded bg-surface-alt p-2">{arc.from} → {arc.to}</div>
+              )}</For>
+            </div>
           </Show>
         </aside>
       )}

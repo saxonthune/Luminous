@@ -132,8 +132,8 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.12.00 | `12-nylon/00-index.md` |  |  | — | — | — |
 | doc01.12.01 | `12-nylon/01-principles.md` | High-level principles for helping a user construct the view they need to understand a software system | nylon, principles, views, hierarchy, software-understanding | doc01.04 | — | — |
 | doc01.12.02 | `12-nylon/02-idea.md` | A canvas app for differentiating software behavior into a bipartite network of Transformations and Contracts | nylon, apps, behavior, transformations, contracts, differentiation | doc01.04, doc01.12.03, doc01.12.04 | doc01.12.03, doc01.12.04, doc01.12.05 | — |
-| doc01.12.03 | `12-nylon/03-glossary.md` | Nylon's controlled vocabulary for Nodes, Arcs, Contract Pairs, containment, and differentiation | nylon, glossary, vocabulary, nodes, arcs, transformations, contracts | doc01.12.02 | doc01.12.02, doc01.12.04, doc01.12.05, doc01.12.06 | — |
-| doc01.12.04 | `12-nylon/04-requirements.md` | Nylon's UI, document, differentiation, and command-line capabilities as a controlled list of requirements | nylon, ui, cli, requirements, differentiation | doc01.12.02, doc01.12.03 | doc01.12.02 | — |
+| doc01.12.03 | `12-nylon/03-glossary.md` | Nylon's controlled vocabulary for Nodes, Arcs, containment, differentiation, Standard View, Continuous View, and Tabs | nylon, glossary, vocabulary, nodes, arcs, transformations, contracts, views, tabs | doc01.12.02 | doc01.12.02, doc01.12.04, doc01.12.05, doc01.12.06 | — |
+| doc01.12.04 | `12-nylon/04-requirements.md` | Nylon's Standard View, Tabs, Continuous View, document actions, differentiation, and command-line requirements | nylon, ui, cli, requirements, differentiation, views, tabs | doc01.12.02, doc01.12.03 | doc01.12.02 | — |
 | doc01.12.05 | `12-nylon/05-nylon-formalization.md` | Nylon's formal rules and the semantic rules being tested as Transformations are differentiated | nylon, formalization, bipartite, transformations, contracts, arcs | doc01.12.02, doc01.12.03 | doc01.12.06 | — |
 | doc01.12.06 | `12-nylon/06-authoring-guidelines.md` | Practical guidance for ordering and differentiating behavior in a Nylon network | nylon, authoring, guidelines, differentiation, ordering | doc01.12.03, doc01.12.05 | — | — |
 
@@ -404,6 +404,7 @@ Quick lookup for file-path→doc mapping:
 | `style` | doc00.04 |
 | `subtypes` | doc00.05 |
 | `symbols` | doc01.09.01 |
+| `tabs` | doc01.12.03, doc01.12.04 |
 | `theme` | doc02.22.01 |
 | `theming` | doc02.05.05 |
 | `theory` | doc00.01 |
@@ -419,7 +420,7 @@ Quick lookup for file-path→doc mapping:
 | `unreal` | doc01.06.01.09 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
-| `views` | doc01.12.01, doc02.11 |
+| `views` | doc01.12.01, doc01.12.03, doc01.12.04, doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc01.11.01, doc03.04 |
 | `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc03.02 |

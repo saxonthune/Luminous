@@ -1,6 +1,8 @@
 import type { NylonContract, NylonDocument, NylonTransformation } from './types.ts';
 import {
   placeRectAtCandidates,
+  spaceRectangles,
+  computeBounds,
   type CandidatePlacementPoint,
   type CandidatePlacementRect,
   type EdgeDeclaration,
@@ -8,6 +10,8 @@ import {
 } from '@luminous/cactus/layout';
 
 export const TRANSFORMATION_SIZE = 180;
+export const STANDARD_CARD_WIDTH = 300;
+export const STANDARD_CARD_HEIGHT = 270;
 export const CONTRACT_WIDTH = 220;
 export const CONTRACT_HEIGHT = 110;
 export const COMPACT_CONTRACT_WIDTH = 136;
@@ -24,10 +28,15 @@ export const CONTRACT_FRAME_VISUAL_BAND = 150;
 export const LEAF_VISUAL_BAND = 200;
 export type NylonContainerState = 'expanded' | 'covered' | 'collapsed';
 
-export type NylonRenderNode =
+export type NylonViewDefinition =
+  | { kind: 'continuous' }
+  | { kind: 'standard'; focusId: string | null };
+
+export type NylonRenderNode = (
   | { kind: 'transformation'; renderId: string; item: NylonTransformation; x: number; y: number; w: number; h: number; depth: number }
   | { kind: 'contract'; renderId: string; item: NylonContract; x: number; y: number; w: number; h: number; depth: number; boundaryContainerId?: string; compact?: boolean }
-  | { kind: 'container'; renderId: string; item: NylonTransformation; x: number; y: number; w: number; h: number; depth: number; expanded: boolean; state: NylonContainerState };
+  | { kind: 'container'; renderId: string; item: NylonTransformation; x: number; y: number; w: number; h: number; depth: number; expanded: boolean; state: NylonContainerState }
+) & { context?: boolean };
 
 export interface NylonProjection {
   nodes: NylonRenderNode[];
@@ -150,7 +159,9 @@ function boundaryCandidates(
 /**
  * Project stable parent-relative positions into the currently disclosed
  * canvas. Disclosure changes visibility and container sizes without changing
- * the stored positions.
+ * the stored positions. Standard View fixes one level of detail and adds only
+ * the exact endpoints of Arcs crossing that detail's boundary. Its focus is
+ * drawn at the origin; Child positions remain relative to that focus.
  */
 export function projectNylon(
   doc: NylonDocument,
@@ -158,7 +169,10 @@ export function projectNylon(
   selectedRenderIds: ReadonlySet<string> = new Set<string>(),
   boundaryViewport?: CandidatePlacementRect,
   coveredIds: ReadonlySet<string> = new Set<string>(),
+  view: NylonViewDefinition = { kind: 'continuous' },
 ): NylonProjection {
+  const standard = view.kind === 'standard';
+  const focusId = view.kind === 'standard' ? view.focusId : null;
   const transformations = new Map(doc.transformations.map((item) => [item.id, item]));
   const allItems = new Map<string, NylonTransformation | NylonContract>([
     ...doc.transformations.map((item) => [item.id, item] as const),
@@ -176,6 +190,24 @@ export function projectNylon(
     childrenOf.set(item.parent, siblings);
   }
 
+  const scope = new Set<string>();
+  function includeDescendants(id: string): void {
+    if (scope.has(id)) return;
+    scope.add(id);
+    for (const child of childrenOf.get(id) ?? []) includeDescendants(child);
+  }
+  if (standard) {
+    if (focusId !== null) {
+      if (!transformations.has(focusId)) return { nodes: [], edges: [], contractFrames: [] };
+      includeDescendants(focusId);
+    } else for (const id of allItems.keys()) scope.add(id);
+  }
+  const contextIds = new Set<string>();
+  if (standard) for (const arc of doc.arcs) {
+    if (scope.has(arc.from) === scope.has(arc.to)) continue;
+    contextIds.add(scope.has(arc.from) ? arc.to : arc.from);
+  }
+
   const localLayouts = new Map<string, LayoutNode>();
   const visibleIds = new Set<string>();
 
@@ -184,6 +216,7 @@ export function projectNylon(
   }
 
   function isExpanded(id: string): boolean {
+    if (standard) return isContainer(id) && id === focusId;
     return isContainer(id) && !collapsedIds.has(id) && !coveredIds.has(id);
   }
 
@@ -193,16 +226,17 @@ export function projectNylon(
     const item = allItems.get(id);
     if (!item) return { id, x: 0, y: 0, w: 0, h: 0 };
 
-    const base = { id, x: item.x ?? 0, y: item.y ?? 0 };
+    const base = { id, x: standard && id === focusId ? 0 : item.x ?? 0, y: standard && id === focusId ? 0 : item.y ?? 0 };
     if (!isContainer(id)) {
       const layout = transformations.has(id)
-        ? { ...base, w: TRANSFORMATION_SIZE, h: TRANSFORMATION_SIZE }
+        ? { ...base, w: standard ? STANDARD_CARD_WIDTH : TRANSFORMATION_SIZE, h: standard ? STANDARD_CARD_HEIGHT : TRANSFORMATION_SIZE }
         : { ...base, w: CONTRACT_WIDTH, h: CONTRACT_HEIGHT };
       localLayouts.set(id, layout);
       return layout;
     }
-    if (collapsedIds.has(id)) {
-      const layout = { ...base, w: COLLAPSED_CONTAINER_WIDTH, h: COLLAPSED_CONTAINER_HEIGHT };
+    if (standard ? !isExpanded(id) : collapsedIds.has(id)) {
+      const layout = { ...base, w: standard ? STANDARD_CARD_WIDTH : COLLAPSED_CONTAINER_WIDTH,
+        h: standard ? STANDARD_CARD_HEIGHT : COLLAPSED_CONTAINER_HEIGHT };
       localLayouts.set(id, layout);
       return layout;
     }
@@ -221,7 +255,7 @@ export function projectNylon(
     return layout;
   }
 
-  const rootIds = childrenOf.get(undefined) ?? [];
+  const rootIds = standard && focusId !== null ? [focusId] : childrenOf.get(undefined) ?? [];
   const rootLayouts = rootIds.map(layoutOf);
   for (const root of rootLayouts) localLayouts.set(root.id, root);
 
@@ -238,6 +272,7 @@ export function projectNylon(
     for (const childId of childrenOf.get(id) ?? []) placeVisible(childId, absolute);
   }
   for (const rootId of rootIds) placeVisible(rootId);
+  for (const id of contextIds) placeVisible(id);
 
   function depthOf(id: string): number {
     let depth = 0;
@@ -262,7 +297,8 @@ export function projectNylon(
         return {
           kind: 'container', renderId: id, item: item as NylonTransformation,
           ...position, w: layout.w, h: layout.h, depth, expanded: isExpanded(id),
-          state: collapsedIds.has(id) ? 'collapsed' : coveredIds.has(id) ? 'covered' : 'expanded',
+          state: standard ? isExpanded(id) ? 'expanded' : 'collapsed'
+            : collapsedIds.has(id) ? 'collapsed' : coveredIds.has(id) ? 'covered' : 'expanded',
         };
       }
       return transformations.has(id)
@@ -271,6 +307,77 @@ export function projectNylon(
     })
     .filter((node): node is NylonRenderNode => node !== null)
     .sort((a, b) => a.depth - b.depth);
+
+  if (standard) {
+    const focus = nodes.find((node) => node.kind === 'container' && node.item.id === focusId);
+    if (focus) {
+      const pairedIds = new Set(doc.transformations.flatMap((item) => item.contractPair
+        ? [item.contractPair.input, item.contractPair.output] : []));
+      const children = nodes.filter((node) => node.item.parent === focusId && !contextIds.has(node.item.id));
+      const bounds = computeBounds(children.map((node) => ({
+        x: node.x - (pairedIds.has(node.item.id) ? 14 : 0),
+        y: node.y - (pairedIds.has(node.item.id) ? 38 : 0),
+        width: node.w + (pairedIds.has(node.item.id) ? 28 : 0),
+        height: node.h + (pairedIds.has(node.item.id) ? 52 : 0),
+      })), { padding: CONTAINER_PADDING, minWidth: STANDARD_CARD_WIDTH });
+      focus.x = bounds.x; focus.y = bounds.y - CONTAINER_HEADER;
+      focus.w = bounds.width; focus.h = bounds.height + CONTAINER_HEADER;
+    }
+    // Context uses local display geometry; primary Children keep their authored
+    // relative coordinates. Cactus spaces context units outside that detail.
+    const primary = nodes.filter((node) => !contextIds.has(node.item.id));
+    const left = Math.min(0, ...primary.map((node) => node.x));
+    const right = Math.max(TRANSFORMATION_SIZE, ...primary.map((node) => node.x + node.w));
+    const context = nodes.filter((node) => contextIds.has(node.item.id));
+    const byId = new Map(context.map((node) => [node.item.id, node]));
+    const used = new Set<string>();
+    const groups: NylonRenderNode[][] = [];
+    for (const owner of doc.transformations) {
+      const pair = owner.contractPair;
+      if (!pair || used.has(pair.input) || used.has(pair.output)) continue;
+      const input = byId.get(pair.input);
+      const output = byId.get(pair.output);
+      if (!input || !output) continue;
+      groups.push([input, output]);
+      used.add(pair.input); used.add(pair.output);
+    }
+    for (const node of context) if (!used.has(node.item.id)) groups.push([node]);
+    const units = groups.map((group, index) => {
+      const incoming = doc.arcs.some((arc) => group.some((node) => node.item.id === arc.from) && scope.has(arc.to));
+      const connected = doc.arcs.flatMap((arc) => {
+        let id: string | undefined = group.some((node) => node.item.id === arc.from) ? arc.to
+          : group.some((node) => node.item.id === arc.to) ? arc.from : undefined;
+        const seen = new Set<string>();
+        while (id !== undefined && !seen.has(id)) {
+          const node = primary.find((candidate) => candidate.item.id === id);
+          if (node) return [node.y];
+          seen.add(id); id = allItems.get(id)?.parent;
+        }
+        return [];
+      });
+      const width = Math.max(...group.map((node) => node.w)) + 28;
+      return {
+        id: String(index), x: incoming ? left - width - 100 : right + 100,
+        y: connected.length ? Math.min(...connected) : 0,
+        width, height: group.reduce((sum, node) => sum + node.h + 28, 38),
+      };
+    });
+    // Separate columns so spacing cannot put context inside the focused detail.
+    for (const incoming of [true, false]) {
+      const column = units.filter((unit) => (unit.x < left) === incoming);
+      const placed = spaceRectangles(column, {
+        gap: 48, columns: 1,
+        origin: { x: incoming ? left - Math.max(0, ...column.map((unit) => unit.width)) - 100 : right + 100, y: 0 },
+      });
+      for (const position of placed) {
+        let y = position.y + 38;
+        for (const node of groups[Number(position.id)]) {
+          node.x = position.x + 14; node.y = y; node.depth = 0; node.context = true;
+          y += node.h + 28;
+        }
+      }
+    }
+  }
 
   const contractNodes = new Map(
     nodes.filter((node): node is Extract<NylonRenderNode, { kind: 'contract' }> => node.kind === 'contract')
@@ -304,6 +411,18 @@ export function projectNylon(
 
   function visibleRepresentative(id: string): string | null {
     if (!allItems.has(id)) return null;
+    if (standard) {
+      if (visibleIds.has(id)) return id;
+      if (!scope.has(id)) return null;
+      let parent = allItems.get(id)?.parent;
+      const seen = new Set<string>();
+      while (parent !== undefined && !seen.has(parent)) {
+        if (visibleIds.has(parent)) return parent;
+        seen.add(parent);
+        parent = transformations.get(parent)?.parent;
+      }
+      return null;
+    }
     const ancestors: string[] = [];
     let current = allItems.get(id)?.parent;
     while (current !== undefined) {
@@ -318,6 +437,7 @@ export function projectNylon(
   }
 
   const edges = doc.arcs.flatMap((arc, index): EdgeDeclaration[] => {
+    if (standard && !scope.has(arc.from) && !scope.has(arc.to)) return [];
     const sourceId = visibleRepresentative(arc.from);
     const targetId = visibleRepresentative(arc.to);
     if (!sourceId || !targetId || sourceId === targetId) return [];
@@ -327,6 +447,11 @@ export function projectNylon(
       routeBuilder: (rects) => visibleEdgeRoute(sourceId, targetId, rects),
     }];
   });
+
+  if (standard) return {
+    nodes,
+    contractFrames, edges,
+  };
 
   function isWithin(id: string, containerId: string): boolean {
     if (id === containerId) return true;

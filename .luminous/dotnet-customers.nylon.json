@@ -9,8 +9,8 @@
         "GET or PUT HTTP request",
         "Customer result"
       ],
-      "x": -606.94112733664,
-      "y": -146.27922020715457
+      "x": -383.79182372897185,
+      "y": -2.1828089089294167
     },
     {
       "id": "customer-controller-class",
@@ -21,8 +21,8 @@
         "Customer results"
       ],
       "parent": "customers-api",
-      "x": 89.30424503627285,
-      "y": 1589.8039899956605
+      "x": 463.65037507092933,
+      "y": 797.9216662196574
     },
     {
       "id": "rate-limit",
@@ -88,8 +88,8 @@
       "needs": [
         "admitted route and request metadata"
       ],
-      "x": 1666.622126254297,
-      "y": 168.24745475176525,
+      "x": 677.7328507189269,
+      "y": 188.02527337260233,
       "parent": "get-customer-method"
     },
     {
@@ -99,8 +99,8 @@
       "needs": [
         "GetCustomerRequest"
       ],
-      "x": 2070.703333612547,
-      "y": 165.79453727943832,
+      "x": 1081.814058077177,
+      "y": 185.5723559002754,
       "parent": "get-customer-method"
     },
     {
@@ -110,8 +110,8 @@
       "needs": [
         "validated GetCustomerRequest"
       ],
-      "x": 2591.0414822667526,
-      "y": 80,
+      "x": 1602.1522067313826,
+      "y": 99.77781862083708,
       "parent": "get-customer-method"
     },
     {
@@ -121,8 +121,8 @@
       "needs": [
         "Customer or not-found result"
       ],
-      "x": 3075.0414822667526,
-      "y": 80,
+      "x": 2086.1522067313826,
+      "y": 99.77781862083708,
       "parent": "get-customer-method"
     },
     {
@@ -132,8 +132,8 @@
       "needs": [
         "GetCustomerResponse or ProblemDetails"
       ],
-      "x": 3670.6985443306976,
-      "y": 77.84767496228321,
+      "x": 2681.8092687953276,
+      "y": 97.62549358312029,
       "parent": "get-customer-method"
     },
     {
@@ -149,8 +149,8 @@
         "output": "customer-result"
       },
       "parent": "customers-api",
-      "x": 4743.768510456968,
-      "y": 2492.4223251836356
+      "x": 1189.0990862371225,
+      "y": 735.4548747940298
     },
     {
       "id": "customer-service",
@@ -199,8 +199,8 @@
         "output": "customer-row"
       },
       "parent": "customers-api",
-      "x": 6039.131943922452,
-      "y": 2384.499052884181
+      "x": 2180.9774377217723,
+      "y": 771.740769385719
     },
     {
       "id": "build-ef-query",
@@ -248,8 +248,8 @@
         "AppOptions table"
       ],
       "parent": "customers-api",
-      "x": 398.11685828814757,
-      "y": 281.04057672506605
+      "x": 525.0738776554214,
+      "y": 325.32789649000586
     },
     {
       "id": "environment-variables",
@@ -274,8 +274,8 @@
         "environment settings"
       ],
       "parent": "application-startup",
-      "x": 544.5158245200537,
-      "y": 97.61049524701203
+      "x": 733.4404472160029,
+      "y": 101.65888001906808
     },
     {
       "id": "aws-secrets-manager",
@@ -300,8 +300,8 @@
         "environment settings"
       ],
       "parent": "application-startup",
-      "x": 536.497923545477,
-      "y": 387.9378220636633
+      "x": 339.4765313054156,
+      "y": 367.695898203383
     },
     {
       "id": "app-options-provider",
@@ -329,8 +329,8 @@
         "AppOptions settings"
       ],
       "parent": "application-startup",
-      "x": 1214.3984851270795,
-      "y": 81.8340142908378
+      "x": 1006.5814001615354,
+      "y": 342.28010129311065
     },
     {
       "id": "customer-database",
@@ -424,8 +424,8 @@
         "PUT HTTP request",
         "updated Customer result"
       ],
-      "x": 191.4305825309806,
-      "y": 1900.7346962799857,
+      "x": 114.55973682304987,
+      "y": 703.8285614830273,
       "contractPair": {
         "input": "put-http-request",
         "output": "put-http-response"
@@ -486,8 +486,8 @@
         "authorized PUT request"
       ],
       "parent": "update-customer-controller-class",
-      "x": 1458,
-      "y": 80
+      "x": 554.869819136502,
+      "y": 82.16054551744361
     },
     {
       "id": "update-controller-guards",
@@ -497,8 +497,8 @@
         "UpdateCustomerRequest"
       ],
       "parent": "update-customer-controller-class",
-      "x": 2002,
-      "y": 80
+      "x": 1189.6152628202271,
+      "y": 103.76663367965311
     },
     {
       "id": "prepare-update-service-request",
@@ -508,8 +508,8 @@
         "valid UpdateCustomerRequest"
       ],
       "parent": "update-customer-controller-class",
-      "x": 2546,
-      "y": 80
+      "x": 1733.6152628202271,
+      "y": 103.76663367965311
     },
     {
       "id": "apply-customer-update",
@@ -617,8 +617,8 @@
         "updated Customer result"
       ],
       "parent": "update-customer-controller-class",
-      "x": 2798,
-      "y": 80
+      "x": 1985.6152628202271,
+      "y": 103.76663367965311
     },
     {
       "id": "serialize-update-response",
@@ -628,8 +628,8 @@
         "UpdateCustomerResponse or ProblemDetails"
       ],
       "parent": "update-customer-controller-class",
-      "x": 3318.463484772626,
-      "y": 180.4219363205123
+      "x": 2506.0787475928532,
+      "y": 204.18857000016538
     },
     {
       "id": "get-customer-method",
@@ -640,8 +640,8 @@
         "Customer result"
       ],
       "parent": "customer-controller-class",
-      "x": 71.33406172343726,
-      "y": 166.3897233751842,
+      "x": 93.38530793180651,
+      "y": 193.16617070662468,
       "contractPair": {
         "input": "http-request",
         "output": "http-response"
@@ -770,8 +770,8 @@
       "name": "Application starting",
       "kind": "lifecycle",
       "text": "WebApplicationBuilder created\nHost configuration available",
-      "x": -1222.057699466284,
-      "y": 184.43568858057603
+      "x": -1359.4470276644174,
+      "y": 132.0968675487423
     },
     {
       "id": "environment-read-request",
@@ -836,8 +836,8 @@
       "kind": "options",
       "text": "ConnectionString: string\nCommandTimeoutSeconds: int",
       "parent": "customers-api",
-      "x": 2227.05129437308,
-      "y": 333.6171754379268
+      "x": 987.2818836608233,
+      "y": 376.66477970616177
     },
     {
       "id": "rate-limit-options",
@@ -845,8 +845,8 @@
       "kind": "options",
       "text": "RequestsPerMinute: int\nBurst: int",
       "parent": "customers-api",
-      "x": 2195.388461778983,
-      "y": 161.79036140498286
+      "x": 955.6190510667263,
+      "y": 204.83796567321787
     },
     {
       "id": "customer-api-options",
@@ -854,8 +854,8 @@
       "kind": "options",
       "text": "DefaultPageSize: int\nIncludeInactive: boolean",
       "parent": "customers-api",
-      "x": 2212.699567704,
-      "y": 461.6675476118295
+      "x": 972.9301569917432,
+      "y": 504.71515188006447
     },
     {
       "id": "rate-limit-decision",
@@ -885,16 +885,16 @@
       "id": "controller-request-model",
       "name": "GetCustomerRequest",
       "text": "public sealed record GetCustomerRequest(Guid CustomerId);",
-      "x": 1865.2278158023737,
-      "y": 558.6275504734401,
+      "x": 876.3385402670036,
+      "y": 578.4053690942773,
       "parent": "get-customer-method"
     },
     {
       "id": "guarded-controller-request",
       "name": "Valid controller request",
       "text": "GetCustomerRequest\nCustomerId is a non-empty Guid",
-      "x": 2333.5796006611017,
-      "y": 576.2895098770753,
+      "x": 1344.6903251257318,
+      "y": 596.0673284979124,
       "parent": "get-customer-method"
     },
     {
@@ -902,8 +902,8 @@
       "name": "CustomerLookup",
       "text": "Business request passed between classes\n\nCustomerLookup\n  customerId: CustomerId",
       "parent": "customers-api",
-      "x": 4167.174468411396,
-      "y": 2113.807042109661
+      "x": 855.3847991850139,
+      "y": 781.778429259152
     },
     {
       "id": "candidate-query",
@@ -918,8 +918,8 @@
       "name": "Customer query contract",
       "text": "Repository input\n{ customerId: CustomerId }",
       "parent": "customers-api",
-      "x": 5396.585050505119,
-      "y": 2463.0011324689676
+      "x": 1630.982255019532,
+      "y": 742.6240747671824
     },
     {
       "id": "ef-query",
@@ -948,23 +948,23 @@
       "name": "Customer database result",
       "text": "CustomerRow | null\n{ id, displayName, status }",
       "parent": "customers-api",
-      "x": 5401.358405479969,
-      "y": 2656.4368627409694
+      "x": 1640.0605753595012,
+      "y": 936.0598050391842
     },
     {
       "id": "customer-result",
       "name": "Customer result",
       "text": "Business result passed between classes\n\nCustomer { id, displayName }\nor NotFound",
       "parent": "customers-api",
-      "x": 4181.234116930173,
-      "y": 2260.4499447310336
+      "x": 869.44444770379,
+      "y": 928.4213318805247
     },
     {
       "id": "response-model",
       "name": "GetCustomerResponse",
       "text": "{\n  \"id\": \"customer-id\",\n  \"displayName\": \"Ada Lovelace\"\n}\nor ProblemDetails",
-      "x": 3410.984208120663,
-      "y": 84.30480772027632,
+      "x": 2422.094932585293,
+      "y": 104.0826263411134,
       "parent": "get-customer-method"
     },
     {
@@ -1049,24 +1049,24 @@
       "name": "UpdateCustomerRequest",
       "text": "public sealed record UpdateCustomerRequest(\n  Guid CustomerId,\n  string DisplayName,\n  CustomerStatus Status);",
       "parent": "update-customer-controller-class",
-      "x": 1710,
-      "y": 80
+      "x": 897.6152628202271,
+      "y": 103.76663367965311
     },
     {
       "id": "guarded-update-controller-request",
       "name": "Valid update request",
       "text": "UpdateCustomerRequest\nCustomerId is non-empty\nDisplayName is non-empty\nStatus is recognized",
       "parent": "update-customer-controller-class",
-      "x": 2254,
-      "y": 80
+      "x": 1441.6152628202271,
+      "y": 103.76663367965311
     },
     {
       "id": "update-service-request",
       "name": "UpdateCustomer",
       "text": "Business update passed between classes\n\nUpdateCustomer\n  customerId: CustomerId\n  displayName: string\n  status: CustomerStatus",
       "parent": "customers-api",
-      "x": 4216.5617456405225,
-      "y": 3217.9357252632526
+      "x": 987.0109032443036,
+      "y": 1154.9130442846645
     },
     {
       "id": "candidate-customer-update",
@@ -1081,8 +1081,8 @@
       "name": "Customer update contract",
       "text": "Repository update input\n{ customerId, displayName, status }",
       "parent": "customers-api",
-      "x": 5435.235933951261,
-      "y": 3249.864118702477
+      "x": 1807.3857243557745,
+      "y": 1241.068333106297
     },
     {
       "id": "tracked-customer-entity",
@@ -1119,24 +1119,24 @@
       "name": "Updated customer database result",
       "text": "CustomerRow | NotFound\n{ id, displayName, status }",
       "parent": "customers-api",
-      "x": 5864.2222900390625,
-      "y": 3629.8903242507413
+      "x": 1806.1901569580837,
+      "y": 1381.7145509350512
     },
     {
       "id": "updated-customer-result",
       "name": "Updated Customer result",
       "text": "Updated Customer { id, displayName, status }\nor NotFound",
       "parent": "customers-api",
-      "x": 3291.1004813219756,
-      "y": 3809.20997211868
+      "x": 608.5459533817395,
+      "y": 1203.7100259530544
     },
     {
       "id": "update-response-model",
       "name": "UpdateCustomerResponse",
       "text": "{\n  \"id\": \"customer-id\",\n  \"displayName\": \"Ada Lovelace\",\n  \"status\": \"Active\"\n}\nor ProblemDetails",
       "parent": "update-customer-controller-class",
-      "x": 3050,
-      "y": 80
+      "x": 2237.615262820227,
+      "y": 103.76663367965311
     },
     {
       "id": "put-rate-limit-decision",

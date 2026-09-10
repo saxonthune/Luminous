@@ -8,6 +8,7 @@ import { arrangeNylonContainer, type NylonDagDirection } from './dagArrange.ts';
 import { spaceNylonContainer } from './spaceArrange.ts';
 import { makeRoomForExpansion } from './makeRoom.ts';
 import { nylonSelectionRoots } from './dragSelection.ts';
+import { arrangeNylonStandardView } from './standardLayout.ts';
 
 export interface NylonLayoutContext {
   collapsed?: string[];
@@ -19,6 +20,7 @@ export type NylonAction = NylonBatchOperation
   | { op: 'selection.move'; ids: string[]; dx: number; dy: number }
   | { op: 'layout.dag'; id: string; direction: NylonDagDirection; context?: NylonLayoutContext }
   | { op: 'layout.space'; id: string; context?: NylonLayoutContext }
+  | { op: 'layout.standard'; focusId: string | null }
   | { op: 'container.expand'; id: string; context: NylonLayoutContext }
   | { op: 'document.replace'; document: NylonDocument }
   | { op: 'doctor' }
@@ -28,6 +30,7 @@ export type NylonAction = NylonBatchOperation
 export function actionLabel(action: NylonAction): string {
   const names: Partial<Record<NylonAction['op'], string>> = {
     'layout.dag': 'DAG layout', 'layout.space': 'Space children',
+    'layout.standard': 'Arrange children',
     'container.expand': 'Make room for expansion', 'selection.move': 'Move selection',
     'node.reparent': 'Reparent Node', 'node.add': 'Add Node', 'node.delete': 'Delete Node',
     differentiate: 'Differentiate', batch: 'Batch', doctor: 'Repair Document',
@@ -58,6 +61,10 @@ export function executeNylonAction(doc: NylonDocument, action: NylonAction): Nyl
         result = applyNylonBatch(doc, ids.map((id) => ({ op: 'node.move', id, dx: action.dx, dy: action.dy })));
         break;
       }
+      case 'layout.standard':
+        if (action.focusId !== null && typeof action.focusId !== 'string') throw new Error('focusId must be an ID or null');
+        result = arrangeNylonStandardView(doc, action.focusId);
+        break;
       case 'layout.dag': case 'layout.space': case 'container.expand': {
         const context = action.context ?? {};
         for (const values of [context.collapsed, context.covered]) {

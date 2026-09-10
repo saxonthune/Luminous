@@ -1,7 +1,7 @@
 ---
 title: Glossary
-summary: Nylon's controlled vocabulary for Nodes, Arcs, Contract Pairs, containment, and differentiation
-tags: [nylon, glossary, vocabulary, nodes, arcs, transformations, contracts]
+summary: Nylon's controlled vocabulary for Nodes, Arcs, containment, differentiation, Standard View, Continuous View, and Tabs
+tags: [nylon, glossary, vocabulary, nodes, arcs, transformations, contracts, views, tabs]
 deps: [doc01.12.02]
 ---
 
@@ -41,7 +41,9 @@ Nylon docs use these terms exactly.
 
 - Each **Transformation** is a Node that changes data, explained by a name, prose,
   and an informal list of the data it needs.
-  - A Transformation is drawn as a square.
+  - Continuous View draws a leaf Transformation as a square.
+  - Standard View draws a Transformation as a card with its responsibility
+    and a schematic when it contains Children.
   - A Transformation can contain Transformations and Contracts after it is
     differentiated.
 
@@ -95,7 +97,8 @@ Nylon docs use these terms exactly.
 
 - **Parent Transformation** — the Transformation whose differentiated detail
   contains other Transformations and Contracts.
-  - Every Parent Transformation is exactly one of: expanded, covered, collapsed.
+  - In Continuous View, every Parent Transformation is exactly one of:
+    expanded, covered, collapsed.
   - An expanded Parent Transformation shows its Children according to their
     individual states.
   - A covered Parent Transformation hides its descendants and retains its
@@ -145,3 +148,40 @@ Nylon docs use these terms exactly.
 
 - Each **Exit Transformation** is a Child Transformation that produces an
   output promised by its Parent Transformation.
+
+## Views and navigation
+
+- **View** — a representation of Nodes and Arcs from one Document for
+  understanding part or all of its network.
+  - A View refers to existing Nodes and Arcs without copying their meaning.
+  - Node positions belong to the Document and are shared by its Views.
+
+- Each **Continuous View** is a View that shows nested Parent Transformations
+  with individual expand, collapse, and Cover states.
+  - Continuous View is deprecated and remains available as the first Tab.
+
+- Each **Standard View** is a View that shows the immediate Children of one
+  Focus Transformation and the endpoints of Arcs crossing its boundary.
+  - A Standard View at the Document root shows root Nodes.
+  - Child Parent Transformations show an Open contents control in place of
+    disclosure controls, including those containing only Contracts.
+  - Arcs attached to hidden descendants appear at their visible Child ancestor.
+  - Standard View preserves the Document's bipartite structure and
+    Differentiation rules.
+
+- **Focus Transformation** — the Transformation whose detail a Standard View
+  presents.
+  - Its ancestry provides navigation to containing Transformations.
+
+- **Context Node** — a representation of an existing Node outside the focused
+  detail that explains an Arc crossing the Focus Transformation's boundary.
+  - A Context Node exposes its Node's identity and data.
+  - Its other connections do not add further Context Nodes.
+
+- **Tab** — an open View that retains a working context while another View
+  is active.
+  - A Tab retains its camera and selection, and its Continuous View disclosure.
+  - Tabs share Document changes and History.
+  - Each Tab owns its camera independently of other Tabs.
+  - Each Document source retains its Tabs for the browser tab's session,
+    including hot reloads and page refreshes.
