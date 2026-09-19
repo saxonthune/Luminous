@@ -1,16 +1,20 @@
 packages:
   - packages/*
-onlyBuiltDependencies:
-  - esbuild
+
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@0.3.3
-  vitest: 4.1.11
   vite-plus: 0.3.3
+  vitest: 4.1.11
+
+onlyBuiltDependencies:
+  - esbuild
+
 overrides:
-  vite: "catalog:"
-  vitest: "catalog:"
+  vite: 'catalog:'
+  vitest: 'catalog:'
+
 peerDependencyRules:
   allowAny:
     - vite
   allowedVersions:
-    vite: "*"
+    vite: '*'

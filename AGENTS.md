@@ -184,8 +184,7 @@ mechanical coverage for ordinary prototype changes.
 
 Use the native TypeScript 7 compiler (`tsc`, ~10× faster) for type checking and emit.
 Vite+ supplies the workspace toolchain and its `vp check` command. The
-`typescript` package remains on 5.9 as a compatibility API for dependencies that
-still require it; `@typescript/native` supplies the TypeScript 7 `tsc` binary.
+All workspace packages use the official TypeScript 7 package directly.
 
 - `just typecheck` — runs `tsc --noEmit` across all packages
 - `pnpm exec tsc --noEmit -p packages/<pkg>/<tsconfig>` — check a single package with TypeScript 7

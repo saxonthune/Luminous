@@ -7,15 +7,15 @@
   "type": "module",
   "dependencies": {
     "@luminous/core": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.25.3"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsup": "^8.5.0",
-    "tsx": "^4.19.3",
-    "typescript": "~5.9.3",
+    "@types/node": "^26.6.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.13",
+    "typescript": "~7.0.2",
     "vite": "catalog:",
-    "vitest": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   }
 }
