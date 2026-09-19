@@ -18,7 +18,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "resolveJsonModule": true,
+    "types": ["node"],
     "paths": {
+      "@luminous/cactus/layout": ["../cactus/src/layout-public.ts"],
       "@luminous/cactus/chrome-types": ["../cactus/src/chrome/types.ts"]
     }
   },

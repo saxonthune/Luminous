@@ -1,0 +1,280 @@
+{
+  "v": 1,
+  "title": "nyc-subwhere source data to drawn train",
+  "transformations": [
+    {
+      "id": "worker-snapshot-pipeline",
+      "name": "Worker snapshot pipeline",
+      "prose": "Turns the MTA realtime response into the resolved RenderSnapshot served to browsers.",
+      "needs": [
+        "MTA GTFS-realtime bytes",
+        "poll time",
+        "cross-poll memory"
+      ],
+      "x": 258,
+      "y": 40
+    },
+    {
+      "id": "decode-feed",
+      "name": "Decode GTFS-realtime",
+      "prose": "Decodes each protobuf response into a transit_realtime.FeedMessage.",
+      "needs": [
+        "GTFS-realtime Protocol Buffer bytes"
+      ],
+      "parent": "worker-snapshot-pipeline",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "reshape-trips",
+      "name": "Build RenderSnapshot",
+      "prose": "Combines TripUpdates, VehiclePositions, poll time, and cross-poll memory. It resolves an observed last stop, upcoming arrivals, direction, and stalled status for each renderable trip.",
+      "needs": [
+        "FeedMessage entities",
+        "poll time",
+        "previous trip state"
+      ],
+      "parent": "worker-snapshot-pipeline",
+      "x": 502,
+      "y": 80
+    },
+    {
+      "id": "publish-snapshot",
+      "name": "Publish snapshot",
+      "prose": "Serializes the RenderSnapshot to KV; GET /api/trips serves that JSON without decoding the feed on the read path.",
+      "needs": [
+        "RenderSnapshot",
+        "Cloudflare KV binding"
+      ],
+      "parent": "worker-snapshot-pipeline",
+      "x": 962,
+      "y": 80
+    },
+    {
+      "id": "browser-train-pipeline",
+      "name": "Browser train pipeline",
+      "prose": "Folds each snapshot into a continuous estimate, samples a pose on every animation frame, and updates the Three.js train instances.",
+      "needs": [
+        "GET /api/trips snapshot",
+        "baked TrackIndex",
+        "animation time"
+      ],
+      "x": 1718,
+      "y": 40
+    },
+    {
+      "id": "ingest-snapshot",
+      "name": "TripEstimator.ingest",
+      "prose": "Resolves each trip against its baked Track and rebases the new estimate onto the position already shown so changed arrival predictions do not snap a train backward.",
+      "needs": [
+        "RenderSnapshot JSON",
+        "TrackIndex",
+        "prior estimator basis"
+      ],
+      "parent": "browser-train-pipeline",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "sample-distance",
+      "name": "TripEstimator.poses",
+      "prose": "Samples the current distance along every live Track from animation time and the estimator basis, bounded by the unreached-station hold point.",
+      "needs": [
+        "estimator basis",
+        "animation time"
+      ],
+      "parent": "browser-train-pipeline",
+      "x": 502,
+      "y": 80
+    },
+    {
+      "id": "distance-to-pose",
+      "name": "pointAt",
+      "prose": "Walks the Track polyline to the sampled distance, interpolates longitude and latitude on the bracketing segment, and derives bearing from that segment.",
+      "needs": [
+        "Track points and cumulative distances",
+        "distance along Track"
+      ],
+      "parent": "browser-train-pipeline",
+      "x": 962,
+      "y": 80
+    },
+    {
+      "id": "pose-to-instance",
+      "name": "NetworkLayer.setTrains",
+      "prose": "Converts longitude and latitude to local map coordinates, offsets the train onto its track, rotates it by bearing, and writes the Three.js instance matrix and color.",
+      "needs": [
+        "TrainPose",
+        "map coordinate projection",
+        "route geometry"
+      ],
+      "parent": "browser-train-pipeline",
+      "x": 1422,
+      "y": 80
+    },
+    {
+      "id": "draw-frame",
+      "name": "Draw train frame",
+      "prose": "The renderer draws the positioned and rotated train instance in the map's current camera projection.",
+      "needs": [
+        "Three.js train instance",
+        "map camera"
+      ],
+      "parent": "browser-train-pipeline",
+      "x": 1882,
+      "y": 80
+    }
+  ],
+  "contracts": [
+    {
+      "id": "mta-response-bytes",
+      "name": "MTA realtime response",
+      "text": "Protocol Buffer bytes from the NYCT GTFS-realtime endpoints",
+      "x": 20,
+      "y": 155
+    },
+    {
+      "id": "feed-message",
+      "name": "FeedMessage",
+      "text": "entity[]\n  tripUpdate { trip, stopTimeUpdate[] }\n  vehicle { trip, stopId, currentStatus }",
+      "parent": "worker-snapshot-pipeline",
+      "x": 262,
+      "y": 115
+    },
+    {
+      "id": "render-snapshot",
+      "name": "RenderSnapshot",
+      "text": "{\n  asOf: EpochMs,\n  trips: [{ tripId, routeId, direction, lastKnownStop, upcoming, status }]\n}",
+      "parent": "worker-snapshot-pipeline",
+      "x": 722,
+      "y": 115
+    },
+    {
+      "id": "snapshot-json",
+      "name": "GET /api/trips JSON",
+      "text": "RenderSnapshot serialized as application/json",
+      "x": 1500,
+      "y": 155
+    },
+    {
+      "id": "track-index",
+      "name": "Baked TrackIndex",
+      "text": "Track[]\n  routeId, direction\n  points: [lng, lat][]\n  cumDist: number[]\n  stops: { stopId, dist }[]",
+      "x": 1520,
+      "y": 700
+    },
+    {
+      "id": "estimator-basis",
+      "name": "Estimator basis",
+      "text": "Per trip: Track, fromDist/fromT, toDist/toT, observed stop, color, stalled",
+      "parent": "browser-train-pipeline",
+      "x": 272,
+      "y": 115
+    },
+    {
+      "id": "distance-on-track",
+      "name": "Distance on Track",
+      "text": "{ track, distanceMeters, uncertain, color, tripId }",
+      "parent": "browser-train-pipeline",
+      "x": 732,
+      "y": 115
+    },
+    {
+      "id": "train-pose",
+      "name": "TrainPose",
+      "text": "{\n  tripId: string,\n  color: \"#RRGGBB\",\n  lngLat: [longitude, latitude],\n  bearing: radians,\n  uncertain: boolean\n}",
+      "parent": "browser-train-pipeline",
+      "x": 1192,
+      "y": 115
+    },
+    {
+      "id": "instance-state",
+      "name": "Three.js train instance",
+      "text": "local x/y/z translation\nY-axis bearing rotation\nroute color and uncertainty blink",
+      "parent": "browser-train-pipeline",
+      "x": 1652,
+      "y": 115
+    },
+    {
+      "id": "drawn-train",
+      "name": "Drawn train",
+      "text": "A train box at the estimated map coordinates, oriented along its travel bearing",
+      "x": 3850,
+      "y": 155
+    }
+  ],
+  "arcs": [
+    {
+      "from": "mta-response-bytes",
+      "to": "decode-feed"
+    },
+    {
+      "from": "decode-feed",
+      "to": "feed-message"
+    },
+    {
+      "from": "feed-message",
+      "to": "reshape-trips"
+    },
+    {
+      "from": "reshape-trips",
+      "to": "render-snapshot"
+    },
+    {
+      "from": "render-snapshot",
+      "to": "publish-snapshot"
+    },
+    {
+      "from": "publish-snapshot",
+      "to": "snapshot-json"
+    },
+    {
+      "from": "snapshot-json",
+      "to": "ingest-snapshot"
+    },
+    {
+      "from": "track-index",
+      "to": "ingest-snapshot"
+    },
+    {
+      "from": "ingest-snapshot",
+      "to": "estimator-basis"
+    },
+    {
+      "from": "estimator-basis",
+      "to": "sample-distance"
+    },
+    {
+      "from": "sample-distance",
+      "to": "distance-on-track"
+    },
+    {
+      "from": "distance-on-track",
+      "to": "distance-to-pose"
+    },
+    {
+      "from": "track-index",
+      "to": "distance-to-pose"
+    },
+    {
+      "from": "distance-to-pose",
+      "to": "train-pose"
+    },
+    {
+      "from": "train-pose",
+      "to": "pose-to-instance"
+    },
+    {
+      "from": "pose-to-instance",
+      "to": "instance-state"
+    },
+    {
+      "from": "instance-state",
+      "to": "draw-frame"
+    },
+    {
+      "from": "draw-frame",
+      "to": "drawn-train"
+    }
+  ]
+}

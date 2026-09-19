@@ -4,6 +4,8 @@ A spatial canvas for [unfolding software design](https://computation.saxon.zone)
 
 Luminous connects human visual thinking with AI structured context. You design on a canvas — components, signals, data flow, architecture — and the structured data behind it is legible to AI agents that can read, query, and build from it.
 
+All Luminous apps are prototypes, developed for rapid experimentation; features and data formats evolve as we use them.
+
 ## Demo
 
 [Live canvas](https://saxonthune.github.io/Luminous/) — auto-generated from static analysis of this codebase on every deploy.

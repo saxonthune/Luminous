@@ -1,4 +1,4 @@
-import { createSignal, createSelector, onMount, onCleanup } from 'solid-js';
+import { batch, createSignal, createSelector, onMount, onCleanup } from 'solid-js';
 import type { Transform } from './useViewport.js';
 import { rectsIntersect, rectContainsRect, type NodeRect } from './useBoxSelect.js';
 import { traceCallback, markInteraction } from '../perf.js';
@@ -137,7 +137,10 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
     const startY = event.clientY;
     setGesture({ kind: 'pressing', nodeId, startX, startY });
 
-    const target = event.currentTarget as Element | null;
+    // Selection can replace the pressed node before the drag threshold is
+    // crossed. Keep its event path so capture can use a surviving ancestor.
+    const pressPath = event.composedPath();
+    let target = event.currentTarget as Element | null;
     let captured = false;
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -153,6 +156,9 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
         const group = options.dragGroup?.(nodeId) ?? [nodeId];
         setDraggedNodeIds(group.length > 0 ? [...group] : [nodeId]);
         setGesture({ kind: 'draggingNode', nodeId, startX, startY, dx: rawDx / k, dy: rawDy / k });
+        if (!target?.isConnected) {
+          target = pressPath.find((entry): entry is Element => entry instanceof Element && entry.isConnected) ?? null;
+        }
         target?.setPointerCapture?.(event.pointerId);
         captured = true;
         options.callbacks.onDragStart?.(nodeId, draggedNodeIds());
@@ -167,12 +173,18 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
 
     const handlePointerUp = () => {
       const g = gesture();
-      if (g.kind === 'draggingNode') {
-        options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy, draggedNodeIds());
+      // The host can publish optimistic positions synchronously. Retire the
+      // gesture offset in the same update so neither old nor doubled positions paint.
+      batch(() => {
+        if (g.kind === 'draggingNode') {
+          options.callbacks.onDragEnd?.(g.nodeId, g.dx, g.dy, draggedNodeIds());
+        }
+        setGesture(IDLE);
+        setDraggedNodeIds([]);
+      });
+      if (captured && (!target?.hasPointerCapture || target.hasPointerCapture(event.pointerId))) {
+        target?.releasePointerCapture?.(event.pointerId);
       }
-      setGesture(IDLE);
-      setDraggedNodeIds([]);
-      if (captured) target?.releasePointerCapture?.(event.pointerId);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };

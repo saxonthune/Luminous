@@ -786,6 +786,52 @@ function computeOrganizerFit(children: NodeGeometry[], config?: OrganizerLayoutC
 const DEFAULT_ORGANIZER_LAYOUT: OrganizerLayoutConfig  // { padding: 20, headerHeight: 40 }
 ```
 
+### candidatePlacement.ts
+
+```typescript
+function placeRectAtCandidates(
+  size: { width: number; height: number },
+  candidates: CandidatePlacementPoint[],
+  obstacles: CandidatePlacementRect[],
+  options?: {
+    gap?: number
+    bounds?: CandidatePlacementRect
+    containment?: { bounds: CandidatePlacementRect; minFraction: number }
+  },
+): CandidatePlacementResult
+```
+
+`placeRectAtCandidates` places a rectangle without assigning meaning to it.
+The caller supplies candidate centers, obstacle rectangles, optional hard
+bounds, and an optional minimum-contained-area constraint. The function
+prefers a result within the hard bounds, then one that satisfies the
+containment constraint, then the least obstructed result, then the earliest
+candidate.
+
+### spacing.ts
+
+```typescript
+function spaceRectangles(
+  rects: SpacingRect[],
+  options: { gap: number; origin?: Position; columns?: number },
+): SpacingPosition[]
+
+function resolveRectangleOverlaps(
+  rects: SpacingRect[],
+  fixedId: string,
+  gap: number,
+): SpacingPosition[]
+```
+
+`spaceRectangles` packs one flat set of rectangles into deterministic
+reading-order rows. It preserves rectangle sizes and does not inspect nested
+content. `resolveRectangleOverlaps` keeps one rectangle fixed and translates
+overlapping peers right and down until the flat set has the requested gap.
+The caller maps domain Nodes and compound objects into rectangles and decides
+which hierarchy levels receive each operation. Pure layout functions are also
+available from `@luminous/cactus/layout`, which does not load browser UI
+components and can therefore be used by command-line adapters.
+
 ## Core Types
 
 ```typescript

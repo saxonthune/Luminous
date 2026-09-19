@@ -20,7 +20,7 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
       fresh: ${{ steps.resolve.outputs.fresh }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - id: resolve
@@ -40,7 +40,7 @@ jobs:
     env:
       VERSION: ${{ needs.check.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - if: needs.check.outputs.fresh == 'true'

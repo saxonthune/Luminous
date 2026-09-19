@@ -5,6 +5,5 @@ inbox/
 tasks/
 results/
 chains/
-*.epic.md
 *.log
 .version

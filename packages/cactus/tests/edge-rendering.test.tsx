@@ -40,6 +40,26 @@ function getEdgeLayers(container: HTMLElement): { lines: Element | null; labels:
 }
 
 describe('Canvas edge rendering', () => {
+  it('keeps thick round dots separated at normal and distant zoom', () => {
+    let canvas: CanvasRef | undefined;
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas ref={(ref) => { canvas = ref; }} edges={[
+        { id: 'tether', sourceId: 'a', targetId: 'b', styling: { dash: 'dotted', width: 5 } },
+      ]}>
+        <NodeContainer nodeId="a" x={() => 0} y={() => 0} w={() => 40} h={() => 40} />
+        <NodeContainer nodeId="b" x={() => 500} y={() => 0} w={() => 40} h={() => 40} />
+      </Canvas>
+    ));
+    for (const k of [1, 0.1]) {
+      canvas!.setView({ x: 0, y: 0, k }, false);
+      const line = container.querySelector('[data-cactus-edge-layer-lines] polyline')!;
+      const [dash, gap] = line.getAttribute('stroke-dasharray')!.split(' ').map(Number);
+      expect(dash).toBe(0);
+      expect(line.getAttribute('stroke-linecap')).toBe('round');
+      expect(gap).toBeGreaterThan(Number(line.getAttribute('stroke-width')) * 2);
+    }
+    cleanup();
+  });
   it('uses the host projection of selected IDs for edge emphasis', () => {
     let canvasRef: CanvasRef | undefined;
     const edges: EdgeDeclaration[] = [

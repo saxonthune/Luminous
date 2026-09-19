@@ -61,6 +61,12 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Development Philosophy
 
+All Luminous apps are prototypes. Prioritize rapid experimentation and short
+feedback loops. Keep implementations small and easy to change as node kinds,
+edge types, and semantics evolve. Keep each app's semantic rules together in
+its domain code so UI and CLI consumers share them. Introduce abstractions,
+configuration, and compatibility machinery only when a concrete use case needs them.
+
 - **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Living software starts small and develops centers and ornamentation as feature complexity evolves.
 - **Happy path first**: implement the minimal end-to-end path. Complex algorithms, guards, and elaborate systems come only when sufficient forces cross the threshold — change in quantity begets change in quality.
 - **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in rhidoc bridge the gap between them — they don't replace either side.
@@ -74,6 +80,10 @@ See `.rhidoc/02-design/01-pdr-unfolding-architecture.md` for full details. Key d
 - **Polymorphic nodes.** Notes are the primary node type, but the data model is a discriminated union — portals, pipeline-generated nodes (components, signals), and future types share base properties (position, size, nesting) and differ by `type` field.
 - **Freeform edges first, ports later.** Any node to any node, optional label. Three-polarity port system (in/out/neutral) available for typed constructs.
 - **Server is storage, client is intelligence.** Server serves files and broadcasts file-change notifications over WebSocket. Client owns all domain logic.
+  **Nylon exception:** UI and CLI submit revision-checked actions to the server,
+  which runs the shared Nylon executor and keeps bounded session undo/redo history.
+  The static demo runs that same executor locally. Nylon prepares geometry;
+  cactus owns layout algorithms. Direct file edits clear Nylon history.
 - **Diagram pipelines.** Scripts that read source code via static analysis and emit `.canvas.json`. The pipeline is the reusable artifact — shareable across projects and communities. Each pipeline defines its own node types from the forces of its domain; we don't pre-build a universal schema of typed nodes.
 - **Willing to delete.** No backward compatibility with features nobody uses.
 
@@ -150,6 +160,13 @@ to see all recipes. Common ones: `just build`, `just test`, `just typecheck`,
 
 Per-package recipes exist too (e.g. `just test-mcp`, `just typecheck-core`).
 
+### Development server ports
+
+Before starting a development server, probe the ports that the user says are running and
+the configured default ports. Reuse a reachable storage server instead of starting a
+duplicate process. The client port does not serve the storage API; pass the reachable
+storage-server port to app CLI commands.
+
 ### E2E tests
 
 The user runs E2E tests manually. Agents shall not run Playwright or other E2E
@@ -165,11 +182,14 @@ mechanical coverage for ordinary prototype changes.
 
 ## Type Checking
 
-Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).
+Use the native TypeScript 7 compiler (`tsc`, ~10× faster) for type checking and emit.
+Vite+ supplies the workspace toolchain and its `vp check` command. The
+All workspace packages use the official TypeScript 7 package directly.
 
-- `just typecheck` — runs `tsgo --noEmit` across all packages
-- `pnpm -C packages/<pkg> exec tsgo --noEmit -p <tsconfig>` — check a single package
-- Build scripts (`tsc -b`, `tsc -p`) stay as-is — tsgo does not emit in the beta
+- `just typecheck` — runs `tsc --noEmit` across all packages
+- `pnpm exec tsc --noEmit -p packages/<pkg>/<tsconfig>` — check a single package with TypeScript 7
+- Build scripts (`tsc -b`, `tsc -p`) use the same native compiler
+- `pnpm exec vp check` — run Vite+ formatting, lint, and type checks
 
 ## Searching and reading files
 

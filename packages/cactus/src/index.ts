@@ -43,6 +43,12 @@ export { CanvasContext, useCanvasContext } from './CanvasContext.js';
 export { computeBounds, findContainerAt, isPointInRect, isOverContainerInterior } from './geometry/containment.js';
 export { resolveAbsolutePosition, resolveAbsolutePositionByParentOf, computeAttach, computeDetach, computeContainerFit } from './geometry/containerOps.js';
 export type { ContainerNode, ContainerFitConfig } from './geometry/containerOps.js';
+export { computeExpansionTranslations } from './geometry/expansion.js';
+export type { ExpansionRect, ExpansionUnit, ExpansionTranslation } from './geometry/expansion.js';
+export { resolveRectangleOverlaps, spaceRectangles } from './geometry/spacing.js';
+export type { SpaceRectanglesOptions, SpacingPosition, SpacingRect } from './geometry/spacing.js';
+export { placeRectAtCandidates } from './geometry/candidatePlacement.js';
+export type { CandidatePlacementOptions, CandidatePlacementPoint, CandidatePlacementRect, CandidatePlacementResult } from './geometry/candidatePlacement.js';
 export { gridLayout } from './gridLayout.js';
 export type { GridLayoutOptions } from './gridLayout.js';
 export { elkLayout } from './elkLayout.js';
@@ -84,3 +90,5 @@ export { Toolbar, ToolbarControlRenderer, MenuRoot } from './chrome/ChromePrimit
 export { ChromeSlots } from './chrome/ChromeSlots.js';
 export { CACTUS_TOKENS, cactusVar } from './cactus-tokens.js';
 export type { CactusToken } from './cactus-tokens.js';
+
+export { placeAdjacent } from './geometry/placeAdjacent.js';

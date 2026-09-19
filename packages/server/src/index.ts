@@ -4,6 +4,8 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { resolve } from "node:path"
 import { scanDocuments, resolveRoots } from "./workspace.js"
+import { dispatchNylon, nylonSession } from "./nylon.js"
+import type { NylonActionRequest } from '@luminous/core/nylon/history'
 import {
   getDocument,
   applyAction,
@@ -18,6 +20,7 @@ import {
   writeRawDocument,
   isDataflowPath,
   isRawDocPath,
+  isNylonPath,
   copyDocument,
   moveDocument,
   deleteDocument,
@@ -87,8 +90,8 @@ function wsSendText(socket: Socket, text: string): void {
   socket.write(Buffer.concat([header, payload]))
 }
 
-function broadcast(path: string): void {
-  const msg = JSON.stringify({ event: "changed", path })
+function broadcast(path: string, revision?: string, actionId?: string): void {
+  const msg = JSON.stringify({ event: "changed", path, revision, actionId })
   for (const socket of clients) {
     try {
       wsSendText(socket, msg)
@@ -143,6 +146,30 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   const url = req.url ?? "/"
 
+  if (url.startsWith('/api/nylon/document/') && req.method === 'GET') {
+    const path = decodeURIComponent(url.slice('/api/nylon/document/'.length))
+    if (!path || hasTraversal(path) || !isNylonPath(path)) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Nylon path' }); return
+    }
+    sendJson(res, 200, { ok: true, snapshot: await nylonSession(path).read() })
+    return
+  }
+  if (url === '/api/nylon/action' && req.method === 'POST') {
+    let body: NylonActionRequest & { path: string }
+    try { body = await parseBody(req) as typeof body }
+    catch { sendJson(res, 400, { ok: false, error: 'Invalid JSON' }); return }
+    if (!body || typeof body.path !== 'string' || !body.path || hasTraversal(body.path) || !isNylonPath(body.path)) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Nylon path' }); return
+    }
+    const { path, ...request } = body
+    const result = await dispatchNylon(path, request)
+    if (result.ok && result.changed && !request.dryRun && !result.replayed) {
+      broadcast(path, result.snapshot.revision, request.actionId)
+    }
+    sendJson(res, result.ok ? 200 : result.conflict ? 409 : 400, result)
+    return
+  }
+
   // GET /api/health
   if (url === "/api/health" && req.method === "GET") {
     sendJson(res, 200, { status: "ok", commit: gitCommit })
@@ -179,7 +206,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   // POST /api/document/write — { path, content } — whole-document write for
-  // .dataflow.json files. Graph mutations keep their single write path
+  // raw app documents. Graph mutations keep their single write path
   // through /api/action/* and /api/action/batch.
   if (url === "/api/document/write" && req.method === "POST") {
     let body: { path?: string; content?: unknown }
@@ -195,7 +222,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       return
     }
     if (!isRawDocPath(docPath)) {
-      sendJson(res, 400, { ok: false, error: "only .dataflow.json, .atlas.json, .linen.json, or .merino.json paths may be written here" })
+      sendJson(res, 400, { ok: false, error: "only recognized raw Luminous document paths may be written here" })
+      return
+    }
+    if (isNylonPath(docPath)) {
+      sendJson(res, 400, { ok: false, error: 'Use /api/nylon/action with document.replace and a base revision for Nylon writes' })
       return
     }
     if (body.content === undefined) {
@@ -429,12 +460,15 @@ server.on("upgrade", (req: IncomingMessage, socket: Socket, _head: Buffer) => {
 })
 
 server.listen(port, () => {
-  console.log(`server listening on http://localhost:${port}`)
+  const address = server.address()
+  console.log(`server listening on http://localhost:${typeof address === 'object' && address ? address.port : port}`)
   console.log(`serving ${roots.length} workspace root(s):`)
   for (const r of roots) console.log(`  ${r.name} → ${r.dir}`)
   watchDocuments(roots, (path) => {
     console.log(`[watch] external change detected: ${path}`)
-    broadcast(path)
+    if (isNylonPath(path)) {
+      void nylonSession(path).read().then((snapshot) => broadcast(path, snapshot.revision)).catch(() => broadcast(path))
+    } else broadcast(path)
   })
 })
 

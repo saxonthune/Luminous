@@ -19,12 +19,11 @@ build: build-cactus build-server build-mcp build-client
 
 # build cactus type declarations
 build-cactus:
-    pnpm -C packages/cactus exec tsc -p tsconfig.build.json
+    pnpm exec tsc -p packages/cactus/tsconfig.build.json
 
-# build the storage server
+# build the server and its environment-independent Nylon executor
 build-server:
-    pnpm -C packages/server exec rimraf dist
-    pnpm -C packages/server exec tsc
+    pnpm -C packages/server exec esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js
 
 # build (regenerate) the MCP server bundle
 build-mcp:
@@ -35,13 +34,13 @@ mcp: build-mcp
 
 # build the canvas client
 build-client:
-    pnpm -C packages/client exec tsc -b
-    pnpm -C packages/client exec vite build
+    pnpm exec tsc -b packages/client/tsconfig.json
+    pnpm -C packages/client exec vp build
 
 # build the client as a static, no-backend demo site (bundles public/canvases/)
 build-static:
-    pnpm -C packages/client exec tsc -b
-    STATIC_BUILD=true pnpm -C packages/client exec vite build
+    pnpm exec tsc -b packages/client/tsconfig.json
+    STATIC_BUILD=true pnpm -C packages/client exec vp build
 
 # ---- test ----
 
@@ -60,6 +59,24 @@ test-mcp:
 test-client:
     pnpm -C packages/client exec vitest run
 
+# Nylon action/history and projection checks, without browser E2E tests
+test-nylon:
+    pnpm -C packages/core exec vitest run tests/nylon
+    pnpm -C packages/client exec vitest run src/apps/nylon/__tests__ src/ws/__tests__
+
+# run the independent CI test groups concurrently
+test-ci:
+    #!/usr/bin/env bash
+    set -u
+    just test-cactus & cactus_pid=$!
+    just test-server & server_pid=$!
+    just test-nylon & nylon_pid=$!
+    status=0
+    wait "$cactus_pid" || status=1
+    wait "$server_pid" || status=1
+    wait "$nylon_pid" || status=1
+    exit "$status"
+
 test-server:
     pnpm -C packages/server exec vitest run
 
@@ -70,39 +87,42 @@ test-e2e:
 # ---- typecheck ----
 
 # typecheck all packages
-typecheck: typecheck-core typecheck-cactus typecheck-mcp typecheck-client
+typecheck: typecheck-core typecheck-cactus typecheck-mcp typecheck-client typecheck-server
+
+typecheck-server:
+    pnpm exec tsc --noEmit -p packages/server/tsconfig.json
 
 typecheck-core:
-    pnpm -C packages/core exec tsgo --noEmit
+    pnpm exec tsc --noEmit -p packages/core/tsconfig.json
 
 typecheck-cactus:
-    pnpm -C packages/cactus exec tsgo --noEmit
+    pnpm exec tsc --noEmit -p packages/cactus/tsconfig.json
 
 typecheck-mcp:
-    pnpm -C packages/mcp exec tsgo --noEmit -p tsconfig.json
+    pnpm exec tsc --noEmit -p packages/mcp/tsconfig.json
 
 typecheck-client:
-    pnpm -C packages/client exec tsgo --noEmit
+    pnpm exec tsc --noEmit -p packages/client/tsconfig.json
 
 # ---- lint ----
 
 # lint the workspace
 lint:
-    pnpm exec eslint .
+    pnpm exec vp lint
 
 # ---- dev ----
 
 # run the storage server + canvas client together
 dev:
-    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.luminous & pnpm -C packages/client exec vite
+    pnpm -C packages/server exec tsx watch src/index.ts -- --config {{justfile_directory()}}/luminous.config.json --dir {{justfile_directory()}}/.luminous & pnpm -C packages/client exec vp dev
 
 # run the canvas client only
 dev-client:
-    pnpm -C packages/client exec vite
+    pnpm -C packages/client exec vp dev
 
 # run the client in static (no-backend) mode against the bundled demo docs
 dev-static:
-    STATIC_BUILD=true pnpm -C packages/client exec vite
+    STATIC_BUILD=true pnpm -C packages/client exec vp dev
 
 # run the storage server only
 dev-server:
@@ -112,9 +132,13 @@ dev-server:
 dev-mcp:
     pnpm -C packages/mcp exec tsx src/server.ts
 
+# call an app CLI against the storage server, e.g. `just cli nylon list`
+cli *args:
+    pnpm exec tsx scripts/luminous-cli.ts {{args}}
+
 # preview the production client build
 preview:
-    pnpm -C packages/client exec vite preview
+    pnpm -C packages/client exec vp preview
 
 # start the built storage server
 start-server:
@@ -146,5 +170,5 @@ check-skill-reference: gen-skill-reference
 
 # kill dev servers on ports 4080 and 5200
 kill:
-    -lsof -ti :4080 -ti :5200 | xargs -r kill -9 2>/dev/null
+    -bash scripts/kill-dev.sh
     @echo "Killed processes on ports 4080 and 5200"

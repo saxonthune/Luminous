@@ -1,13 +1,16 @@
 ---
 title: Layout Primitives
-summary: The layout algorithms cactus ships — tidyLayout, treeLayout, forceDirectedLayout, compositeLayout, dagLayout — with their contracts and when to use each
+summary: The layout algorithms cactus ships for trees, DAGs, containment, flat spacing, and overlap removal
 tags: [cactus, layout, algorithms]
 deps: [doc02.05.01]
 ---
 
 # Layout Primitives
 
-Cactus ships four layout algorithms: `tidyLayout`, `treeLayout`, `forceDirectedLayout`, and `compositeLayout`. All are pure functions of node and edge structure — domain-agnostic, no schema interpretation. Callers supply measured sizes and pre-filtered edges; cactus applies geometry. None of these functions know what a "component" or a "signal" is.
+Cactus layout functions are pure functions of node and edge structure. They are
+domain-agnostic and carry no schema interpretation. Callers supply measured
+sizes and pre-filtered edges; cactus applies geometry. None of these functions
+know what a "component" or a "signal" is.
 
 ## `tidyLayout`
 
@@ -113,7 +116,12 @@ function dagLayout(
   edges: LayoutEdge[],
   options?: DagLayoutOptions
 ): LayoutResult
-// DagLayoutOptions = { tidy?: TidyLayoutOptions; horizontalGap?: number; verticalGap?: number }
+// DagLayoutOptions = {
+//   tidy?: TidyLayoutOptions;
+//   horizontalGap?: number;
+//   verticalGap?: number;
+//   direction?: 'LR' | 'TD' | 'RL' | 'DT';
+// }
 ```
 
 **Input shape:** `TidyNode[]` (same as tidyLayout — nodes with `w`, `h`, `parentId`), `LayoutEdge[]` (all directed edges, not pre-filtered to tree-role only).
@@ -124,7 +132,7 @@ function dagLayout(
 1. "Lifts" edges — an edge between two deeply nested nodes induces an ordering on their nearest non-shared ancestors at that scope level.
 2. Counts net votes between each pair of siblings: if more edges flow A→B than B→A, A ranks above B. Ties impose no constraint.
 3. Topologically sorts siblings using Kahn's algorithm on the net-direction DAG.
-4. Positions nodes by rank: same rank side-by-side, different ranks stacked vertically.
+4. Positions nodes by rank in the requested direction. `TD` is the default.
 5. Recurses into containers to order their children the same way.
 
 Pass 1 runs `tidyLayout` internally for sizing. Inner children keep their tidy-computed relative positions.
@@ -134,6 +142,18 @@ Pass 1 runs `tidyLayout` internally for sizing. Inner children keep their tidy-c
 **What it doesn't do:** Doesn't minimize edge crossings within ranks (a known Sugiyama optimization). Doesn't handle cycles gracefully beyond appending unranked nodes in original order.
 
 **Clustering:** `TidyNode.clusterId?: string` groups same-parent siblings sharing the value into one rank unit — internally synthesized as a temporary container before layout, then resolved back to the real node IDs after. See doc02.05.06 for the design and `Canvas`'s `ClusterDeclaration` rendering.
+
+## Flat Spacing and Overlap Removal
+
+`spaceRectangles` arranges one flat set of rectangles in reading-order rows
+with a caller-supplied gap. It does not inspect descendants. This makes it
+suitable for a command that arranges one container level while retaining the
+internal layout of every child container.
+
+`resolveRectangleOverlaps` keeps one rectangle fixed and moves overlapping
+peers right and down. A caller can repeat this operation at successive ancestor
+levels after a child layout changes a container's bounds. Cactus owns the
+rectangle geometry; the caller owns hierarchy traversal and persistence.
 
 ## Composing Layouts
 

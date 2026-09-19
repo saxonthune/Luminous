@@ -1,0 +1,1601 @@
+{
+  "v": 1,
+  "transformations": [
+    {
+      "id": "customers-api",
+      "name": "Customers API",
+      "prose": "Accepts HTTP requests for GET /customers/{id} and PUT /customers/{id}, then returns endpoint-specific JSON responses. Its differentiated detail is organized around the controllers, service, and repository classes.",
+      "needs": [
+        "GET or PUT HTTP request",
+        "Customer result"
+      ],
+      "x": -162.35522490427317,
+      "y": 328.49577325372775
+    },
+    {
+      "id": "customer-controller-class",
+      "name": "CustomersController.cs",
+      "prose": "Owns the customer HTTP endpoints. Each endpoint method contains its own middleware filters, request mapping, service call, and response mapping.",
+      "needs": [
+        "GET and PUT HTTP requests",
+        "Customer results"
+      ],
+      "parent": "customers-api",
+      "x": 463.65037507092933,
+      "y": 797.9216662196574
+    },
+    {
+      "id": "rate-limit",
+      "name": "GET rate-limit filter",
+      "prose": "Evaluates the GET rate limit and branches into admitted and rejected outcomes.",
+      "needs": [
+        "GET HTTP request",
+        "endpoint rate-limit policy"
+      ],
+      "x": 19.59088083466413,
+      "y": 54.91789060815422,
+      "parent": "get-request-middleware"
+    },
+    {
+      "id": "evaluate-rate-limit",
+      "name": "Evaluate rate limit",
+      "prose": "Reads the caller and endpoint policy and produces one rate-limit decision.",
+      "needs": [
+        "HTTP request caller",
+        "endpoint rate-limit policy"
+      ],
+      "parent": "rate-limit",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "admit-under-limit",
+      "name": "Admit GET under limit",
+      "prose": "When the decision is under the limit, preserves the request for controller mapping.",
+      "needs": [
+        "rate-limit decision with allowed: true"
+      ],
+      "parent": "rate-limit",
+      "x": 42,
+      "y": 514
+    },
+    {
+      "id": "reject-over-limit",
+      "name": "Reject GET over limit",
+      "prose": "When the decision is over the limit, creates the data required for an HTTP 429 response.",
+      "needs": [
+        "rate-limit decision with allowed: false"
+      ],
+      "parent": "rate-limit",
+      "x": 294,
+      "y": 514
+    },
+    {
+      "id": "serialize-rate-limit-failure",
+      "name": "Serialize 429 response",
+      "prose": "Turns the rejected rate-limit outcome into a ProblemDetails HTTP response.",
+      "needs": [
+        "rate-limit failure"
+      ],
+      "x": 42,
+      "y": 948,
+      "parent": "rate-limit"
+    },
+    {
+      "id": "json-to-request-model",
+      "name": "JSON to request model",
+      "prose": "Reads the route id and request metadata into the controller's C# request model.",
+      "needs": [
+        "admitted route and request metadata"
+      ],
+      "x": 677.7328507189269,
+      "y": 188.02527337260233,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "controller-guards",
+      "name": "Controller guards",
+      "prose": "Checks that the route id is present and syntactically valid before the controller invokes application behavior.",
+      "needs": [
+        "GetCustomerRequest"
+      ],
+      "x": 1081.814058077177,
+      "y": 185.5723559002754,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "prepare-service-request",
+      "name": "Create service request",
+      "prose": "Transforms the valid controller request into the business-facing CustomerLookup contract passed to CustomerService.cs.",
+      "needs": [
+        "validated GetCustomerRequest"
+      ],
+      "x": 1602.1522067313826,
+      "y": 99.77781862083708,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "map-customer-response",
+      "name": "Customer to response model",
+      "prose": "Maps the CustomerService result into the API response model, including the not-found case.",
+      "needs": [
+        "Customer or not-found result"
+      ],
+      "x": 2086.1522067313826,
+      "y": 99.77781862083708,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "serialize-response",
+      "name": "Serialize JSON response",
+      "prose": "Serializes the response model and selects the final HTTP status.",
+      "needs": [
+        "GetCustomerResponse or ProblemDetails"
+      ],
+      "x": 2681.8092687953276,
+      "y": 97.62549358312029,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "customer-service-class",
+      "name": "CustomerService.cs",
+      "prose": "Owns customer lookup and update behavior, applies business guards, and translates repository results into business results.",
+      "needs": [
+        "CustomerLookup or UpdateCustomer",
+        "customer database result"
+      ],
+      "contractPair": {
+        "input": "service-request",
+        "output": "customer-result"
+      },
+      "parent": "customers-api",
+      "x": 1189.0990862371225,
+      "y": 735.4548747940298
+    },
+    {
+      "id": "customer-service",
+      "name": "Apply customer lookup",
+      "prose": "Applies the customer lookup behavior to the business-facing service request.",
+      "needs": [
+        "CustomerLookup business model"
+      ],
+      "parent": "customer-service-class",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "service-guard",
+      "name": "Service guard",
+      "prose": "Checks the business lookup rules before calling CustomerRepository.cs.",
+      "needs": [
+        "candidate customer query",
+        "customer lookup rules"
+      ],
+      "parent": "customer-service-class",
+      "x": 42,
+      "y": 514
+    },
+    {
+      "id": "map-customer-result",
+      "name": "Row to Customer result",
+      "prose": "Transforms the persistence row or null into the business Customer result returned to CustomerController.cs.",
+      "needs": [
+        "CustomerRow or null"
+      ],
+      "parent": "customer-service-class",
+      "x": 42,
+      "y": 1018
+    },
+    {
+      "id": "customer-repository-class",
+      "name": "CustomerRepository.cs",
+      "prose": "Owns persistence behavior and uses Entity Framework Core to query or update customers.",
+      "needs": [
+        "customer query or update contract",
+        "Entity Framework DbContext"
+      ],
+      "contractPair": {
+        "input": "customer-query",
+        "output": "customer-row"
+      },
+      "parent": "customers-api",
+      "x": 2180.9774377217723,
+      "y": 771.740769385719
+    },
+    {
+      "id": "build-ef-query",
+      "name": "Build EF query",
+      "prose": "Builds an AsNoTracking customer query against the Entity Framework DbContext.",
+      "needs": [
+        "customer id",
+        "Customer DbSet"
+      ],
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "prepare-sql-query",
+      "name": "Prepare SQL query",
+      "prose": "Uses Entity Framework Core to translate the composed query into the SQL command sent to the customer database.",
+      "needs": [
+        "composed EF Core query",
+        "database connection"
+      ],
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 514
+    },
+    {
+      "id": "map-customer-row",
+      "name": "Materialize CustomerRow",
+      "prose": "Maps the database entity or null into the repository's CustomerRow result.",
+      "needs": [
+        "CustomerEntity or null"
+      ],
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 980
+    },
+    {
+      "id": "application-startup",
+      "name": "Bind and validate IOptions",
+      "prose": "Uses application startup to gather configuration from independent providers, bind typed options classes, validate them, and register them for dependency injection.",
+      "needs": [
+        "application starting",
+        "environment variables",
+        "AWS Secrets Manager",
+        "AppOptions table"
+      ],
+      "parent": "customers-api",
+      "x": 525.0738776554214,
+      "y": 325.32789649000586
+    },
+    {
+      "id": "environment-variables",
+      "name": "Environment variables provider",
+      "prose": "Reads the process environment and contributes matching configuration keys.",
+      "needs": [
+        "environment read request",
+        "process environment"
+      ],
+      "contractPair": {
+        "input": "environment-read-request",
+        "output": "environment-settings"
+      },
+      "x": -35.63660758165605,
+      "y": -652.060711946377
+    },
+    {
+      "id": "prepare-secrets-request",
+      "name": "Prepare secrets request",
+      "prose": "Uses the environment-derived deployment identity and secret name to request application secrets.",
+      "needs": [
+        "environment settings"
+      ],
+      "parent": "application-startup",
+      "x": 733.4404472160029,
+      "y": 101.65888001906808
+    },
+    {
+      "id": "aws-secrets-manager",
+      "name": "AWS Secrets Manager provider",
+      "prose": "Retrieves the named secret and contributes its values to application configuration.",
+      "needs": [
+        "secrets read request",
+        "AWS Secrets Manager"
+      ],
+      "contractPair": {
+        "input": "secrets-read-request",
+        "output": "secret-settings"
+      },
+      "x": 844.7586786142556,
+      "y": -641.5194393073514
+    },
+    {
+      "id": "prepare-app-options-request",
+      "name": "Prepare AppOptions request",
+      "prose": "Uses the environment-derived database location to request application-owned settings from the AppOptions table.",
+      "needs": [
+        "environment settings"
+      ],
+      "parent": "application-startup",
+      "x": 339.4765313054156,
+      "y": 367.695898203383
+    },
+    {
+      "id": "app-options-provider",
+      "name": "AppOptions table provider",
+      "prose": "Fetches application-owned settings from the external customer database and contributes the returned values.",
+      "needs": [
+        "AppOptions read request",
+        "AppOptions table"
+      ],
+      "contractPair": {
+        "input": "app-options-read-request",
+        "output": "app-options-settings"
+      },
+      "x": 42,
+      "y": 80,
+      "parent": "customer-database"
+    },
+    {
+      "id": "bind-options",
+      "name": "Compose and register IOptions",
+      "prose": "Waits for every configuration provider, composes their values by precedence, binds and validates typed options classes, and registers them for dependency injection.",
+      "needs": [
+        "environment settings",
+        "secret settings",
+        "AppOptions settings"
+      ],
+      "parent": "application-startup",
+      "x": 1006.5814001615354,
+      "y": 342.28010129311065
+    },
+    {
+      "id": "customer-database",
+      "name": "Customer database",
+      "prose": "Executes SQL queries and updates for customers and exposes the AppOptions table used during application startup.",
+      "needs": [
+        "SQL query or update",
+        "database connection"
+      ],
+      "contractPair": {
+        "input": "sql-query",
+        "output": "sql-result"
+      },
+      "x": 2410.0312777616546,
+      "y": 273.45119593695273
+    },
+    {
+      "id": "customer-database-a1",
+      "name": "Execute Customers query",
+      "prose": "Executes the incoming SQL lookup against the Customers table.",
+      "needs": [
+        "SQL query",
+        "database connection"
+      ],
+      "parent": "customer-database",
+      "x": 17.41328567264538,
+      "y": 1536.5795294666968
+    },
+    {
+      "id": "prepare-environment-request",
+      "name": "Prepare environment request",
+      "prose": "Uses the application host to request the environment settings needed to locate the remaining configuration providers.",
+      "needs": [
+        "application starting"
+      ],
+      "parent": "application-startup",
+      "x": 30.99584709095401,
+      "y": 77.2489617727385
+    },
+    {
+      "id": "authorize-get-request",
+      "name": "Authorize GET customer",
+      "prose": "Checks whether the authenticated caller may read the requested customer.",
+      "needs": [
+        "admitted GET request",
+        "caller identity",
+        "customer read policy"
+      ],
+      "x": 42,
+      "y": 80,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "continue-authorized-get",
+      "name": "Continue authorized GET",
+      "prose": "Passes an authorized GET request into request-model binding.",
+      "needs": [
+        "allowed GET authorization decision"
+      ],
+      "x": 42,
+      "y": 514,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "reject-unauthorized-get",
+      "name": "Reject unauthorized GET",
+      "prose": "Turns a denied GET authorization decision into an unauthorized endpoint result.",
+      "needs": [
+        "denied GET authorization decision"
+      ],
+      "x": 309.6910101515826,
+      "y": 333.5541877236076,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "serialize-get-authorization-failure",
+      "name": "Serialize GET 401 response",
+      "prose": "Serializes the rejected GET authorization result as ProblemDetails.",
+      "needs": [
+        "GET authorization failure"
+      ],
+      "x": 42,
+      "y": 948,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "update-customer-controller-class",
+      "name": "PUT /customers/{id}",
+      "prose": "Implements the update-customer controller method, including its middleware, request binding, service request, and response mapping.",
+      "needs": [
+        "PUT HTTP request",
+        "updated Customer result"
+      ],
+      "x": 114.55973682304987,
+      "y": 703.8285614830273,
+      "contractPair": {
+        "input": "put-http-request",
+        "output": "put-http-response"
+      },
+      "parent": "customer-controller-class"
+    },
+    {
+      "id": "authorize-put-request",
+      "name": "Authorize PUT customer",
+      "prose": "Checks whether the authenticated caller may update the requested customer.",
+      "needs": [
+        "PUT request",
+        "caller identity",
+        "customer update policy"
+      ],
+      "x": 32.35487210987619,
+      "y": 74.40223779690933,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "continue-authorized-put",
+      "name": "Continue authorized PUT",
+      "prose": "Passes an authorized PUT request into request-model binding.",
+      "needs": [
+        "allowed PUT authorization decision"
+      ],
+      "x": 545.9999999999999,
+      "y": 40,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "reject-unauthorized-put",
+      "name": "Reject unauthorized PUT",
+      "prose": "Turns a denied PUT authorization decision into an unauthorized endpoint result.",
+      "needs": [
+        "denied PUT authorization decision"
+      ],
+      "x": 545.9999999999999,
+      "y": 292,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "serialize-put-authorization-failure",
+      "name": "Serialize PUT 401 response",
+      "prose": "Serializes the rejected PUT authorization result as ProblemDetails.",
+      "needs": [
+        "PUT authorization failure"
+      ],
+      "x": 1050,
+      "y": 292,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "json-to-update-request-model",
+      "name": "JSON to update request model",
+      "prose": "Combines the route id and JSON body into the controller's update request model.",
+      "needs": [
+        "authorized PUT request"
+      ],
+      "parent": "update-customer-controller-class",
+      "x": 554.869819136502,
+      "y": 82.16054551744361
+    },
+    {
+      "id": "update-controller-guards",
+      "name": "Update controller guards",
+      "prose": "Validates the route id, display name, and requested status before invoking application behavior.",
+      "needs": [
+        "UpdateCustomerRequest"
+      ],
+      "parent": "update-customer-controller-class",
+      "x": 1189.6152628202271,
+      "y": 103.76663367965311
+    },
+    {
+      "id": "prepare-update-service-request",
+      "name": "Create update service request",
+      "prose": "Transforms the valid controller request into the business-facing update command.",
+      "needs": [
+        "valid UpdateCustomerRequest"
+      ],
+      "parent": "update-customer-controller-class",
+      "x": 1733.6152628202271,
+      "y": 103.76663367965311
+    },
+    {
+      "id": "apply-customer-update",
+      "name": "Apply customer update",
+      "prose": "Applies the requested customer changes to the business-facing update command.",
+      "needs": [
+        "UpdateCustomer business model"
+      ],
+      "parent": "customer-service-class",
+      "x": 294,
+      "y": 80
+    },
+    {
+      "id": "customer-update-guard",
+      "name": "Customer update guard",
+      "prose": "Checks business rules for changing a customer's name and status before calling CustomerRepository.cs.",
+      "needs": [
+        "candidate customer update",
+        "customer update rules"
+      ],
+      "parent": "customer-service-class",
+      "x": 294,
+      "y": 514
+    },
+    {
+      "id": "load-customer-for-update",
+      "name": "Load CustomerEntity for update",
+      "prose": "Loads the tracked customer entity targeted by the update command.",
+      "needs": [
+        "customer update contract",
+        "Customer DbSet"
+      ],
+      "parent": "customer-repository-class",
+      "x": 294,
+      "y": 80
+    },
+    {
+      "id": "apply-customer-changes",
+      "name": "Apply customer changes",
+      "prose": "Applies the validated display name and status to the tracked entity.",
+      "needs": [
+        "tracked CustomerEntity",
+        "customer update contract"
+      ],
+      "parent": "customer-repository-class",
+      "x": 294,
+      "y": 514
+    },
+    {
+      "id": "prepare-sql-update",
+      "name": "Prepare SQL update",
+      "prose": "Uses Entity Framework Core to translate tracked changes into the SQL update sent to the customer database.",
+      "needs": [
+        "pending EF update",
+        "database connection"
+      ],
+      "parent": "customer-repository-class",
+      "x": 294,
+      "y": 980
+    },
+    {
+      "id": "execute-customer-update",
+      "name": "Execute Customers update",
+      "prose": "Executes the incoming SQL update against the Customers table and returns the affected customer row.",
+      "needs": [
+        "SQL update",
+        "Customers table",
+        "database connection"
+      ],
+      "parent": "customer-database",
+      "x": 50.323416299548285,
+      "y": 1802.197682171571,
+      "contractPair": {
+        "input": "sql-update",
+        "output": "sql-update-result"
+      }
+    },
+    {
+      "id": "materialize-updated-customer-row",
+      "name": "Materialize updated CustomerRow",
+      "prose": "Maps the saved database entity or a missing-row result into the repository's update result.",
+      "needs": [
+        "SQL update result"
+      ],
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 1446
+    },
+    {
+      "id": "map-updated-customer-result",
+      "name": "Updated row to Customer result",
+      "prose": "Transforms the updated persistence row or missing-row result into the business Customer result.",
+      "needs": [
+        "updated CustomerRow or NotFound"
+      ],
+      "parent": "customer-service-class",
+      "x": 274,
+      "y": 766
+    },
+    {
+      "id": "map-update-response",
+      "name": "Customer update to response model",
+      "prose": "Maps the updated business result into the PUT endpoint response model.",
+      "needs": [
+        "updated Customer result"
+      ],
+      "parent": "update-customer-controller-class",
+      "x": 1985.6152628202271,
+      "y": 103.76663367965311
+    },
+    {
+      "id": "serialize-update-response",
+      "name": "Serialize PUT JSON response",
+      "prose": "Serializes the update response model and selects the final PUT HTTP status.",
+      "needs": [
+        "UpdateCustomerResponse or ProblemDetails"
+      ],
+      "parent": "update-customer-controller-class",
+      "x": 2506.0787475928532,
+      "y": 204.18857000016538
+    },
+    {
+      "id": "get-customer-method",
+      "name": "GET /customers/{id}",
+      "prose": "Implements the get-customer controller method, including its middleware, request binding, service request, and response mapping.",
+      "needs": [
+        "GET HTTP request",
+        "Customer result"
+      ],
+      "parent": "customer-controller-class",
+      "x": 93.38530793180651,
+      "y": 193.16617070662468,
+      "contractPair": {
+        "input": "http-request",
+        "output": "http-response"
+      }
+    },
+    {
+      "id": "get-request-middleware",
+      "name": "GET middleware",
+      "prose": "Runs the GET method's rate-limit and authorization filters before request binding.",
+      "needs": [
+        "GET HTTP request",
+        "rate-limit options",
+        "caller identity"
+      ],
+      "parent": "get-customer-method",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "get-authorization-filter",
+      "name": "GET authorization filter",
+      "prose": "Evaluates the GET authorization policy and branches into admitted and rejected outcomes.",
+      "needs": [
+        "rate-limited GET request",
+        "caller identity",
+        "customer read policy"
+      ],
+      "parent": "get-request-middleware",
+      "x": 834.2035832377153,
+      "y": 72.71800693348347
+    },
+    {
+      "id": "put-request-middleware",
+      "name": "PUT middleware",
+      "prose": "Runs the PUT method's rate-limit and authorization filters before request binding.",
+      "needs": [
+        "PUT HTTP request",
+        "rate-limit options",
+        "caller identity"
+      ],
+      "parent": "update-customer-controller-class",
+      "x": 42,
+      "y": 80
+    },
+    {
+      "id": "put-rate-limit-filter",
+      "name": "PUT rate-limit filter",
+      "prose": "Evaluates the PUT rate limit and branches into admitted and rejected outcomes.",
+      "needs": [
+        "PUT HTTP request",
+        "endpoint rate-limit policy"
+      ],
+      "parent": "put-request-middleware",
+      "x": 26.27645003016488,
+      "y": 68.64191311462979
+    },
+    {
+      "id": "evaluate-put-rate-limit",
+      "name": "Evaluate PUT rate limit",
+      "prose": "Reads the caller and PUT endpoint policy and produces one rate-limit decision.",
+      "needs": [
+        "PUT HTTP request caller",
+        "PUT endpoint rate-limit policy"
+      ],
+      "parent": "put-rate-limit-filter",
+      "x": 27.376209337498445,
+      "y": 69.50510747748541
+    },
+    {
+      "id": "admit-put-under-limit",
+      "name": "Admit PUT under limit",
+      "prose": "Preserves an admitted PUT request for authorization.",
+      "needs": [
+        "PUT rate-limit decision with allowed: true"
+      ],
+      "parent": "put-rate-limit-filter",
+      "x": 540,
+      "y": 40
+    },
+    {
+      "id": "reject-put-over-limit",
+      "name": "Reject PUT over limit",
+      "prose": "Creates the data required for a PUT HTTP 429 response.",
+      "needs": [
+        "PUT rate-limit decision with allowed: false"
+      ],
+      "parent": "put-rate-limit-filter",
+      "x": 540,
+      "y": 260
+    },
+    {
+      "id": "serialize-put-rate-limit-failure",
+      "name": "Serialize PUT 429 response",
+      "prose": "Turns the rejected PUT rate-limit outcome into a ProblemDetails HTTP response.",
+      "needs": [
+        "PUT rate-limit failure"
+      ],
+      "parent": "put-rate-limit-filter",
+      "x": 1060,
+      "y": 260
+    },
+    {
+      "id": "put-authorization-filter",
+      "name": "PUT authorization filter",
+      "prose": "Evaluates the PUT authorization policy and branches into admitted and rejected outcomes.",
+      "needs": [
+        "rate-limited PUT request",
+        "caller identity",
+        "customer update policy"
+      ],
+      "parent": "put-request-middleware",
+      "x": 51.38179045550597,
+      "y": 626.3000961383858
+    }
+  ],
+  "contracts": [
+    {
+      "id": "http-request",
+      "name": "GET HTTP request",
+      "text": "GET /customers/{id}\nAccept: application/json\n\n{\n  \"route\": { \"id\": \"customer-id\" },\n  \"caller\": \"client-id\"\n}",
+      "x": -3285.0471682674333,
+      "y": -247.29589913994877
+    },
+    {
+      "id": "application-starting",
+      "name": "Application starting",
+      "kind": "lifecycle",
+      "text": "WebApplicationBuilder created\nHost configuration available",
+      "x": -1845.975345652498,
+      "y": -210.6552891470497
+    },
+    {
+      "id": "environment-read-request",
+      "name": "Environment read request",
+      "kind": "environment-settings",
+      "text": "prefixes: ConnectionStrings__, RateLimit__, CustomerApi__",
+      "x": -481.76387817085805,
+      "y": -654.3991343251042
+    },
+    {
+      "id": "environment-settings",
+      "name": "Environment settings",
+      "kind": "environment-settings",
+      "text": "ConnectionStrings__Customers\nRateLimit__RequestsPerMinute\nCustomerApi__DefaultPageSize",
+      "x": -482.91688042296465,
+      "y": -489.105207877647
+    },
+    {
+      "id": "secrets-read-request",
+      "name": "Secrets read request",
+      "kind": "environment-settings",
+      "text": "secretId: customers-api/production\nAWS region and workload identity",
+      "x": 438.17512515419276,
+      "y": -625.8729094844691
+    },
+    {
+      "id": "secret-settings",
+      "name": "Secret settings",
+      "kind": "environment-settings",
+      "text": "databasePassword: secret\napiKey: secret",
+      "x": 445.9453273896602,
+      "y": -448.6971168831683
+    },
+    {
+      "id": "app-options-read-request",
+      "name": "AppOptions read request",
+      "kind": "environment-settings",
+      "text": "table: AppOptions\nenvironment: Production",
+      "x": 1370.7575020201562,
+      "y": -604.4796111832715
+    },
+    {
+      "id": "app-options-settings",
+      "name": "AppOptions settings",
+      "kind": "environment-settings",
+      "text": "RateLimit.RequestsPerMinute: 120\nCustomerApi.DefaultPageSize: 50",
+      "x": 1372.1215319607204,
+      "y": -452.3120870707643
+    },
+    {
+      "id": "app-options-table",
+      "name": "AppOptions table",
+      "kind": "environment-settings",
+      "text": "Key | Value\nRateLimit.RequestsPerMinute | 120\nCustomerApi.DefaultPageSize | 50",
+      "x": 373.74668168120843,
+      "y": 125.22904580002648,
+      "parent": "customer-database"
+    },
+    {
+      "id": "database-options",
+      "name": "IOptions<DatabaseOptions>",
+      "kind": "options",
+      "text": "ConnectionString: string\nCommandTimeoutSeconds: int",
+      "parent": "customers-api",
+      "x": 987.2818836608233,
+      "y": 376.66477970616177
+    },
+    {
+      "id": "rate-limit-options",
+      "name": "IOptions<RateLimitOptions>",
+      "kind": "options",
+      "text": "RequestsPerMinute: int\nBurst: int",
+      "parent": "customers-api",
+      "x": 955.6190510667263,
+      "y": 204.83796567321787
+    },
+    {
+      "id": "customer-api-options",
+      "name": "IOptions<CustomerApiOptions>",
+      "kind": "options",
+      "text": "DefaultPageSize: int\nIncludeInactive: boolean",
+      "parent": "customers-api",
+      "x": 972.9301569917432,
+      "y": 504.71515188006447
+    },
+    {
+      "id": "rate-limit-decision",
+      "name": "Rate limit decision",
+      "text": "allowed: boolean\nretryAfterSeconds?: number",
+      "parent": "rate-limit",
+      "x": 42,
+      "y": 332
+    },
+    {
+      "id": "admitted-request",
+      "name": "Rate-limited GET request",
+      "text": "caller: string\ncustomerId: string\nrate limit: admitted",
+      "x": 42,
+      "y": 766,
+      "parent": "rate-limit"
+    },
+    {
+      "id": "rate-limit-failure",
+      "name": "Rate limit failure",
+      "text": "status: 429\ntitle: Too Many Requests\nretryAfterSeconds: number",
+      "x": 334,
+      "y": 766,
+      "parent": "rate-limit"
+    },
+    {
+      "id": "controller-request-model",
+      "name": "GetCustomerRequest",
+      "text": "public sealed record GetCustomerRequest(Guid CustomerId);",
+      "x": 876.3385402670036,
+      "y": 578.4053690942773,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "guarded-controller-request",
+      "name": "Valid controller request",
+      "text": "GetCustomerRequest\nCustomerId is a non-empty Guid",
+      "x": 1344.6903251257318,
+      "y": 596.0673284979124,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "service-request",
+      "name": "CustomerLookup",
+      "text": "Business request passed between classes\n\nCustomerLookup\n  customerId: CustomerId",
+      "parent": "customers-api",
+      "x": 855.3847991850139,
+      "y": 781.778429259152
+    },
+    {
+      "id": "candidate-query",
+      "name": "Candidate customer query",
+      "text": "customerId: CustomerId\nincludeInactive: false",
+      "parent": "customer-service-class",
+      "x": 42,
+      "y": 332
+    },
+    {
+      "id": "customer-query",
+      "name": "Customer query contract",
+      "text": "Repository input\n{ customerId: CustomerId }",
+      "parent": "customers-api",
+      "x": 1630.982255019532,
+      "y": 742.6240747671824
+    },
+    {
+      "id": "ef-query",
+      "name": "Composed EF query",
+      "text": "IQueryable<CustomerEntity>\nAsNoTracking()\nWhere(customerId)",
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 332
+    },
+    {
+      "id": "sql-query",
+      "name": "SQL query",
+      "text": "SELECT Id, DisplayName, Status\nFROM Customers\nWHERE Id = @customerId",
+      "x": 1251.8434063252348,
+      "y": 361.99073263177473
+    },
+    {
+      "id": "sql-result",
+      "name": "SQL result",
+      "text": "Customer record | null\n{ Id, DisplayName, Status }",
+      "x": 1249.7352093376128,
+      "y": 492.90590565571637
+    },
+    {
+      "id": "customer-row",
+      "name": "Customer database result",
+      "text": "CustomerRow | null\n{ id, displayName, status }",
+      "parent": "customers-api",
+      "x": 1640.0605753595012,
+      "y": 936.0598050391842
+    },
+    {
+      "id": "customer-result",
+      "name": "Customer result",
+      "text": "Business result passed between classes\n\nCustomer { id, displayName }\nor NotFound",
+      "parent": "customers-api",
+      "x": 869.44444770379,
+      "y": 928.4213318805247
+    },
+    {
+      "id": "response-model",
+      "name": "GetCustomerResponse",
+      "text": "{\n  \"id\": \"customer-id\",\n  \"displayName\": \"Ada Lovelace\"\n}\nor ProblemDetails",
+      "x": 2422.094932585293,
+      "y": 104.0826263411134,
+      "parent": "get-customer-method"
+    },
+    {
+      "id": "http-response",
+      "name": "GET HTTP JSON response",
+      "text": "200 application/json + Customer\nor 400 / 401 / 404 / 429 + ProblemDetails",
+      "x": -3286.5471413254145,
+      "y": -103.95770470694035
+    },
+    {
+      "id": "customer-database-a",
+      "name": "Customers table",
+      "text": "Customers\n{ Id, DisplayName, Status }",
+      "parent": "customer-database",
+      "x": 349.5729830523103,
+      "y": 1581.22992731068
+    },
+    {
+      "id": "get-authorization-decision",
+      "name": "GET authorization decision",
+      "text": "allowed: boolean\ncallerId: string\nreason?: string",
+      "x": 42,
+      "y": 332,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "authorized-get-request",
+      "name": "Authorized GET request",
+      "text": "caller: string\ncustomerId: string",
+      "x": 42,
+      "y": 766,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "get-authorization-failure",
+      "name": "GET authorization failure",
+      "text": "status: 401\ntitle: Unauthorized",
+      "x": 334,
+      "y": 766,
+      "parent": "get-authorization-filter"
+    },
+    {
+      "id": "put-http-request",
+      "name": "PUT HTTP request",
+      "text": "PUT /customers/{id}\nContent-Type: application/json\n\n{\n  \"displayName\": \"Ada Lovelace\",\n  \"status\": \"Active\"\n}",
+      "x": -3301.727761342882,
+      "y": 189.45242820115166
+    },
+    {
+      "id": "put-http-response",
+      "name": "PUT HTTP JSON response",
+      "text": "200 application/json + Customer\nor 400 / 401 / 404 / 409 + ProblemDetails",
+      "x": -3301.727761342882,
+      "y": 349.45242820115163
+    },
+    {
+      "id": "put-authorization-decision",
+      "name": "PUT authorization decision",
+      "text": "allowed: boolean\ncallerId: string\nreason?: string",
+      "x": 288.4020895797603,
+      "y": 173.56143728345523,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "authorized-put-request",
+      "name": "Authorized PUT request",
+      "text": "caller: string\ncustomerId: string\nbody: UpdateCustomerBody",
+      "x": 797.9999999999999,
+      "y": 40,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "put-authorization-failure",
+      "name": "PUT authorization failure",
+      "text": "status: 401\ntitle: Unauthorized",
+      "x": 797.9999999999999,
+      "y": 292,
+      "parent": "put-authorization-filter"
+    },
+    {
+      "id": "update-controller-request-model",
+      "name": "UpdateCustomerRequest",
+      "text": "public sealed record UpdateCustomerRequest(\n  Guid CustomerId,\n  string DisplayName,\n  CustomerStatus Status);",
+      "parent": "update-customer-controller-class",
+      "x": 897.6152628202271,
+      "y": 103.76663367965311
+    },
+    {
+      "id": "guarded-update-controller-request",
+      "name": "Valid update request",
+      "text": "UpdateCustomerRequest\nCustomerId is non-empty\nDisplayName is non-empty\nStatus is recognized",
+      "parent": "update-customer-controller-class",
+      "x": 1441.6152628202271,
+      "y": 103.76663367965311
+    },
+    {
+      "id": "update-service-request",
+      "name": "UpdateCustomer",
+      "text": "Business update passed between classes\n\nUpdateCustomer\n  customerId: CustomerId\n  displayName: string\n  status: CustomerStatus",
+      "parent": "customers-api",
+      "x": 987.0109032443036,
+      "y": 1154.9130442846645
+    },
+    {
+      "id": "candidate-customer-update",
+      "name": "Candidate customer update",
+      "text": "customerId: CustomerId\ndisplayName: string\nstatus: CustomerStatus",
+      "parent": "customer-service-class",
+      "x": 334,
+      "y": 332
+    },
+    {
+      "id": "repository-update-request",
+      "name": "Customer update contract",
+      "text": "Repository update input\n{ customerId, displayName, status }",
+      "parent": "customers-api",
+      "x": 1807.3857243557745,
+      "y": 1241.068333106297
+    },
+    {
+      "id": "tracked-customer-entity",
+      "name": "Tracked CustomerEntity",
+      "text": "CustomerEntity | null\nEntity Framework change tracking enabled",
+      "parent": "customer-repository-class",
+      "x": 334,
+      "y": 332
+    },
+    {
+      "id": "pending-customer-update",
+      "name": "Pending EF update",
+      "text": "Modified CustomerEntity\nChangeTracker state: Modified",
+      "parent": "customer-repository-class",
+      "x": 274,
+      "y": 766
+    },
+    {
+      "id": "sql-update",
+      "name": "SQL update",
+      "text": "UPDATE Customers\nSET DisplayName = @displayName, Status = @status\nWHERE Id = @customerId",
+      "x": 1242.2694845004517,
+      "y": 826.7614265750133
+    },
+    {
+      "id": "sql-update-result",
+      "name": "SQL update result",
+      "text": "affectedRows: int\nCustomer record | null",
+      "x": 1249.008932601705,
+      "y": 982.6557119114093
+    },
+    {
+      "id": "updated-customer-row",
+      "name": "Updated customer database result",
+      "text": "CustomerRow | NotFound\n{ id, displayName, status }",
+      "parent": "customers-api",
+      "x": 1806.1901569580837,
+      "y": 1381.7145509350512
+    },
+    {
+      "id": "updated-customer-result",
+      "name": "Updated Customer result",
+      "text": "Updated Customer { id, displayName, status }\nor NotFound",
+      "parent": "customers-api",
+      "x": 608.5459533817395,
+      "y": 1203.7100259530544
+    },
+    {
+      "id": "update-response-model",
+      "name": "UpdateCustomerResponse",
+      "text": "{\n  \"id\": \"customer-id\",\n  \"displayName\": \"Ada Lovelace\",\n  \"status\": \"Active\"\n}\nor ProblemDetails",
+      "parent": "update-customer-controller-class",
+      "x": 2237.615262820227,
+      "y": 103.76663367965311
+    },
+    {
+      "id": "put-rate-limit-decision",
+      "name": "PUT rate-limit decision",
+      "text": "allowed: boolean\nretryAfterSeconds?: number",
+      "parent": "put-rate-limit-filter",
+      "x": 280,
+      "y": 40
+    },
+    {
+      "id": "rate-limited-put-request",
+      "name": "Rate-limited PUT request",
+      "text": "caller: string\ncustomerId: string\nbody: UpdateCustomerBody\nrate limit: admitted",
+      "parent": "put-rate-limit-filter",
+      "x": 800,
+      "y": 40
+    },
+    {
+      "id": "put-rate-limit-failure",
+      "name": "PUT rate-limit failure",
+      "text": "status: 429\ntitle: Too Many Requests\nretryAfterSeconds: number",
+      "parent": "put-rate-limit-filter",
+      "x": 800,
+      "y": 260
+    }
+  ],
+  "arcs": [
+    {
+      "from": "database-options",
+      "to": "prepare-sql-query"
+    },
+    {
+      "from": "rate-limit-options",
+      "to": "evaluate-rate-limit"
+    },
+    {
+      "from": "customer-api-options",
+      "to": "controller-guards"
+    },
+    {
+      "from": "http-request",
+      "to": "evaluate-rate-limit"
+    },
+    {
+      "from": "evaluate-rate-limit",
+      "to": "rate-limit-decision"
+    },
+    {
+      "from": "rate-limit-decision",
+      "to": "admit-under-limit"
+    },
+    {
+      "from": "admit-under-limit",
+      "to": "admitted-request"
+    },
+    {
+      "from": "rate-limit-decision",
+      "to": "reject-over-limit"
+    },
+    {
+      "from": "reject-over-limit",
+      "to": "rate-limit-failure"
+    },
+    {
+      "from": "rate-limit-failure",
+      "to": "serialize-rate-limit-failure"
+    },
+    {
+      "from": "serialize-rate-limit-failure",
+      "to": "http-response"
+    },
+    {
+      "from": "json-to-request-model",
+      "to": "controller-request-model"
+    },
+    {
+      "from": "controller-request-model",
+      "to": "controller-guards"
+    },
+    {
+      "from": "controller-guards",
+      "to": "guarded-controller-request"
+    },
+    {
+      "from": "guarded-controller-request",
+      "to": "prepare-service-request"
+    },
+    {
+      "from": "prepare-service-request",
+      "to": "service-request"
+    },
+    {
+      "from": "service-request",
+      "to": "customer-service"
+    },
+    {
+      "from": "customer-service",
+      "to": "candidate-query"
+    },
+    {
+      "from": "candidate-query",
+      "to": "service-guard"
+    },
+    {
+      "from": "service-guard",
+      "to": "customer-query"
+    },
+    {
+      "from": "customer-query",
+      "to": "build-ef-query"
+    },
+    {
+      "from": "build-ef-query",
+      "to": "ef-query"
+    },
+    {
+      "from": "ef-query",
+      "to": "prepare-sql-query"
+    },
+    {
+      "from": "prepare-sql-query",
+      "to": "sql-query"
+    },
+    {
+      "from": "sql-result",
+      "to": "map-customer-row"
+    },
+    {
+      "from": "map-customer-row",
+      "to": "customer-row"
+    },
+    {
+      "from": "customer-row",
+      "to": "map-customer-result"
+    },
+    {
+      "from": "map-customer-result",
+      "to": "customer-result"
+    },
+    {
+      "from": "customer-result",
+      "to": "map-customer-response"
+    },
+    {
+      "from": "map-customer-response",
+      "to": "response-model"
+    },
+    {
+      "from": "response-model",
+      "to": "serialize-response"
+    },
+    {
+      "from": "serialize-response",
+      "to": "http-response"
+    },
+    {
+      "from": "environment-read-request",
+      "to": "environment-variables"
+    },
+    {
+      "from": "environment-variables",
+      "to": "environment-settings"
+    },
+    {
+      "from": "environment-settings",
+      "to": "prepare-secrets-request"
+    },
+    {
+      "from": "prepare-secrets-request",
+      "to": "secrets-read-request"
+    },
+    {
+      "from": "secrets-read-request",
+      "to": "aws-secrets-manager"
+    },
+    {
+      "from": "aws-secrets-manager",
+      "to": "secret-settings"
+    },
+    {
+      "from": "prepare-app-options-request",
+      "to": "app-options-read-request"
+    },
+    {
+      "from": "app-options-read-request",
+      "to": "app-options-provider"
+    },
+    {
+      "from": "app-options-table",
+      "to": "app-options-provider"
+    },
+    {
+      "from": "app-options-provider",
+      "to": "app-options-settings"
+    },
+    {
+      "from": "app-options-settings",
+      "to": "bind-options"
+    },
+    {
+      "from": "environment-settings",
+      "to": "bind-options"
+    },
+    {
+      "from": "secret-settings",
+      "to": "bind-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "database-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "rate-limit-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "customer-api-options"
+    },
+    {
+      "from": "sql-query",
+      "to": "customer-database-a1"
+    },
+    {
+      "from": "customer-database-a",
+      "to": "customer-database-a1"
+    },
+    {
+      "from": "customer-database-a1",
+      "to": "sql-result"
+    },
+    {
+      "from": "application-starting",
+      "to": "prepare-environment-request"
+    },
+    {
+      "from": "prepare-environment-request",
+      "to": "environment-read-request"
+    },
+    {
+      "from": "environment-settings",
+      "to": "prepare-app-options-request"
+    },
+    {
+      "from": "admitted-request",
+      "to": "authorize-get-request"
+    },
+    {
+      "from": "authorize-get-request",
+      "to": "get-authorization-decision"
+    },
+    {
+      "from": "get-authorization-decision",
+      "to": "continue-authorized-get"
+    },
+    {
+      "from": "continue-authorized-get",
+      "to": "authorized-get-request"
+    },
+    {
+      "from": "authorized-get-request",
+      "to": "json-to-request-model"
+    },
+    {
+      "from": "get-authorization-decision",
+      "to": "reject-unauthorized-get"
+    },
+    {
+      "from": "reject-unauthorized-get",
+      "to": "get-authorization-failure"
+    },
+    {
+      "from": "get-authorization-failure",
+      "to": "serialize-get-authorization-failure"
+    },
+    {
+      "from": "serialize-get-authorization-failure",
+      "to": "http-response"
+    },
+    {
+      "from": "authorize-put-request",
+      "to": "put-authorization-decision"
+    },
+    {
+      "from": "put-authorization-decision",
+      "to": "continue-authorized-put"
+    },
+    {
+      "from": "continue-authorized-put",
+      "to": "authorized-put-request"
+    },
+    {
+      "from": "authorized-put-request",
+      "to": "json-to-update-request-model"
+    },
+    {
+      "from": "put-authorization-decision",
+      "to": "reject-unauthorized-put"
+    },
+    {
+      "from": "reject-unauthorized-put",
+      "to": "put-authorization-failure"
+    },
+    {
+      "from": "put-authorization-failure",
+      "to": "serialize-put-authorization-failure"
+    },
+    {
+      "from": "serialize-put-authorization-failure",
+      "to": "put-http-response"
+    },
+    {
+      "from": "json-to-update-request-model",
+      "to": "update-controller-request-model"
+    },
+    {
+      "from": "update-controller-request-model",
+      "to": "update-controller-guards"
+    },
+    {
+      "from": "update-controller-guards",
+      "to": "guarded-update-controller-request"
+    },
+    {
+      "from": "guarded-update-controller-request",
+      "to": "prepare-update-service-request"
+    },
+    {
+      "from": "prepare-update-service-request",
+      "to": "update-service-request"
+    },
+    {
+      "from": "update-service-request",
+      "to": "apply-customer-update"
+    },
+    {
+      "from": "apply-customer-update",
+      "to": "candidate-customer-update"
+    },
+    {
+      "from": "candidate-customer-update",
+      "to": "customer-update-guard"
+    },
+    {
+      "from": "customer-update-guard",
+      "to": "repository-update-request"
+    },
+    {
+      "from": "repository-update-request",
+      "to": "load-customer-for-update"
+    },
+    {
+      "from": "load-customer-for-update",
+      "to": "tracked-customer-entity"
+    },
+    {
+      "from": "tracked-customer-entity",
+      "to": "apply-customer-changes"
+    },
+    {
+      "from": "apply-customer-changes",
+      "to": "pending-customer-update"
+    },
+    {
+      "from": "pending-customer-update",
+      "to": "prepare-sql-update"
+    },
+    {
+      "from": "database-options",
+      "to": "prepare-sql-update"
+    },
+    {
+      "from": "prepare-sql-update",
+      "to": "sql-update"
+    },
+    {
+      "from": "sql-update",
+      "to": "execute-customer-update"
+    },
+    {
+      "from": "customer-database-a",
+      "to": "execute-customer-update"
+    },
+    {
+      "from": "execute-customer-update",
+      "to": "sql-update-result"
+    },
+    {
+      "from": "sql-update-result",
+      "to": "materialize-updated-customer-row"
+    },
+    {
+      "from": "materialize-updated-customer-row",
+      "to": "updated-customer-row"
+    },
+    {
+      "from": "updated-customer-row",
+      "to": "map-updated-customer-result"
+    },
+    {
+      "from": "map-updated-customer-result",
+      "to": "updated-customer-result"
+    },
+    {
+      "from": "updated-customer-result",
+      "to": "map-update-response"
+    },
+    {
+      "from": "map-update-response",
+      "to": "update-response-model"
+    },
+    {
+      "from": "update-response-model",
+      "to": "serialize-update-response"
+    },
+    {
+      "from": "serialize-update-response",
+      "to": "put-http-response"
+    },
+    {
+      "from": "put-http-request",
+      "to": "evaluate-put-rate-limit"
+    },
+    {
+      "from": "rate-limit-options",
+      "to": "evaluate-put-rate-limit"
+    },
+    {
+      "from": "evaluate-put-rate-limit",
+      "to": "put-rate-limit-decision"
+    },
+    {
+      "from": "put-rate-limit-decision",
+      "to": "admit-put-under-limit"
+    },
+    {
+      "from": "admit-put-under-limit",
+      "to": "rate-limited-put-request"
+    },
+    {
+      "from": "put-rate-limit-decision",
+      "to": "reject-put-over-limit"
+    },
+    {
+      "from": "reject-put-over-limit",
+      "to": "put-rate-limit-failure"
+    },
+    {
+      "from": "put-rate-limit-failure",
+      "to": "serialize-put-rate-limit-failure"
+    },
+    {
+      "from": "serialize-put-rate-limit-failure",
+      "to": "put-http-response"
+    },
+    {
+      "from": "rate-limited-put-request",
+      "to": "authorize-put-request"
+    }
+  ],
+  "title": ".NET GET /customers/{id}"
+}

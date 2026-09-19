@@ -51,6 +51,16 @@ function lineExitsBox(
   return { x: cx + t * dx, y: cy + t * dy };
 }
 
+/** Direct perimeter-to-perimeter route at a caller-selected visual band. */
+export function directRectRoute(source: NodeRect, target: NodeRect, band = 0): EdgeRoute {
+  const sx = source.x + source.w / 2;
+  const sy = source.y + source.h / 2;
+  const tx = target.x + target.w / 2;
+  const ty = target.y + target.h / 2;
+  return { points: [lineExitsBox(sx, sy, source.w, source.h, tx, ty),
+    lineExitsBox(tx, ty, target.w, target.h, sx, sy)], segmentLayers: [band] };
+}
+
 function routeLength(points: readonly RoutePoint[]): number {
   let length = 0;
   for (let i = 1; i < points.length; i++) length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);

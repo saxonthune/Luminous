@@ -1,0 +1,14 @@
+export { dagLayout } from './dagLayout.js';
+export { computeBounds } from './geometry/geometry.js';
+export { computeExpansionTranslations } from './geometry/expansion.js';
+export type { DagLayoutOptions } from './dagLayout.js';
+export { resolveRectangleOverlaps, spaceRectangles } from './geometry/spacing.js';
+export type { SpaceRectanglesOptions, SpacingPosition, SpacingRect } from './geometry/spacing.js';
+export { placeRectAtCandidates } from './geometry/candidatePlacement.js';
+export type { CandidatePlacementPoint, CandidatePlacementRect } from './geometry/candidatePlacement.js';
+export type { LayoutEdge } from './layout.js';
+export type { TidyNode } from './tidyLayout.js';
+export type { EdgeDeclaration, RegisteredNodeRect } from './types.js';
+
+export { placeAdjacent } from './geometry/placeAdjacent.js';
+export { directRectRoute } from './edgeRouting.js';

@@ -3,6 +3,7 @@ import { readFile, writeFile, access, stat, copyFile, rename, rm } from "node:fs
 import { resolve } from "node:path"
 import type { Document } from "./types.js"
 import { applyActionToDoc } from "./actions.js"
+import { emptyNylonDocument } from '@luminous/core/nylon'
 
 type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
 
@@ -17,6 +18,7 @@ const ATLAS_SUFFIX = ".atlas.json"
 const ATLASDATA_SUFFIX = ".atlasdata.json"
 const LINEN_SUFFIX = ".linen.json"
 const MERINO_SUFFIX = ".merino.json"
+const NYLON_SUFFIX = ".nylon.json"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
@@ -34,9 +36,24 @@ export function isMerinoPath(relativePath: string): boolean {
   return relativePath.endsWith(MERINO_SUFFIX)
 }
 
+export function isNylonPath(relativePath: string): boolean {
+  return relativePath.endsWith(NYLON_SUFFIX)
+}
+
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
-  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath)
+  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath) || isNylonPath(relativePath)
+}
+
+/** Document paths whose external writes invalidate caches and notify clients. */
+export function isWatchedDocumentPath(relativePath: string): boolean {
+  return relativePath.endsWith(".graph.json")
+    || relativePath.endsWith(DATAFLOW_SUFFIX)
+    || relativePath.endsWith(ATLAS_SUFFIX)
+    || relativePath.endsWith(ATLASDATA_SUFFIX)
+    || relativePath.endsWith(LINEN_SUFFIX)
+    || relativePath.endsWith(MERINO_SUFFIX)
+    || relativePath.endsWith(NYLON_SUFFIX)
 }
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */
@@ -56,7 +73,7 @@ export function setRootDir(dir: string): void {
  * If the first segment names a known root, the rest is resolved within it;
  * otherwise the whole path is resolved against the first registered root.
  */
-function resolveDocPath(relativePath: string): string {
+export function resolveDocPath(relativePath: string): string {
   const slash = relativePath.indexOf("/")
   if (slash !== -1) {
     const dir = roots.get(relativePath.slice(0, slash))
@@ -224,7 +241,7 @@ export async function applyAction(
   params: Record<string, unknown>
 ): Promise<ActionResult> {
   if (isRawDocPath(relativePath)) {
-    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json)" }
+    return { ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json, .merino.json, .nylon.json)" }
   }
   const doc = await getDocument(relativePath)
   const result = applyActionToDoc(doc, action, params)
@@ -240,7 +257,7 @@ export async function applyBatch(
   actions: Array<{ action: string; params: Record<string, unknown>; ref?: string }>
 ): Promise<Array<ActionResult & { ref?: string }>> {
   if (isRawDocPath(relativePath)) {
-    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json)" }]
+    return [{ ok: false, error: "graph actions are not supported on raw document formats (.dataflow.json, .atlas.json, .linen.json, .merino.json, .nylon.json)" }]
   }
   const doc = await getDocument(relativePath)
   const refs = new Map<string, string>()
@@ -314,6 +331,29 @@ export async function writeRawDocument(relativePath: string, content: unknown): 
   rawCache.set(relativePath, content)
 }
 
+/** Missing documents start empty so revision-checked imports can create files. */
+export async function readNylonText(relativePath: string): Promise<string> {
+  try { return await readFile(resolveDocPath(relativePath), 'utf8') }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return JSON.stringify(emptyNylonDocument())
+    throw error
+  }
+}
+
+/** Publish a complete file, checking for unobserved edits before the rename. */
+export async function writeNylonText(relativePath: string, text: string, expected: string): Promise<void> {
+  const absPath = resolveDocPath(relativePath)
+  const temporary = `${absPath}.${crypto.randomUUID()}.tmp`
+  try {
+    await writeFile(temporary, text, "utf-8")
+    if (await readNylonText(relativePath) !== expected) throw new Error("Document changed on disk. Refresh before retrying.")
+    await rename(temporary, absPath)
+    rawCache.set(relativePath, JSON.parse(text))
+  } finally {
+    await rm(temporary, { force: true })
+  }
+}
+
 /**
  * Read a pack file (*.pack.json) as raw text. Throws if the file does not exist.
  * Path is resolved through the same root-namespace logic as documents.
@@ -354,7 +394,7 @@ export function watchDocuments(
       // here, rather than at event receipt, so an early watcher notification
       // cannot echo a server-originated write back to its client.
       const lastWrite = recentWrites.get(absPath)
-      if (lastWrite !== undefined && Date.now() - lastWrite < 3000) return
+      if (!isNylonPath(docPath) && lastWrite !== undefined && Date.now() - lastWrite < 3000) return
       recentWrites.delete(absPath)
       cache.delete(docPath)
       rawCache.delete(docPath)
@@ -368,16 +408,7 @@ export function watchDocuments(
       const watcher = watch(root.dir, { recursive: true }, (_event, filename) => {
         if (!filename) return
         const normalized = filename.toString().replace(/\\/g, "/")
-        if (
-          !normalized.endsWith(".graph.json") &&
-          !normalized.endsWith(DATAFLOW_SUFFIX) &&
-          !normalized.endsWith(ATLAS_SUFFIX) &&
-          !normalized.endsWith(ATLASDATA_SUFFIX) &&
-          !normalized.endsWith(LINEN_SUFFIX) &&
-          !normalized.endsWith(MERINO_SUFFIX)
-        ) {
-          return
-        }
+        if (!isWatchedDocumentPath(normalized)) return
         const docPath = root.name ? `${root.name}/${normalized}` : normalized
         const absPath = resolve(root.dir, normalized)
         scheduleChange(docPath, absPath)

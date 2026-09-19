@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from 'solid-js/web';
+import { createRenderEffect, createSignal } from 'solid-js';
 import { useGesture, type Gesture } from '../src/interactions/useGesture';
 import type { NodeRect } from '../src/interactions/useBoxSelect';
 
@@ -82,6 +83,48 @@ const move = (init: MouseEventInit) => window.dispatchEvent(new MouseEvent('poin
 const up = () => window.dispatchEvent(new MouseEvent('pointerup', {}));
 
 describe('useGesture', () => {
+  it('commits a first-click drag when selection replaces the pressed element', () => {
+    const { el, started, ended, cleanup } = mount();
+    const stableParent = el.parentElement!;
+    el.setPointerCapture = vi.fn(() => {
+      if (!el.isConnected) throw new DOMException('Element is detached', 'InvalidStateError');
+    });
+    stableParent.setPointerCapture = vi.fn();
+    stableParent.releasePointerCapture = vi.fn();
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    // Selecting a Nylon node rebuilds its projection and replaces its DOM node.
+    el.remove();
+    move({ clientX: 30, clientY: 10 });
+    expect(started).toEqual(['a']);
+    expect(stableParent.setPointerCapture).toHaveBeenCalledTimes(1);
+    up();
+    expect(ended).toEqual([['a', 30, 10]]);
+    cleanup();
+    stableParent.remove();
+  });
+
+  it('hands drag offsets to synchronous host positions without exposing old or doubled geometry', () => {
+    const observed: number[] = [];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let el!: HTMLDivElement;
+    const cleanup = render(() => {
+      const [x, setX] = createSignal(100);
+      const gesture = useGesture({ zoomScale: () => 1,
+        callbacks: { onDragEnd: (_id, dx) => setX((value) => value + dx) } });
+      createRenderEffect(() => observed.push(x() + gesture.dragDelta().dx));
+      return <div ref={el} onPointerDown={(event) => gesture.beginPress('a', event)} />;
+    }, host);
+    down(el, { button: 0, clientX: 0, clientY: 0 });
+    move({ clientX: 30, clientY: 0 });
+    observed.length = 0;
+    up();
+    expect(observed.length).toBeGreaterThan(0);
+    expect(observed.every((x) => x === 130)).toBe(true);
+    cleanup();
+    host.remove();
+  });
+
   it('pointerdown on a node enters pressing without firing onDragStart', () => {
     const { started, el, gesture, cleanup } = mount();
     down(el, { button: 0, clientX: 0, clientY: 0 });

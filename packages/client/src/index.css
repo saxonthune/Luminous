@@ -236,6 +236,8 @@ body {
      [data-theme] above, so this single mapping swaps with the theme. */
   --atlas-edge-tab-fill: var(--color-token-moss);
   --atlas-edge-tab-glyph: var(--on-accent);
+  /* Nylon assigns meaning; the existing theme palette supplies its color. */
+  --nylon-control-arc: var(--color-token-rose);
 }
 
 /* Atlas color-picker vars must live in a plain :root block, not @theme inline —
