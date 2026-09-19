@@ -182,11 +182,15 @@ mechanical coverage for ordinary prototype changes.
 
 ## Type Checking
 
-Use `tsgo` (TypeScript 7.0 Go-native beta, ~10× faster) for type checking. `tsc` is still used for emit (build).
+Use the native TypeScript 7 compiler (`tsc`, ~10× faster) for type checking and emit.
+Vite+ supplies the workspace toolchain and its `vp check` command. The
+`typescript` package remains on 5.9 as a compatibility API for dependencies that
+still require it; `@typescript/native` supplies the TypeScript 7 `tsc` binary.
 
-- `just typecheck` — runs `tsgo --noEmit` across all packages
-- `pnpm -C packages/<pkg> exec tsgo --noEmit -p <tsconfig>` — check a single package
-- Build scripts (`tsc -b`, `tsc -p`) stay as-is — tsgo does not emit in the beta
+- `just typecheck` — runs `tsc --noEmit` across all packages
+- `pnpm exec tsc --noEmit -p packages/<pkg>/<tsconfig>` — check a single package with TypeScript 7
+- Build scripts (`tsc -b`, `tsc -p`) use the same native compiler
+- `pnpm exec vp check` — run Vite+ formatting, lint, and type checks
 
 ## Searching and reading files
 

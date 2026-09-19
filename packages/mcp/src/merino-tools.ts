@@ -18,7 +18,6 @@ import {
   checkMerinoDocument,
 } from '@luminous/core/merino'
 import type {
-  MerinoAction,
   MerinoBatchAction,
   MerinoColorToken,
   MerinoContainerLayout,

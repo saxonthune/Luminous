@@ -29,14 +29,16 @@
     "solid-js": "^1.9.0"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@types/d3-force": "^3.0.10",
     "@types/d3-selection": "^3.0.11",
     "@types/d3-transition": "^3.0.9",
     "@types/d3-zoom": "^3.0.8",
     "jsdom": "^26.0.0",
     "typescript": "~5.9.3",
-    "vite": "^6.4.2",
+    "vite": "catalog:",
     "vite-plugin-solid": "^2.11.0",
-    "vitest": "^3.2.3"
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   }
 }
