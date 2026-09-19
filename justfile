@@ -157,5 +157,5 @@ check-skill-reference: gen-skill-reference
 
 # kill dev servers on ports 4080 and 5200
 kill:
-    -lsof -ti :4080 -ti :5200 | xargs -r kill -9 2>/dev/null
+    -bash scripts/kill-dev.sh
     @echo "Killed processes on ports 4080 and 5200"
