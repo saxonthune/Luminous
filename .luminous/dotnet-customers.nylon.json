@@ -9,8 +9,8 @@
         "GET or PUT HTTP request",
         "Customer result"
       ],
-      "x": -383.79182372897185,
-      "y": -2.1828089089294167
+      "x": -162.35522490427317,
+      "y": 328.49577325372775
     },
     {
       "id": "customer-controller-class",
@@ -289,8 +289,8 @@
         "input": "secrets-read-request",
         "output": "secret-settings"
       },
-      "x": 923.7815071198524,
-      "y": -623.1420357641898
+      "x": 844.7586786142556,
+      "y": -641.5194393073514
     },
     {
       "id": "prepare-app-options-request",
@@ -344,8 +344,8 @@
         "input": "sql-query",
         "output": "sql-result"
       },
-      "x": 6429.5630812936015,
-      "y": -73.94164946807618
+      "x": 2410.0312777616546,
+      "y": 273.45119593695273
     },
     {
       "id": "customer-database-a1",
@@ -762,16 +762,16 @@
       "id": "http-request",
       "name": "GET HTTP request",
       "text": "GET /customers/{id}\nAccept: application/json\n\n{\n  \"route\": { \"id\": \"customer-id\" },\n  \"caller\": \"client-id\"\n}",
-      "x": -2007.0631389620544,
-      "y": 2187.46404598778
+      "x": -3285.0471682674333,
+      "y": -247.29589913994877
     },
     {
       "id": "application-starting",
       "name": "Application starting",
       "kind": "lifecycle",
       "text": "WebApplicationBuilder created\nHost configuration available",
-      "x": -1359.4470276644174,
-      "y": 132.0968675487423
+      "x": -1845.975345652498,
+      "y": -210.6552891470497
     },
     {
       "id": "environment-read-request",
@@ -794,32 +794,32 @@
       "name": "Secrets read request",
       "kind": "environment-settings",
       "text": "secretId: customers-api/production\nAWS region and workload identity",
-      "x": 544.7640253245421,
-      "y": -653.4389811492217
+      "x": 438.17512515419276,
+      "y": -625.8729094844691
     },
     {
       "id": "secret-settings",
       "name": "Secret settings",
       "kind": "environment-settings",
       "text": "databasePassword: secret\napiKey: secret",
-      "x": 552.5342275600095,
-      "y": -476.26318854792083
+      "x": 445.9453273896602,
+      "y": -448.6971168831683
     },
     {
       "id": "app-options-read-request",
       "name": "AppOptions read request",
       "kind": "environment-settings",
       "text": "table: AppOptions\nenvironment: Production",
-      "x": 1341.3536025111139,
-      "y": -666.9627293900371
+      "x": 1370.7575020201562,
+      "y": -604.4796111832715
     },
     {
       "id": "app-options-settings",
       "name": "AppOptions settings",
       "kind": "environment-settings",
       "text": "RateLimit.RequestsPerMinute: 120\nCustomerApi.DefaultPageSize: 50",
-      "x": 1342.7176324516781,
-      "y": -514.7952052775299
+      "x": 1372.1215319607204,
+      "y": -452.3120870707643
     },
     {
       "id": "app-options-table",
@@ -933,15 +933,15 @@
       "id": "sql-query",
       "name": "SQL query",
       "text": "SELECT Id, DisplayName, Status\nFROM Customers\nWHERE Id = @customerId",
-      "x": 6262.42060281856,
-      "y": 2232.478221017296
+      "x": 1251.8434063252348,
+      "y": 361.99073263177473
     },
     {
       "id": "sql-result",
       "name": "SQL result",
       "text": "Customer record | null\n{ Id, DisplayName, Status }",
-      "x": 6449.5993863955855,
-      "y": 2495.71053803205
+      "x": 1249.7352093376128,
+      "y": 492.90590565571637
     },
     {
       "id": "customer-row",
@@ -971,8 +971,8 @@
       "id": "http-response",
       "name": "GET HTTP JSON response",
       "text": "200 application/json + Customer\nor 400 / 401 / 404 / 429 + ProblemDetails",
-      "x": -2008.5631120200355,
-      "y": 2330.8022404207886
+      "x": -3286.5471413254145,
+      "y": -103.95770470694035
     },
     {
       "id": "customer-database-a",
@@ -1010,15 +1010,15 @@
       "id": "put-http-request",
       "name": "PUT HTTP request",
       "text": "PUT /customers/{id}\nContent-Type: application/json\n\n{\n  \"displayName\": \"Ada Lovelace\",\n  \"status\": \"Active\"\n}",
-      "x": -1905.0608745185232,
-      "y": 3671.1592191131535
+      "x": -3301.727761342882,
+      "y": 189.45242820115166
     },
     {
       "id": "put-http-response",
       "name": "PUT HTTP JSON response",
       "text": "200 application/json + Customer\nor 400 / 401 / 404 / 409 + ProblemDetails",
-      "x": -1905.0608745185232,
-      "y": 3831.1592191131535
+      "x": -3301.727761342882,
+      "y": 349.45242820115163
     },
     {
       "id": "put-authorization-decision",
@@ -1104,15 +1104,15 @@
       "id": "sql-update",
       "name": "SQL update",
       "text": "UPDATE Customers\nSET DisplayName = @displayName, Status = @status\nWHERE Id = @customerId",
-      "x": 6769.5993863955855,
-      "y": 2729.710538032048
+      "x": 1242.2694845004517,
+      "y": 826.7614265750133
     },
     {
       "id": "sql-update-result",
       "name": "SQL update result",
       "text": "affectedRows: int\nCustomer record | null",
-      "x": 6954.5993863955855,
-      "y": 2929.710538032048
+      "x": 1249.008932601705,
+      "y": 982.6557119114093
     },
     {
       "id": "updated-customer-row",

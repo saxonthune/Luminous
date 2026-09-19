@@ -1,4 +1,5 @@
 import type { NylonContract, NylonDocument, NylonTransformation } from './types.ts';
+import { checkNylonDocument, nylonArcId } from './diagnostics.ts';
 import {
   placeRectAtCandidates,
   spaceRectangles,
@@ -45,6 +46,7 @@ export interface NylonProjection {
 }
 
 export interface NylonContractFrame {
+  controlArcId?: string;
   id: string;
   transformationId: string;
   name: string;
@@ -383,7 +385,14 @@ export function projectNylon(
     nodes.filter((node): node is Extract<NylonRenderNode, { kind: 'contract' }> => node.kind === 'contract')
       .map((node) => [node.item.id, node]),
   );
-  const contractFrames = doc.transformations.flatMap((transformation): NylonContractFrame[] => {
+  const contractOwners = [
+    ...doc.transformations.map((item) => ({ ...item, controlArcId: undefined as string | undefined })),
+    ...doc.arcs.flatMap((arc, index) => arc.kind === 'control' && arc.controlContract ? [{
+      id: arc.from, name: transformations.get(arc.to)?.name ?? arc.to,
+      contractPair: arc.controlContract, controlArcId: nylonArcId(arc, index),
+    }] : []),
+  ];
+  const contractFrames = contractOwners.flatMap((transformation): NylonContractFrame[] => {
     if (!transformation.contractPair) return [];
     const facets = [transformation.contractPair.input, transformation.contractPair.output]
       .map((id) => contractNodes.get(id))
@@ -399,7 +408,8 @@ export function projectNylon(
     const maxX = Math.max(...facets.map((node) => node.x + node.w));
     const maxY = Math.max(...facets.map((node) => node.y + node.h));
     return [{
-      id: `${transformation.id}-contract-pair`, transformationId: transformation.id,
+      id: transformation.controlArcId ? `control-contract:${transformation.controlArcId}` : `${transformation.id}-contract-pair`,
+      transformationId: transformation.id, controlArcId: transformation.controlArcId,
       name: transformation.name, input: transformation.contractPair.input,
       output: transformation.contractPair.output,
       inputRenderId: transformation.contractPair.input,
@@ -436,14 +446,20 @@ export function projectNylon(
     return visibleIds.has(id) ? id : null;
   }
 
+  const diagnostics = checkNylonDocument(doc);
   const edges = doc.arcs.flatMap((arc, index): EdgeDeclaration[] => {
     if (standard && !scope.has(arc.from) && !scope.has(arc.to)) return [];
     const sourceId = visibleRepresentative(arc.from);
     const targetId = visibleRepresentative(arc.to);
     if (!sourceId || !targetId || sourceId === targetId) return [];
+    const id = nylonArcId(arc, index);
+    const warnings = diagnostics.filter((issue) => issue.arcIds.includes(id));
+    const label = [warnings.length ? `⚠ ${warnings.map((issue) => issue.message).join('; ')}` : '',
+      arc.kind === 'control' ? `${arc.control ?? 'control'}${arc.controlContract ? ` · ${id}` : ''}` : ''].filter(Boolean).join(' · ');
     return [{
-      id: `${arc.from}->${arc.to}-${index}`, sourceId, targetId,
-      styling: { arrowHead: true, colorToken: 'fg-muted', width: 2.25 },
+      id, sourceId, targetId, labelText: label || undefined,
+      styling: { arrowHead: true, colorToken: arc.kind === 'control' ? 'nylon-control-arc' : 'fg-muted',
+        dash: arc.kind === 'control' ? 'dashed' : 'solid', width: arc.kind === 'control' ? 3 : 2.25 },
       routeBuilder: (rects) => visibleEdgeRoute(sourceId, targetId, rects),
     }];
   });
@@ -467,7 +483,7 @@ export function projectNylon(
 
   const nodeById = new Map(nodes.map((node) => [node.item.id, node]));
   const baseFrameByTransformation = new Map(
-    contractFrames.map((frame) => [frame.transformationId, frame]),
+    contractFrames.filter((frame) => !frame.controlArcId).map((frame) => [frame.transformationId, frame]),
   );
   const boundaryNodes: NylonRenderNode[] = [];
   const boundaryFrames: NylonContractFrame[] = [];

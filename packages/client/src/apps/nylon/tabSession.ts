@@ -1,3 +1,4 @@
+import { decodePips, type NylonPipSession } from './pipSession.ts';
 import type { NylonViewDefinition } from '@luminous/core/nylon/projection';
 import type { NylonCanvasState } from './NylonCanvas.tsx';
 
@@ -23,9 +24,9 @@ const storageKey = (source: string) => `nylon-tabs:${source}`;
 export function readNylonTabSession(source: string): NylonTabSession | undefined {
   try {
     const saved = JSON.parse(sessionStorage.getItem(storageKey(source)) ?? 'null');
-    if (!saved || saved.v !== 1 || !Array.isArray(saved.tabs) || !Array.isArray(saved.closed)) return;
+    if (!saved || (saved.v !== 1 && saved.v !== 2) || !Array.isArray(saved.tabs) || !Array.isArray(saved.closed)) return;
     const seen = new Set<string>();
-    const decode = (entry: { view: NylonViewDefinition; state?: { camera: NylonCanvasState['camera']; selection: string[]; containerStates: [string, string][] } }): NylonTab => {
+    const decode = (entry: { view: NylonViewDefinition; state?: { camera: NylonCanvasState['camera']; selection: string[]; containerStates: [string, string][]; pips?: NylonPipSession } }): NylonTab => {
       const view = entry.view;
       if (!view || (view.kind !== 'continuous' && !(view.kind === 'standard' && (view.focusId === null || typeof view.focusId === 'string')))) throw new Error('Invalid View');
       const key = nylonTabKey(view);
@@ -37,7 +38,7 @@ export function readNylonTabSession(source: string): NylonTabSession | undefined
         || !Array.isArray(selection) || !selection.every((id) => typeof id === 'string')
         || !Array.isArray(containerStates) || !containerStates.every((pair) => Array.isArray(pair)
           && typeof pair[0] === 'string' && ['expanded', 'covered', 'collapsed'].includes(pair[1]))) throw new Error('Invalid Tab state');
-      return { key, view, state: { camera, selection,
+      return { key, view, state: { camera, selection, pips: decodePips(entry.state.pips),
         containerStates: new Map(containerStates as [string, 'expanded' | 'covered' | 'collapsed'][]) } };
     };
     const tabs = saved.tabs.map(decode) as NylonTab[];
@@ -53,7 +54,7 @@ export function writeNylonTabSession(source: string, session: NylonTabSession): 
   } : undefined });
   try {
     sessionStorage.setItem(storageKey(source), JSON.stringify({
-      v: 1, tabs: session.tabs.map(encode), closed: session.closed.map(encode), activeKey: session.activeKey,
+      v: 2, tabs: session.tabs.map(encode), closed: session.closed.map(encode), activeKey: session.activeKey,
     }));
   } catch { /* Storage can be disabled or full; navigation still works. */ }
 }

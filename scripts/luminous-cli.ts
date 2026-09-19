@@ -366,8 +366,8 @@ async function main(): Promise<void> {
   if (command === 'doctor') {
     if (argv.length > 0) fail(`unknown argument "${argv[0]}"`);
     const result = doctorNylonDocument(await readDocument(path));
-    if (!result.ok) fail(result.error);
-    await finishMutation(path, { op: 'doctor' }, { repairs: result.repairs });
+    console.log(JSON.stringify({ issues: result.issues }, null, 2));
+    if (result.issues.some((issue) => issue.severity === 'error')) process.exitCode = 1;
     return;
   }
   if (command === 'write') {

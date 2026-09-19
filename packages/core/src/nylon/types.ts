@@ -41,6 +41,15 @@ export interface NylonContract {
 }
 
 export interface NylonArc {
+  /** Stable identity for authored control interactions; older data Arcs may omit it. */
+  id?: string;
+  kind?: 'data' | 'control';
+  /** Control progression at this level of detail. */
+  control?: 'invoke' | 'return' | 'continue';
+  /** A return identifies the invocation it completes; its destination may differ from the caller. */
+  invocation?: string;
+  /** Input/output Nodes describing this invocation. */
+  controlContract?: NylonContractPair;
   from: string;
   to: string;
 }

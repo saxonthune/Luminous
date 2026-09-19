@@ -14,9 +14,9 @@ Nylon constructs from doc01.12.03.
 ## Document
 
 - **D1.** The system shall read a Document from a `*.nylon.json` file.
-- **D2.** The system shall reject an Arc whose ends are both Transformations or
-  both Contracts.
-- **D3.** The system shall reject an Arc that references an unknown
+- **D2.** The system shall diagnose a Data Arc whose ends are both Transformations or
+  both Contracts, or a Control Pass Arc whose ends are not both Transformations.
+- **D3.** The system shall diagnose an Arc that references an unknown
   Transformation or Contract.
 - **D4.** The system shall reject duplicate identifiers across Transformations
   and Contracts.
@@ -34,30 +34,52 @@ Nylon constructs from doc01.12.03.
 - **D10.** The .NET specimen's rate-limit policy shall show mutually exclusive
   admitted and rejected paths, and the rejected path shall lead to an HTTP 429
   response.
-- **D11.** The .NET specimen shall show separate Contract Pairs for the API,
-  service, repository, and database boundaries: `HTTP request → HTTP response`,
-  `CustomerLookup → Customer result`, `Customer query → customer database
-  result`, and `SQL query → SQL result`.
+- **D11.** The .NET specimen shall give GET and contact-refresh their own
+  endpoint boundaries. GET shall use an HTTP Control Contract and
+  invocation-owned Control Contracts for `CustomerLookup → Customer result`,
+  `Customer query → customer database result`, and `SQL query → SQL result`.
+  All specimen pairs, including HTTP, startup, and provider loading, shall belong
+  to invocation Arcs rather than Transformations. External client and host
+  Transformations shall make the HTTP and startup invocations explicit.
 - **D12.** The `CustomerRepository.cs` Parent Transformation shall contain the
   Transformations and Contracts that use Entity Framework to turn a customer
   query into a customer database result.
 - **D13.** The system shall allow every Node to carry canvas coordinates.
 - **D14.** The .NET specimen shall place the customer database outside the API,
-  connect it to the Entity Framework detail through its SQL Contract Pair, and
-  differentiate it to contain `Customers` and `AppOptions` table Contracts.
+  connect its internal query Transformation to the Entity Framework detail
+  through a SQL Control Contract, and contain `Customers`, `CustomerContacts`,
+  `ContactSummaries`, and `AppOptions` table Contracts.
 - **D15.** The system shall allow a Contract to carry an optional open-vocabulary
   Contract Kind.
 - **D16.** The .NET specimen shall place Application startup and the typed
-  `IOptions` Contracts it produces inside the API, place `Application starting`
-  outside the API, and keep the environment, AWS Secrets Manager, and database
-  providers outside the API.
-- **D17.** The .NET specimen's Application startup Transformation shall not
-  declare a Contract Pair or a configured-application output Contract.
+  `IOptions` Contracts it produces inside the API. Startup shall contain the
+  provider-loading steps; their settings Contracts shall feed binding. The
+  database shall remain outside the API.
+- **D17.** The .NET specimen's startup shall connect `Application starting`
+  through provider loading and options binding to `Configured application`.
+  These boundary Contracts shall remain outside the startup detail, and request
+  handling shall depend on the configured application.
 - **D18.** A root Node's canvas coordinates shall be relative to the Document's
   canvas, and a Child's canvas coordinates shall be relative to its Parent
   Transformation.
 - **D19.** The Input Contract and Output Contract of a Contract Pair shall have
   the same Parent Transformation or shall both belong to the document root.
+- **D20.** A Control Pass Arc shall identify an invocation, return, or continuation.
+  A return shall reference the invocation it completes and may resume at a
+  different Transformation from the caller.
+- **D21.** An invocation may reference a Control Contract consisting of two
+  distinct Contract Nodes in the same coordinate space.
+- **D22.** The .NET specimen shall include a contact-refresh endpoint whose
+  service reads customer details through one repository before writing a
+  contact-summary table through another and returning HTTP 204 after write completion.
+- **D23.** When the contact lookup returns NotFound, the specimen shall show a
+  mutually exclusive continuation returning HTTP 404 without invoking the
+  summary-write repository.
+- **D24.** The details repository shall expose internal read and result
+  Transformations. The read shall depend on Customers and CustomerContacts;
+  return control shall leave the internal result Transformation. The summary
+  write shall expose its committed effect on ContactSummaries separately from
+  its completion acknowledgement.
 
 ## Canvas
 
@@ -88,9 +110,12 @@ actions apply to both Views.
   Contract and shall save its changed position. Dragging a Parent
   Transformation shall also move its descendants.
 - **C11.** The system shall draw a Contract Pair as one compound object with a
-  distinct Input Contract half and Output Contract half.
-- **C12.** The system shall identify the owning Transformation and the direction
-  from input type to output type on each Contract Pair.
+  distinct Input Contract half and Output Contract half, labelled "Control Contracts".
+- **C12.** The system shall identify the called Transformation and the direction
+  from input type to output type on invocation-owned pairs. The frame shall use
+  the control-Arc color, and inspection of either endpoint or Contract shall
+  identify its invocation and input/output Contracts. Older Transformation-owned
+  pairs shall use the same presentation with their owner's name.
 - **C13.** The system shall allow the user to drag a Contract Pair by its frame
   and shall move both Contracts together. When the user drags either Contract
   half, the system shall move only that Contract as it would any other Node.
@@ -179,7 +204,10 @@ actions apply to both Views.
 - **C44.** The system shall derive zoom-dependent display and interaction
   behavior from one shared Relative Zoom policy.
 - **C45.** At low projected screen sizes, a Node shall omit secondary prose
-  and data while retaining its identity and stored geometry.
+  and data while retaining its identity and stored geometry. At overview zoom,
+  Standard View cards and Contracts shall emphasize larger wrapping names and
+  omit schematics, counts, and secondary labels. Zoom changes shall not resize
+  or reposition Nodes. Names at working zoom and PIP titles shall remain prominent.
 - **C46.** The system shall allow the user to select Nodes by dragging a
   selection box across empty canvas or the interior of an expanded Parent
   Transformation.
@@ -333,6 +361,51 @@ actions apply to both Views.
   halves are represented and ordered by their connections to the focused
   detail. Their display positions shall remain outside Document history.
 
+## Picture in picture (PIP)
+
+- **P1.** In Standard View, each Transformation's Open contents control shall
+  have an adjacent PIP control. The inspector shall allow any Transformation
+  to open its Standard View in a PIP.
+- **P2.** Each PIP shall use Standard View content with optional external context, in a
+  labelled container on the active Tab's canvas. All PIPs shall share the
+  canvas camera. Their containers shall fit their contents.
+- **P3.** A thick, dotted, curved tether shall connect a PIP to the particular appearance
+  of the Node from which it opened. The tether shall follow both ends as they
+  move and shall not be a Document Arc.
+- **P4.** Opening a PIP from inside another PIP shall create a peer container
+  on the same canvas, never a nested PIP. Moving a PIP shall not move PIPs
+  opened from it.
+- **P5.** A new PIP shall occupy clear space with a buffer from existing content
+  and PIPs. Placement shall bring it as close to its source as the buffered
+  obstacles allow, without moving existing content. The camera shall reveal it.
+- **P6.** The user shall be able to drag a PIP by its header. After initial
+  placement, deliberate overlaps shall be allowed. Moving the container shall
+  not change Document coordinates or History.
+- **P7.** PIP content inspection and movement shall use the same Document and
+  actions as Tabs. Each rendered appearance shall remain distinguishable for
+  selection and navigation. A PIP shall offer Arrange children and Open in tab.
+- **P8.** Reopening the same destination from the same source appearance shall
+  reveal its existing PIP instead of creating a duplicate.
+- **P9.** Closing a PIP shall close its downstream PIPs. Reopen closed PIP shall
+  restore the most recently closed group with its retained positions.
+- **P10.** Each Tab shall retain its PIPs, source references, positions, and
+  closed groups through hot reload, page refresh, and closing/reopening the Tab,
+  within the browser tab's session. Restoring a session shall preserve positions
+  rather than repeat initial placement. Existing sessions without PIPs shall
+  continue to restore their Tabs.
+- **P11.** A PIP whose Transformation is removed shall retain a missing-content
+  placeholder. An unavailable source appearance shall be identified in its
+  header. Restoring the source or destination shall restore its presentation.
+
+- **P12.** PIPs shall initially omit external Context Nodes and their connections.
+  A Show context toggle shall restore them within that PIP. Each PIP shall
+  retain its context visibility with its Tab session.
+- **P13.** Selecting a PIP member while context is hidden shall temporarily show
+  straight dotted connections to its external Contracts represented in the
+  main View. These connections shall use the Standard View's endpoint
+  projection, shall not duplicate Contract Nodes or change Document Arcs, and
+  shall disappear on deselection. The curved source tether shall remain distinct.
+
 ## Tabs
 
 - **T1.** A Tab shall identify its View by the Focus Transformation's name or
@@ -373,7 +446,7 @@ actions apply to both Views.
   the same Nylon action handler. The server shall execute actions in server
   mode; the static demo shall execute them locally with the same behavior.
 - **H2.** Each completed drag, layout, reparenting, differentiation, Node
-  creation, deletion, repair, replacement, or batch shall form one undo step
+  creation, deletion, replacement, or batch shall form one undo step
   when it changes the Document. Failed actions, dry runs, and unchanged results
   shall not add history entries.
 - **H3.** Undo shall restore the Document before the latest committed action,
@@ -422,18 +495,33 @@ actions apply to both Views.
 
 - **F1.** When the user differentiates a leaf Transformation, the system shall
   add two child Transformations and one Contract between them.
-- **F2.** Differentiation shall replace each incoming Arc to the Parent
+- **F2.** Differentiation shall replace each incoming Data Arc to the Parent
   Transformation with an Arc to the first child Transformation.
-- **F3.** Differentiation shall replace each outgoing Arc from the Parent
+- **F3.** Differentiation shall replace each outgoing Data Arc from the Parent
   Transformation with an Arc from the second child Transformation.
 - **F4.** Differentiation shall connect the first child Transformation to the
   new Contract and the new Contract to the second child Transformation.
 - **F5.** After Differentiation, the Parent Transformation shall contain its new
-  Children and shall not remain an endpoint of an Arc.
+  Children and shall not remain an endpoint of a Data Arc. Control Pass Arcs
+  shall retain their endpoints until the author explicitly assigns them to Children.
 - **F6.** The system shall refuse to differentiate a Transformation that already
   has Children.
 - **F7.** Differentiation shall preserve the Parent Transformation's Contract
   Pair.
+
+## Prototype diagnostics and control appearance
+
+- **C66.** Control Pass Arcs shall use a theme-aware color and dashed stroke,
+  and identify their role. A Control Contract frame shall identify its invocation.
+- **C67.** Affected Nodes shall show expandable warning indicators. A visible
+  ancestor shall report issues on hidden descendants. Affected visible Arcs
+  shall expose their warning messages in their labels.
+- **C68.** The UI shall list all Document diagnostics. Semantic warnings shall
+  not block ordinary movement. When structural errors prevent projection, the
+  UI shall retain the Document and Tabs and show the issues until corrected.
+- **C69.** A Control Contract shall show separate input and output Nodes and
+  allow moving both together by its frame. When both Contracts belong to a
+  larger selection, dragging the frame shall move the whole selection.
 
 ## Command-line interface
 
@@ -465,8 +553,9 @@ actions apply to both Views.
   content, and the `node delete` command shall refuse to remove a Node with
   dependants unless the user explicitly requests cascading deletion.
 - **L13.** The `arc add`, `arc remove`, and `arc replace` commands shall identify
-  an Arc by its ordered endpoint pair and shall preserve Contract–Transformation
-  alternation.
+  an Arc by its ordered endpoint pair. Adding or replacing a Data Arc shall
+  retain semantic violations for diagnosis, as direct JSON authoring does.
+  Removal or replacement shall refuse an ambiguous endpoint pair.
 - **L14.** The `contract-pair set`, `contract-pair clear`, and
   `contract-pair move` commands shall create, remove, and spatially translate a
   Transformation's Contract Pair.
@@ -481,11 +570,10 @@ actions apply to both Views.
   its one-based index, operation name, and reason.
 - **L19.** The `export` command shall write only canonical Nylon JSON to standard
   output so the caller can pipe or redirect it to a chosen destination.
-- **L20.** The `doctor` command shall repair all unambiguous invariant failures
-  across one Document, validate the complete result, report its repairs, and
-  write the Document once or not at all.
-- **L21.** The `doctor` command shall refuse a repair whose meaning is
-  ambiguous, including a duplicate Node identifier.
+- **L20.** The `doctor` and `check` commands shall report rule identifiers,
+  severity, explanations, and affected Node and Arc IDs without writing the Document.
+- **L21.** Doctor shall never delete or repair authored content, including
+  ambiguous content such as duplicate Node identifiers.
 - **L22.** The `layout dag` command shall apply the same directional DAG layout
   as the Parent Transformation's ordering menu.
 - **L23.** The `layout space` command shall apply the same immediate-Child
@@ -495,6 +583,9 @@ actions apply to both Views.
   same requests as the UI and API, including selection movement and expansion.
 - **L25.** The `history`, `undo`, and `redo` commands shall use the Document's
   shared session history.
+- **L26.** Setting a Contract Pair shall retain incomplete or non-distinct
+  Contract references for diagnosis. Semantic warnings shall not prevent the
+  change; the owning Transformation must exist.
 
 ## Input-command bindings
 
@@ -509,6 +600,15 @@ one input to the command it performs and the requirement it serves.
 | Standard View Tab close button | left click | Close the Tab | T4 |
 | Reopen closed tab button | left click | Restore the most recently closed Tab | T5 |
 | Document root button | left click | Open the root Standard View | V1, T2 |
+| Transformation PIP control | left click | Open or reveal a peer PIP of its contents | P1, P4, P8 |
+| Transformation inspector Open in PIP button | left click | Open or reveal the Transformation's PIP | P1, P8 |
+| PIP header | left drag | Move the PIP container | P6 |
+| PIP Show context toggle | left click | Show or hide external Context Nodes within this PIP | P12 |
+| PIP member | select / deselect | Show / hide temporary connections to external Contracts in the main View | P13 |
+| PIP Open in tab button | left click | Open the PIP's Standard View in a Tab | P7 |
+| PIP Arrange children button | left click | Arrange and save the Focus Transformation's immediate Children | P7 |
+| PIP close button | left click | Close the PIP and its downstream PIPs | P9 |
+| Reopen closed PIP button | left click | Restore the most recently closed PIP group | P9 |
 | Transformation Open contents control | left click | Open the Transformation's Standard View | V6, T2 |
 | Transformation inspector Open in new tab button | left click | Open the Transformation's Standard View | V6, T2 |
 | Standard View breadcrumb | left click | Open the identified ancestor or Document root | V7, T2 |
@@ -533,6 +633,9 @@ one input to the command it performs and the requirement it serves.
 | Transformation or Contract | left drag | Move the Node and save its position | C10 |
 | Selected Transformation or Contract | left drag | Move the selected Nodes together and save their positions | C47 |
 | Contract Pair frame | left drag | Move both Contracts in the Contract Pair | C13 |
+| Control Contract frame | left drag | Move both Contracts, or the whole selection when both are selected | C47, C69 |
+| Node warning indicator | click or keyboard activation | Reveal rule violations | C67 |
+| Document issues summary | click or keyboard activation | Reveal all rule violations | C68 |
 | Contract half | left drag | Move only that Contract Node | C10, C13 |
 | Parent Transformation expand button | left click | Show the Parent Transformation's descendants and declared Arc endpoints | C15, C17 |
 | Parent Transformation collapse button | left click | Hide the Parent Transformation's descendants and project their Arc endpoints onto the Parent Transformation | C15–C17 |

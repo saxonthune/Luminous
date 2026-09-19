@@ -16,6 +16,8 @@ export { emptyNylonDocument, parseNylonDocument, serializeNylonDocument } from '
 export type { ParseNylonDocumentResult } from './document.ts';
 export { checkNylonDocument } from './check.ts';
 export type { NylonCheckIssue } from './check.ts';
+export { nylonRules } from './diagnostics.ts';
+export type { NylonRule, NylonRuleContext, NylonFinding, NylonDiagnostic } from './diagnostics.ts';
 export { doctorNylonDocument } from './doctor.ts';
 export type { NylonDoctorRepair, NylonDoctorResult } from './doctor.ts';
 export {

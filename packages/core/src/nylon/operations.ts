@@ -58,9 +58,9 @@ export function differentiateTransformation(
   const firstId = uniqueId(doc, `${id}-a1`);
   const middleId = uniqueId(doc, `${id}-a`);
   const secondId = uniqueId(doc, `${id}-a2`);
-  const incoming = doc.arcs.filter((arc) => arc.to === id);
-  const outgoing = doc.arcs.filter((arc) => arc.from === id);
-  const kept = doc.arcs.filter((arc) => arc.from !== id && arc.to !== id);
+  const incoming = doc.arcs.filter((arc) => arc.kind !== 'control' && arc.to === id);
+  const outgoing = doc.arcs.filter((arc) => arc.kind !== 'control' && arc.from === id);
+  const kept = doc.arcs.filter((arc) => arc.kind === 'control' || (arc.from !== id && arc.to !== id));
 
   return {
     ok: true,
@@ -100,10 +100,10 @@ export function differentiateTransformation(
       ],
       arcs: [
         ...kept,
-        ...incoming.map((arc) => ({ from: arc.from, to: firstId })),
+        ...incoming.map((arc) => ({ ...arc, to: firstId })),
         { from: firstId, to: middleId },
         { from: middleId, to: secondId },
-        ...outgoing.map((arc) => ({ from: secondId, to: arc.to })),
+        ...outgoing.map((arc) => ({ ...arc, from: secondId })),
       ],
     },
   };
@@ -192,13 +192,13 @@ export function reparentNylonNode(doc: NylonDocument, id: string, parentOption: 
   const parent = normalizedParent(parentOption);
   const parentError = validateParent(doc, parent);
   if (parentError) return { ok: false, error: parentError };
-  if (parent === id) return { ok: false, error: 'A Node cannot contain itself' };
-  const transformations = new Map(doc.transformations.map((item) => [item.id, item]));
-  let current = parent;
-  while (current !== undefined) {
-    if (current === id) return { ok: false, error: `Reparenting "${id}" under "${parent}" would create a cycle` };
-    current = transformations.get(current)?.parent;
-  }
+  const candidate = {
+    ...doc,
+    transformations: doc.transformations.map((item) => item.id === id ? { ...item, parent } : item),
+    contracts: doc.contracts.map((item) => item.id === id ? { ...item, parent } : item),
+  };
+  const errors = checkNylonDocument(candidate).filter((issue) => issue.severity === 'error');
+  if (errors.length) return { ok: false, error: errors.map((issue) => issue.message).join('; ') };
 
   const allItems = new Map<string, NylonDocument['transformations'][number] | NylonDocument['contracts'][number]>([
     ...doc.transformations.map((item) => [item.id, item] as const),
@@ -244,23 +244,9 @@ function nodeKind(doc: NylonDocument, id: string): 'transformation' | 'contract'
   return null;
 }
 
-function validateArc(doc: NylonDocument, from: string, to: string): string | null {
-  const fromKind = nodeKind(doc, from);
-  const toKind = nodeKind(doc, to);
-  if (!fromKind) return `Arc references unknown Node "${from}"`;
-  if (!toKind) return `Arc references unknown Node "${to}"`;
-  if (fromKind === toKind) return `Arc "${from}" -> "${to}" breaks Contract–Transformation alternation`;
-  const parentIds = new Set([...doc.transformations, ...doc.contracts].flatMap((item) => item.parent ? [item.parent] : []));
-  if (parentIds.has(from) || parentIds.has(to)) return 'A Parent Transformation cannot be an Arc endpoint';
-  return null;
-}
-
 export function addNylonArc(doc: NylonDocument, from: string, to: string): NylonResult {
-  const error = validateArc(doc, from, to);
-  if (error) return { ok: false, error };
-  if (doc.arcs.some((arc) => arc.from === from && arc.to === to)) {
-    return { ok: false, error: `Arc "${from}" -> "${to}" already exists` };
-  }
+  // Graph validity is diagnosed by the shared catalog after the action/batch.
+  // Keep incomplete or semantically questionable connections editable like JSON.
   return { ok: true, doc: { ...doc, arcs: [...doc.arcs, { from, to }] } };
 }
 
@@ -278,6 +264,9 @@ export function replaceNylonArc(
   newFrom: string,
   newTo: string,
 ): NylonResult {
+  if (doc.arcs.some((arc) => arc.from === oldFrom && arc.to === oldTo && arc.kind === 'control')) {
+    return { ok: false, error: 'Edit Control Arc endpoints in JSON; endpoint-pair replacement is only for Data Arcs' };
+  }
   const removed = removeNylonArc(doc, oldFrom, oldTo);
   return removed.ok ? addNylonArc(removed.doc, newFrom, newTo) : removed;
 }
@@ -303,6 +292,9 @@ export function insertNylonArc(
   to: string,
   options: InsertArcOptions,
 ): NylonResult {
+  if (doc.arcs.some((arc) => arc.from === from && arc.to === to && arc.kind === 'control')) {
+    return { ok: false, error: 'Edit Control Arcs in JSON; alternating-path insertion is only for Data Arcs' };
+  }
   if (!doc.arcs.some((arc) => arc.from === from && arc.to === to)) {
     return { ok: false, error: `Arc "${from}" -> "${to}" not found` };
   }
@@ -353,9 +345,6 @@ export function setNylonContractPair(
   input: string,
   output: string,
 ): NylonResult {
-  if (input === output) return { ok: false, error: 'A Contract Pair requires distinct Input and Output Contracts' };
-  if (!doc.contracts.some((item) => item.id === input)) return { ok: false, error: `Input Contract "${input}" not found` };
-  if (!doc.contracts.some((item) => item.id === output)) return { ok: false, error: `Output Contract "${output}" not found` };
   if (!doc.transformations.some((item) => item.id === transformationId)) {
     return { ok: false, error: `Transformation "${transformationId}" not found` };
   }

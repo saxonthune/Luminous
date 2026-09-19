@@ -2,27 +2,124 @@
   "v": 1,
   "transformations": [
     {
+      "id": "contact-refresh-endpoint",
+      "name": "POST /customers/{id}/contact-refresh",
+      "parent": "customer-controller-class",
+      "x": 42,
+      "y": 2300,
+      "prose": "Returns HTTP 204 after the summary commit, or HTTP 404 when the customer is absent. The not-found branch performs no summary write."
+    },
+    {
+      "id": "contact-refresh-handle",
+      "name": "Handle contact refresh",
+      "parent": "contact-refresh-endpoint",
+      "x": 42,
+      "y": 80,
+      "prose": "Invoke the service with the route customer ID."
+    },
+    {
+      "id": "contact-refresh-respond",
+      "name": "Return HTTP 204",
+      "parent": "contact-refresh-endpoint",
+      "x": 500,
+      "y": 80,
+      "prose": "Guard: refresh result is RefreshCompleted. Return HTTP 204 only after the summary write committed. Mutually exclusive with HTTP 404."
+    },
+    {
+      "id": "contact-refresh-service",
+      "name": "CustomerService.RefreshContact",
+      "parent": "customer-service-class",
+      "x": 42,
+      "y": 800,
+      "prose": "Read customer details. Found proceeds to prepare and commit a contact summary; NotFound returns CustomerNotFound without calling the write repository. Write failures/timeouts remain undifferentiated."
+    },
+    {
+      "id": "contact-refresh-load",
+      "name": "Load customer details",
+      "parent": "contact-refresh-service",
+      "x": 42,
+      "y": 80,
+      "prose": "Invoke CustomerRepository.GetDetails."
+    },
+    {
+      "id": "contact-refresh-prepare",
+      "name": "Prepare contact summary",
+      "parent": "contact-refresh-service",
+      "x": 420,
+      "y": 80,
+      "prose": "Guard: details result is Found. Prepare a contact summary from those details. This branch is mutually exclusive with Return customer not found.",
+      "needs": [
+        "Found(CustomerDetails)"
+      ]
+    },
+    {
+      "id": "contact-refresh-save",
+      "name": "Save contact summary",
+      "parent": "contact-refresh-service",
+      "x": 800,
+      "y": 80,
+      "prose": "Invoke ContactSummaryRepository.Upsert."
+    },
+    {
+      "id": "contact-refresh-complete",
+      "name": "Complete refresh",
+      "parent": "contact-refresh-service",
+      "x": 1180,
+      "y": 80,
+      "prose": "Runs only after the summary write returns successfully."
+    },
+    {
+      "id": "customer-repository-details",
+      "name": "CustomerRepository.GetDetails",
+      "parent": "customer-repository-class",
+      "x": 42,
+      "y": 700,
+      "prose": "Differentiates GetDetails into a table read/join and result materialization. The invocation targets this boundary; return leaves its internal result Transformation.",
+      "needs": [
+        "details lookup ID",
+        "Customers table",
+        "CustomerContacts table"
+      ]
+    },
+    {
+      "id": "contact-summary-repository",
+      "name": "ContactSummaryRepository.cs",
+      "parent": "customers-api",
+      "x": 6500,
+      "y": 800,
+      "prose": "Owns mutations to ContactSummaries."
+    },
+    {
+      "id": "contact-summary-upsert",
+      "name": "Upsert contact summary",
+      "parent": "contact-summary-repository",
+      "x": 42,
+      "y": 80,
+      "prose": "Upsert ContactSummaries and commit this write transaction before returning SummaryCommitted. The outgoing table Arc describes the committed state. The earlier customer read and this write are not one atomic transaction.",
+      "needs": [
+        "summary write input",
+        "database connection"
+      ]
+    },
+    {
       "id": "customers-api",
       "name": "Customers API",
-      "prose": "Accepts one HTTP request for GET /customers/{id} and returns one JSON response. Its differentiated detail is organized around the controller, service, and repository classes.",
+      "prose": "Hosts separate GET and contact-refresh endpoints. Startup binds configuration before requests are accepted. GET reads customer data; contact refresh reads details and either commits a summary write or returns not found.",
       "needs": [
-        "HTTP request",
-        "Customer result"
+        "GET or contact-refresh HTTP request",
+        "configured application"
       ],
-      "contractPair": {
-        "input": "http-request",
-        "output": "http-response"
-      },
       "x": 8,
       "y": -169.31104466680154
     },
     {
       "id": "customer-controller-class",
       "name": "CustomerController.cs",
-      "prose": "Owns the HTTP boundary: admission, request mapping and validation, creation of the service request, and response serialization.",
+      "prose": "Contains separate GET and POST contact-refresh endpoint behaviors, with operation-specific requests and responses.",
       "needs": [
         "HTTP request",
-        "Customer result"
+        "Customer | NotFound",
+        "RefreshCompleted | CustomerNotFound"
       ],
       "parent": "customers-api",
       "x": 98.53712842598466,
@@ -36,7 +133,7 @@
         "HTTP request caller",
         "endpoint rate-limit policy"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 42,
       "y": 80
     },
@@ -81,7 +178,7 @@
       "needs": [
         "rate-limit failure"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 313.11646870400773,
       "y": 656.7957576644847
     },
@@ -92,7 +189,7 @@
       "needs": [
         "admitted route and request metadata"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 547.028505564408,
       "y": 640.0869091720646
     },
@@ -103,7 +200,7 @@
       "needs": [
         "GetCustomerRequest"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 988.9476413980043,
       "y": 632.4107172247881
     },
@@ -114,7 +211,7 @@
       "needs": [
         "validated GetCustomerRequest"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 1452.9355743243668,
       "y": 637.2083459765134
     },
@@ -125,7 +222,7 @@
       "needs": [
         "Customer or not-found result"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 1246.932792202585,
       "y": 1066.1608689556685
     },
@@ -136,22 +233,18 @@
       "needs": [
         "GetCustomerResponse or ProblemDetails"
       ],
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 718.1526355384366,
       "y": 1080.7700878281423
     },
     {
       "id": "customer-service-class",
       "name": "CustomerService.cs",
-      "prose": "Owns customer lookup behavior and its business guard, then translates the repository result into a business result.",
+      "prose": "Owns GetCustomer lookup and RefreshContact. Lookup returns Customer or NotFound; refresh reads details, writes a summary when found, or returns CustomerNotFound without writing.",
       "needs": [
-        "CustomerLookup",
-        "customer database result"
+        "CustomerLookup or refresh customer ID",
+        "repository results"
       ],
-      "contractPair": {
-        "input": "service-request",
-        "output": "customer-result"
-      },
       "parent": "customers-api",
       "x": 2266.1042452656425,
       "y": 731.8552582356157
@@ -163,7 +256,7 @@
       "needs": [
         "CustomerLookup business model"
       ],
-      "parent": "customer-service-class",
+      "parent": "customer-lookup-service",
       "x": 42,
       "y": 80
     },
@@ -175,7 +268,7 @@
         "candidate customer query",
         "customer lookup rules"
       ],
-      "parent": "customer-service-class",
+      "parent": "customer-lookup-service",
       "x": 518.9973205483493,
       "y": 87.70781274986007
     },
@@ -186,22 +279,19 @@
       "needs": [
         "CustomerRow or null"
       ],
-      "parent": "customer-service-class",
+      "parent": "customer-lookup-service",
       "x": 688.1260047943688,
       "y": 390.5093780807772
     },
     {
       "id": "customer-repository-class",
       "name": "CustomerRepository.cs",
-      "prose": "Owns persistence behavior and uses Entity Framework Core to turn a customer query into a customer database result.",
+      "prose": "Contains GetCustomer using EF and GetDetails using customer/contact table reads.",
       "needs": [
-        "Customer query contract",
-        "Entity Framework DbContext"
+        "lookup customer ID",
+        "database connection",
+        "Customers and CustomerContacts tables"
       ],
-      "contractPair": {
-        "input": "customer-query",
-        "output": "customer-row"
-      },
       "parent": "customers-api",
       "x": 3600,
       "y": 739.3110446668015
@@ -214,7 +304,7 @@
         "customer id",
         "Customer DbSet"
       ],
-      "parent": "customer-repository-class",
+      "parent": "customer-lookup-repository",
       "x": 42,
       "y": 80
     },
@@ -226,7 +316,7 @@
         "composed EF Core query",
         "database connection"
       ],
-      "parent": "customer-repository-class",
+      "parent": "customer-lookup-repository",
       "x": 482,
       "y": 80
     },
@@ -237,7 +327,7 @@
       "needs": [
         "CustomerEntity or null"
       ],
-      "parent": "customer-repository-class",
+      "parent": "customer-lookup-repository",
       "x": 922,
       "y": 80
     },
@@ -249,10 +339,6 @@
         "application host",
         "configuration providers"
       ],
-      "contractPair": {
-        "input": "application-starting",
-        "output": "application-configured"
-      },
       "parent": "customers-api",
       "x": 270,
       "y": 1739.3110446668015
@@ -276,10 +362,6 @@
         "environment read request",
         "process environment"
       ],
-      "contractPair": {
-        "input": "environment-read-request",
-        "output": "environment-settings"
-      },
       "parent": "application-startup",
       "x": 522,
       "y": 80
@@ -303,10 +385,6 @@
         "secrets read request",
         "AWS Secrets Manager"
       ],
-      "contractPair": {
-        "input": "secrets-read-request",
-        "output": "secret-settings"
-      },
       "parent": "application-startup",
       "x": 1482,
       "y": 80
@@ -330,10 +408,6 @@
         "AppOptions read request",
         "AppOptions table"
       ],
-      "contractPair": {
-        "input": "app-options-read-request",
-        "output": "app-options-settings"
-      },
       "parent": "application-startup",
       "x": 2442,
       "y": 80
@@ -354,20 +428,224 @@
     {
       "id": "customer-database",
       "name": "Customer database",
-      "prose": "Executes SQL queries for customer lookup and exposes the AppOptions table used during application startup.",
+      "prose": "Contains query behavior and the durable Customers, CustomerContacts, ContactSummaries, and AppOptions tables. Table dependencies describe reads or state changes, not control transfer.",
       "needs": [
         "SQL query",
         "database connection"
       ],
-      "contractPair": {
-        "input": "sql-query",
-        "output": "sql-result"
-      },
-      "x": 5220,
+      "x": 8500,
       "y": 760
+    },
+    {
+      "id": "customer-get-endpoint",
+      "name": "GET /customers/{id}",
+      "parent": "customer-controller-class",
+      "x": 0,
+      "y": 0,
+      "prose": "Owns GET admission, request mapping, customer lookup, and the HTTP response.",
+      "needs": [
+        "GET request",
+        "configured rate-limit and API options"
+      ]
+    },
+    {
+      "id": "customer-lookup-service",
+      "name": "CustomerService.GetCustomer",
+      "parent": "customer-service-class",
+      "x": 0,
+      "y": 0,
+      "prose": "Validates customer lookup intent and maps the repository result to Customer or NotFound.",
+      "needs": [
+        "CustomerLookup",
+        "CustomerRow or null"
+      ]
+    },
+    {
+      "id": "customer-lookup-repository",
+      "name": "CustomerRepository.GetCustomer",
+      "parent": "customer-repository-class",
+      "x": 0,
+      "y": 0,
+      "prose": "Builds the EF query, invokes the database query, and materializes CustomerRow.",
+      "needs": [
+        "customer query",
+        "database options"
+      ]
+    },
+    {
+      "id": "database-customer-query",
+      "name": "Execute customer SELECT",
+      "parent": "customer-database",
+      "x": 42,
+      "y": 80,
+      "prose": "Executes the customer lookup SQL against Customers and returns the record or null.",
+      "needs": [
+        "SQL query",
+        "Customers table"
+      ]
+    },
+    {
+      "id": "contact-details-read",
+      "name": "Read customer and contacts",
+      "parent": "customer-repository-details",
+      "x": 42,
+      "y": 80,
+      "prose": "Read Customers by ID and left-join CustomerContacts. A customer with no contact row is still Found; an absent Customers row is NotFound.",
+      "needs": [
+        "details lookup ID",
+        "Customers table",
+        "CustomerContacts table"
+      ]
+    },
+    {
+      "id": "contact-details-materialize",
+      "name": "Return Found or NotFound",
+      "parent": "customer-repository-details",
+      "x": 650,
+      "y": 80,
+      "prose": "Map the joined row or no-row result to exactly one of Found(CustomerDetails) or NotFound(CustomerId).",
+      "needs": [
+        "joined customer/contact row or no row"
+      ]
+    },
+    {
+      "id": "contact-refresh-not-found",
+      "name": "Return customer not found",
+      "parent": "contact-refresh-service",
+      "x": 420,
+      "y": 420,
+      "prose": "Guard: details result is NotFound. Return CustomerNotFound without preparing or writing a summary. Mutually exclusive with Prepare contact summary.",
+      "needs": [
+        "NotFound(CustomerId)"
+      ]
+    },
+    {
+      "id": "contact-refresh-respond-not-found",
+      "name": "Return HTTP 404",
+      "parent": "contact-refresh-endpoint",
+      "x": 850,
+      "y": 80,
+      "prose": "Guard: refresh result is CustomerNotFound. Produce ProblemDetails with HTTP 404. Mutually exclusive with the HTTP 204 response.",
+      "needs": [
+        "CustomerNotFound(CustomerId)"
+      ]
+    },
+    {
+      "id": "get-client-send",
+      "name": "Client sends GET",
+      "x": -1300,
+      "y": 100,
+      "prose": "Invoke GET /customers/{id}."
+    },
+    {
+      "id": "get-client-receive",
+      "name": "Client receives GET response",
+      "x": -1300,
+      "y": 500,
+      "prose": "Receive the GET response, including rejected or not-found outcomes."
+    },
+    {
+      "id": "refresh-client-send",
+      "name": "Client sends contact refresh",
+      "x": -1300,
+      "y": 1300,
+      "prose": "Invoke POST /customers/{id}/contact-refresh."
+    },
+    {
+      "id": "refresh-client-receive",
+      "name": "Client receives refresh response",
+      "x": -1300,
+      "y": 1700,
+      "prose": "Receive either HTTP 204 after commit or HTTP 404 without a write."
+    },
+    {
+      "id": "host-start",
+      "name": "Host starts application",
+      "x": -1300,
+      "y": 2500,
+      "prose": "Invoke startup to load and bind application configuration."
+    },
+    {
+      "id": "host-ready",
+      "name": "Host receives ready application",
+      "x": -1300,
+      "y": 2900,
+      "prose": "Startup has completed; the application may serve requests."
     }
   ],
   "contracts": [
+    {
+      "id": "contact-refresh-http-in",
+      "name": "Contact refresh HTTP request",
+      "parent": "contact-refresh-endpoint",
+      "x": 42,
+      "y": 400,
+      "text": "POST /customers/{id}/contact-refresh\nroute.id: CustomerId"
+    },
+    {
+      "id": "contact-refresh-http-out",
+      "name": "Contact refresh HTTP response",
+      "parent": "contact-refresh-endpoint",
+      "x": 500,
+      "y": 400,
+      "text": "204 No Content after summary commit\nor 404 application/problem+json when the customer is absent."
+    },
+    {
+      "id": "contact-refresh-input",
+      "name": "Refresh input",
+      "parent": "contact-refresh-service",
+      "x": 42,
+      "y": 760,
+      "text": "customerId: CustomerId"
+    },
+    {
+      "id": "contact-refresh-output",
+      "name": "Refresh output",
+      "parent": "contact-refresh-service",
+      "x": 42,
+      "y": 940,
+      "text": "RefreshCompleted | CustomerNotFound(CustomerId)\nExactly one outcome per invocation. Completed means the summary write committed; NotFound means no summary write was attempted."
+    },
+    {
+      "id": "contact-details-input",
+      "name": "Details lookup",
+      "parent": "contact-refresh-service",
+      "x": 420,
+      "y": 760,
+      "text": "customerId: CustomerId"
+    },
+    {
+      "id": "contact-details-output",
+      "name": "Customer details result",
+      "parent": "contact-refresh-service",
+      "x": 420,
+      "y": 940,
+      "text": "Found(CustomerDetails { id, displayName, email?, phone? }) | NotFound(CustomerId)\nExactly one outcome per invocation."
+    },
+    {
+      "id": "contact-summary-data",
+      "name": "Prepared summary",
+      "parent": "contact-refresh-service",
+      "x": 650,
+      "y": 420,
+      "text": "ContactSummary { customerId, displayName, preferredContact }"
+    },
+    {
+      "id": "contact-summary-input",
+      "name": "Summary write input",
+      "parent": "contact-refresh-service",
+      "x": 1180,
+      "y": 760,
+      "text": "ContactSummary { customerId, displayName, preferredContact }"
+    },
+    {
+      "id": "contact-summary-output",
+      "name": "Summary write acknowledgement",
+      "parent": "contact-refresh-service",
+      "x": 1180,
+      "y": 940,
+      "text": "SummaryCommitted { customerId }\nThe repository write transaction committed. This does not acknowledge downstream processing."
+    },
     {
       "id": "http-request",
       "name": "HTTP request",
@@ -452,8 +730,9 @@
       "name": "AppOptions table",
       "kind": "environment-settings",
       "text": "Key | Value\nRateLimit.RequestsPerMinute | 120\nCustomerApi.DefaultPageSize | 50",
-      "x": 5530,
-      "y": 1010
+      "x": 1180,
+      "y": 420,
+      "parent": "customer-database"
     },
     {
       "id": "database-options",
@@ -494,7 +773,7 @@
       "id": "admitted-request",
       "name": "Admitted request",
       "text": "caller: string\ncustomerId: string",
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 767.028505564408,
       "y": 195.00000000000003
     },
@@ -502,7 +781,7 @@
       "id": "rate-limit-failure",
       "name": "Rate limit failure",
       "text": "status: 429\ntitle: Too Many Requests\nretryAfterSeconds: number",
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 767.028505564408,
       "y": 434.99999999999994
     },
@@ -510,7 +789,7 @@
       "id": "controller-request-model",
       "name": "GetCustomerRequest",
       "text": "public sealed record GetCustomerRequest(Guid CustomerId);",
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 746.878563195551,
       "y": 672.2083811152244
     },
@@ -518,7 +797,7 @@
       "id": "guarded-controller-request",
       "name": "Valid controller request",
       "text": "GetCustomerRequest\nCustomerId is a non-empty Guid",
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 1197.4332480609569,
       "y": 688.5202275104429
     },
@@ -534,7 +813,7 @@
       "id": "candidate-query",
       "name": "Candidate customer query",
       "text": "customerId: CustomerId\nincludeInactive: false",
-      "parent": "customer-service-class",
+      "parent": "customer-lookup-service",
       "x": 262,
       "y": 115
     },
@@ -550,7 +829,7 @@
       "id": "ef-query",
       "name": "Composed EF query",
       "text": "IQueryable<CustomerEntity>\nAsNoTracking()\nWhere(customerId)",
-      "parent": "customer-repository-class",
+      "parent": "customer-lookup-repository",
       "x": 262,
       "y": 115
     },
@@ -588,7 +867,7 @@
       "id": "response-model",
       "name": "GetCustomerResponse",
       "text": "{\n  \"id\": \"customer-id\",\n  \"displayName\": \"Ada Lovelace\"\n}\nor ProblemDetails",
-      "parent": "customer-controller-class",
+      "parent": "customer-get-endpoint",
       "x": 979.7331568958303,
       "y": 1114.6463144240488
     },
@@ -598,36 +877,171 @@
       "text": "200 application/json + Customer\nor 400 / 404 / 429 + ProblemDetails",
       "x": -455.52834624774937,
       "y": 788.2487035513583
+    },
+    {
+      "id": "customers-table",
+      "name": "Customers table",
+      "parent": "customer-database",
+      "x": 42,
+      "y": 420,
+      "text": "Durable rows: Id, DisplayName, Status.\nSupplies lookup data; availability does not invoke its readers.",
+      "kind": "table"
+    },
+    {
+      "id": "customer-contacts-table",
+      "name": "CustomerContacts table",
+      "parent": "customer-database",
+      "x": 420,
+      "y": 420,
+      "text": "Durable rows: CustomerId, Email, Phone.\nGetDetails reads these alongside Customers.",
+      "kind": "table"
+    },
+    {
+      "id": "contact-summaries-table",
+      "name": "ContactSummaries table",
+      "parent": "customer-database",
+      "x": 800,
+      "y": 420,
+      "text": "Durable rows: CustomerId, DisplayName, PreferredContact.\nAn incoming write describes committed state; it is not a returned payload or a control signal.",
+      "kind": "table"
+    },
+    {
+      "id": "contact-details-row",
+      "name": "Joined customer/contact row",
+      "parent": "customer-repository-details",
+      "x": 350,
+      "y": 115,
+      "text": "CustomerRow with optional contact fields | NoCustomerRow"
     }
   ],
   "arcs": [
     {
-      "from": "environment-variables",
-      "to": "bind-startup-configuration"
+      "id": "refresh-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "contact-refresh-handle",
+      "to": "contact-refresh-service",
+      "controlContract": {
+        "input": "contact-refresh-input",
+        "output": "contact-refresh-output"
+      }
     },
     {
-      "from": "aws-secrets-manager",
-      "to": "bind-startup-configuration"
+      "id": "refresh-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-refresh-complete",
+      "to": "contact-refresh-respond",
+      "invocation": "refresh-call"
     },
     {
-      "from": "customer-database",
-      "to": "app-options-table"
+      "id": "details-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "contact-refresh-load",
+      "to": "customer-repository-details",
+      "controlContract": {
+        "input": "contact-details-input",
+        "output": "contact-details-output"
+      }
     },
     {
-      "from": "app-options-table",
-      "to": "bind-startup-configuration"
+      "id": "details-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-details-materialize",
+      "to": "contact-refresh-prepare",
+      "invocation": "details-call"
     },
     {
-      "from": "bind-startup-configuration",
-      "to": "database-options"
+      "id": "summary-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "contact-refresh-save",
+      "to": "contact-summary-upsert",
+      "controlContract": {
+        "input": "contact-summary-input",
+        "output": "contact-summary-output"
+      }
     },
     {
-      "from": "bind-startup-configuration",
-      "to": "rate-limit-options"
+      "id": "summary-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-summary-upsert",
+      "to": "contact-refresh-complete",
+      "invocation": "summary-call"
     },
     {
-      "from": "bind-startup-configuration",
-      "to": "customer-api-options"
+      "id": "prepare-then-save",
+      "kind": "control",
+      "control": "continue",
+      "from": "contact-refresh-prepare",
+      "to": "contact-refresh-save"
+    },
+    {
+      "from": "contact-refresh-http-in",
+      "to": "contact-refresh-handle"
+    },
+    {
+      "from": "contact-refresh-respond",
+      "to": "contact-refresh-http-out"
+    },
+    {
+      "from": "contact-refresh-handle",
+      "to": "contact-refresh-input"
+    },
+    {
+      "from": "contact-refresh-input",
+      "to": "contact-refresh-load"
+    },
+    {
+      "from": "contact-refresh-complete",
+      "to": "contact-refresh-output"
+    },
+    {
+      "from": "contact-refresh-output",
+      "to": "contact-refresh-respond"
+    },
+    {
+      "from": "contact-refresh-load",
+      "to": "contact-details-input"
+    },
+    {
+      "from": "contact-details-input",
+      "to": "contact-details-read"
+    },
+    {
+      "from": "contact-details-materialize",
+      "to": "contact-details-output"
+    },
+    {
+      "from": "contact-details-output",
+      "to": "contact-refresh-prepare"
+    },
+    {
+      "from": "contact-refresh-prepare",
+      "to": "contact-summary-data"
+    },
+    {
+      "from": "contact-summary-data",
+      "to": "contact-refresh-save"
+    },
+    {
+      "from": "contact-refresh-save",
+      "to": "contact-summary-input"
+    },
+    {
+      "from": "contact-summary-input",
+      "to": "contact-summary-upsert"
+    },
+    {
+      "from": "contact-summary-upsert",
+      "to": "contact-summary-output"
+    },
+    {
+      "from": "contact-summary-output",
+      "to": "contact-refresh-complete"
     },
     {
       "from": "database-options",
@@ -731,10 +1145,10 @@
     },
     {
       "from": "sql-query",
-      "to": "customer-database"
+      "to": "database-customer-query"
     },
     {
-      "from": "customer-database",
+      "from": "database-customer-query",
       "to": "sql-result"
     },
     {
@@ -768,7 +1182,373 @@
     {
       "from": "serialize-response",
       "to": "http-response"
+    },
+    {
+      "from": "application-starting",
+      "to": "begin-configuration"
+    },
+    {
+      "from": "begin-configuration",
+      "to": "environment-read-request"
+    },
+    {
+      "from": "environment-read-request",
+      "to": "environment-variables"
+    },
+    {
+      "from": "environment-variables",
+      "to": "environment-settings"
+    },
+    {
+      "from": "environment-settings",
+      "to": "prepare-secrets-request"
+    },
+    {
+      "from": "prepare-secrets-request",
+      "to": "secrets-read-request"
+    },
+    {
+      "from": "secrets-read-request",
+      "to": "aws-secrets-manager"
+    },
+    {
+      "from": "aws-secrets-manager",
+      "to": "secret-settings"
+    },
+    {
+      "from": "secret-settings",
+      "to": "prepare-app-options-request"
+    },
+    {
+      "from": "prepare-app-options-request",
+      "to": "app-options-read-request"
+    },
+    {
+      "from": "app-options-read-request",
+      "to": "app-options-provider"
+    },
+    {
+      "from": "app-options-table",
+      "to": "app-options-provider"
+    },
+    {
+      "from": "app-options-provider",
+      "to": "app-options-settings"
+    },
+    {
+      "from": "environment-settings",
+      "to": "bind-options"
+    },
+    {
+      "from": "secret-settings",
+      "to": "bind-options"
+    },
+    {
+      "from": "app-options-settings",
+      "to": "bind-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "database-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "rate-limit-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "customer-api-options"
+    },
+    {
+      "from": "bind-options",
+      "to": "application-configured"
+    },
+    {
+      "from": "application-configured",
+      "to": "evaluate-rate-limit"
+    },
+    {
+      "from": "application-configured",
+      "to": "contact-refresh-handle"
+    },
+    {
+      "from": "customers-table",
+      "to": "database-customer-query"
+    },
+    {
+      "from": "database-options",
+      "to": "contact-refresh-save"
+    },
+    {
+      "id": "get-service-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "prepare-service-request",
+      "to": "customer-lookup-service",
+      "controlContract": {
+        "input": "service-request",
+        "output": "customer-result"
+      }
+    },
+    {
+      "id": "get-service-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "map-customer-result",
+      "to": "map-customer-response",
+      "invocation": "get-service-call"
+    },
+    {
+      "id": "get-repository-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "service-guard",
+      "to": "customer-lookup-repository",
+      "controlContract": {
+        "input": "customer-query",
+        "output": "customer-row"
+      }
+    },
+    {
+      "id": "get-repository-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "map-customer-row",
+      "to": "map-customer-result",
+      "invocation": "get-repository-call"
+    },
+    {
+      "id": "get-database-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "prepare-sql-query",
+      "to": "database-customer-query",
+      "controlContract": {
+        "input": "sql-query",
+        "output": "sql-result"
+      }
+    },
+    {
+      "id": "get-database-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "database-customer-query",
+      "to": "map-customer-row",
+      "invocation": "get-database-call"
+    },
+    {
+      "from": "customers-table",
+      "to": "contact-details-read"
+    },
+    {
+      "from": "customer-contacts-table",
+      "to": "contact-details-read"
+    },
+    {
+      "from": "contact-details-read",
+      "to": "contact-details-row"
+    },
+    {
+      "from": "contact-details-row",
+      "to": "contact-details-materialize"
+    },
+    {
+      "id": "details-read-then-materialize",
+      "kind": "control",
+      "control": "continue",
+      "from": "contact-details-read",
+      "to": "contact-details-materialize"
+    },
+    {
+      "from": "contact-summary-upsert",
+      "to": "contact-summaries-table"
+    },
+    {
+      "id": "details-not-found-return",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-details-materialize",
+      "to": "contact-refresh-not-found",
+      "invocation": "details-call"
+    },
+    {
+      "id": "refresh-not-found-return",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-refresh-not-found",
+      "to": "contact-refresh-respond-not-found",
+      "invocation": "refresh-call"
+    },
+    {
+      "from": "contact-details-output",
+      "to": "contact-refresh-not-found"
+    },
+    {
+      "from": "contact-refresh-not-found",
+      "to": "contact-refresh-output"
+    },
+    {
+      "from": "contact-refresh-output",
+      "to": "contact-refresh-respond-not-found"
+    },
+    {
+      "from": "contact-refresh-respond-not-found",
+      "to": "contact-refresh-http-out"
+    },
+    {
+      "id": "http-get-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "get-client-send",
+      "to": "customer-get-endpoint",
+      "controlContract": {
+        "input": "http-request",
+        "output": "http-response"
+      }
+    },
+    {
+      "id": "http-get-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "serialize-response",
+      "to": "get-client-receive",
+      "invocation": "http-get-call"
+    },
+    {
+      "id": "http-get-call-return-2",
+      "kind": "control",
+      "control": "return",
+      "from": "serialize-rate-limit-failure",
+      "to": "get-client-receive",
+      "invocation": "http-get-call"
+    },
+    {
+      "from": "get-client-send",
+      "to": "http-request"
+    },
+    {
+      "from": "http-response",
+      "to": "get-client-receive"
+    },
+    {
+      "id": "http-refresh-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "refresh-client-send",
+      "to": "contact-refresh-endpoint",
+      "controlContract": {
+        "input": "contact-refresh-http-in",
+        "output": "contact-refresh-http-out"
+      }
+    },
+    {
+      "id": "http-refresh-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-refresh-respond",
+      "to": "refresh-client-receive",
+      "invocation": "http-refresh-call"
+    },
+    {
+      "id": "http-refresh-call-return-2",
+      "kind": "control",
+      "control": "return",
+      "from": "contact-refresh-respond-not-found",
+      "to": "refresh-client-receive",
+      "invocation": "http-refresh-call"
+    },
+    {
+      "from": "refresh-client-send",
+      "to": "contact-refresh-http-in"
+    },
+    {
+      "from": "contact-refresh-http-out",
+      "to": "refresh-client-receive"
+    },
+    {
+      "id": "startup-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "host-start",
+      "to": "application-startup",
+      "controlContract": {
+        "input": "application-starting",
+        "output": "application-configured"
+      }
+    },
+    {
+      "id": "startup-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "bind-options",
+      "to": "host-ready",
+      "invocation": "startup-call"
+    },
+    {
+      "from": "host-start",
+      "to": "application-starting"
+    },
+    {
+      "from": "application-configured",
+      "to": "host-ready"
+    },
+    {
+      "id": "environment-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "begin-configuration",
+      "to": "environment-variables",
+      "controlContract": {
+        "input": "environment-read-request",
+        "output": "environment-settings"
+      }
+    },
+    {
+      "id": "environment-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "environment-variables",
+      "to": "prepare-secrets-request",
+      "invocation": "environment-call"
+    },
+    {
+      "id": "secrets-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "prepare-secrets-request",
+      "to": "aws-secrets-manager",
+      "controlContract": {
+        "input": "secrets-read-request",
+        "output": "secret-settings"
+      }
+    },
+    {
+      "id": "secrets-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "aws-secrets-manager",
+      "to": "prepare-app-options-request",
+      "invocation": "secrets-call"
+    },
+    {
+      "id": "app-options-call",
+      "kind": "control",
+      "control": "invoke",
+      "from": "prepare-app-options-request",
+      "to": "app-options-provider",
+      "controlContract": {
+        "input": "app-options-read-request",
+        "output": "app-options-settings"
+      }
+    },
+    {
+      "id": "app-options-call-return",
+      "kind": "control",
+      "control": "return",
+      "from": "app-options-provider",
+      "to": "bind-options",
+      "invocation": "app-options-call"
     }
   ],
-  "title": ".NET GET /customers/{id}"
+  "title": ".NET customer lookup and contact refresh"
 }

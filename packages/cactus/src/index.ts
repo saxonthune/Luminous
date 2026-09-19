@@ -90,3 +90,5 @@ export { Toolbar, ToolbarControlRenderer, MenuRoot } from './chrome/ChromePrimit
 export { ChromeSlots } from './chrome/ChromeSlots.js';
 export { CACTUS_TOKENS, cactusVar } from './cactus-tokens.js';
 export type { CactusToken } from './cactus-tokens.js';
+
+export { placeAdjacent } from './geometry/placeAdjacent.js';

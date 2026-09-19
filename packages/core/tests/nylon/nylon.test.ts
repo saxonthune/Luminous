@@ -118,7 +118,7 @@ describe('Nylon documents', () => {
     expect(moved.doc.transformations.find((item) => item.id === 'api')).toMatchObject({ x: 220, y: 40 });
   });
 
-  it('adds positioned Nodes and validates new Arcs', () => {
+  it('adds positioned Nodes and diagnoses questionable Arcs without rejecting them', () => {
     const withTransformation = addNylonTransformation(simple(), {
       id: 'nested', name: 'Nested', parent: 'api', x: 300, y: 400,
     });
@@ -131,7 +131,9 @@ describe('Nylon documents', () => {
     if (!withContract.ok) return;
     expect(withContract.doc.contracts.find((item) => item.id === 'middle')?.kind).toBe('options');
     expect(addNylonArc(withContract.doc, 'nested', 'middle').ok).toBe(true);
-    expect(addNylonArc(withContract.doc, 'nested', 'api')).toMatchObject({ ok: false });
+    const connected = addNylonArc(withContract.doc, 'nested', 'api');
+    expect(connected.ok).toBe(true);
+    if (connected.ok) expect(checkNylonDocument(connected.doc)).toContainEqual(expect.objectContaining({ rule: 'data-alternation' }));
   });
 
   it('inserts new Nodes at the deeper Arc endpoint parent and allows reparenting', () => {
@@ -203,7 +205,7 @@ describe('Nylon documents', () => {
     expect(checkNylonDocument(result.doc)).toEqual([]);
   });
 
-  it('doctors every unambiguous issue across a Document in one transaction', () => {
+  it('diagnoses broken documents without changing or deleting authored content', () => {
     const doc: NylonDocument = {
       v: 1,
       transformations: [
@@ -223,23 +225,21 @@ describe('Nylon documents', () => {
       ],
     };
 
+    const before = structuredClone(doc);
     const result = doctorNylonDocument(doc);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(checkNylonDocument(result.doc)).toEqual([]);
-    const repairedLeaf = result.doc.transformations.find((item) => item.id === 'leaf');
-    expect(repairedLeaf).toMatchObject({ x: 0, y: 0 });
-    expect(repairedLeaf?.parent).toBeUndefined();
-    expect(result.doc.contracts.find((item) => item.id === 'out')?.parent).toBeUndefined();
-    expect(result.doc.arcs).toEqual([{ from: 'in', to: 'leaf' }]);
-    expect(result.repairs.map((repair) => repair.code)).toEqual(expect.arrayContaining([
-      'orphan-parent', 'parent-cycle', 'contract-pair-parent', 'missing-coordinate', 'coordinate-frame', 'arc',
+    expect(doc).toEqual(before);
+    expect(result.doc).toEqual(before);
+    expect(result.repairs).toEqual([]);
+    expect(result.issues.map((issue) => issue.rule)).toEqual(expect.arrayContaining([
+      'unknown-parent', 'parent-cycle', 'contract-space', 'arc-endpoint', 'duplicate-arc',
     ]));
   });
 
   it('refuses to guess how duplicate identifiers should be repaired', () => {
     const doc = simple();
     doc.contracts.push({ id: 'request', name: 'Other request' });
-    expect(doctorNylonDocument(doc)).toMatchObject({ ok: false });
+    expect(doctorNylonDocument(doc).issues).toContainEqual(expect.objectContaining({ rule: 'duplicate-node-id', severity: 'error' }));
   });
 });

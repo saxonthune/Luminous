@@ -14,10 +14,9 @@ Nylon docs use these terms exactly.
 - **Document** — the persisted Nylon design in a `*.nylon.json` file.
   - A Document holds Nodes and Arcs.
 
-- **Doctor** — a whole-Document repair that restores unambiguous Nylon
-  invariants after direct file editing.
-  - Doctor reports every repair it applies.
-  - Doctor does not arrange valid Nodes or guess between ambiguous meanings.
+- **Doctor** — a read-only diagnosis of a Document.
+  - Doctor reports rule violations with affected Node and Arc identities.
+  - Doctor never deletes, repairs, or rewrites authored content.
 
 ## Network
 
@@ -74,9 +73,20 @@ Nylon docs use these terms exactly.
 - Each **Output Contract** is the Contract that supplies the output type of one
   Contract Pair.
 
-- **Arc** — a directed connection between one Contract and one Transformation.
-  - Every Arc has exactly one Contract end and one Transformation end.
+- **Arc** — a directed connection between Nodes.
+  - A Data Arc connects one Contract and one Transformation.
+  - A Control Pass Arc connects two Transformations and states invocation,
+    return, or continuation. Either endpoint may be differentiated.
   - Not: "Flow".
+
+- **Control Contract** — the input and output of one invocation.
+  - The canvas presents its two Nodes as a pair labelled **Control Contracts**.
+  - A Control Contract belongs to an invocation Arc and references two distinct
+    Contract Nodes in the same coordinate space.
+  - Its Contracts remain endpoints of Data Arcs and move together by their frame.
+  - A separate return Arc identifies the invocation and the Transformation
+    where control resumes, which need not be the original caller.
+  - An invocation does not by itself promise a return or synchronous execution.
 
 - **Ghost Node** — a view-only stand-in that keeps a relevant off-screen Node
   visible at the edge of the viewport.
@@ -94,6 +104,8 @@ Nylon docs use these terms exactly.
     between them.
   - Differentiation preserves the Parent Transformation's Contract Pair as the
     boundary of the expanded detail.
+  - Existing Control Pass Arcs remain on the boundary until an author explicitly
+    assigns their endpoints to internal Transformations.
 
 - **Parent Transformation** — the Transformation whose differentiated detail
   contains other Transformations and Contracts.
@@ -166,7 +178,7 @@ Nylon docs use these terms exactly.
   - Child Parent Transformations show an Open contents control in place of
     disclosure controls, including those containing only Contracts.
   - Arcs attached to hidden descendants appear at their visible Child ancestor.
-  - Standard View preserves the Document's bipartite structure and
+  - Standard View preserves the data network's bipartite structure and
     Differentiation rules.
 
 - **Focus Transformation** — the Transformation whose detail a Standard View

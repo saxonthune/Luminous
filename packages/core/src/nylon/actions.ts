@@ -33,7 +33,7 @@ export function actionLabel(action: NylonAction): string {
     'layout.standard': 'Arrange children',
     'container.expand': 'Make room for expansion', 'selection.move': 'Move selection',
     'node.reparent': 'Reparent Node', 'node.add': 'Add Node', 'node.delete': 'Delete Node',
-    differentiate: 'Differentiate', batch: 'Batch', doctor: 'Repair Document',
+    differentiate: 'Differentiate', batch: 'Batch', doctor: 'Diagnose Document',
     'document.replace': 'Replace Document',
   };
   return names[action.op] ?? action.op;
@@ -45,7 +45,7 @@ export function executeNylonAction(doc: NylonDocument, action: NylonAction): Nyl
     if (!action || typeof action.op !== 'string') throw new Error('missing action op');
     if (!['doctor', 'document.replace', 'batch'].includes(action.op)) {
       const errors = checkNylonDocument(doc).filter((issue) => issue.severity === 'error');
-      if (errors.length) return { ok: false, error: `Repair the Document first: ${errors.map((issue) => issue.message).join('; ')}` };
+      if (errors.length) return { ok: false, error: `Resolve structural issues first: ${errors.map((issue) => issue.message).join('; ')}` };
     }
     let result: NylonResult;
     switch (action.op) {
@@ -90,7 +90,7 @@ export function executeNylonAction(doc: NylonDocument, action: NylonAction): Nyl
         break;
       }
       case 'document.replace': result = { ok: true, doc: action.document }; break;
-      case 'doctor': result = doctorNylonDocument(doc); break;
+      case 'doctor': return doctorNylonDocument(doc);
       default: result = applyNylonBatch(doc, [action]);
     }
     if (!result.ok) return result;

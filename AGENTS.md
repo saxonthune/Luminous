@@ -61,6 +61,12 @@ These still work but carry schema-first assumptions that contradict the unfoldin
 
 ## Development Philosophy
 
+All Luminous apps are prototypes. Prioritize rapid experimentation and short
+feedback loops. Keep implementations small and easy to change as node kinds,
+edge types, and semantics evolve. Keep each app's semantic rules together in
+its domain code so UI and CLI consumers share them. Introduce abstractions,
+configuration, and compatibility machinery only when a concrete use case needs them.
+
 - **Unfolding process**: start minimal, grow complexity only when forces demand it. Every change should be a structure-preserving transformation. Living software starts small and develops centers and ornamentation as feature complexity evolves.
 - **Happy path first**: implement the minimal end-to-end path. Complex algorithms, guards, and elaborate systems come only when sufficient forces cross the threshold — change in quantity begets change in quality.
 - **Two sources of truth**: only product expectations and source code are sources of truth. Specs and docs in rhidoc bridge the gap between them — they don't replace either side.

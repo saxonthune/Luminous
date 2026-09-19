@@ -262,7 +262,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           const strokeDasharray = createMemo(() => {
             const scale = metricScale();
             return dash === 'dashed' ? `${6 * scale} ${3 * scale}`
-              : dash === 'dotted' ? `${2 * scale} ${3 * scale}`
+              : dash === 'dotted' ? `0 ${3 * width()}`
               : undefined;
           });
           const arrowSize = createMemo(() => counterScaledEdgeMetric(

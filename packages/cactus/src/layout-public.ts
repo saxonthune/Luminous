@@ -9,3 +9,6 @@ export type { CandidatePlacementPoint, CandidatePlacementRect } from './geometry
 export type { LayoutEdge } from './layout.js';
 export type { TidyNode } from './tidyLayout.js';
 export type { EdgeDeclaration, RegisteredNodeRect } from './types.js';
+
+export { placeAdjacent } from './geometry/placeAdjacent.js';
+export { directRectRoute } from './edgeRouting.js';

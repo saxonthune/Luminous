@@ -1,23 +1,17 @@
+import { createNylonPips } from './createNylonPips.ts';
+import { NylonPip } from './NylonPip.tsx';
+import { pipNodeId, type NylonPipSession } from './pipSession.ts';
+import { NylonViewContent } from './NylonViewContent.tsx';
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack, type JSX } from 'solid-js';
-import { Portal } from 'solid-js/web';
 import type { NylonContract, NylonDocument, NylonTransformation } from '@luminous/core/nylon';
 import type { NylonAction } from '@luminous/core/nylon/actions';
 import {
   Canvas,
-  MenuRoot,
-  NodeContainer,
-  isOverContainerInterior,
-  useCanvasContext,
-  useGesture,
   type CanvasRef,
-  type MenuSchema,
   type Transform,
 } from '@luminous/cactus';
 import {
-  CONTRACT_FRAME_VISUAL_BAND,
-  LEAF_VISUAL_BAND,
   projectNylon,
-  type NylonContractFrame,
   type NylonRenderNode,
   type NylonContainerState,
   type NylonViewDefinition,
@@ -25,12 +19,8 @@ import {
 import type { NylonDagDirection } from '@luminous/core/nylon/dagArrange';
 import { nylonSelectionRoots } from '@luminous/core/nylon/dragSelection';
 import { NylonViewportChrome } from './NylonViewportChrome.tsx';
-import { NylonTransformationCard } from './NylonTransformationCard.tsx';
-import { NylonFocusContainer } from './NylonFocusContainer.tsx';
 import {
   NYLON_VIEW_POLICY,
-  containerDragLocked,
-  showsSecondaryNodeContent,
   type ViewportSize,
 } from './viewportPolicy.ts';
 
@@ -49,15 +39,8 @@ export interface NylonCanvasState {
   camera: Transform;
   selection: string[];
   containerStates: ReadonlyMap<string, NylonContainerState>;
+  pips?: NylonPipSession;
 }
-
-const containerButtonStyle: JSX.CSSProperties = {
-  height: '20px', padding: '0 3px', display: 'flex',
-  'align-items': 'center', 'justify-content': 'center', gap: '2px',
-  'flex-shrink': 0, 'font-size': '15px', 'font-weight': 650, 'line-height': 1,
-  border: '1px solid var(--border-strong)', 'border-radius': '4px',
-  background: 'var(--surface)', color: 'var(--fg)', cursor: 'pointer',
-};
 
 export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
   let canvasRef: CanvasRef | undefined;
@@ -98,7 +81,7 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
       height: viewport.height / transform.k,
     };
   });
-  const projection = createMemo(() => projectNylon(
+  const mainProjection = createMemo(() => projectNylon(
     props.doc,
     collapsedIds(),
     new Set(selectedRenderIds()),
@@ -106,6 +89,15 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
     coveredIds(),
     props.view,
   ));
+
+  const pips = createNylonPips(() => props.doc, () => mainProjection(), initial?.pips,
+    (rect) => canvasRef?.fitView([rect], 72, false), selectedRenderIds);
+  const projection = pips.projection;
+  const workspaceBounds = () => [
+    ...baseProjection().nodes.map((node) => ({ x: node.x, y: node.y, width: node.w, height: node.h })),
+    ...pips.views().map((view) => view.frame),
+  ];
+  const openPip = (focus: string, renderId: string) => pips.open(focus, renderId);
 
   onMount(() => {
     const nodes = baseProjection().nodes;
@@ -120,7 +112,7 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
   });
 
   createEffect(() => props.onState?.({
-    camera: camera(), selection: [...selectedRenderIds()], containerStates: containerStates(),
+    camera: camera(), selection: [...selectedRenderIds()], containerStates: containerStates(), pips: pips.session(),
   }));
 
   onMount(() => {
@@ -171,20 +163,22 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
 
   function dragRoots(id: string): string[] {
     const selected = canvasRef?.getSelectedIds() ?? [];
-    const semanticIds = (selected.includes(id) ? selected : [id]).filter(canMove).map(semanticNodeId);
+    const pair = projection().contractFrames.find((frame) => frame.id === id);
+    const pressed = pair ? [pair.inputRenderId, pair.outputRenderId] : [id];
+    const semanticIds = (pressed.every((nodeId) => selected.includes(nodeId)) ? selected : pressed)
+      .filter(canMove).map(semanticNodeId);
     return nylonSelectionRoots(props.doc, [...new Set(semanticIds)]);
   }
 
   function canMove(id: string): boolean {
     if (!standard()) return true;
     const node = projection().nodes.find((item) => item.renderId === id);
-    return !!node && !node.context && node.item.id !== focusId();
+    const owner = pips.owner(id);
+    const viewFocus = owner === 'main' ? focusId() : pips.views().find((v) => v.pip.id === owner)?.pip.focusId;
+    return !!node && !node.context && node.item.id !== viewFocus;
   }
 
   function dragGroup(id: string): string[] {
-    const pair = projection().contractFrames.find((frame) => frame.id === id);
-    if (pair) return [pair.inputRenderId, pair.outputRenderId];
-
     const pressedNode = projection().nodes.find((node) => node.renderId === id);
     if (pressedNode?.kind === 'contract' && pressedNode.boundaryContainerId) return [id];
 
@@ -192,11 +186,14 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
     const transformations = new Map(props.doc.transformations.map((item) => [item.id, item]));
     return projection().nodes
       .filter((node) => {
-        if (node.context || (node.kind === 'contract' && node.boundaryContainerId)) return false;
+        if (!canMove(node.renderId) || node.context || (node.kind === 'contract' && node.boundaryContainerId)) return false;
         if (roots.has(node.item.id)) return true;
         const seen = new Set<string>();
         let parent = node.item.parent;
+        const owner = pips.owner(node.renderId);
+        const viewFocus = owner === 'main' ? focusId() : pips.views().find((v) => v.pip.id === owner)?.pip.focusId;
         while (parent !== undefined && !seen.has(parent)) {
+          if (standard() && parent === viewFocus) return false;
           if (roots.has(parent)) return true;
           seen.add(parent);
           parent = transformations.get(parent)?.parent;
@@ -208,10 +205,8 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
 
   let dragRequest: { revision: string; action: NylonAction } | undefined;
   function startDrag(id: string): void {
-    const pair = projection().contractFrames.find((frame) => frame.id === id);
-    dragRequest = { revision: props.revision, action: pair
-      ? { op: 'contract-pair.move', transformationId: pair.transformationId, dx: 0, dy: 0 }
-      : { op: 'selection.move', ids: dragRoots(id), dx: 0, dy: 0 } };
+    dragRequest = { revision: props.revision,
+      action: { op: 'selection.move', ids: dragRoots(id), dx: 0, dy: 0 } };
   }
 
   function endDrag(_id: string, dx: number, dy: number): void {
@@ -310,9 +305,11 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
           <button type="button" class="shrink-0 rounded border border-border-subtle px-2 py-1 text-sm disabled:opacity-40"
             disabled={props.blocked} onClick={arrangeChildren}>Arrange children</button>
           <button type="button" class="shrink-0 text-xs" onClick={() => canvasRef?.fitView(
-            baseProjection().nodes.map((node) => ({ x: node.x, y: node.y, width: node.w, height: node.h })), 72,
+            workspaceBounds(), 72,
           )}>Fit view</button>
           <button type="button" class="shrink-0 text-xs" onClick={frameReadable}>Readable zoom</button>
+          <button type="button" class="shrink-0 text-xs disabled:opacity-40" disabled={!pips.session().closed.length}
+            onClick={pips.reopen}>Reopen closed PIP</button>
         </div>
       </Show>
     <div ref={hostEl} style={{ position: 'relative', flex: '1 1 auto', 'min-height': 0 }}>
@@ -324,7 +321,19 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
         boxSelect={{ trigger: 'drag' }}
         onSelectionChange={selectionChanged}
       >
-        <NylonNodeLayer
+        <For each={pips.ids()}>{(id) => {
+          const view = () => pips.views().find((v) => v.pip.id === id)!;
+          return <NylonPip pip={view().pip} frame={view().frame}
+            name={props.doc.transformations.find((n) => n.id === view().pip.focusId)?.name ?? view().pip.focusId}
+            missing={!view().exists}
+            sourceMissing={!projection().nodes.some((n) => n.renderId === pipNodeId(view().pip.sourceView, view().pip.sourceNode))}
+            onToggleContext={() => pips.toggleContext(id)}
+            onMove={pips.move} onClose={() => { pips.close(id); clearSelection(); }}
+            onOpenTab={() => props.onOpenView?.(view().pip.focusId)}
+            onArrange={() => props.onAction({ op: 'layout.standard', focusId: view().pip.focusId })}
+            blocked={props.blocked} />;
+        }}</For>
+        <NylonViewContent
           doc={props.doc}
           nodes={() => projection().nodes}
           contractFrames={() => projection().contractFrames}
@@ -341,11 +350,12 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
           standard={standard()}
           canMove={canMove}
           onOpenView={props.onOpenView}
+          onOpenPip={standard() ? openPip : undefined}
         />
       </Canvas>
       <NylonViewportChrome
         doc={props.doc}
-        projection={baseProjection()}
+        projection={projection()}
         selectedId={selectedId()}
         camera={camera()}
         viewport={viewportSize()}
@@ -360,400 +370,10 @@ export function NylonCanvas(props: NylonCanvasProps): JSX.Element {
         onClose={clearSelection}
         onDifferentiate={differentiate}
         onOpenView={props.onOpenView}
+        onOpenPip={standard() ? (id) => openPip(id,
+          selectedRenderIds().find((renderId) => semanticNodeId(renderId) === id) ?? id) : undefined}
       />
     </div>
-    </>
-  );
-}
-
-function NylonNodeLayer(props: {
-  doc: NylonDocument;
-  nodes: () => NylonRenderNode[];
-  contractFrames: () => NylonContractFrame[];
-  viewportSize: () => ViewportSize;
-  dragGroup: (id: string) => string[];
-  onDragEnd: (id: string, dx: number, dy: number) => void;
-  onDragStart: (id: string) => void;
-  blocked: boolean;
-  onExpand: (id: string) => void;
-  onCollapse: (id: string) => void;
-  onCover: (id: string) => void;
-  onArrange: (id: string, direction: NylonDagDirection) => void;
-  onSpace: (id: string) => void;
-  standard: boolean;
-  canMove: (id: string) => boolean;
-  onOpenView?: (id: string | null) => void;
-}): JSX.Element {
-  const ctx = useCanvasContext();
-  const gesture = useGesture({
-    zoomScale: () => ctx.transform().k,
-    dragGroup: (id) => props.dragGroup(id),
-    callbacks: {
-      onDragStart: (id) => props.onDragStart(id),
-      onDragEnd: (id, dx, dy) => props.onDragEnd(id, dx, dy),
-    },
-  });
-  const dragDelta = (id: string) => gesture.draggedNodeIds().includes(id)
-    ? gesture.dragDelta()
-    : { dx: 0, dy: 0 };
-
-  return (
-    <>
-      <For each={props.contractFrames()}>
-        {(frame) => {
-          const dragLocked = () => !props.canMove(frame.inputRenderId) || !props.canMove(frame.outputRenderId)
-            || containerDragLocked(frame, ctx.transform().k, props.viewportSize());
-          const delta = () => [frame.inputRenderId, frame.outputRenderId]
-            .every((id) => gesture.draggedNodeIds().includes(id))
-            ? gesture.dragDelta()
-            : { dx: 0, dy: 0 };
-          return (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${frame.x}px`,
-                top: `${frame.y}px`,
-                width: `${frame.w}px`,
-                height: `${frame.h}px`,
-                transform: `translate(${delta().dx}px, ${delta().dy}px)`,
-                'z-index': CONTRACT_FRAME_VISUAL_BAND,
-                'pointer-events': frame.boundaryContainerId ? 'none' : 'auto',
-                border: `${frame.compact ? 2 : 3}px solid var(--color-token-moss)`,
-                'border-radius': frame.compact ? '22px' : '34px',
-                background: 'color-mix(in srgb, var(--color-kind-signal-bg) 30%, transparent)',
-                'box-shadow': '0 0 0 5px color-mix(in srgb, var(--color-token-moss) 14%, transparent)',
-                cursor: frame.boundaryContainerId
-                  ? 'default'
-                  : dragLocked() ? 'not-allowed' : gesture.isDraggingNode(frame.id) ? 'grabbing' : 'grab',
-              }}
-              data-contract-frame={frame.id}
-              data-no-pan
-              onPointerDown={(event) => {
-                ctx.onNodePointerDown(frame.transformationId, event);
-                if (!props.blocked && !dragLocked()) gesture.beginPress(frame.id, event);
-              }}
-            >
-              <div style={{
-                position: 'absolute', top: '0', left: '50%', transform: 'translate(-50%, -50%)',
-                padding: frame.compact ? '2px 7px' : '3px 10px', background: 'var(--surface-alt)', color: 'var(--fg)',
-                border: '2px solid var(--color-token-moss)', 'border-radius': '999px',
-                'font-size': frame.compact ? '9px' : '11px', 'font-weight': 700, 'white-space': 'nowrap',
-                'text-transform': 'uppercase', 'letter-spacing': '.08em',
-              }}>
-                {frame.name} Contract Pair
-              </div>
-              <div style={{
-                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-                width: frame.compact ? '18px' : '24px', height: frame.compact ? '18px' : '24px', display: 'grid', 'place-items': 'center',
-                background: 'var(--surface-alt)', color: 'var(--color-token-moss)',
-                border: '2px solid var(--color-token-moss)', 'border-radius': '999px',
-                'font-size': frame.compact ? '12px' : '15px', 'font-weight': 800,
-              }} aria-hidden="true">↓</div>
-            </div>
-          );
-        }}
-      </For>
-      <For each={props.nodes()}>
-        {(node) => {
-          const focusContainer = () => props.standard && node.kind === 'container' && node.expanded;
-          const dragLocked = () => !props.canMove(node.renderId) || (node.kind === 'container'
-            && containerDragLocked(node, ctx.transform().k, props.viewportSize()));
-          const showSecondary = () => showsSecondaryNodeContent(node, ctx.transform().k);
-          const delta = () => dragDelta(node.renderId);
-          const containerTint = () => node.depth % 2 === 0
-            ? 'color-mix(in srgb, var(--surface-alt) 76%, var(--color-token-ochre) 24%)'
-            : 'color-mix(in srgb, var(--surface-alt) 72%, var(--color-token-moss) 28%)';
-          const containerBorder = () => node.depth % 2 === 0
-            ? 'var(--color-token-ochre)'
-            : 'var(--color-token-moss)';
-          const facetRole = () => {
-            if (node.kind !== 'contract') return null;
-            const frame = props.contractFrames().find((candidate) => (
-              candidate.input === node.item.id || candidate.output === node.item.id
-            ));
-            if (!frame) return null;
-            return frame.input === node.item.id ? 'input' : 'output';
-          };
-          const contractKind = () => node.kind === 'contract' ? node.item.kind : undefined;
-          const contractBackground = () => contractKind() === 'environment-settings'
-            ? 'var(--color-kind-datasource-bg)'
-            : contractKind() === 'options'
-              ? 'var(--color-kind-memo-bg)'
-              : contractKind()
-                ? 'var(--color-kind-effect-bg)'
-                : 'var(--color-kind-signal-bg)';
-          const contractBorder = () => contractKind() === 'environment-settings'
-            ? 'var(--color-kind-datasource-border)'
-            : contractKind() === 'options'
-              ? 'var(--color-kind-memo-border)'
-              : contractKind()
-                ? 'var(--color-kind-effect-border)'
-                : 'var(--color-kind-signal-border)';
-          return (
-            <NodeContainer
-          nodeId={node.renderId}
-          x={() => node.x + delta().dx}
-          y={() => node.y + delta().dy}
-          w={() => node.w}
-          h={() => node.h}
-          visualBand={() => node.kind === 'container' && (!props.standard || focusContainer()) ? node.depth : LEAF_VISUAL_BAND + node.depth}
-          softContainer={() => node.kind === 'container' && (!props.standard || focusContainer())}
-          containerTint={containerTint}
-          containerBorder={containerBorder}
-          containerBorderWidth={() => 2}
-          containerInset={() => ({ top: 38, left: 0, right: 0, bottom: 0 })}
-          onPointerDown={(event) => {
-            if (node.kind === 'container' && node.state === 'expanded' && event.button === 0
-              && isOverContainerInterior(event.currentTarget as Element, event.clientX, event.clientY)) return;
-            if (node.kind === 'container' && node.state === 'covered' && event.button === 0) {
-              event.stopPropagation();
-            }
-            ctx.onNodePointerDown(node.renderId, event);
-            if (!props.blocked && !dragLocked()) gesture.beginPress(node.renderId, event);
-          }}
-        >
-          <Show when={node.context}>
-            <span class="absolute -top-5 left-1 text-xs font-semibold text-fg-muted">Context</span>
-          </Show>
-          <Show when={focusContainer()}>
-            <NylonFocusContainer name={node.item.name} selected={ctx.isSelected(node.renderId)} />
-          </Show>
-          <Show when={props.standard && node.kind !== 'contract' && !focusContainer() ? node : null}>
-            {(card) => <NylonTransformationCard doc={props.doc} item={card().item as NylonTransformation}
-              selected={ctx.isSelected(node.renderId)} onOpen={props.onOpenView} />}
-          </Show>
-          <Show when={node.kind === 'container' && !props.standard}>
-            <div style={{
-              height: node.kind === 'container' && node.state === 'collapsed' ? '100%' : '38px',
-              padding: '0 4px', display: 'flex', 'align-items': 'center', gap: '4px',
-              color: 'var(--fg)', 'font-size': '15px', 'font-weight': 650,
-              border: ctx.isSelected(node.renderId) ? '3px solid var(--accent)' : `2px solid ${containerBorder()}`,
-              'border-radius': node.kind === 'container' && node.state === 'collapsed' ? '10px' : '10px 10px 0 0',
-              background: containerTint(),
-              cursor: dragLocked() ? 'not-allowed' : gesture.isDraggingNode(node.renderId) ? 'grabbing' : 'grab',
-            }}>
-              <span title={node.item.name} style={{ overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap',
-                'max-width': '100%', 'flex-shrink': 1 }}>
-                {node.item.name}
-              </span>
-              <div style={{ 'margin-left': 'auto', display: 'flex', gap: '2px', 'flex-shrink': 0 }} data-no-pan>
-                <Show when={node.kind === 'container' && node.expanded}>
-                  <button
-                    type="button"
-                    aria-label={`Space children of ${node.item.name}`}
-                    title="Space children"
-                    on:pointerdown={(event) => event.stopPropagation()}
-                    on:click={(event) => {
-                      event.stopPropagation();
-                      props.onSpace(node.item.id);
-                    }}
-                    style={containerButtonStyle}
-                  >Space</button>
-                  <DagLayoutMenu
-                    name={node.item.name}
-                    onArrange={(direction) => props.onArrange(node.item.id, direction)}
-                  />
-                </Show>
-                <Show when={!props.standard}>
-                <button
-                  type="button"
-                  aria-label={`Expand ${node.item.name}`}
-                  title="Expand"
-                  disabled={node.kind === 'container' && node.expanded}
-                  on:pointerdown={(event) => event.stopPropagation()}
-                  on:click={(event) => {
-                    event.stopPropagation();
-                    props.onExpand(node.item.id);
-                  }}
-                  style={{
-                    ...containerButtonStyle,
-                    opacity: node.kind === 'container' && node.expanded ? 0.38 : 1,
-                  }}
-                >+</button>
-                <button
-                  type="button"
-                  aria-label={`Collapse ${node.item.name}`}
-                  title="Collapse"
-                  disabled={node.kind === 'container' && node.state === 'collapsed'}
-                  on:pointerdown={(event) => event.stopPropagation()}
-                  on:click={(event) => {
-                    event.stopPropagation();
-                    props.onCollapse(node.item.id);
-                  }}
-                  style={{
-                    ...containerButtonStyle,
-                    opacity: node.kind === 'container' && node.state === 'collapsed' ? 0.38 : 1,
-                  }}
-                >−</button>
-                <button
-                  type="button"
-                  aria-label={`Cover ${node.item.name}`}
-                  title="Cover"
-                  disabled={node.kind === 'container' && !node.expanded}
-                  on:pointerdown={(event) => event.stopPropagation()}
-                  on:click={(event) => {
-                    event.stopPropagation();
-                    props.onCover(node.item.id);
-                  }}
-                  style={{
-                    ...containerButtonStyle,
-                    opacity: node.kind === 'container' && !node.expanded ? 0.38 : 1,
-                  }}
-                >Cover</button>
-                </Show>
-              </div>
-            </div>
-          </Show>
-          <Show when={node.kind === 'transformation' && !props.standard}>
-            <div style={{
-              width: '100%', height: '100%', padding: '16px', display: 'flex',
-              'flex-direction': 'column', 'justify-content': 'center', gap: '10px',
-              background: 'var(--surface)', color: 'var(--fg)',
-              border: ctx.isSelected(node.renderId) ? '3px solid var(--accent)' : '2px solid var(--border-strong)',
-              'border-radius': '3px', 'box-shadow': 'var(--shadow-sm)', overflow: 'hidden',
-              cursor: gesture.isDraggingNode(node.renderId) ? 'grabbing' : 'grab',
-            }}>
-              <span style={{ 'font-size': '11px', 'text-transform': 'uppercase', 'letter-spacing': '.1em', color: 'var(--fg-muted)' }}>Transformation</span>
-              <strong style={{ 'font-size': '18px', 'line-height': 1.2 }}>{node.item.name}</strong>
-              <Show when={showSecondary()}>
-                <span style={{ 'font-size': '12px', 'line-height': 1.35, color: 'var(--fg-muted)', display: '-webkit-box', '-webkit-line-clamp': 4, '-webkit-box-orient': 'vertical', overflow: 'hidden' }}>
-                  {node.kind === 'transformation' ? node.item.prose : ''}
-                </span>
-                <Show when={node.kind === 'transformation' && node.item.needs?.length}>
-                  <span style={{ 'font-size': '11px', color: 'var(--fg-muted)', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}>
-                    Needs: {node.kind === 'transformation' ? node.item.needs?.join(', ') : ''}
-                  </span>
-                </Show>
-              </Show>
-            </div>
-          </Show>
-          <Show when={node.kind === 'contract' ? node : null}>
-            {(contractNode) => (
-              <NylonContractContent
-                node={contractNode()}
-                selected={() => ctx.isSelected(contractNode().renderId)}
-                dragging={() => gesture.isDraggingNode(contractNode().renderId)}
-                facetRole={facetRole()}
-                contractKind={contractKind()}
-                background={contractBackground()}
-                border={contractBorder()}
-                showSecondary={showSecondary}
-              />
-            )}
-          </Show>
-            </NodeContainer>
-          );
-        }}
-      </For>
-    </>
-  );
-}
-
-function NylonContractContent(props: {
-  node: Extract<NylonRenderNode, { kind: 'contract' }>;
-  selected: () => boolean;
-  dragging: () => boolean;
-  facetRole: string | null;
-  contractKind: string | undefined;
-  background: string;
-  border: string;
-  showSecondary: () => boolean;
-}): JSX.Element {
-  return (
-    <Show
-      when={props.node.compact}
-      fallback={
-        <div style={{
-          width: '100%', height: '100%', padding: '14px 22px', display: 'flex',
-          'flex-direction': 'column', 'justify-content': 'center', gap: '6px',
-          background: props.background, color: 'var(--fg)',
-          border: props.selected() ? '3px solid var(--accent)' : `2px solid ${props.border}`,
-          'border-radius': '999px', 'box-shadow': 'var(--shadow-sm)', overflow: 'hidden',
-          cursor: props.dragging() ? 'grabbing' : 'grab',
-        }}>
-          <span style={{ 'font-size': '10px', 'text-transform': 'uppercase', 'letter-spacing': '.1em', color: 'var(--fg-muted)', 'text-align': 'center' }}>
-            Contract{props.facetRole ? ` · ${props.facetRole}` : ''}{props.contractKind ? ` · ${props.contractKind}` : ''}
-          </span>
-          <strong style={{ 'font-size': '15px', 'line-height': 1.2, 'text-align': 'center' }}>{props.node.item.name}</strong>
-          <Show when={props.showSecondary()}>
-            <span style={{ 'font-family': 'ui-monospace, monospace', 'font-size': '11px', 'line-height': 1.3, color: 'var(--fg-muted)', 'white-space': 'pre-line', 'text-align': 'center', overflow: 'hidden', 'text-overflow': 'ellipsis' }}>
-              {props.node.item.text}
-            </span>
-          </Show>
-        </div>
-      }
-    >
-      <div style={{
-        width: '100%', height: '100%', padding: '2px 6px', display: 'flex',
-        'flex-direction': 'column', 'justify-content': 'center', gap: '0',
-        background: props.background, color: 'var(--fg)',
-        border: props.selected() ? '3px solid var(--accent)' : `2px solid ${props.border}`,
-        'border-radius': '999px', 'box-shadow': 'var(--shadow-sm)', overflow: 'hidden',
-        cursor: props.dragging() ? 'grabbing' : 'grab',
-      }}>
-        <span style={{ 'font-size': '10px', 'text-transform': 'uppercase', 'letter-spacing': '.08em', color: 'var(--fg-muted)', 'text-align': 'center' }}>
-          {props.facetRole ?? 'contract'}
-        </span>
-        <strong style={{ 'font-size': '15px', 'line-height': 1.1, 'text-align': 'center', overflow: 'hidden', 'text-overflow': 'ellipsis', 'white-space': 'nowrap' }}>
-          {props.node.item.name}
-        </strong>
-      </div>
-    </Show>
-  );
-}
-
-function DagLayoutMenu(props: {
-  name: string;
-  onArrange: (direction: NylonDagDirection) => void;
-}): JSX.Element {
-  const [open, setOpen] = createSignal(false);
-  const [anchor, setAnchor] = createSignal({ x: 0, y: 0 });
-  const schema = (): MenuSchema => ({
-    id: 'nylon-dag-direction',
-    items: [
-      ['LR', 'Left to right'],
-      ['TD', 'Top to down'],
-      ['RL', 'Right to left'],
-      ['DT', 'Down to top'],
-    ].map(([direction, label]) => ({
-      type: 'action' as const,
-      action: { id: `layout.dag.${direction}`, label, payload: direction },
-    })),
-  });
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label={`Order ${props.name} with DAG layout`}
-        aria-haspopup="menu"
-        title="DAG layout"
-        on:pointerdown={(event) => event.stopPropagation()}
-        on:click={(event) => {
-          event.stopPropagation();
-          const rect = event.currentTarget.getBoundingClientRect();
-          setAnchor({ x: rect.left, y: rect.bottom + 2 });
-          setOpen(true);
-        }}
-        style={containerButtonStyle}
-      >
-        DAG <span aria-hidden="true">▾</span>
-      </button>
-      <Show when={open()}>
-        <Portal>
-          <MenuRoot
-            schema={schema()}
-            open
-            onOpenChange={setOpen}
-            anchorX={anchor().x}
-            anchorY={anchor().y}
-            onAction={(_id, payload) => {
-              props.onArrange(payload as NylonDagDirection);
-              setOpen(false);
-            }}
-          />
-        </Portal>
-      </Show>
     </>
   );
 }
@@ -764,6 +384,7 @@ function NylonInspector(props: {
   onClose: () => void;
   onDifferentiate: (id: string) => void;
   onOpenView?: (id: string | null) => void;
+  onOpenPip?: (id: string) => void;
 }): JSX.Element {
   const selected = createMemo(() => {
     if (props.selectedId === null) return null;
@@ -773,6 +394,8 @@ function NylonInspector(props: {
     return contract ? { kind: 'contract' as const, item: contract } : null;
   });
   const hasChildren = (id: string) => [...props.doc.transformations, ...props.doc.contracts].some((item) => item.parent === id);
+  const controlContracts = createMemo(() => props.doc.arcs.filter((arc) => arc.controlContract
+    && [arc.from, arc.to, arc.controlContract.input, arc.controlContract.output].includes(props.selectedId ?? '')));
   const connections = createMemo(() => {
     const id = props.selectedId;
     if (!id) return [];
@@ -824,6 +447,10 @@ function NylonInspector(props: {
                   <button type="button" class="rounded border border-border-subtle px-2 py-1 text-xs text-fg"
                     onClick={() => props.onOpenView?.(transformation().id)}>Open in new tab</button>
                 </Show>
+                <Show when={props.onOpenPip}>
+                  <button type="button" class="rounded border border-border-subtle px-2 py-1 text-xs text-fg"
+                    onClick={() => props.onOpenPip?.(transformation().id)}>Open in PIP</button>
+                </Show>
                 <p class="whitespace-pre-wrap text-xs leading-5 text-fg">{transformation().prose}</p>
                 <div>
                   <div class="mb-1 text-[10px] uppercase tracking-wider text-fg-muted">Data needed</div>
@@ -845,7 +472,7 @@ function NylonInspector(props: {
                 <Show when={transformation().contractPair}>
                   {(boundary) => (
                     <div>
-                      <div class="mb-1 text-[10px] uppercase tracking-wider text-fg-muted">Contract Pair</div>
+                      <div class="mb-1 text-[10px] uppercase tracking-wider text-fg-muted">Control Contracts</div>
                       <div class="text-xs text-fg">Input: {boundary().input}</div>
                       <div class="text-xs text-fg">Output: {boundary().output}</div>
                     </div>
@@ -865,6 +492,18 @@ function NylonInspector(props: {
                 <pre class="max-h-80 overflow-auto whitespace-pre-wrap rounded bg-surface-alt p-3 text-xs text-fg">{contract().text}</pre>
               </>
             )}
+          </Show>
+          <Show when={controlContracts().length}>
+            <div class="text-xs text-fg">
+              <div class="mb-1 text-[10px] uppercase tracking-wider text-fg-muted">Control Contracts</div>
+              <For each={controlContracts()}>{(arc) => (
+                <div class="mb-2 rounded bg-surface-alt p-2">
+                  <div>Invocation: {arc.id}</div>
+                  <div>Input: {arc.controlContract!.input}</div>
+                  <div>Output: {arc.controlContract!.output}</div>
+                </div>
+              )}</For>
+            </div>
           </Show>
           <Show when={connections().length}>
             <div class="flex flex-col gap-2 text-xs text-fg">

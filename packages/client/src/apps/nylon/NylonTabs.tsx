@@ -1,5 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount, untrack, type JSX } from 'solid-js';
 import { NylonCanvas, type NylonCanvasProps } from './NylonCanvas.tsx';
+import { checkNylonDocument } from '@luminous/core/nylon';
 import { readNylonTabSession, writeNylonTabSession, type NylonTab } from './tabSession.ts';
 
 /** Tabs retain local navigation; all canvases use the same Document and actions. */
@@ -12,6 +13,8 @@ export function NylonTabs(props: NylonCanvasProps & { sourceId: string }): JSX.E
   const [active, setActive] = createSignal(restored?.tabs.find((tab) => tab.key === restored.activeKey) ?? root);
   const [closed, setClosed] = createSignal<NylonTab[]>(restored?.closed ?? []);
   const transformations = createMemo(() => new Map(props.doc.transformations.map((item) => [item.id, item])));
+  const diagnostics = createMemo(() => checkNylonDocument(props.doc));
+  const structurallyUnsafe = () => diagnostics().some((issue) => issue.severity === 'error');
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
   function save(): void {
@@ -98,6 +101,15 @@ export function NylonTabs(props: NylonCanvasProps & { sourceId: string }): JSX.E
 
   return (
     <>
+      <Show when={diagnostics().length}>
+        <details class="max-h-48 shrink-0 overflow-auto bg-surface p-2 text-fg" open={structurallyUnsafe()}>
+          <summary class="cursor-pointer">⚠ {diagnostics().length} Document issues</summary>
+          <For each={diagnostics()}>{(issue) => <p class="py-1 text-xs">
+            {issue.rule} — Nodes: {issue.nodeIds.join(', ')}
+            {issue.arcIds.length ? `; Arcs: ${issue.arcIds.join(', ')}` : ''}: {issue.message}
+          </p>}</For>
+        </details>
+      </Show>
       <div class="flex shrink-0 items-center gap-1 border-b border-border-subtle bg-surface px-1 text-xs">
         <div role="tablist" aria-label="Nylon views" class="flex min-w-0 flex-1 overflow-x-auto">
           <For each={tabs()}>{(tab) => (
@@ -129,9 +141,11 @@ export function NylonTabs(props: NylonCanvasProps & { sourceId: string }): JSX.E
               <button type="button" onClick={() => open(null)}>Open Document root</button>
             </div>
           }>
+            <Show when={!structurallyUnsafe()} fallback={<p class="p-4 text-fg">Resolve the structural issues in the JSON to resume the canvas. Your document and tabs are retained.</p>}>
             <NylonCanvas doc={props.doc} revision={props.revision} blocked={props.blocked}
               onAction={props.onAction} view={tab.view} initialState={tab.state}
               onState={(state) => { tab.state = state; scheduleSave(); }} onOpenView={open} />
+            </Show>
           </Show>
         )}</Show>
       </div>

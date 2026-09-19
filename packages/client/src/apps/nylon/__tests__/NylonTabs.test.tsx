@@ -74,6 +74,22 @@ describe('Nylon Tabs', () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it('retains the active view through warning and structurally invalid file reloads', () => {
+    const { setDocument, onAction } = mount();
+    click('Open child');
+    click('Change camera and selection');
+    setDocument({ ...doc, arcs: [{ from: 'child', to: 'missing' }] });
+    expect(host.textContent).toContain('arc-endpoint');
+    expect(host.querySelector('[data-camera]')?.textContent).toBe('123');
+    setDocument({ ...doc, transformations: [{ ...doc.transformations[0], parent: 'child' }] });
+    expect(host.textContent).toContain('Resolve the structural issues');
+    expect(active()).toBe('Child');
+    setDocument(doc);
+    expect(host.querySelector('[data-camera]')?.textContent).toBe('123');
+    expect(host.querySelector('[data-selection]')?.textContent).toBe('child');
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it('keeps a missing focus recoverable and supports keyboard tab activation', () => {
     const { setDocument } = mount();
     click('Open child');

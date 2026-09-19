@@ -74,7 +74,8 @@ describe('Nylon HTTP and CLI integration', () => {
     const batched = await cli('batch', 'created.nylon.json', operationsFile);
     expect(batched.undo).toHaveLength(4);
     expect((await cli('undo', 'created.nylon.json')).document).toEqual(laidOut.document);
-    expect((await cli('doctor', 'created.nylon.json')).undo).toHaveLength(3);
+    expect((await cli('doctor', 'created.nylon.json')).issues).toEqual([]);
+    expect((await cli('history', 'created.nylon.json')).undo).toHaveLength(3);
     expect((await cli('history', 'created.nylon.json')).redo).toHaveLength(1);
     const actionFile = join(directory, 'action.json');
     await writeFile(actionFile, JSON.stringify({ op: 'selection.move', ids: ['a'], dx: 10, dy: 0 }));

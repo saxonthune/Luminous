@@ -58,7 +58,12 @@ function isContract(value: unknown): value is NylonContract {
 }
 
 function isArc(value: unknown): value is NylonArc {
-  return isRecord(value) && typeof value.from === 'string' && typeof value.to === 'string';
+  return isRecord(value) && typeof value.from === 'string' && typeof value.to === 'string'
+    && optionalString(value.id)
+    && optionalString(value.invocation)
+    && (value.kind === undefined || value.kind === 'data' || value.kind === 'control')
+    && (value.control === undefined || ['invoke', 'return', 'continue'].includes(value.control as string))
+    && optionalContractPair(value.controlContract);
 }
 
 export function parseNylonDocument(text: string): ParseNylonDocumentResult {

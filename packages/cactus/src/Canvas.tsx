@@ -117,7 +117,7 @@ export interface CanvasProps {
 }
 
 export interface CanvasRef {
-  fitView: (rects: Array<{ x: number; y: number; width: number; height: number }>, padding?: number) => void;
+  fitView: (rects: Array<{ x: number; y: number; width: number; height: number }>, padding?: number, animate?: boolean) => void;
   /** Center a rect without changing the current zoom level. */
   centerView: (rect: { x: number; y: number; width: number; height: number }) => void;
   /** Move to an exact camera transform. */

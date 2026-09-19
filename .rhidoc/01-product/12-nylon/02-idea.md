@@ -1,6 +1,6 @@
 ---
 title: Idea
-summary: A canvas app for differentiating software behavior into a bipartite network of Transformations and Contracts
+summary: A canvas app for differentiating software behavior into data dependencies and explicit control passing between Transformations
 tags: [nylon, apps, behavior, transformations, contracts, differentiation]
 deps: [doc01.04, doc01.12.03, doc01.12.04]
 ---
@@ -8,7 +8,8 @@ deps: [doc01.04, doc01.12.03, doc01.12.04]
 # Idea
 
 Nylon is a Luminous app for designing how data changes as software runs. A
-Document alternates Contracts and Transformations. A Contract states the data
+Document has a data network alternating Contracts and Transformations, with
+Control Pass Arcs between Transformations. A Contract states the data
 available at one point. A Transformation states in prose how software changes
 that data and lists the data it needs. This alternating structure makes the path
 from an external source to a visible result readable by a person and available
@@ -21,8 +22,7 @@ the data contracts between them, whether or not one run exercises every path.
 
 ## Bipartite structure
 
-Every Arc joins one Contract and one Transformation. An Arc never joins two
-Contracts or two Transformations. A path therefore alternates:
+Every Data Arc joins one Contract and one Transformation. A data path alternates:
 
 `Contract → Transformation → Contract`
 
@@ -35,8 +35,9 @@ and one Output Contract and states that the Transformation changes the input
 type into the output type. The two Contracts remain separate Nodes in the
 alternating network, but the canvas presents them as two halves of one compound
 object. This makes “request transformed into response” visible without
-collapsing the Contracts into the Transformation or inventing a second kind of
-Arc.
+collapsing the Contracts into the Transformation. The control prototype adds
+invocation-owned Control Contracts and separate invocation, return, and
+continuation Arcs; existing Transformation-owned Contract Pairs remain available.
 
 A choice remains part of the alternating network. One decision Contract can
 feed multiple Transformations whose prose states mutually exclusive guards. For
@@ -65,7 +66,7 @@ Transformation when the design assigns ownership differently.
 
 The .NET REST API document starts with a JSON HTTP request and ends with a JSON
 HTTP response. The API contains `CustomerController.cs`, `CustomerService.cs`,
-and `CustomerRepository.cs` as differentiated Parent Transformations. A
+`CustomerRepository.cs`, and `ContactSummaryRepository.cs` as differentiated Parent Transformations. A
 customer database sits outside the API as a separate Transformation. The
 controller turns the HTTP request into a business `CustomerLookup` and turns the
 business result into the HTTP response. The service turns `CustomerLookup` into
@@ -73,6 +74,24 @@ business result into the HTTP response. The service turns `CustomerLookup` into
 query` into `customer database result`; along that path, Entity Framework
 prepares a SQL query, the database turns it into a SQL result, and the
 repository materializes the result.
+
+GET and POST contact-refresh have separate endpoint boundaries. Their HTTP
+requests are explicit invocations from client Transformations. Startup is an
+invocation from the host, and provider loading also uses invocation-owned pairs.
+Every specimen pair is labelled Control Contracts. GET's service,
+repository, and database calls use invocation-owned Control Contracts and
+explicit return continuations. The original Node identities remain available
+inside the new operation boundaries.
+
+Contact refresh invokes GetDetails, whose internal read joins Customers and
+CustomerContacts and whose result Transformation returns Found or NotFound.
+Found proceeds to a summary write and returns HTTP 204 after commit. NotFound
+returns HTTP 404 through a separate guarded continuation without a write.
+ContactSummaries is shown as durable state, separately from the write's acknowledgement.
+
+Startup loads environment, secret, and AppOptions settings through their
+Contracts before binding typed options. Its configured-application output is
+a prerequisite of request handling.
 
 To introduce the repository, Arc Insertion replaces the Arc from `Service
 guard` to `Customer query contract`. Because `Service guard` is deeper, the new
