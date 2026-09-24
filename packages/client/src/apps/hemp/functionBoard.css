@@ -1,0 +1,148 @@
+.hemp-function-board {
+  width: 1380px;
+  padding: 28px;
+  color: #23394c;
+  background: #edf4fa;
+  border: 2px solid #4c85b9;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.hemp-function-heading {
+  padding: 0 8px 20px;
+}
+.hemp-function-heading h1 {
+  font-size: 30px;
+  font-weight: 650;
+  margin: 6px 0 10px;
+}
+.hemp-function-heading p {
+  margin: 6px 0;
+  color: #476078;
+}
+.hemp-function-heading code {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.hemp-function-body,
+.hemp-part-children {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hemp-part {
+  min-width: 0;
+  border: 1px solid #9bafbf;
+  border-radius: 6px;
+  background: #ffffff;
+}
+.hemp-part > header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+}
+.hemp-part > header code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  flex: 1;
+  font-size: 16px;
+}
+.hemp-part-kind {
+  color: #4e6170;
+  font-size: 12px;
+}
+.hemp-part-line {
+  color: #526878;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.hemp-part-children {
+  padding: 0 10px 10px;
+}
+.hemp-part[data-kind="binding"] {
+  background: #daebe4;
+  border-color: #759f8a;
+}
+.hemp-part[data-kind="match"],
+.hemp-part[data-kind="if"] {
+  background: #e3d6f2;
+  border-color: #9977b5;
+}
+.hemp-part[data-kind="arm"],
+.hemp-part[data-kind="guard"],
+.hemp-part[data-kind="condition"] {
+  background: #f5e7bf;
+  border-color: #b59038;
+}
+.hemp-part[data-kind="call"],
+.hemp-part[data-kind="method"] {
+  background: #c4dffa;
+  border-color: #4c85b9;
+}
+.hemp-part[data-kind="return"],
+.hemp-part[data-kind="try"] {
+  background: #f4d2cc;
+  border-color: #bc7b76;
+}
+.hemp-part[data-kind="loop"],
+.hemp-part[data-kind="closure"] {
+  background: #d1e5eb;
+  border-color: #68a2b5;
+}
+.hemp-part[data-kind="match"] > .hemp-part-children {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  align-items: start;
+}
+.hemp-part[data-kind="match"] > .hemp-part-children > :first-child {
+  grid-column: 1 / -1;
+}
+.hemp-part[data-kind="operator"] > .hemp-part-children,
+.hemp-part[data-kind="assign"] > .hemp-part-children {
+  flex-direction: row;
+}
+.hemp-part[data-kind="operator"] > .hemp-part-children > *,
+.hemp-part[data-kind="assign"] > .hemp-part-children > * {
+  flex: 1;
+}
+.hemp-part-links {
+  padding: 0 12px 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hemp-part-links span,
+.hemp-part-links button {
+  font-size: 12px;
+  color: #174c7b;
+  border-bottom: 1px dotted #4c85b9;
+}
+.hemp-function-connections {
+  margin-top: 24px;
+  padding: 16px;
+  background: white;
+  border-radius: 6px;
+}
+.hemp-function-connections h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.hemp-function-connections p {
+  margin: 6px 0 12px;
+}
+.hemp-function-connections table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+.hemp-function-connections td,
+.hemp-function-connections th {
+  padding: 7px;
+  border-bottom: 1px solid #d1dce4;
+}
+.hemp-function-view button:focus-visible,
+.hemp-function-board a:focus-visible {
+  outline: 2px solid #174c7b;
+  outline-offset: 3px;
+}

@@ -159,3 +159,10 @@ packages/client/packages/
 
 # Per-dev workspace roots for multi-repo serving (see luminous.config.example.json)
 luminous.config.json
+
+# Hemp prior-art specimen, local tools, and generated diagrams
+/braincrawl
+/.hemp-tools/
+/.hemp-prior-art/
+/tools/hemp-rust/target/
+/tools/hemp-fixture/target/

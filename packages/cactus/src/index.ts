@@ -92,3 +92,4 @@ export { CACTUS_TOKENS, cactusVar } from './cactus-tokens.js';
 export type { CactusToken } from './cactus-tokens.js';
 
 export { placeAdjacent } from './geometry/placeAdjacent.js';
+export { visibleRects } from './geometry/visibleRects.js';

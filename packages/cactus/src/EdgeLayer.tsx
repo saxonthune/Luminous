@@ -79,8 +79,9 @@ function truncate(s: string): string {
   return s.length > LABEL_CAP ? s.slice(0, LABEL_CAP) + '…' : s;
 }
 
-function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8): string {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
+function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8, curved = false): string {
+  // Match the final tangent of bezierSegmentPath, not the diagonal endpoint chord.
+  const angle = curved ? (x2 >= x1 ? 0 : Math.PI) : Math.atan2(y2 - y1, x2 - x1);
   const baseX1 = x2 - size * Math.cos(angle - Math.PI / 6);
   const baseY1 = y2 - size * Math.sin(angle - Math.PI / 6);
   const baseX2 = x2 - size * Math.cos(angle + Math.PI / 6);
@@ -261,7 +262,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           const metricScale = createMemo(() => width() / baseWidth());
           const strokeDasharray = createMemo(() => {
             const scale = metricScale();
-            return dash === 'dashed' ? `${6 * scale} ${3 * scale}`
+            return dash === 'dashed' ? `${6 * scale} ${(edge.styling?.dashGap ?? 3) * scale}`
               : dash === 'dotted' ? `0 ${3 * width()}`
               : undefined;
           });
@@ -313,7 +314,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                               />
                             </Show>
                             <Show when={arrowHead && isFinal()}>
-                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y, arrowSize())} fill={color} opacity={opacity()} />
+                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y, arrowSize(), curved())} fill={color} opacity={opacity()} />
                             </Show>
                             <Show when={curved()} fallback={(
                               <line

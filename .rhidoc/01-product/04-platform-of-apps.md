@@ -20,3 +20,6 @@ runs; and Merino (doc01.10), a general node-and-edge app for designing a
 program as event-driven requirements and their deployments. Nylon (doc01.12)
 draws an alternating network of data Contracts and the Transformations that
 act on them.
+
+Hemp (doc01.13) inspects Rust crates, modules, and their dependencies from a
+pipeline-produced source inventory.

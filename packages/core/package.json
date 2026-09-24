@@ -11,6 +11,7 @@
     "./atlas": "./src/atlas/index.ts",
     "./linen": "./src/linen/index.ts",
     "./nylon": "./src/nylon/index.ts",
+    "./hemp": "./src/hemp/index.ts",
     "./nylon/*": "./src/nylon/*.ts",
     "./merino": "./src/merino/index.ts",
     "./view": "./src/view.ts",

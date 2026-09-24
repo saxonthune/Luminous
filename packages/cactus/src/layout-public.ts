@@ -1,4 +1,6 @@
 export { dagLayout } from './dagLayout.js';
+export { gridLayout } from './gridLayout.js';
+export { retainLayout } from './geometry/retainLayout.js';
 export { computeBounds } from './geometry/geometry.js';
 export { computeExpansionTranslations } from './geometry/expansion.js';
 export type { DagLayoutOptions } from './dagLayout.js';

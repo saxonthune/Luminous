@@ -6,6 +6,7 @@ import { LinenApp } from './linen/LinenApp';
 import { MerinoApp } from './merino/MerinoApp';
 import { RayonApp } from './rayon/RayonApp';
 import { NylonApp } from './nylon/NylonApp';
+import { HempApp } from './hemp/HempApp';
 
 export interface LuminousApp {
   id: string;
@@ -21,4 +22,5 @@ export const APPS: LuminousApp[] = [
   { id: 'merino', label: 'Merino', component: MerinoApp },
   { id: 'rayon', label: 'Rayon', component: RayonApp },
   { id: 'nylon', label: 'Nylon', component: NylonApp },
+  { id: 'hemp', label: 'Hemp', component: HempApp },
 ];
