@@ -9,4 +9,4 @@ deps: [doc01.13.04]
 
 - **HEMPTERM1.** [p] **crate-container** — a picture-in-picture node containing a crate's modules.
 
-- **HEMPTERM2.** [p] **soldered PCB principle** — semantic flatness when zoomed in: nothing to expand, hide, or move around.
+- **HEMPTERM2.** [p] **soldered PCB principle** — semantic flatness of the PCB's atomic item layer: items stay fixed, while finer detail is inspected in the sidebar or a floating draggable window.

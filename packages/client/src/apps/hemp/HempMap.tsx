@@ -1,13 +1,4 @@
-import {
-  For,
-  Show,
-  createMemo,
-  createSignal,
-  createResource,
-  createEffect,
-  onMount,
-  onCleanup,
-} from "solid-js";
+import { For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js";
 import {
   Canvas,
   useCanvasContext,
@@ -20,58 +11,19 @@ import {
   indexHempMap,
   validateFunctionInfo,
   type HempMap as MapDocument,
-  type MapItem,
   type FunctionChunk,
 } from "@luminous/core/hemp";
 import { presentMapItem } from "./mapPresentation";
-import { Part } from "./FunctionBoard";
+import { FunctionWindow } from "./FunctionWindow";
 import { MapDetails } from "./MapDetails";
 import "./hempMap.css";
-
-function FunctionContents(props: {
-  item: MapItem;
-  doc: MapDocument;
-  load: (name: string) => Promise<FunctionChunk>;
-  focus: (id: string) => void;
-}) {
-  const [chunk, { refetch }] = createResource(() => props.item.functionFile, props.load);
-  return (
-    <Show
-      when={!chunk.error}
-      fallback={
-        <p role="alert">
-          Function load failed. <button onClick={() => void refetch()}>Retry</button>
-        </p>
-      }
-    >
-      <Show when={chunk()} fallback={<p role="status">Loading function…</p>} keyed>
-        {(value) => (
-          <>
-            <code class="hemp-map-signature">{value.info.signature}</code>
-            <div class="hemp-function-body">
-              <For each={value.info.body}>
-                {(part) => (
-                  <Part
-                    part={part}
-                    info={value.info}
-                    doc={{ nodes: props.doc.items }}
-                    onReference={props.focus}
-                  />
-                )}
-              </For>
-            </div>
-          </>
-        )}
-      </Show>
-    </Show>
-  );
-}
 
 export function HempMapView(props: { doc: MapDocument; sourceId: string }) {
   // Parent mounts this view keyed by artifact snapshot.
   const index = indexHempMap(props.doc);
   const [query, setQuery] = createSignal("");
   const [selected, setSelected] = createSignal<string>();
+  const [inspected, setInspected] = createSignal<string>();
   const [direction, setDirection] = createSignal<"dependencies" | "usages">("dependencies");
   const [size, setSize] = createSignal({ width: 1200, height: 800 });
   const [edges, setEdges] = createSignal<EdgeDeclaration[]>([]);
@@ -218,8 +170,21 @@ export function HempMapView(props: { doc: MapDocument; sourceId: string }) {
                 </button>
                 <span>{presentation.subtitle}</span>
               </header>
+              <p class="hemp-map-stats">
+                {item.lineCount !== undefined ? `${item.lineCount} lines · ` : ""}
+                {index.outgoing.get(item.id)?.length ?? 0} dependencies ·{" "}
+                {index.incoming.get(item.id)?.length ?? 0} usages
+              </p>
               <Show when={item.functionFile}>
-                <FunctionContents item={item} doc={props.doc} load={load} focus={focus} />
+                <button
+                  class="hemp-map-open-flow"
+                  onClick={() => {
+                    selectItem(item.id);
+                    setInspected(item.id);
+                  }}
+                >
+                  Control flow
+                </button>
               </Show>
             </article>
           );
@@ -289,6 +254,17 @@ export function HempMapView(props: { doc: MapDocument; sourceId: string }) {
           >
             <Scene />
           </Canvas>
+          <Show when={inspected()} keyed>
+            {(id) => (
+              <FunctionWindow
+                item={index.byId.get(id)!}
+                doc={props.doc}
+                load={load}
+                focus={focus}
+                close={() => setInspected(undefined)}
+              />
+            )}
+          </Show>
         </div>
         <MapDetails doc={props.doc} item={selected() ? index.byId.get(selected()!) : undefined} />
       </div>

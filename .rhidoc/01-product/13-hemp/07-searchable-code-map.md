@@ -30,6 +30,11 @@ The resizable details sidebar shows the selected item's documentation, kind,
 namespace and source location. Open in VS Code and Open in Zed appear at the top.
 Source editor settings can override the generated checkout path for this view.
 
+The PCB's atomic layer is now the item: compact cards show name, kind, available
+line count, and direct dependency/usage counts. Control flow opens a single
+floating, draggable inspector without moving or expanding the item. Closing it
+leaves the map unchanged. Opening another function replaces this inspector.
+
 Binary selection follows the existing workspace normal-dependency closure
 described in doc01.13.03. It inventories source, not proven runtime reachability.
 File selection analyzes the selected file, including its inline modules.
@@ -47,7 +52,8 @@ map manifests; manifest checking does not fetch and validate all chunks.
 | Presentation | `mapPresentation.ts` in the Hemp app | Labels, kind colors, reserved visual sizes |
 | Arrangement and retention | `scripts/hemp-map-layout.ts`, using cactus | Parent-relative saved rectangles |
 | Search and relationship lookup | `packages/core/src/hemp/map.ts` | Search results and directed neighborhoods |
-| Canvas projection | `HempMap.tsx` | Visible item cards, loaded function interiors, highlighted references |
+| Resource grouping | `functionResources.ts` in Hemp core | Branch-exclusive references and function-level shared references |
+| Canvas projection | `HempMap.tsx`, `FunctionWindow.tsx` | Compact item cards, on-demand ordered details, highlighted references |
 
 The orchestrator keeps I/O separate from the pure normalization, joining,
 indexing, and presentation functions. The semantic inventory adapter is shared
@@ -78,11 +84,10 @@ manifest's item record. Updating a visual size policy requires an explicit
 - Copying an artifact requires its manifest and referenced sibling chunks.
   Unreferenced chunks remain on disk; generation does not delete them.
 - The browser loads the manifest once and builds name and adjacency indexes.
-  Function bodies load near the viewport at every zoom level, with a bounded cache.
+  Function bodies load only when their control-flow window opens, with a bounded cache.
 - Cactus culls offscreen rectangles. Lightweight rectangles can remain registered
   for routing without mounting offscreen item DOM trees. Zooming out never
-  suppresses items or their internal detail. More visible area can require
-  more rendered content; the cache limit is not a limit on visible bodies.
+  suppresses items. An open details window is independent of canvas zoom.
 
 This implementation scans the rectangle index for viewport changes and uses
 in-memory substring search. It does not claim bounded memory for arbitrarily
@@ -110,9 +115,22 @@ selection; relocation is not automatically reconciled.
 
 ## Interpretation and limits
 
-Function interiors retain the soldered PCB principle from doc01.13.06: represented
-syntax is fixed and remains visible at every zoom level. Zoom changes scale,
-not semantic visibility or reserved locations.
+The soldered PCB principle applies to the atomic item layer. Finer syntax is
+inspected separately, not expanded inline. Zoom changes scale, not semantic
+visibility or reserved locations. The earlier standalone function study remains
+available as a separate experiment.
+
+The details window preserves syntax order. Each resolved target is assigned to
+its nearest match arm or if/else branch. Repeated uses in the same branch produce
+one resource block. A target used in multiple branch scopes, or outside branches,
+appears once at function level. Nested branch sharing also promotes to function
+level in this limited version. These are static references, not runtime resource
+consumption, local-variable data flow, or liveness. Local-variable references are
+not yet extracted. Signature-only references remain on the PCB, not body blocks.
+
+The compact presentation needs `--relayout` once for previously generated large
+function footprints. The bundled function-map fixture has been repacked; later
+generation retains those new positions as usual.
 
 Highlighted edges are direct resolved item references, with arrows from using
 item to used item. They attach to item headings; the function's per-part
@@ -135,8 +153,11 @@ semantic inventory. Missing bodies are reported in analysis warnings.
 | Fit connections | Fit the focused neighborhood's headings |
 | Clear focus | Remove highlighting without rearranging |
 | Fit map | Fit the complete saved extent |
-| Wheel | Zoom without hiding items or function contents |
+| Wheel on canvas | Zoom without hiding PCB items or changing an open details window |
 | Background drag or middle drag | Pan |
 | Function connection annotation | Focus its referenced item |
 | Open in VS Code / Open in Zed | Open the selected item's source location in that editor |
 | Sidebar divider drag or Left/Right when focused | Resize the details sidebar |
+| Control flow on a function item | Open its ordered details in the floating window |
+| Floating window header drag | Move the window without moving PCB items |
+| Close control flow | Close the floating window |

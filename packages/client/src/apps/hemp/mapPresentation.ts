@@ -1,4 +1,4 @@
-import { functionParts, type FunctionInfo, type MapItem } from "@luminous/core/hemp";
+import { type FunctionInfo, type MapItem } from "@luminous/core/hemp";
 
 /** Only this stage chooses what the facts say and look like on the canvas. */
 export function presentMapItem(item: MapItem) {
@@ -19,12 +19,7 @@ export function presentMapItem(item: MapItem) {
   return { title: item.name, subtitle: item.kind, color: colors[item.kind] ?? "#e5e1da" };
 }
 
-/** Conservative reserved footprint, independent of whether the body is loaded. */
-export function mapItemSize(item: MapItem, info?: FunctionInfo) {
-  if (!info) return { w: 420, h: 160 };
-  const rows = functionParts(info.body);
-  return {
-    w: 1380,
-    h: 220 + rows.reduce((sum, p) => sum + 100 + Math.ceil(p.label.length / 60) * 24, 0),
-  };
+/** The PCB stops at items; detailed syntax never affects its footprint. */
+export function mapItemSize(_item: MapItem, _info?: FunctionInfo) {
+  return { w: 420, h: 190 };
 }

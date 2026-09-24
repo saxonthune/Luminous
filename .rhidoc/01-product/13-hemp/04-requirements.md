@@ -108,4 +108,9 @@ doc01.13.03 for the generation command and current coverage limits.
 - **HEMP51.** [p] Items retain persistent locations for a given source collection.
 - **HEMP52.** [p] Hemp's artifact experiments remain accessible under one app heading in Luminous.
 - **HEMP53.** [p] Hemp preserves explicit data-transformation stages so item properties can be carried through to the UI and changed later.
-- **HEMP54.** [p] Zooming out does not hide items or function contents in the searchable code map.
+- **HEMP54.** [p] Zooming out does not hide PCB items or the contents of an open control-flow window.
+
+- **HEMP55.** [p] The default PCB view represents compact items and their connections; ordered function details and control flow are not shown inline.
+- **HEMP56.** [p] Information below the PCB's atomic item layer is available through the sidebar or a floating draggable details window.
+- **HEMP57.** [p] A function's details window shows ordered control flow with resource blocks in the branches that uniquely consume them.
+- **HEMP58.** [p] Resources used in more than one branch appear at function level, even when only a subset of branches uses them.

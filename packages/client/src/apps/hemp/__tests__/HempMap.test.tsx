@@ -44,9 +44,26 @@ it("search focuses a fixed item, dims unrelated items and fetches function chunk
     await vi.waitFor(() =>
       expect(host.querySelector(".hemp-map-selected")?.textContent).toContain("process_command"),
     );
+    expect(host.querySelectorAll("[data-part-id]")).toHaveLength(0);
+    expect(fetcher).not.toHaveBeenCalled();
+    host.querySelector<HTMLButtonElement>(".hemp-map-selected .hemp-map-open-flow")!.click();
     await vi.waitFor(() =>
-      expect(host.querySelectorAll("[data-part-id]").length).toBeGreaterThan(0),
+      expect(host.querySelectorAll('[role="dialog"] [data-part-id]').length).toBeGreaterThan(0),
     );
+    expect(host.querySelectorAll("[data-map-item] [data-part-id]")).toHaveLength(0);
+    const floating = host.querySelector<HTMLElement>('[role="dialog"]')!;
+    const beforeDrag = floating.style.left;
+    floating.querySelector(".hemp-window-handle")!.dispatchEvent(
+      new MouseEvent("pointerdown", {
+        bubbles: true,
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+      }),
+    );
+    window.dispatchEvent(new MouseEvent("pointermove", { clientX: 180, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("pointerup", { clientX: 180, clientY: 140 }));
+    expect(floating.style.left).not.toBe(beforeDrag);
     expect(fetcher).toHaveBeenCalled();
     const sidebar = host.querySelector('aside[aria-label="Item details"]')!;
     expect(sidebar.textContent).toContain("process_command");
@@ -65,7 +82,7 @@ it("search focuses a fixed item, dims unrelated items and fetches function chunk
     expect(host.querySelector<HTMLElement>(`[data-map-item="${fn.id}"]`)!.style.left).toBe(
       originalLeft,
     );
-    const beforeZoom = host.querySelectorAll(`[data-map-item="${fn.id}"] [data-part-id]`).length;
+    const beforeZoom = host.querySelectorAll('[role="dialog"] [data-part-id]').length;
     const panSurface = host.querySelector("[data-pan-surface]")!;
     panSurface.dispatchEvent(
       new WheelEvent("wheel", {
@@ -79,9 +96,9 @@ it("search focuses a fixed item, dims unrelated items and fetches function chunk
     await vi.waitFor(() =>
       expect(host.querySelectorAll("[data-map-item]").length).toBe(doc.items.length),
     );
-    expect(host.querySelectorAll(`[data-map-item="${fn.id}"] [data-part-id]`).length).toBe(
-      beforeZoom,
-    );
+    expect(host.querySelectorAll('[role="dialog"] [data-part-id]').length).toBe(beforeZoom);
+    host.querySelector<HTMLButtonElement>('[aria-label="Close control flow"]')!.click();
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
   } finally {
     dispose();
     host.remove();
