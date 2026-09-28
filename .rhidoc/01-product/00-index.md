@@ -24,5 +24,6 @@ deps: []
 | doc01.11 | Rayon | group (1) | — | — |
 | doc01.12 | Nylon | group (6) | — | — |
 | doc01.13 | Hemp | group (7) | — | — |
+| doc01.14 | Twill | group (1) | — | — |
 
 Topics: ai-context, apps, architecture, background, canvas, history, platform, rhidoc, software-design, split, vision, visualization

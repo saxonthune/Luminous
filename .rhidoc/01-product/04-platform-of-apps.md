@@ -23,3 +23,6 @@ act on them.
 
 Hemp (doc01.13) inspects Rust crates, modules, and their dependencies from a
 pipeline-produced source inventory.
+
+Twill (doc01.14) queries source entities, module relationships, and contracts,
+then renders query results as progressively disclosed code maps.

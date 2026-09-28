@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc01.13.01, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc01.13.01, doc01.14.01, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -150,6 +150,14 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.13.05 | `13-hemp/05-glossary.md` | User-named concepts in Hemp. | hemp, glossary | doc01.13.04 | doc01.13.06 | — |
 | doc01.13.06 | `13-hemp/06-source-analysis-and-function-info.md` | Rust syntax and semantic vocabulary, source-to-artifact pipelines, FunctionInfo extraction, and the soldered PCB principle for function inspection. | hemp, rust, static-analysis, function-info, syntax, semantics | doc01.13.01, doc01.13.03, doc01.13.04, doc01.13.05 | doc01.13.07 | — |
 | doc01.13.07 | `13-hemp/07-searchable-code-map.md` | Searchable Hemp artifact, explicit extraction and presentation stages, lazy function loading, and retained map positions. | hemp, pipeline, search, layout | doc01.13.03, doc01.13.04, doc01.13.06 | — | — |
+
+### Twill
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.14.00 | `14-twill/00-index.md` |  |  | — | — | — |
+| doc01.14.01 | `14-twill/01-initial-transcript.md` | Initial conversation establishing Twill's codebase-query model, data model, and progressive module-and-contract map. | twill, transcript, code-query, modules, contracts, source-analysis | doc01.04 | — | — |
 
 ## 02-design — Design
 
@@ -279,6 +287,7 @@ Quick lookup for file-path→doc mapping:
 | `client` | doc02.21.03 |
 | `clusters` | doc02.05.06 |
 | `co-location` | doc02.14 |
+| `code-query` | doc01.14.01 |
 | `cognitive-load` | doc03.04 |
 | `comfyui` | doc01.06.01.07 |
 | `commercial` | doc01.06.01.06 |
@@ -287,7 +296,7 @@ Quick lookup for file-path→doc mapping:
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `containment` | doc01.07.06 |
 | `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21.01 |
-| `contracts` | doc01.09.01, doc01.12.02, doc01.12.03, doc01.12.05 |
+| `contracts` | doc01.09.01, doc01.12.02, doc01.12.03, doc01.12.05, doc01.14.01 |
 | `control-flow` | doc01.09.01 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
@@ -357,6 +366,7 @@ Quick lookup for file-path→doc mapping:
 | `milestone-2` | doc03.06 |
 | `milestones` | doc01.03.01, doc01.03.02 |
 | `modeling` | doc03.02 |
+| `modules` | doc01.14.01 |
 | `naming` | doc00.05 |
 | `node` | doc02.09 |
 | `node-and-edge` | doc01.06.01.02 |
@@ -418,6 +428,7 @@ Quick lookup for file-path→doc mapping:
 | `software-design` | doc01.01 |
 | `software-understanding` | doc01.12.01, doc01.13.01 |
 | `solid` | doc02.06.01, doc02.07, doc02.10.01, doc03.01, doc03.05 |
+| `source-analysis` | doc01.14.01 |
 | `spatial` | doc01.07.05 |
 | `split` | doc01.02 |
 | `sql` | doc02.10.02 |
@@ -434,7 +445,9 @@ Quick lookup for file-path→doc mapping:
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc01.06.01.03, doc03.03 |
 | `tools` | doc02.04, doc02.15, doc02.21.02 |
+| `transcript` | doc01.14.01 |
 | `transformations` | doc01.12.02, doc01.12.03, doc01.12.05 |
+| `twill` | doc01.14.01 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
 | `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc01.12.04, doc02.12, doc02.22.01 |
