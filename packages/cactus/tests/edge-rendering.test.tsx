@@ -172,6 +172,21 @@ describe('Canvas edge rendering', () => {
     cleanup();
   });
 
+  it.each([200, -200])('aligns a curved arrow with its target tangent at x=%s', (targetX) => {
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={[{ id: 'curve', sourceId: 'a', targetId: 'b', styling: { curve: 'bezier', arrowHead: true } }]}>
+        <NodeContainer nodeId="a" x={() => 0} y={() => 0} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="b" x={() => targetX} y={() => 80} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+    const arrow = container.querySelector('[data-cactus-edge-layer-lines] path[fill]:not([fill="none"])')!;
+    const [x, y, ax, ay, bx, by] = arrow.getAttribute('d')!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+    expect(ax).toBeCloseTo(bx);
+    expect((ay + by) / 2).toBeCloseTo(y);
+    expect(Math.sign(x - ax)).toBe(Math.sign(targetX));
+    cleanup();
+  });
+
   it('does NOT render edge SVG layer when no edges prop provided', () => {
     const { container, cleanup } = renderIntoContainer(() => (
       <Canvas>

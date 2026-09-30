@@ -42,12 +42,14 @@ export function isNylonPath(relativePath: string): boolean {
 
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
-  return isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath) || isNylonPath(relativePath)
+  return relativePath.endsWith('.hemp.json') || relativePath.endsWith('.hemp2.json') || relativePath.endsWith('.hemp2-part.json') || isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath) || isNylonPath(relativePath)
 }
 
 /** Document paths whose external writes invalidate caches and notify clients. */
 export function isWatchedDocumentPath(relativePath: string): boolean {
   return relativePath.endsWith(".graph.json")
+    || relativePath.endsWith('.hemp.json')
+    || relativePath.endsWith('.hemp2.json')
     || relativePath.endsWith(DATAFLOW_SUFFIX)
     || relativePath.endsWith(ATLAS_SUFFIX)
     || relativePath.endsWith(ATLASDATA_SUFFIX)

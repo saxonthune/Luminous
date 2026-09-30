@@ -1,0 +1,1440 @@
+{
+  "version": 1,
+  "projection": "items",
+  "name": "process_command · function study",
+  "analysis": {
+    "sourceRoot": "/home/saxon/code/github/saxonthune/Luminous/tools/hemp-fixture",
+    "method": "rust-analyzer 1.94.0 documentSymbol + references + semantic token definitions + syn ordered FunctionInfo",
+    "scope": "examples/function_board.rs",
+    "warnings": [
+      "One source file plus inline modules only. External module bodies are not inventoried.",
+      "Macro-generated declarations, locals and closure identities are not fully inventoried. References are not calls or runtime observations.",
+      "0 reference locations outside the selected source files were excluded. External dependency definitions are not included.",
+      "Uses rust-analyzer's active default Cargo configuration (including test targets); this is not a union of all feature configurations. An empty reference list is not proof that an item is unused.",
+      "Function study: source-shaped syntax, not a CFG. Other expressions retain source text. Connections are resolved item references, not dataflow; locals, external definitions, macro expansions and inferred runtime targets are not connection targets. Line count includes comments within the function span."
+    ]
+  },
+  "nodes": [
+    {
+      "id": "examples/function_board.rs",
+      "kind": "module",
+      "name": "function_board.rs",
+      "description": "Module-sized semantic inventory.",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 1
+      }
+    },
+    {
+      "id": "examples/function_board.rs::constant:DEFAULT_LIMIT",
+      "name": "DEFAULT_LIMIT",
+      "kind": "constant",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nconst DEFAULT_LIMIT: usize = 3",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 3,
+        "column": 7
+      }
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command",
+      "name": "Command",
+      "kind": "enum",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nenum Command {\n    Fetch { /* … */ },\n    Preview,\n    Clear,\n}\n\n\nsize = 16 (0x10), align = 0x8, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 6
+      }
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "name": "Fetch",
+      "kind": "variant",
+      "parent": "examples/function_board.rs::enum:Command",
+      "description": "function_board::Command\n\nFetch { limit: usize, }\n\n\nsize = 16 (0x10), align = 0x8, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 16
+      }
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+      "name": "limit",
+      "kind": "field",
+      "parent": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "description": "function_board::Command::Fetch\n\nlimit: usize\n\n\nsize = 8, align = 0x8, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 24
+      }
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Preview",
+      "name": "Preview",
+      "kind": "variant",
+      "parent": "examples/function_board.rs::enum:Command",
+      "description": "function_board::Command\n\nPreview\n\n\nsize = 8, align = 0x1, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 40
+      }
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Clear",
+      "name": "Clear",
+      "kind": "variant",
+      "parent": "examples/function_board.rs::enum:Command",
+      "description": "function_board::Command\n\nClear\n\n\nsize = 8, align = 0x1, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 49
+      }
+    },
+    {
+      "id": "examples/function_board.rs::struct:Client",
+      "name": "Client",
+      "kind": "struct",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nstruct Client {\n    enabled: bool,\n}\n\n\nsize = 1, align = 0x1, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 6,
+        "column": 8
+      }
+    },
+    {
+      "id": "examples/function_board.rs::struct:Client::field:enabled",
+      "name": "enabled",
+      "kind": "field",
+      "parent": "examples/function_board.rs::struct:Client",
+      "description": "function_board::Client\n\nenabled: bool\n\n\nsize = 1, align = 0x1, offset = 0x0, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 6,
+        "column": 17
+      }
+    },
+    {
+      "id": "examples/function_board.rs::impl:impl Client",
+      "name": "impl Client",
+      "kind": "impl",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nstruct Client {\n    enabled: bool,\n}",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 7,
+        "column": 6
+      }
+    },
+    {
+      "id": "examples/function_board.rs::impl:impl Client::method:fetch",
+      "name": "fetch",
+      "kind": "method",
+      "parent": "examples/function_board.rs::impl:impl Client",
+      "description": "function_board::Client\n\nfn fetch(&self, limit: usize) -> Result<Vec<usize>, String>",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 8,
+        "column": 8
+      }
+    },
+    {
+      "id": "examples/function_board.rs::impl:impl Client::method:clear",
+      "name": "clear",
+      "kind": "method",
+      "parent": "examples/function_board.rs::impl:impl Client",
+      "description": "function_board::Client\n\nfn clear(&self)",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 11,
+        "column": 8
+      }
+    },
+    {
+      "id": "examples/function_board.rs::function:record",
+      "name": "record",
+      "kind": "function",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nfn record(total: usize)",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 13,
+        "column": 4
+      }
+    },
+    {
+      "id": "examples/function_board.rs::function:process_command",
+      "name": "process_command",
+      "kind": "function",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nfn process_command(client: &Client, command: Command) -> Result<usize, String>\n\n\nProcess a command using an injected client and record its result.",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 16,
+        "column": 4
+      }
+    },
+    {
+      "id": "examples/function_board.rs::function:main",
+      "name": "main",
+      "kind": "function",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nfn main()",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 41,
+        "column": 4
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::constant:DEFAULT_LIMIT",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 17,
+          "column": 17,
+          "text": "let limit = DEFAULT_LIMIT;"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 16,
+          "column": 46,
+          "text": "fn process_command(client: &Client, command: Command) -> Result<usize, String> {"
+        },
+        {
+          "file": "examples/function_board.rs",
+          "line": 23,
+          "column": 9,
+          "text": "Command::Fetch { limit: requested } if requested > 0 => {"
+        },
+        {
+          "file": "examples/function_board.rs",
+          "line": 31,
+          "column": 9,
+          "text": "Command::Preview => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::enum:Command",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 38,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 23,
+          "column": 18,
+          "text": "Command::Fetch { limit: requested } if requested > 0 => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 47,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 23,
+          "column": 26,
+          "text": "Command::Fetch { limit: requested } if requested > 0 => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 55,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command::variant:Preview",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 31,
+          "column": 18,
+          "text": "Command::Preview => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::struct:Client",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 16,
+          "column": 29,
+          "text": "fn process_command(client: &Client, command: Command) -> Result<usize, String> {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::struct:Client",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 42,
+          "column": 18,
+          "text": "let client = Client { enabled: true };"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::struct:Client::field:enabled",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 18,
+          "column": 16,
+          "text": "if !client.enabled {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::struct:Client::field:enabled",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 42,
+          "column": 27,
+          "text": "let client = Client { enabled: true };"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::impl:impl Client::method:fetch",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 24,
+          "column": 33,
+          "text": "let values = client.fetch(requested)?;"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::impl:impl Client::method:clear",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 35,
+          "column": 23,
+          "text": "_ => { client.clear(); }"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::function:record",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 37,
+          "column": 5,
+          "text": "record(total);"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::function:process_command",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 13,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    }
+  ],
+  "views": {
+    "examples/function_board.rs": {
+      "examples/function_board.rs::impl:impl Client": {
+        "x": 24,
+        "y": 64
+      },
+      "examples/function_board.rs::function:main": {
+        "x": 24,
+        "y": 176
+      },
+      "examples/function_board.rs::function:process_command": {
+        "x": 368,
+        "y": 64
+      },
+      "examples/function_board.rs::constant:DEFAULT_LIMIT": {
+        "x": 712,
+        "y": 64
+      },
+      "examples/function_board.rs::enum:Command": {
+        "x": 712,
+        "y": 176
+      },
+      "examples/function_board.rs::struct:Client": {
+        "x": 712,
+        "y": 288
+      },
+      "examples/function_board.rs::function:record": {
+        "x": 712,
+        "y": 400
+      }
+    },
+    "examples/function_board.rs::enum:Command": {
+      "examples/function_board.rs::enum:Command::variant:Fetch": {
+        "x": 24,
+        "y": 64
+      },
+      "examples/function_board.rs::enum:Command::variant:Preview": {
+        "x": 24,
+        "y": 176
+      },
+      "examples/function_board.rs::enum:Command::variant:Clear": {
+        "x": 24,
+        "y": 288
+      }
+    },
+    "examples/function_board.rs::enum:Command::variant:Fetch": {
+      "examples/function_board.rs::enum:Command::variant:Fetch::field:limit": {
+        "x": 24,
+        "y": 64
+      }
+    },
+    "examples/function_board.rs::struct:Client": {
+      "examples/function_board.rs::struct:Client::field:enabled": {
+        "x": 24,
+        "y": 64
+      }
+    },
+    "examples/function_board.rs::impl:impl Client": {
+      "examples/function_board.rs::impl:impl Client::method:fetch": {
+        "x": 24,
+        "y": 64
+      },
+      "examples/function_board.rs::impl:impl Client::method:clear": {
+        "x": 24,
+        "y": 208
+      }
+    },
+    "workspace": {
+      "examples/function_board.rs": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "containers": {
+    "examples/function_board.rs": {
+      "x": 380,
+      "y": 0,
+      "width": 1016,
+      "height": 520
+    },
+    "examples/function_board.rs::enum:Command": {
+      "x": 1496,
+      "y": 0,
+      "width": 360,
+      "height": 376
+    },
+    "examples/function_board.rs::enum:Command::variant:Fetch": {
+      "x": 1956,
+      "y": 0,
+      "width": 360,
+      "height": 200
+    },
+    "examples/function_board.rs::struct:Client": {
+      "x": 1496,
+      "y": 472,
+      "width": 360,
+      "height": 200
+    },
+    "examples/function_board.rs::impl:impl Client": {
+      "x": 1496,
+      "y": 768,
+      "width": 360,
+      "height": 328
+    }
+  },
+  "functionInfo": {
+    "body": [
+      {
+        "children": [
+          {
+            "children": [],
+            "end": {
+              "column": 30,
+              "line": 17
+            },
+            "id": "part:1",
+            "kind": "expression",
+            "label": "DEFAULT_LIMIT",
+            "start": {
+              "column": 17,
+              "line": 17
+            }
+          }
+        ],
+        "end": {
+          "column": 31,
+          "line": 17
+        },
+        "id": "part:2",
+        "kind": "binding",
+        "label": "let limit",
+        "start": {
+          "column": 5,
+          "line": 17
+        }
+      },
+      {
+        "children": [
+          {
+            "children": [
+              {
+                "children": [],
+                "end": {
+                  "column": 23,
+                  "line": 18
+                },
+                "id": "part:3",
+                "kind": "expression",
+                "label": "! client . enabled",
+                "start": {
+                  "column": 8,
+                  "line": 18
+                }
+              }
+            ],
+            "end": {
+              "column": 23,
+              "line": 18
+            },
+            "id": "part:4",
+            "kind": "condition",
+            "label": "condition",
+            "start": {
+              "column": 8,
+              "line": 18
+            }
+          },
+          {
+            "children": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "children": [],
+                            "end": {
+                              "column": 37,
+                              "line": 19
+                            },
+                            "id": "part:5",
+                            "kind": "expression",
+                            "label": "\"client disabled\"",
+                            "start": {
+                              "column": 20,
+                              "line": 19
+                            }
+                          }
+                        ],
+                        "end": {
+                          "column": 44,
+                          "line": 19
+                        },
+                        "id": "part:6",
+                        "kind": "method",
+                        "label": "into",
+                        "start": {
+                          "column": 20,
+                          "line": 19
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 45,
+                      "line": 19
+                    },
+                    "id": "part:7",
+                    "kind": "call",
+                    "label": "Err",
+                    "start": {
+                      "column": 16,
+                      "line": 19
+                    }
+                  }
+                ],
+                "end": {
+                  "column": 45,
+                  "line": 19
+                },
+                "id": "part:8",
+                "kind": "return",
+                "label": "return",
+                "start": {
+                  "column": 9,
+                  "line": 19
+                }
+              }
+            ],
+            "end": {
+              "column": 6,
+              "line": 20
+            },
+            "id": "part:9",
+            "kind": "then",
+            "label": "then",
+            "start": {
+              "column": 24,
+              "line": 18
+            }
+          }
+        ],
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "id": "part:10",
+        "kind": "if",
+        "label": "if",
+        "start": {
+          "column": 5,
+          "line": 18
+        }
+      },
+      {
+        "children": [
+          {
+            "children": [],
+            "end": {
+              "column": 22,
+              "line": 21
+            },
+            "id": "part:11",
+            "kind": "expression",
+            "label": "0",
+            "start": {
+              "column": 21,
+              "line": 21
+            }
+          }
+        ],
+        "end": {
+          "column": 23,
+          "line": 21
+        },
+        "id": "part:12",
+        "kind": "binding",
+        "label": "let mut total",
+        "start": {
+          "column": 5,
+          "line": 21
+        }
+      },
+      {
+        "children": [
+          {
+            "children": [],
+            "end": {
+              "column": 18,
+              "line": 22
+            },
+            "id": "part:13",
+            "kind": "expression",
+            "label": "command",
+            "start": {
+              "column": 11,
+              "line": 22
+            }
+          },
+          {
+            "children": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "children": [],
+                        "end": {
+                          "column": 57,
+                          "line": 23
+                        },
+                        "id": "part:14",
+                        "kind": "expression",
+                        "label": "requested",
+                        "start": {
+                          "column": 48,
+                          "line": 23
+                        }
+                      },
+                      {
+                        "children": [],
+                        "end": {
+                          "column": 61,
+                          "line": 23
+                        },
+                        "id": "part:15",
+                        "kind": "expression",
+                        "label": "0",
+                        "start": {
+                          "column": 60,
+                          "line": 23
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 61,
+                      "line": 23
+                    },
+                    "id": "part:16",
+                    "kind": "operator",
+                    "label": ">",
+                    "start": {
+                      "column": 48,
+                      "line": 23
+                    }
+                  }
+                ],
+                "end": {
+                  "column": 61,
+                  "line": 23
+                },
+                "id": "part:17",
+                "kind": "guard",
+                "label": "guard",
+                "start": {
+                  "column": 48,
+                  "line": 23
+                }
+              },
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "children": [],
+                                "end": {
+                                  "column": 32,
+                                  "line": 24
+                                },
+                                "id": "part:18",
+                                "kind": "expression",
+                                "label": "client",
+                                "start": {
+                                  "column": 26,
+                                  "line": 24
+                                }
+                              },
+                              {
+                                "children": [],
+                                "end": {
+                                  "column": 48,
+                                  "line": 24
+                                },
+                                "id": "part:19",
+                                "kind": "expression",
+                                "label": "requested",
+                                "start": {
+                                  "column": 39,
+                                  "line": 24
+                                }
+                              }
+                            ],
+                            "end": {
+                              "column": 49,
+                              "line": 24
+                            },
+                            "id": "part:20",
+                            "kind": "method",
+                            "label": "fetch",
+                            "start": {
+                              "column": 26,
+                              "line": 24
+                            }
+                          }
+                        ],
+                        "end": {
+                          "column": 50,
+                          "line": 24
+                        },
+                        "id": "part:21",
+                        "kind": "try",
+                        "label": "? · propagate error",
+                        "start": {
+                          "column": 26,
+                          "line": 24
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 51,
+                      "line": 24
+                    },
+                    "id": "part:22",
+                    "kind": "binding",
+                    "label": "let values",
+                    "start": {
+                      "column": 13,
+                      "line": 24
+                    }
+                  },
+                  {
+                    "children": [
+                      {
+                        "children": [],
+                        "end": {
+                          "column": 32,
+                          "line": 25
+                        },
+                        "id": "part:23",
+                        "kind": "expression",
+                        "label": "values",
+                        "start": {
+                          "column": 26,
+                          "line": 25
+                        }
+                      },
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "children": [
+                                      {
+                                        "children": [],
+                                        "end": {
+                                          "column": 25,
+                                          "line": 26
+                                        },
+                                        "id": "part:24",
+                                        "kind": "expression",
+                                        "label": "value",
+                                        "start": {
+                                          "column": 20,
+                                          "line": 26
+                                        }
+                                      },
+                                      {
+                                        "children": [],
+                                        "end": {
+                                          "column": 29,
+                                          "line": 26
+                                        },
+                                        "id": "part:25",
+                                        "kind": "expression",
+                                        "label": "2",
+                                        "start": {
+                                          "column": 28,
+                                          "line": 26
+                                        }
+                                      }
+                                    ],
+                                    "end": {
+                                      "column": 29,
+                                      "line": 26
+                                    },
+                                    "id": "part:26",
+                                    "kind": "operator",
+                                    "label": "%",
+                                    "start": {
+                                      "column": 20,
+                                      "line": 26
+                                    }
+                                  },
+                                  {
+                                    "children": [],
+                                    "end": {
+                                      "column": 34,
+                                      "line": 26
+                                    },
+                                    "id": "part:27",
+                                    "kind": "expression",
+                                    "label": "0",
+                                    "start": {
+                                      "column": 33,
+                                      "line": 26
+                                    }
+                                  }
+                                ],
+                                "end": {
+                                  "column": 34,
+                                  "line": 26
+                                },
+                                "id": "part:28",
+                                "kind": "operator",
+                                "label": "==",
+                                "start": {
+                                  "column": 20,
+                                  "line": 26
+                                }
+                              }
+                            ],
+                            "end": {
+                              "column": 34,
+                              "line": 26
+                            },
+                            "id": "part:29",
+                            "kind": "condition",
+                            "label": "condition",
+                            "start": {
+                              "column": 20,
+                              "line": 26
+                            }
+                          },
+                          {
+                            "children": [
+                              {
+                                "children": [
+                                  {
+                                    "children": [],
+                                    "end": {
+                                      "column": 26,
+                                      "line": 27
+                                    },
+                                    "id": "part:30",
+                                    "kind": "expression",
+                                    "label": "total",
+                                    "start": {
+                                      "column": 21,
+                                      "line": 27
+                                    }
+                                  },
+                                  {
+                                    "children": [],
+                                    "end": {
+                                      "column": 35,
+                                      "line": 27
+                                    },
+                                    "id": "part:31",
+                                    "kind": "expression",
+                                    "label": "value",
+                                    "start": {
+                                      "column": 30,
+                                      "line": 27
+                                    }
+                                  }
+                                ],
+                                "end": {
+                                  "column": 35,
+                                  "line": 27
+                                },
+                                "id": "part:32",
+                                "kind": "operator",
+                                "label": "+=",
+                                "start": {
+                                  "column": 21,
+                                  "line": 27
+                                }
+                              }
+                            ],
+                            "end": {
+                              "column": 18,
+                              "line": 28
+                            },
+                            "id": "part:33",
+                            "kind": "then",
+                            "label": "then",
+                            "start": {
+                              "column": 35,
+                              "line": 26
+                            }
+                          }
+                        ],
+                        "end": {
+                          "column": 18,
+                          "line": 28
+                        },
+                        "id": "part:34",
+                        "kind": "if",
+                        "label": "if",
+                        "start": {
+                          "column": 17,
+                          "line": 26
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 14,
+                      "line": 29
+                    },
+                    "id": "part:35",
+                    "kind": "loop",
+                    "label": "for value in",
+                    "start": {
+                      "column": 13,
+                      "line": 25
+                    }
+                  }
+                ],
+                "end": {
+                  "column": 10,
+                  "line": 30
+                },
+                "id": "part:36",
+                "kind": "block",
+                "label": "block",
+                "start": {
+                  "column": 65,
+                  "line": 23
+                }
+              }
+            ],
+            "end": {
+              "column": 10,
+              "line": 30
+            },
+            "id": "part:37",
+            "kind": "arm",
+            "label": "Command :: Fetch { limit : requested }",
+            "start": {
+              "column": 9,
+              "line": 23
+            }
+          },
+          {
+            "children": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "children": [
+                              {
+                                "children": [],
+                                "end": {
+                                  "column": 46,
+                                  "line": 32
+                                },
+                                "id": "part:38",
+                                "kind": "expression",
+                                "label": "value",
+                                "start": {
+                                  "column": 41,
+                                  "line": 32
+                                }
+                              },
+                              {
+                                "children": [],
+                                "end": {
+                                  "column": 54,
+                                  "line": 32
+                                },
+                                "id": "part:39",
+                                "kind": "expression",
+                                "label": "limit",
+                                "start": {
+                                  "column": 49,
+                                  "line": 32
+                                }
+                              }
+                            ],
+                            "end": {
+                              "column": 54,
+                              "line": 32
+                            },
+                            "id": "part:40",
+                            "kind": "operator",
+                            "label": "+",
+                            "start": {
+                              "column": 41,
+                              "line": 32
+                            }
+                          }
+                        ],
+                        "end": {
+                          "column": 54,
+                          "line": 32
+                        },
+                        "id": "part:41",
+                        "kind": "closure",
+                        "label": "|value : usize| (deferred body)",
+                        "start": {
+                          "column": 26,
+                          "line": 32
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 55,
+                      "line": 32
+                    },
+                    "id": "part:42",
+                    "kind": "binding",
+                    "label": "let adjust",
+                    "start": {
+                      "column": 13,
+                      "line": 32
+                    }
+                  },
+                  {
+                    "children": [
+                      {
+                        "children": [],
+                        "end": {
+                          "column": 18,
+                          "line": 33
+                        },
+                        "id": "part:43",
+                        "kind": "expression",
+                        "label": "total",
+                        "start": {
+                          "column": 13,
+                          "line": 33
+                        }
+                      },
+                      {
+                        "children": [
+                          {
+                            "children": [],
+                            "end": {
+                              "column": 29,
+                              "line": 33
+                            },
+                            "id": "part:44",
+                            "kind": "expression",
+                            "label": "1",
+                            "start": {
+                              "column": 28,
+                              "line": 33
+                            }
+                          }
+                        ],
+                        "end": {
+                          "column": 30,
+                          "line": 33
+                        },
+                        "id": "part:45",
+                        "kind": "call",
+                        "label": "adjust",
+                        "start": {
+                          "column": 21,
+                          "line": 33
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 30,
+                      "line": 33
+                    },
+                    "id": "part:46",
+                    "kind": "assign",
+                    "label": "=",
+                    "start": {
+                      "column": 13,
+                      "line": 33
+                    }
+                  }
+                ],
+                "end": {
+                  "column": 10,
+                  "line": 34
+                },
+                "id": "part:47",
+                "kind": "block",
+                "label": "block",
+                "start": {
+                  "column": 29,
+                  "line": 31
+                }
+              }
+            ],
+            "end": {
+              "column": 10,
+              "line": 34
+            },
+            "id": "part:48",
+            "kind": "arm",
+            "label": "Command :: Preview",
+            "start": {
+              "column": 9,
+              "line": 31
+            }
+          },
+          {
+            "children": [
+              {
+                "children": [
+                  {
+                    "children": [
+                      {
+                        "children": [],
+                        "end": {
+                          "column": 22,
+                          "line": 35
+                        },
+                        "id": "part:49",
+                        "kind": "expression",
+                        "label": "client",
+                        "start": {
+                          "column": 16,
+                          "line": 35
+                        }
+                      }
+                    ],
+                    "end": {
+                      "column": 30,
+                      "line": 35
+                    },
+                    "id": "part:50",
+                    "kind": "method",
+                    "label": "clear",
+                    "start": {
+                      "column": 16,
+                      "line": 35
+                    }
+                  }
+                ],
+                "end": {
+                  "column": 33,
+                  "line": 35
+                },
+                "id": "part:51",
+                "kind": "block",
+                "label": "block",
+                "start": {
+                  "column": 14,
+                  "line": 35
+                }
+              }
+            ],
+            "end": {
+              "column": 33,
+              "line": 35
+            },
+            "id": "part:52",
+            "kind": "arm",
+            "label": "_",
+            "start": {
+              "column": 9,
+              "line": 35
+            }
+          }
+        ],
+        "end": {
+          "column": 6,
+          "line": 36
+        },
+        "id": "part:53",
+        "kind": "match",
+        "label": "match",
+        "start": {
+          "column": 5,
+          "line": 22
+        }
+      },
+      {
+        "children": [
+          {
+            "children": [],
+            "end": {
+              "column": 17,
+              "line": 37
+            },
+            "id": "part:54",
+            "kind": "expression",
+            "label": "total",
+            "start": {
+              "column": 12,
+              "line": 37
+            }
+          }
+        ],
+        "end": {
+          "column": 18,
+          "line": 37
+        },
+        "id": "part:55",
+        "kind": "call",
+        "label": "record",
+        "start": {
+          "column": 5,
+          "line": 37
+        }
+      },
+      {
+        "children": [
+          {
+            "children": [],
+            "end": {
+              "column": 13,
+              "line": 38
+            },
+            "id": "part:56",
+            "kind": "expression",
+            "label": "total",
+            "start": {
+              "column": 8,
+              "line": 38
+            }
+          }
+        ],
+        "end": {
+          "column": 14,
+          "line": 38
+        },
+        "id": "part:57",
+        "kind": "call",
+        "label": "Ok",
+        "start": {
+          "column": 5,
+          "line": 38
+        }
+      }
+    ],
+    "definitionLine": 16,
+    "lineCount": 25,
+    "name": "process_command",
+    "signature": "fn process_command (client : & Client , command : Command) -> Result < usize , String >",
+    "itemId": "examples/function_board.rs::function:process_command",
+    "namespace": "function_board.rs",
+    "connections": [
+      {
+        "partId": "part:1",
+        "targetId": "examples/function_board.rs::constant:DEFAULT_LIMIT",
+        "kind": "reference",
+        "line": 17,
+        "column": 17
+      },
+      {
+        "partId": "part:37",
+        "targetId": "examples/function_board.rs::enum:Command",
+        "kind": "reference",
+        "line": 23,
+        "column": 9
+      },
+      {
+        "partId": "part:48",
+        "targetId": "examples/function_board.rs::enum:Command",
+        "kind": "reference",
+        "line": 31,
+        "column": 9
+      },
+      {
+        "partId": "part:37",
+        "targetId": "examples/function_board.rs::enum:Command::variant:Fetch",
+        "kind": "reference",
+        "line": 23,
+        "column": 18
+      },
+      {
+        "partId": "part:37",
+        "targetId": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+        "kind": "reference",
+        "line": 23,
+        "column": 26
+      },
+      {
+        "partId": "part:48",
+        "targetId": "examples/function_board.rs::enum:Command::variant:Preview",
+        "kind": "reference",
+        "line": 31,
+        "column": 18
+      },
+      {
+        "partId": "part:3",
+        "targetId": "examples/function_board.rs::struct:Client::field:enabled",
+        "kind": "reference",
+        "line": 18,
+        "column": 16
+      },
+      {
+        "partId": "part:20",
+        "targetId": "examples/function_board.rs::impl:impl Client::method:fetch",
+        "kind": "reference",
+        "line": 24,
+        "column": 33
+      },
+      {
+        "partId": "part:50",
+        "targetId": "examples/function_board.rs::impl:impl Client::method:clear",
+        "kind": "reference",
+        "line": 35,
+        "column": 23
+      },
+      {
+        "partId": "part:55",
+        "targetId": "examples/function_board.rs::function:record",
+        "kind": "reference",
+        "line": 37,
+        "column": 5
+      }
+    ]
+  }
+}

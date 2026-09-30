@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "projection": "items",
+  "name": "braincrawl · stem/crates/l3/src/ids.rs",
+  "analysis": {
+    "method": "rust-analyzer 1.94.0 documentSymbol + references + semantic token definitions",
+    "scope": "stem/crates/l3/src/ids.rs",
+    "warnings": [
+      "One source file plus inline modules only. External module bodies, macro-generated declarations, locals and closure identities are not fully inventoried. References are not calls or runtime observations.",
+      "3 reference locations outside this source file were excluded. External dependency definitions are not included.",
+      "Uses rust-analyzer's active default Cargo configuration (including test targets); this is not a union of all feature configurations. An empty reference list is not proof that an item is unused."
+    ]
+  },
+  "nodes": [
+    {
+      "id": "stem/crates/l3/src/ids.rs",
+      "kind": "module",
+      "name": "ids.rs",
+      "description": "Module-sized semantic inventory.",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 1
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::constant:ALPHABET",
+      "name": "ALPHABET",
+      "kind": "constant",
+      "parent": "stem/crates/l3/src/ids.rs",
+      "description": "l3::ids\n\nconst ALPHABET: &[u8] = \n\n\nImplements notable traits: Read",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 9
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::constant:SUFFIX_LEN",
+      "name": "SUFFIX_LEN",
+      "kind": "constant",
+      "parent": "stem/crates/l3/src/ids.rs",
+      "description": "l3::ids\n\nconst SUFFIX_LEN: usize = 7",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 10
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::function:new_id",
+      "name": "new_id",
+      "kind": "function",
+      "parent": "stem/crates/l3/src/ids.rs",
+      "description": "l3::ids\n\npub fn new_id(existing: &HashSet<String>) -> String\n\n\nA fresh r- + 7-char anchor not already in existing. Regenerates on collision.",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 13
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::function:random_suffix",
+      "name": "random_suffix",
+      "kind": "function",
+      "parent": "stem/crates/l3/src/ids.rs",
+      "description": "l3::ids\n\nfn random_suffix() -> String",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 22
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::module:tests",
+      "name": "tests",
+      "kind": "module",
+      "parent": "stem/crates/l3/src/ids.rs",
+      "description": "l3::ids\n\nmod tests",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 28
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::module:tests::function:shape_matches_prefix_alphabet_and_length",
+      "name": "shape_matches_prefix_alphabet_and_length",
+      "kind": "function",
+      "parent": "stem/crates/l3/src/ids.rs::module:tests",
+      "description": "l3::ids::tests\n\nfn shape_matches_prefix_alphabet_and_length()",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 32
+      }
+    },
+    {
+      "id": "stem/crates/l3/src/ids.rs::module:tests::function:regenerates_on_collision",
+      "name": "regenerates_on_collision",
+      "kind": "function",
+      "parent": "stem/crates/l3/src/ids.rs::module:tests",
+      "description": "l3::ids::tests\n\nfn regenerates_on_collision()",
+      "source": {
+        "file": "stem/crates/l3/src/ids.rs",
+        "line": 44
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "stem/crates/l3/src/ids.rs::function:random_suffix",
+      "to": "stem/crates/l3/src/ids.rs::constant:ALPHABET",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 24,
+          "text": "(0..SUFFIX_LEN).map(|_| ALPHABET[rng.gen_range(0..ALPHABET.len())] as char).collect()"
+        }
+      ]
+    },
+    {
+      "from": "stem/crates/l3/src/ids.rs::module:tests::function:shape_matches_prefix_alphabet_and_length",
+      "to": "stem/crates/l3/src/ids.rs::constant:ALPHABET",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 39,
+          "text": "assert!(suffix.bytes().all(|b| ALPHABET.contains(&b)));"
+        }
+      ]
+    },
+    {
+      "from": "stem/crates/l3/src/ids.rs::function:random_suffix",
+      "to": "stem/crates/l3/src/ids.rs::constant:SUFFIX_LEN",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 24,
+          "text": "(0..SUFFIX_LEN).map(|_| ALPHABET[rng.gen_range(0..ALPHABET.len())] as char).collect()"
+        }
+      ]
+    },
+    {
+      "from": "stem/crates/l3/src/ids.rs::module:tests::function:shape_matches_prefix_alphabet_and_length",
+      "to": "stem/crates/l3/src/ids.rs::constant:SUFFIX_LEN",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 38,
+          "text": "assert_eq!(suffix.len(), SUFFIX_LEN);"
+        }
+      ]
+    },
+    {
+      "from": "stem/crates/l3/src/ids.rs::module:tests::function:shape_matches_prefix_alphabet_and_length",
+      "to": "stem/crates/l3/src/ids.rs::function:new_id",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 35,
+          "text": "let id = new_id(&existing);"
+        }
+      ]
+    },
+    {
+      "from": "stem/crates/l3/src/ids.rs::module:tests::function:regenerates_on_collision",
+      "to": "stem/crates/l3/src/ids.rs::function:new_id",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 49,
+          "text": "let first = new_id(&existing);"
+        },
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 51,
+          "text": "let second = new_id(&existing);"
+        }
+      ]
+    },
+    {
+      "from": "stem/crates/l3/src/ids.rs::function:new_id",
+      "to": "stem/crates/l3/src/ids.rs::function:random_suffix",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "stem/crates/l3/src/ids.rs",
+          "line": 15,
+          "text": "let id = format!(\"r-{}\", random_suffix());"
+        }
+      ]
+    }
+  ],
+  "views": {
+    "stem/crates/l3/src/ids.rs": {
+      "stem/crates/l3/src/ids.rs::function:new_id": {
+        "x": 24.000000000000004,
+        "y": 63.99999999999997
+      },
+      "stem/crates/l3/src/ids.rs::module:tests": {
+        "x": 18.28642403035054,
+        "y": 195.1443756037843
+      },
+      "stem/crates/l3/src/ids.rs::function:random_suffix": {
+        "x": 368,
+        "y": 63.99999999999997
+      },
+      "stem/crates/l3/src/ids.rs::constant:ALPHABET": {
+        "x": 711.9999999999999,
+        "y": 63.99999999999997
+      },
+      "stem/crates/l3/src/ids.rs::constant:SUFFIX_LEN": {
+        "x": 711.9999999999999,
+        "y": 207.99999999999997
+      }
+    },
+    "stem/crates/l3/src/ids.rs::module:tests": {
+      "stem/crates/l3/src/ids.rs::module:tests::function:shape_matches_prefix_alphabet_and_length": {
+        "x": 24,
+        "y": 64
+      },
+      "stem/crates/l3/src/ids.rs::module:tests::function:regenerates_on_collision": {
+        "x": 24,
+        "y": 208
+      }
+    },
+    "workspace": {
+      "stem/crates/l3/src/ids.rs": {
+        "x": -165.69474931322608,
+        "y": -105.70178315455007
+      }
+    }
+  },
+  "containers": {
+    "stem/crates/l3/src/ids.rs": {
+      "x": 8.21478052851057,
+      "y": 239.7206239702389,
+      "width": 1016,
+      "height": 328
+    },
+    "stem/crates/l3/src/ids.rs::module:tests": {
+      "x": -320.0905711381736,
+      "y": 889.0438132801207,
+      "width": 360,
+      "height": 328
+    }
+  }
+}

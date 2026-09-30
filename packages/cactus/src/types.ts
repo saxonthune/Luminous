@@ -40,6 +40,8 @@ export interface EdgeStyling {
   /** CSS variable name (without leading --), e.g. 'accent' or 'fg-muted'. */
   colorToken?: string;
   dash?: 'solid' | 'dashed' | 'dotted';
+  /** Gap between dashes in canvas units, counter-scaled with the stroke on zoom-out. */
+  dashGap?: number;
   width?: number;
   /** Show an arrowhead triangle on the target end. Default false. */
   arrowHead?: boolean;

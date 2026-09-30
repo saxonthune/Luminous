@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc01.13.01, doc01.14.01, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -136,6 +136,28 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.12.04 | `12-nylon/04-requirements.md` | Nylon's Standard View, Tabs, Continuous View, document actions, differentiation, and command-line requirements | nylon, ui, cli, requirements, differentiation, views, tabs | doc01.12.02, doc01.12.03 | doc01.12.02 | — |
 | doc01.12.05 | `12-nylon/05-nylon-formalization.md` | Nylon's formal rules and the semantic rules being tested as Transformations are differentiated | nylon, formalization, bipartite, transformations, contracts, arcs | doc01.12.02, doc01.12.03 | doc01.12.06 | — |
 | doc01.12.06 | `12-nylon/06-authoring-guidelines.md` | Practical guidance for ordering and differentiating behavior in a Nylon network | nylon, authoring, guidelines, differentiation, ordering | doc01.12.03, doc01.12.05 | — | — |
+
+### Hemp
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.13.00 | `13-hemp/00-index.md` |  |  | — | — | — |
+| doc01.13.01 | `13-hemp/01-about.md` | Hemp connects Rust source structure and software understanding through visual inspection, with execution as a further layer. | hemp, apps, rust, software-understanding | doc01.04, doc01.13.03 | doc01.13.03, doc01.13.04, doc01.13.06 | — |
+| doc01.13.02 | `13-hemp/02-reasoning-operations.md` |  |  | — | — | — |
+| doc01.13.03 | `13-hemp/03-static-inspector.md` | Pipeline-produced Rust crate and module inventory, dependency evidence, draggable nodes, LR arrangement, and CLI access. | hemp, rust, pipeline, cli, dependencies | doc01.13.01, doc01.13.04 | doc01.13.01, doc01.13.04, doc01.13.06, doc01.13.07 | — |
+| doc01.13.04 | `13-hemp/04-requirements.md` | User-supported Hemp requirements for the static Rust inventory, canvas interaction, descriptions, and CLI access. | hemp, requirements, rust, cli, markdown, selection | doc01.13.01, doc01.13.03 | doc01.13.03, doc01.13.05, doc01.13.06, doc01.13.07 | — |
+| doc01.13.05 | `13-hemp/05-glossary.md` | User-named concepts in Hemp. | hemp, glossary | doc01.13.04 | doc01.13.06 | — |
+| doc01.13.06 | `13-hemp/06-source-analysis-and-function-info.md` | Rust syntax and semantic vocabulary, source-to-artifact pipelines, FunctionInfo extraction, and the soldered PCB principle for function inspection. | hemp, rust, static-analysis, function-info, syntax, semantics | doc01.13.01, doc01.13.03, doc01.13.04, doc01.13.05 | doc01.13.07 | — |
+| doc01.13.07 | `13-hemp/07-searchable-code-map.md` | Searchable Hemp artifact, explicit extraction and presentation stages, lazy function loading, and retained map positions. | hemp, pipeline, search, layout | doc01.13.03, doc01.13.04, doc01.13.06 | — | — |
+
+### Twill
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.14.00 | `14-twill/00-index.md` |  |  | — | — | — |
+| doc01.14.01 | `14-twill/01-initial-transcript.md` | Initial conversation establishing Twill's codebase-query model, data model, and progressive module-and-contract map. | twill, transcript, code-query, modules, contracts, source-analysis | doc01.04 | — | — |
 
 ## 02-design — Design
 
@@ -240,7 +262,7 @@ Quick lookup for file-path→doc mapping:
 | `allen` | doc01.07.05 |
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
-| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.12.02, doc02.21.03 |
+| `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.12.02, doc01.13.01, doc02.21.03 |
 | `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `arcs` | doc01.12.03, doc01.12.05 |
 | `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04, doc01.07.06 |
@@ -260,11 +282,12 @@ Quick lookup for file-path→doc mapping:
 | `canvas-engine` | doc02.11 |
 | `case-study` | doc01.05.02, doc01.07.02 |
 | `chrome` | doc02.19, doc02.20 |
-| `cli` | doc01.07.02, doc01.12.04 |
+| `cli` | doc01.07.02, doc01.12.04, doc01.13.03, doc01.13.04 |
 | `cli-grammar` | doc03.08 |
 | `client` | doc02.21.03 |
 | `clusters` | doc02.05.06 |
 | `co-location` | doc02.14 |
+| `code-query` | doc01.14.01 |
 | `cognitive-load` | doc03.04 |
 | `comfyui` | doc01.06.01.07 |
 | `commercial` | doc01.06.01.06 |
@@ -273,7 +296,7 @@ Quick lookup for file-path→doc mapping:
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `containment` | doc01.07.06 |
 | `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21.01 |
-| `contracts` | doc01.09.01, doc01.12.02, doc01.12.03, doc01.12.05 |
+| `contracts` | doc01.09.01, doc01.12.02, doc01.12.03, doc01.12.05, doc01.14.01 |
 | `control-flow` | doc01.09.01 |
 | `conventions` | doc00.03 |
 | `coverage` | doc02.10.02 |
@@ -285,6 +308,7 @@ Quick lookup for file-path→doc mapping:
 | `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc01.07.01, doc01.07.02, doc02.21.01, doc02.21.02, doc02.21.03 |
 | `debugger` | doc01.11.01 |
 | `decoration` | doc02.17 |
+| `dependencies` | doc01.13.03 |
 | `deployments` | doc01.10.01 |
 | `derivation` | doc02.13 |
 | `design` | doc01.05.01, doc02.02, doc02.08 |
@@ -305,14 +329,16 @@ Quick lookup for file-path→doc mapping:
 | `fifa-bracketing` | doc01.05.02 |
 | `formalization` | doc01.12.05, doc02.02, doc03.02 |
 | `format` | doc02.21.01 |
+| `function-info` | doc01.13.06 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.13.05 |
 | `gojs` | doc01.06.01.06 |
 | `graph` | doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
 | `groups` | doc02.05.06 |
 | `guidelines` | doc01.12.06 |
+| `hemp` | doc01.13.01, doc01.13.03, doc01.13.04, doc01.13.05, doc01.13.06, doc01.13.07 |
 | `hierarchy` | doc01.12.01 |
 | `history` | doc01.02 |
 | `hooks` | doc02.05.02 |
@@ -325,12 +351,13 @@ Quick lookup for file-path→doc mapping:
 | `json-schema` | doc02.10.02 |
 | `konva` | doc01.06.01.04 |
 | `labor` | doc03.08 |
-| `layout` | doc02.05.03, doc02.05.04, doc02.05.06 |
+| `layout` | doc01.13.07, doc02.05.03, doc02.05.04, doc02.05.06 |
 | `legibility` | doc03.07 |
 | `libraries` | doc01.06.01.01 |
 | `linen` | doc01.09.01, doc01.09.02 |
 | `litegraph` | doc01.06.01.07 |
 | `maintenance` | doc00.02 |
+| `markdown` | doc01.13.04 |
 | `mcp` | doc01.10.02, doc02.04, doc02.15, doc02.21.02, doc03.06 |
 | `menus` | doc02.20 |
 | `merino` | doc01.10.01, doc01.10.02 |
@@ -339,6 +366,7 @@ Quick lookup for file-path→doc mapping:
 | `milestone-2` | doc03.06 |
 | `milestones` | doc01.03.01, doc01.03.02 |
 | `modeling` | doc03.02 |
+| `modules` | doc01.14.01 |
 | `naming` | doc00.05 |
 | `node` | doc02.09 |
 | `node-and-edge` | doc01.06.01.02 |
@@ -356,7 +384,7 @@ Quick lookup for file-path→doc mapping:
 | `perception` | doc03.04 |
 | `performance` | doc02.06.01 |
 | `philosophy` | doc00.02 |
-| `pipeline` | doc01.03.01, doc02.07, doc02.10.01, doc03.05 |
+| `pipeline` | doc01.03.01, doc01.13.03, doc01.13.07, doc02.07, doc02.10.01, doc03.05 |
 | `pipelines` | doc03.04 |
 | `plain-language` | doc00.04 |
 | `platform` | doc01.04, doc02.22.01 |
@@ -380,30 +408,36 @@ Quick lookup for file-path→doc mapping:
 | `relations` | doc01.07.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.21.03, doc03.05 |
-| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04 |
+| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04, doc01.13.04 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
 | `routing` | doc01.07.06 |
 | `rtp` | doc02.10.03 |
 | `runtime` | doc01.11.01 |
+| `rust` | doc01.13.01, doc01.13.03, doc01.13.04, doc01.13.06 |
 | `scene-graph` | doc01.06.01.04, doc01.06.01.08 |
 | `schema` | doc02.06.02, doc02.14, doc02.21.01, doc03.03 |
 | `schemas` | doc02.08, doc02.09 |
+| `search` | doc01.13.07 |
+| `selection` | doc01.13.04 |
 | `semantic-zoom` | doc03.07 |
+| `semantics` | doc01.13.06 |
 | `server` | doc02.03 |
 | `shell` | doc02.12, doc02.22.01 |
 | `software-design` | doc01.01 |
-| `software-understanding` | doc01.12.01 |
+| `software-understanding` | doc01.12.01, doc01.13.01 |
 | `solid` | doc02.06.01, doc02.07, doc02.10.01, doc03.01, doc03.05 |
+| `source-analysis` | doc01.14.01 |
 | `spatial` | doc01.07.05 |
 | `split` | doc01.02 |
 | `sql` | doc02.10.02 |
 | `statechart` | doc02.10.03, doc02.12, doc02.22.01 |
-| `static-analysis` | doc01.03.01, doc02.07, doc02.10.01 |
+| `static-analysis` | doc01.03.01, doc01.13.06, doc02.07, doc02.10.01 |
 | `style` | doc00.04 |
 | `subtypes` | doc00.05 |
 | `symbols` | doc01.09.01 |
+| `syntax` | doc01.13.06 |
 | `tabs` | doc01.12.03, doc01.12.04 |
 | `theme` | doc02.22.01 |
 | `theming` | doc02.05.05 |
@@ -411,7 +445,9 @@ Quick lookup for file-path→doc mapping:
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc01.06.01.03, doc03.03 |
 | `tools` | doc02.04, doc02.15, doc02.21.02 |
+| `transcript` | doc01.14.01 |
 | `transformations` | doc01.12.02, doc01.12.03, doc01.12.05 |
+| `twill` | doc01.14.01 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
 | `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc01.12.04, doc02.12, doc02.22.01 |

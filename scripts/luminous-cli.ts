@@ -31,6 +31,7 @@ const dryRun = takeFlag('--dry-run');
 
 function usage(): never {
   console.error(`Usage:
+  luminous hemp generate|items|crates|list|read|check|write|layout|move (run 'luminous hemp' for help)
   luminous nylon list [--server URL]
   luminous nylon read <path> [--server URL]
   luminous nylon history <path> [--server URL]
@@ -154,6 +155,10 @@ function layoutContext(): NylonLayoutContext {
 }
 
 async function main(): Promise<void> {
+  if (argv[0] === 'hemp') {
+    const { hempCli } = await import('./hemp-cli.ts');
+    return hempCli(argv.slice(1), serverUrl, dryRun);
+  }
   if (argv.shift() !== 'nylon') usage();
   const command = argv.shift();
   if (command === 'list') {

@@ -471,6 +471,7 @@ interface RoutePoint {
 interface EdgeStyling {
   colorToken?: string      // CSS variable name without leading -- (e.g. 'accent', 'fg-muted')
   dash?: 'solid' | 'dashed' | 'dotted'
+  dashGap?: number // dashed-line gap in canvas units; counter-scaled with stroke during zoom-out
   width?: number           // default 1.5
   arrowHead?: boolean      // default false — triangle on target end
   curve?: 'straight' | 'bezier' // default straight
@@ -479,7 +480,7 @@ interface EdgeStyling {
 
 ### Edge geometry
 
-Without a `routeBuilder`, cactus derives a direct route between the source and target borders. It bundles parallel direct routes and calculates their labels from the direct route length. Edge styling renders each derived or host-supplied route segment as a straight line by default, or as a horizontal-tangent cubic Bézier when `curve: 'bezier'` is requested.
+Without a `routeBuilder`, cactus derives a direct route between the source and target borders. It bundles parallel direct routes and calculates their labels from the direct route length. Edge styling renders each derived or host-supplied route segment as a straight line by default, or as a horizontal-tangent cubic Bézier when `curve: 'bezier'` is requested. Arrowheads align with the final segment's tangent, including the horizontal tangent of a Bézier.
 
 ```
 x1 = src.x + src.w / 2     x2 = tgt.x + tgt.w / 2
@@ -747,6 +748,19 @@ function useCanvasContext(): CanvasContextValue  // throws if outside Canvas
 `NodeRect` shape: `{ x: number; y: number; w: number; h: number }` — note `w`/`h` (not `width`/`height`); this is the registry's internal shape and differs from the public `NodeRect` type used by `boxSelect.getNodeRects`, which uses `width`/`height` plus `id`.
 
 ## Geometry Utilities
+
+### Fixed-map visibility and retained layout
+
+`visibleRects(rects, transform, viewport, overscan?)` filters canvas-space
+rectangles against a screen-space viewport. It preserves the input records;
+the host controls which semantic detail is rendered inside visible rectangles.
+This helper is exported from `@luminous/cactus`.
+
+`retainLayout(nodes, proposed, saved)` preserves saved parent-relative anchors,
+appends new siblings, and grows ancestor rectangles to contain their children.
+It returns the resulting layout and IDs added or enlarged. It does not move
+existing anchors to resolve growth-related overlaps. This helper and
+`gridLayout` are available from the DOM-free `@luminous/cactus/layout` entry.
 
 ### containment.ts
 

@@ -39,7 +39,7 @@ async function walk(dir: string): Promise<string[]> {
       results.push(...(await walk(join(dir, entry.name))))
     } else if (
       entry.isFile() &&
-      (entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json") || entry.name.endsWith(".atlas.json") || entry.name.endsWith(".linen.json") || entry.name.endsWith(".merino.json") || entry.name.endsWith(".nylon.json"))
+      (entry.name.endsWith(".hemp2.json") || entry.name.endsWith(".hemp.json") || entry.name.endsWith(".graph.json") || entry.name.endsWith(".dataflow.json") || entry.name.endsWith(".atlas.json") || entry.name.endsWith(".linen.json") || entry.name.endsWith(".merino.json") || entry.name.endsWith(".nylon.json"))
     ) {
       results.push(join(dir, entry.name))
     }
@@ -95,6 +95,8 @@ function stripDocSuffix(fileName: string): string {
   if (fileName.endsWith(".linen.json")) return basename(fileName, ".linen.json")
   if (fileName.endsWith(".merino.json")) return basename(fileName, ".merino.json")
   if (fileName.endsWith(".nylon.json")) return basename(fileName, ".nylon.json")
+  if (fileName.endsWith(".hemp.json")) return basename(fileName, ".hemp.json")
+  if (fileName.endsWith(".hemp2.json")) return basename(fileName, ".hemp2.json")
   return fileName
 }
 

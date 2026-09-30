@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "projection": "items",
+  "name": "hemp-fixture · examples/two_modules.rs",
+  "analysis": {
+    "method": "rust-analyzer 1.94.0 documentSymbol + references + semantic token definitions",
+    "scope": "examples/two_modules.rs",
+    "warnings": [
+      "One source file plus inline modules only. External module bodies, macro-generated declarations, locals and closure identities are not fully inventoried. References are not calls or runtime observations.",
+      "0 reference locations outside this source file were excluded. External dependency definitions are not included.",
+      "Uses rust-analyzer's active default Cargo configuration (including test targets); this is not a union of all feature configurations. An empty reference list is not proof that an item is unused."
+    ]
+  },
+  "nodes": [
+    {
+      "id": "examples/two_modules.rs",
+      "kind": "module",
+      "name": "two_modules.rs",
+      "description": "Module-sized semantic inventory.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 1
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:pricing",
+      "name": "pricing",
+      "kind": "module",
+      "parent": "examples/two_modules.rs",
+      "description": "two_modules\n\nmod pricing\n\n\nPricing rules shared by order calculations.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 4
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:pricing::constant:UNIT_PRICE",
+      "name": "UNIT_PRICE",
+      "kind": "constant",
+      "parent": "examples/two_modules.rs::module:pricing",
+      "description": "two_modules::pricing\n\npub const UNIT_PRICE: u32 = 20 (0x14)\n\n\nBase unit price, before shipping.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 6
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:pricing::constant:SHIPPING",
+      "name": "SHIPPING",
+      "kind": "constant",
+      "parent": "examples/two_modules.rs::module:pricing",
+      "description": "two_modules::pricing\n\npub const SHIPPING: u32 = 5\n\n\nShipping charged on an ordinary order.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 8
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:pricing::function:subtotal",
+      "name": "subtotal",
+      "kind": "function",
+      "parent": "examples/two_modules.rs::module:pricing",
+      "description": "two_modules::pricing\n\npub fn subtotal(quantity: u32) -> u32\n\n\nMultiply the quantity by the shared unit price.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 11
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:orders",
+      "name": "orders",
+      "kind": "module",
+      "parent": "examples/two_modules.rs",
+      "description": "two_modules\n\nmod orders\n\n\nOrder calculations consume pricing rules without owning them.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 17
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:orders::function:checkout",
+      "name": "checkout",
+      "kind": "function",
+      "parent": "examples/two_modules.rs::module:orders",
+      "description": "two_modules::orders\n\npub fn checkout(quantity: u32) -> u32\n\n\nOrdinary checkout: subtotal plus shipping.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 19
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::module:orders::function:quote",
+      "name": "quote",
+      "kind": "function",
+      "parent": "examples/two_modules.rs::module:orders",
+      "description": "two_modules::orders\n\npub fn quote() -> u32\n\n\nA single-item quote reads the same price and shipping constants directly.",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 24
+      }
+    },
+    {
+      "id": "examples/two_modules.rs::function:main",
+      "name": "main",
+      "kind": "function",
+      "parent": "examples/two_modules.rs",
+      "description": "two_modules\n\nfn main()",
+      "source": {
+        "file": "examples/two_modules.rs",
+        "line": 29
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "examples/two_modules.rs::module:orders::function:checkout",
+      "to": "examples/two_modules.rs::module:pricing",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 20,
+          "text": "super::pricing::subtotal(quantity) + super::pricing::SHIPPING"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::module:orders::function:quote",
+      "to": "examples/two_modules.rs::module:pricing",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 25,
+          "text": "super::pricing::UNIT_PRICE + super::pricing::SHIPPING"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::module:pricing::function:subtotal",
+      "to": "examples/two_modules.rs::module:pricing::constant:UNIT_PRICE",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 12,
+          "text": "quantity * UNIT_PRICE"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::module:orders::function:quote",
+      "to": "examples/two_modules.rs::module:pricing::constant:UNIT_PRICE",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 25,
+          "text": "super::pricing::UNIT_PRICE + super::pricing::SHIPPING"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::module:orders::function:checkout",
+      "to": "examples/two_modules.rs::module:pricing::constant:SHIPPING",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 20,
+          "text": "super::pricing::subtotal(quantity) + super::pricing::SHIPPING"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::module:orders::function:quote",
+      "to": "examples/two_modules.rs::module:pricing::constant:SHIPPING",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 25,
+          "text": "super::pricing::UNIT_PRICE + super::pricing::SHIPPING"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::module:orders::function:checkout",
+      "to": "examples/two_modules.rs::module:pricing::function:subtotal",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 20,
+          "text": "super::pricing::subtotal(quantity) + super::pricing::SHIPPING"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::function:main",
+      "to": "examples/two_modules.rs::module:orders",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 30,
+          "text": "assert_eq!(orders::checkout(2), 45);"
+        },
+        {
+          "file": "examples/two_modules.rs",
+          "line": 31,
+          "text": "assert_eq!(orders::quote(), 25);"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::function:main",
+      "to": "examples/two_modules.rs::module:orders::function:checkout",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 30,
+          "text": "assert_eq!(orders::checkout(2), 45);"
+        }
+      ]
+    },
+    {
+      "from": "examples/two_modules.rs::function:main",
+      "to": "examples/two_modules.rs::module:orders::function:quote",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/two_modules.rs",
+          "line": 31,
+          "text": "assert_eq!(orders::quote(), 25);"
+        }
+      ]
+    }
+  ],
+  "views": {
+    "examples/two_modules.rs": {
+      "examples/two_modules.rs::module:pricing": {
+        "x": 24,
+        "y": 64
+      },
+      "examples/two_modules.rs::function:main": {
+        "x": 24,
+        "y": 208.00000000000003
+      },
+      "examples/two_modules.rs::module:orders": {
+        "x": 358.1955233157013,
+        "y": 55.42113900273304
+      }
+    },
+    "examples/two_modules.rs::module:pricing": {
+      "examples/two_modules.rs::module:pricing::constant:SHIPPING": {
+        "x": 129.39792239083135,
+        "y": 73.8044318031032
+      },
+      "examples/two_modules.rs::module:pricing::function:subtotal": {
+        "x": 33.804386921907735,
+        "y": 158.84232288666155
+      },
+      "examples/two_modules.rs::module:pricing::constant:UNIT_PRICE": {
+        "x": 368,
+        "y": 62.774474075359294
+      }
+    },
+    "examples/two_modules.rs::module:orders": {
+      "examples/two_modules.rs::module:orders::function:checkout": {
+        "x": 24,
+        "y": 64
+      },
+      "examples/two_modules.rs::module:orders::function:quote": {
+        "x": 24,
+        "y": 208
+      }
+    },
+    "workspace": {
+      "examples/two_modules.rs": {
+        "x": 156.87113325562873,
+        "y": -169.1267066704044
+      }
+    }
+  },
+  "containers": {
+    "examples/two_modules.rs": {
+      "x": 66.25777836993801,
+      "y": 99.26997859925925,
+      "width": 672,
+      "height": 328
+    },
+    "examples/two_modules.rs::module:pricing": {
+      "x": 1399.562340620012,
+      "y": -28.187769484668895,
+      "width": 612,
+      "height": 296
+    },
+    "examples/two_modules.rs::module:orders": {
+      "x": 1152,
+      "y": 392,
+      "width": 360,
+      "height": 328
+    }
+  }
+}
