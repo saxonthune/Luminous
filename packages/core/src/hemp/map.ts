@@ -1,5 +1,5 @@
 import type { HempNode, HempDependency } from "./index";
-import type { FunctionInfo } from "./functionInfo";
+import type { FunctionInfo } from "./functionInfo.ts";
 
 /** Analysis facts are independent of projection and saved geometry. */
 export interface MapItem extends HempNode {

@@ -1,8 +1,8 @@
 import { dagLayout } from "@luminous/cactus/layout";
-import { validateFunctionInfo, type FunctionInfo } from "./functionInfo";
-export { functionParts, validateFunctionInfo } from "./functionInfo";
-export type { FunctionInfo, FunctionPart } from "./functionInfo";
-export * from "./map";
+import { validateFunctionInfo, type FunctionInfo } from "./functionInfo.ts";
+export { functionParts, validateFunctionInfo } from "./functionInfo.ts";
+export type { FunctionInfo, FunctionPart } from "./functionInfo.ts";
+export * from "./map.ts";
 
 export interface HempSource {
   file: string;

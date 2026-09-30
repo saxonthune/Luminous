@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { readFile } from 'node:fs/promises';
-import { hempCli } from './hemp-cli.ts';
 import {
   checkNylonDocument, doctorNylonDocument, parseNylonDocument, serializeNylonDocument,
   type DifferentiateOptions, type NylonDocument, type NylonBatchOperation,
@@ -156,7 +155,10 @@ function layoutContext(): NylonLayoutContext {
 }
 
 async function main(): Promise<void> {
-  if (argv[0] === 'hemp') return hempCli(argv.slice(1), serverUrl, dryRun);
+  if (argv[0] === 'hemp') {
+    const { hempCli } = await import('./hemp-cli.ts');
+    return hempCli(argv.slice(1), serverUrl, dryRun);
+  }
   if (argv.shift() !== 'nylon') usage();
   const command = argv.shift();
   if (command === 'list') {
