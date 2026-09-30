@@ -114,3 +114,4 @@ doc01.13.03 for the generation command and current coverage limits.
 - **HEMP56.** [p] Information below the PCB's atomic item layer is available through the sidebar or a floating draggable details window.
 - **HEMP57.** [p] A function's details window shows ordered control flow with resource blocks in the branches that uniquely consume them.
 - **HEMP58.** [p] Resources used in more than one branch appear at function level, even when only a subset of branches uses them.
+- **HEMP59.** [p] The static Hemp demo includes the existing Hemp example documents in its document picker.

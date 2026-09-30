@@ -1,0 +1,534 @@
+{
+  "format": "hemp2",
+  "name": "examples/function_board.rs",
+  "collection": "86a94d8fdbda60ed8110861f5eeb5ad7e8a1c6326aa769c4ca063a379416a541",
+  "analysis": {
+    "sourceRoot": "/home/saxon/code/github/saxonthune/Luminous/tools/hemp-fixture",
+    "warnings": [
+      "One source file plus inline modules only. External module bodies are not inventoried.",
+      "Macro-generated declarations, locals and closure identities are not fully inventoried. References are not calls or runtime observations.",
+      "0 reference locations outside the selected source files were excluded. External dependency definitions are not included.",
+      "Uses rust-analyzer's active default Cargo configuration (including test targets); this is not a union of all feature configurations. An empty reference list is not proof that an item is unused.",
+      "Resolved workspace item references, not complete dataflow or execution prerequisites. Bodies are source-shaped syntax, not CFGs. Duplicate definition IDs and renames can change identity."
+    ]
+  },
+  "items": [
+    {
+      "id": "examples/function_board.rs",
+      "kind": "module",
+      "name": "function_board.rs",
+      "description": "Module-sized semantic inventory.",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 1
+      },
+      "namespace": ""
+    },
+    {
+      "id": "examples/function_board.rs::constant:DEFAULT_LIMIT",
+      "name": "DEFAULT_LIMIT",
+      "kind": "constant",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nconst DEFAULT_LIMIT: usize = 3",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 3,
+        "column": 7
+      },
+      "namespace": "function_board.rs"
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command",
+      "name": "Command",
+      "kind": "enum",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nenum Command {\n    Fetch { /* … */ },\n    Preview,\n    Clear,\n}\n\n\nsize = 16 (0x10), align = 0x8, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 6
+      },
+      "namespace": "function_board.rs"
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "name": "Fetch",
+      "kind": "variant",
+      "parent": "examples/function_board.rs::enum:Command",
+      "description": "function_board::Command\n\nFetch { limit: usize, }\n\n\nsize = 16 (0x10), align = 0x8, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 16
+      },
+      "namespace": "function_board.rs::Command"
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+      "name": "limit",
+      "kind": "field",
+      "parent": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "description": "function_board::Command::Fetch\n\nlimit: usize\n\n\nsize = 8, align = 0x8, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 24
+      },
+      "namespace": "function_board.rs::Command::Fetch"
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Preview",
+      "name": "Preview",
+      "kind": "variant",
+      "parent": "examples/function_board.rs::enum:Command",
+      "description": "function_board::Command\n\nPreview\n\n\nsize = 8, align = 0x1, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 40
+      },
+      "namespace": "function_board.rs::Command"
+    },
+    {
+      "id": "examples/function_board.rs::enum:Command::variant:Clear",
+      "name": "Clear",
+      "kind": "variant",
+      "parent": "examples/function_board.rs::enum:Command",
+      "description": "function_board::Command\n\nClear\n\n\nsize = 8, align = 0x1, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 5,
+        "column": 49
+      },
+      "namespace": "function_board.rs::Command"
+    },
+    {
+      "id": "examples/function_board.rs::struct:Client",
+      "name": "Client",
+      "kind": "struct",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nstruct Client {\n    enabled: bool,\n}\n\n\nsize = 1, align = 0x1, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 6,
+        "column": 8
+      },
+      "namespace": "function_board.rs"
+    },
+    {
+      "id": "examples/function_board.rs::struct:Client::field:enabled",
+      "name": "enabled",
+      "kind": "field",
+      "parent": "examples/function_board.rs::struct:Client",
+      "description": "function_board::Client\n\nenabled: bool\n\n\nsize = 1, align = 0x1, offset = 0x0, no Drop",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 6,
+        "column": 17
+      },
+      "namespace": "function_board.rs::Client"
+    },
+    {
+      "id": "examples/function_board.rs::impl:impl Client",
+      "name": "impl Client",
+      "kind": "impl",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nstruct Client {\n    enabled: bool,\n}",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 7,
+        "column": 6
+      },
+      "namespace": "function_board.rs"
+    },
+    {
+      "id": "examples/function_board.rs::impl:impl Client::method:fetch",
+      "name": "fetch",
+      "kind": "method",
+      "parent": "examples/function_board.rs::impl:impl Client",
+      "description": "function_board::Client\n\nfn fetch(&self, limit: usize) -> Result<Vec<usize>, String>",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 8,
+        "column": 8
+      },
+      "namespace": "function_board.rs::impl Client",
+      "lineCount": 3,
+      "functionFile": "function-map.6a80596094bee735c89c8ec9.hemp2-part.json"
+    },
+    {
+      "id": "examples/function_board.rs::impl:impl Client::method:clear",
+      "name": "clear",
+      "kind": "method",
+      "parent": "examples/function_board.rs::impl:impl Client",
+      "description": "function_board::Client\n\nfn clear(&self)",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 11,
+        "column": 8
+      },
+      "namespace": "function_board.rs::impl Client",
+      "lineCount": 1,
+      "functionFile": "function-map.69d4e5eb82c68197e50bce33.hemp2-part.json"
+    },
+    {
+      "id": "examples/function_board.rs::function:record",
+      "name": "record",
+      "kind": "function",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nfn record(total: usize)",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 13,
+        "column": 4
+      },
+      "namespace": "function_board.rs",
+      "lineCount": 1,
+      "functionFile": "function-map.395cc2eab85a179534f785c3.hemp2-part.json"
+    },
+    {
+      "id": "examples/function_board.rs::function:process_command",
+      "name": "process_command",
+      "kind": "function",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nfn process_command(client: &Client, command: Command) -> Result<usize, String>\n\n\nProcess a command using an injected client and record its result.",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 16,
+        "column": 4
+      },
+      "namespace": "function_board.rs",
+      "lineCount": 25,
+      "functionFile": "function-map.0d980becfd11eeb7e29058ae.hemp2-part.json"
+    },
+    {
+      "id": "examples/function_board.rs::function:main",
+      "name": "main",
+      "kind": "function",
+      "parent": "examples/function_board.rs",
+      "description": "function_board\n\nfn main()",
+      "source": {
+        "file": "examples/function_board.rs",
+        "line": 41,
+        "column": 4
+      },
+      "namespace": "function_board.rs",
+      "lineCount": 4,
+      "functionFile": "function-map.26240765b51a62b50b1f5414.hemp2-part.json"
+    }
+  ],
+  "references": [
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::constant:DEFAULT_LIMIT",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 17,
+          "column": 17,
+          "text": "let limit = DEFAULT_LIMIT;"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 16,
+          "column": 46,
+          "text": "fn process_command(client: &Client, command: Command) -> Result<usize, String> {"
+        },
+        {
+          "file": "examples/function_board.rs",
+          "line": 23,
+          "column": 9,
+          "text": "Command::Fetch { limit: requested } if requested > 0 => {"
+        },
+        {
+          "file": "examples/function_board.rs",
+          "line": 31,
+          "column": 9,
+          "text": "Command::Preview => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::enum:Command",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 38,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 23,
+          "column": 18,
+          "text": "Command::Fetch { limit: requested } if requested > 0 => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 47,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 23,
+          "column": 26,
+          "text": "Command::Fetch { limit: requested } if requested > 0 => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::enum:Command::variant:Fetch::field:limit",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 55,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::enum:Command::variant:Preview",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 31,
+          "column": 18,
+          "text": "Command::Preview => {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::struct:Client",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 16,
+          "column": 29,
+          "text": "fn process_command(client: &Client, command: Command) -> Result<usize, String> {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::struct:Client",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 42,
+          "column": 18,
+          "text": "let client = Client { enabled: true };"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::struct:Client::field:enabled",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 18,
+          "column": 16,
+          "text": "if !client.enabled {"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::struct:Client::field:enabled",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 42,
+          "column": 27,
+          "text": "let client = Client { enabled: true };"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::impl:impl Client::method:fetch",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 24,
+          "column": 33,
+          "text": "let values = client.fetch(requested)?;"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::impl:impl Client::method:clear",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 35,
+          "column": 23,
+          "text": "_ => { client.clear(); }"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:process_command",
+      "to": "examples/function_board.rs::function:record",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 37,
+          "column": 5,
+          "text": "record(total);"
+        }
+      ]
+    },
+    {
+      "from": "examples/function_board.rs::function:main",
+      "to": "examples/function_board.rs::function:process_command",
+      "kind": "reference",
+      "evidence": [
+        {
+          "file": "examples/function_board.rs",
+          "line": 43,
+          "column": 13,
+          "text": "let _ = process_command(&client, Command::Fetch { limit: 5 });"
+        }
+      ]
+    }
+  ],
+  "layout": {
+    "examples/function_board.rs": {
+      "x": 0,
+      "y": 0,
+      "width": 2520,
+      "height": 1250
+    },
+    "examples/function_board.rs::constant:DEFAULT_LIMIT": {
+      "x": 2040,
+      "y": 690,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::enum:Command": {
+      "x": 60,
+      "y": 160,
+      "width": 1200,
+      "height": 720
+    },
+    "examples/function_board.rs::enum:Command::variant:Fetch": {
+      "x": 60,
+      "y": 160,
+      "width": 540,
+      "height": 410
+    },
+    "examples/function_board.rs::enum:Command::variant:Fetch::field:limit": {
+      "x": 60,
+      "y": 160,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::enum:Command::variant:Preview": {
+      "x": 720,
+      "y": 160,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::enum:Command::variant:Clear": {
+      "x": 720,
+      "y": 470,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::struct:Client": {
+      "x": 1380,
+      "y": 690,
+      "width": 540,
+      "height": 410
+    },
+    "examples/function_board.rs::struct:Client::field:enabled": {
+      "x": 60,
+      "y": 160,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::impl:impl Client": {
+      "x": 1380,
+      "y": 160,
+      "width": 1080,
+      "height": 410
+    },
+    "examples/function_board.rs::impl:impl Client::method:fetch": {
+      "x": 60,
+      "y": 160,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::impl:impl Client::method:clear": {
+      "x": 600,
+      "y": 160,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::function:record": {
+      "x": 60,
+      "y": 1000,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::function:process_command": {
+      "x": 600,
+      "y": 1000,
+      "width": 420,
+      "height": 190
+    },
+    "examples/function_board.rs::function:main": {
+      "x": 2040,
+      "y": 1000,
+      "width": 420,
+      "height": 190
+    }
+  }
+}
