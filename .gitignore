@@ -166,3 +166,6 @@ luminous.config.json
 /.hemp-prior-art/
 /tools/hemp-rust/target/
 /tools/hemp-fixture/target/
+
+# Rhidoc agent event state is local workspace data.
+/.grn/
