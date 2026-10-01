@@ -205,6 +205,19 @@ body {
    redefined per [data-theme]; custom properties resolve lazily, so this single
    :root mapping flows all three Luminous themes through cactus automatically. */
 :root {
+  /* Numbered theme fills are the shared, hue-agnostic slots for typed UI.
+     Themes supply their own base hues above; components choose a slot without
+     depending on a color name such as moss or ochre. */
+  --theme-bg-1: color-mix(in oklch, var(--color-token-slate) 24%, var(--surface));
+  --theme-bg-2: color-mix(in oklch, var(--color-token-moss) 24%, var(--surface));
+  --theme-bg-3: color-mix(in oklch, var(--color-token-deep-moss) 24%, var(--surface));
+  --theme-bg-4: color-mix(in oklch, var(--color-token-ochre) 24%, var(--surface));
+  --theme-bg-5: color-mix(in oklch, var(--color-token-violet) 24%, var(--surface));
+  --theme-bg-6: color-mix(in oklch, var(--color-token-indigo) 24%, var(--surface));
+  --theme-bg-7: color-mix(in oklch, var(--color-token-oxide) 24%, var(--surface));
+  --theme-bg-8: color-mix(in oklch, var(--color-token-rose) 24%, var(--surface));
+  --theme-node-border: color-mix(in oklch, var(--fg) 32%, var(--surface));
+
   --cactus-canvas-bg:     var(--canvas);
   --cactus-fg:            var(--fg);
   --cactus-fg-muted:      var(--fg-muted);

@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { ChevronLeft, ChevronRight, Ellipsis, ExternalLink, GitBranchPlus, Link2, Plus, X, Zap } from 'lucide-solid';
+import { ChevronLeft, ChevronRight, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, Plus, X, Zap } from 'lucide-solid';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useNodeDrag } from '@luminous/cactus';
 import type { CanvasRef, TidyNode } from '@luminous/cactus';
 import { openDenimDatabase, type DenimDatabase, type DenimGraph, type DenimNode } from '@luminous/core/denim';
@@ -15,17 +15,18 @@ import {
   useDenimSession,
   type DenimSession,
 } from './DenimSession';
+import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
 
 const NODE_W = 232;
 const NODE_H = 142;
 const ICON_SIZE = 15;
-const NODE_TINT: Record<string, string> = {
-  Journey: 'color-mix(in srgb, #4776b8 10%, var(--surface))',
-  Action: 'color-mix(in srgb, #4a8c6a 9%, var(--surface))',
-  Capability: 'color-mix(in srgb, #7e62a7 10%, var(--surface))',
-  Resource: 'color-mix(in srgb, #b1793e 11%, var(--surface))',
-  Organization: 'color-mix(in srgb, #526a78 10%, var(--surface))',
-  Contract: 'color-mix(in srgb, #aa5b66 9%, var(--surface))',
+const NODE_THEME_SLOT: Record<string, number> = {
+  Journey: 1,
+  Action: 2,
+  Capability: 5,
+  Resource: 4,
+  Organization: 6,
+  Contract: 8,
 };
 
 type PickerState = { mode: 'include' | 'connect'; parentId?: string; x: number; y: number };
@@ -121,20 +122,46 @@ function CanvasNodes(props: {
   const session = useDenimSession();
   const ctx = useCanvasContext();
   const [dragOffset, setDragOffset] = createSignal<{ id: string; dx: number; dy: number } | null>(null);
+  let releaseFrame = 0;
   const drag = useNodeDrag({
     zoomScale: () => ctx.transform().k,
+    handleSelector: '[data-denim-drag-handle]',
     callbacks: {
-      onDrag: (id, dx, dy) => setDragOffset({ id, dx, dy }),
+      onDrag: (id, dx, dy) => {
+        cancelAnimationFrame(releaseFrame);
+        setDragOffset({ id, dx, dy });
+      },
       onDragEnd: (id) => {
         const offset = dragOffset();
         const position = props.positions().get(id);
         if (offset && position) {
           void session.moveNode(id, { x: position.x + offset.dx, y: position.y + offset.dy }, props.tabId());
+          // Keep the visual drag position through the pointer-up render. The
+          // saved per-tab position is updated synchronously, but its derived
+          // layout can settle on the next frame; clearing both in one event
+          // briefly exposes the old position and makes the node jump.
+          releaseFrame = requestAnimationFrame(() => {
+            releaseFrame = 0;
+            setDragOffset(null);
+          });
+        } else {
+          setDragOffset(null);
         }
-        setDragOffset(null);
       },
     },
   });
+  onCleanup(() => cancelAnimationFrame(releaseFrame));
+
+  async function differentiateNode(parentId: string): Promise<void> {
+    const childId = await session.differentiate(parentId);
+    if (childId) placeDifferentiatedNode(parentId, childId);
+  }
+
+  function placeDifferentiatedNode(parentId: string, childId: string): void {
+    const parent = props.positions().get(parentId);
+    if (!parent) return;
+    void session.moveNode(childId, { x: parent.x, y: parent.y + NODE_H + 80 }, props.tabId());
+  }
 
   return <For each={props.graph.nodes}>{(node) => {
     const basePosition = () => props.positions().get(node.id) ?? { x: 0, y: 0 };
@@ -150,7 +177,7 @@ function CanvasNodes(props: {
         drag.onPointerDown(node.id, event);
       }}>
       <NodeCard node={node} selected={props.selectedId() === node.id} onOpenJourney={() => void session.openJourney(node.id)}
-        onDifferentiate={() => void session.differentiate(node.id)}
+        onDifferentiate={() => void differentiateNode(node.id)}
         onConnect={(event) => props.openPicker('connect', node.id, event)} />
     </NodeContainer>;
   }}</For>;
@@ -168,22 +195,33 @@ function NodeCard(props: {
     'Journey', 'Action', 'Capability', 'Resource', 'Organization', 'Contract', props.node.type,
   ])]);
   return <article class="group relative flex h-full flex-col gap-2 rounded-lg p-3 transition-shadow"
-    style={{ background: NODE_TINT[props.node.type] ?? 'color-mix(in srgb, var(--fg-muted) 7%, var(--surface))' }}
+    style={{
+      background: `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
+      border: '1px solid var(--theme-node-border)',
+    }}
     classList={{ 'ring-2 ring-accent': props.selected }}>
-    <select aria-label="Node type" value={props.node.type}
-      onPointerDown={(event) => event.stopPropagation()}
-      onChange={(event) => {
-        const value = event.currentTarget.value;
-        if (value === '__other__') {
-          const custom = window.prompt('Type name', props.node.type);
-          if (custom?.trim()) void session.updateNode(props.node.id, { type: custom.trim() });
-          event.currentTarget.value = props.node.type;
-        } else void session.updateNode(props.node.id, { type: value });
-      }}
-      class="w-fit max-w-full cursor-pointer appearance-none bg-transparent pr-1 text-xs text-fg-muted outline-none focus-visible:text-fg">
-      <For each={types()}>{(type) => <option value={type}>{type}</option>}</For>
-      <option value="__other__">Other…</option>
-    </select>
+    <div data-denim-drag-handle data-no-pan="true" aria-hidden="true"
+      class="absolute inset-x-0 top-0 z-10 h-3 cursor-grab active:cursor-grabbing" />
+    <div class="flex w-full shrink-0 items-center justify-between gap-2">
+      <select aria-label="Node type" value={props.node.type}
+        onPointerDown={(event) => event.stopPropagation()}
+        onChange={(event) => {
+          const value = event.currentTarget.value;
+          if (value === '__other__') {
+            const custom = window.prompt('Type name', props.node.type);
+            if (custom?.trim()) void session.updateNode(props.node.id, { type: custom.trim() });
+            event.currentTarget.value = props.node.type;
+          } else void session.updateNode(props.node.id, { type: value });
+        }}
+        class="w-[86%] cursor-pointer appearance-none bg-transparent pr-1 text-xs text-fg-muted outline-none focus-visible:text-fg">
+        <For each={types()}>{(type) => <option value={type}>{type}</option>}</For>
+        <option value="__other__">Other…</option>
+      </select>
+      <div data-denim-drag-handle data-no-pan="true" aria-label="Drag node" title="Drag node"
+        class="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-fg-muted hover:bg-surface/60 active:cursor-grabbing">
+        <GripHorizontal size={ICON_SIZE} strokeWidth={1.8} />
+      </div>
+    </div>
     <textarea aria-label="Node text" value={props.node.text}
       onPointerDown={(event) => event.stopPropagation()}
       onBlur={(event) => void session.updateNode(props.node.id, { text: event.currentTarget.value })}
@@ -335,9 +373,6 @@ function DenimWorkspace(props: { onReload: () => void }) {
         </Show>
       </div>}
     </Show>
-    <Show when={session.state.saving && !session.state.error}>
-      <div class="px-4 py-1 text-xs text-fg-muted">Saving…</div>
-    </Show>
     <DenimAppToolbar />
     <div class="relative min-h-0 flex-1">
       <div class="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-border-subtle bg-surface/95 p-1 shadow-sm backdrop-blur">
@@ -351,6 +386,7 @@ function DenimWorkspace(props: { onReload: () => void }) {
           onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></button>
       </div>
       <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker} />
+      <DenimSaveStatusBadge saving={() => session.state.saving} error={() => session.state.error} />
     </div>
     <Show when={picker()}>
       {(current) => <Portal mount={document.body}>

@@ -57,7 +57,7 @@ export interface DenimSession {
   closeTab(id: string): Promise<void>;
   selectNode(id: string | null): void;
   createJourney(text?: string): Promise<void>;
-  differentiate(parentId: string, type?: string, text?: string): Promise<void>;
+  differentiate(parentId: string, type?: string, text?: string): Promise<string | undefined>;
   connectExisting(parentId: string, childId: string): Promise<void>;
   includeNode(nodeId: string, tabId?: string): Promise<void>;
   moveNode(nodeId: string, position: { x: number; y: number }, tabId?: string): Promise<void>;
@@ -342,9 +342,10 @@ export function createDenimSession(
       const node = { id: newId('journey'), type: 'Journey', text };
       return change(() => addDenimNode(database, node), node.id);
     },
-    differentiate(parentId, type = 'Action', text = 'New action') {
+    async differentiate(parentId, type = 'Action', text = 'New action') {
       const node = { id: newId('node'), type, text };
-      return change(() => createDenimChild(database, parentId, node, newId('parent-child')), node.id);
+      await change(() => createDenimChild(database, parentId, node, newId('parent-child')), node.id);
+      return getDenimGraph(database).nodes.some((item) => item.id === node.id) ? node.id : undefined;
     },
     connectExisting(parentId, childId) {
       return change(() => connectDenimChild(database, parentId, childId, newId('parent-child')), childId);

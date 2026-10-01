@@ -18,8 +18,9 @@ describe('DenimSession', () => {
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey']);
     session.openJourney('journey');
-    await session.differentiate('journey', 'Action', 'Create the journey');
-    const child = session.state.graph.nodes.find((node) => node.id !== 'journey');
+    const childId = await session.differentiate('journey', 'Action', 'Create the journey');
+    expect(childId).toBeTypeOf('string');
+    const child = session.state.graph.nodes.find((node) => node.id === childId);
     expect(child).toMatchObject({ type: 'Action', text: 'Create the journey' });
 
     await session.updateNode(child!.id, { type: 'Capability' });

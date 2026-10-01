@@ -51,10 +51,21 @@ extending one global counter.
 - **VWT3.** [p] The View Toolbar has rounded corners and floats below the Denim App Toolbar, centered horizontally over the canvas.
 - **VWT4.** [p] The View Toolbar does not show the Add child node, Connect to node, or Query result buttons.
 
+## Save status
+
+- **SS1.** [p] Denim shows save status in a small round floating badge at the bottom-right of the canvas.
+- **SS2.** [p] While changes are saving, the badge shows a spinning indicator icon.
+- **SS3.** [p] When changes are saved, the badge shows a check icon.
+
 ## Node appearance and movement
 
 - **NODE1.** [p] The user can drag Nodes.
 - **NODE2.** [p] Nodes have mild background shading based on their type so users can distinguish Node types at a glance.
+- **NODE3.** [p] Each Node has a drag bar indicator on the same visual row as the Node type dropdown.
+- **NODE4.** [p] The Node type dropdown occupies 80–90% of that row, with the drag bar right-justified.
+- **NODE5.** [p] The user can drag a Node by dragging its drag bar or from its top padding.
+- **NODE6.** [p] Each Node has a very thin greyish border.
+- **NODE7.** [p] When the user differentiates a Node, Denim places the new Node below the parent Node.
 
 ## Node Toolbar
 
