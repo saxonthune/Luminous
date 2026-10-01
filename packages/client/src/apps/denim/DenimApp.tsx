@@ -64,8 +64,27 @@ function GraphCanvas(props: {
     const tab = activeTab();
     if (tab.id === previousTabId) return;
     previousTabId = tab.id;
-    canvasRef?.setView(session.state.cameras[tab.id] ?? { x: 0, y: 0, k: 1 }, false);
+    const camera = session.state.cameras[tab.id];
+    if (camera) canvasRef?.setView(camera, false);
+    else requestFit();
   });
+
+  let pendingFit = 0;
+  function requestFit(): void {
+    cancelAnimationFrame(pendingFit);
+    pendingFit = requestAnimationFrame(() => {
+      const rects = graph().nodes.flatMap((node) => {
+        const position = positions().get(node.id);
+        return position ? [{ x: position.x, y: position.y, width: NODE_W, height: NODE_H }] : [];
+      });
+      if (rects.length > 0) canvasRef?.fitView(rects, 72, false);
+    });
+  }
+
+  onMount(() => {
+    if (!session.state.cameras[activeTab().id]) requestFit();
+  });
+  onCleanup(() => cancelAnimationFrame(pendingFit));
 
   return (
     <Canvas ref={(handle) => { canvasRef = handle; }}

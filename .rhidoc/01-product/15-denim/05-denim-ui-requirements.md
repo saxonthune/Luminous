@@ -42,6 +42,7 @@ extending one global counter.
 - **TV1.** [p] The Tab Viewer is the second section in the Denim App Toolbar and shows a list of tabs.
 - **TV2.** [p] When tabs overflow in the Tab Viewer, chevron icons let the user scroll left and right.
 - **TV3.** [p] The user can scroll the tabs while the pointer is inside the Tab Viewer.
+- **TV4.** [p] When the user opens a Tab View without a saved camera, Denim fits its Nodes into the viewport.
 
 ## View Toolbar
 
