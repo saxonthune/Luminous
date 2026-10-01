@@ -1,4 +1,5 @@
 import { watch } from "node:fs"
+import { createHash } from "node:crypto"
 import { readFile, writeFile, access, stat, copyFile, rename, rm } from "node:fs/promises"
 import { resolve } from "node:path"
 import type { Document } from "./types.js"
@@ -12,6 +13,7 @@ const rawCache = new Map<string, unknown>()
 const dirty = new Set<string>()
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 const recentWrites = new Map<string, number>()
+const sqliteWriteLocks = new Map<string, Promise<void>>()
 
 const DATAFLOW_SUFFIX = ".dataflow.json"
 const ATLAS_SUFFIX = ".atlas.json"
@@ -19,6 +21,7 @@ const ATLASDATA_SUFFIX = ".atlasdata.json"
 const LINEN_SUFFIX = ".linen.json"
 const MERINO_SUFFIX = ".merino.json"
 const NYLON_SUFFIX = ".nylon.json"
+const SQLITE_SUFFIX = ".sqlite"
 
 export function isDataflowPath(relativePath: string): boolean {
   return relativePath.endsWith(DATAFLOW_SUFFIX)
@@ -40,6 +43,45 @@ export function isNylonPath(relativePath: string): boolean {
   return relativePath.endsWith(NYLON_SUFFIX)
 }
 
+export function isSqlitePath(relativePath: string): boolean {
+  return relativePath.endsWith(SQLITE_SUFFIX)
+}
+
+export class DocumentRevisionConflict extends Error {
+  constructor(readonly currentRevision: string) {
+    super("database revision changed")
+  }
+}
+
+export function databaseRevision(bytes: Uint8Array): string {
+  return `"${createHash("sha256").update(bytes).digest("hex")}"`
+}
+
+export async function readDenimDatabase(relativePath: string): Promise<Buffer> {
+  if (!isSqlitePath(relativePath)) throw new Error("not a SQLite database path")
+  return readFile(resolveDocPath(relativePath))
+}
+
+export async function writeDenimDatabase(relativePath: string, bytes: Uint8Array, expectedRevision: string): Promise<string> {
+  if (!isSqlitePath(relativePath)) throw new Error("not a SQLite database path")
+  const absPath = resolveDocPath(relativePath)
+  const previous = sqliteWriteLocks.get(absPath) ?? Promise.resolve()
+  let release!: () => void
+  const lock = new Promise<void>((resolveLock) => { release = resolveLock })
+  sqliteWriteLocks.set(absPath, lock)
+  await previous
+  try {
+    const currentRevision = databaseRevision(await readFile(absPath))
+    if (currentRevision !== expectedRevision) throw new DocumentRevisionConflict(currentRevision)
+    await writeFile(absPath, bytes)
+    recentWrites.set(absPath, Date.now())
+    return databaseRevision(bytes)
+  } finally {
+    release()
+    if (sqliteWriteLocks.get(absPath) === lock) sqliteWriteLocks.delete(absPath)
+  }
+}
+
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
   return relativePath.endsWith('.hemp.json') || relativePath.endsWith('.hemp2.json') || relativePath.endsWith('.hemp2-part.json') || isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath) || isNylonPath(relativePath)
@@ -56,6 +98,7 @@ export function isWatchedDocumentPath(relativePath: string): boolean {
     || relativePath.endsWith(LINEN_SUFFIX)
     || relativePath.endsWith(MERINO_SUFFIX)
     || relativePath.endsWith(NYLON_SUFFIX)
+    || relativePath.endsWith(SQLITE_SUFFIX)
 }
 
 /** Workspace roots keyed by name. Document paths are namespaced "<root>/<rel>". */

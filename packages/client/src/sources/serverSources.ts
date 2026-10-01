@@ -1,4 +1,5 @@
 import type { CanvasSource } from './CanvasSource';
+import { SourceConflictError } from './CanvasSource';
 
 interface DocumentMeta {
   path: string;
@@ -40,5 +41,24 @@ export async function fetchServerSources(suffix: string): Promise<CanvasSource[]
       absPath: absPathOf(doc),
       load: () =>
         fetch('/api/document/' + encodeURIComponent(doc.path)).then((r) => r.text()),
+      ...(doc.path.endsWith('.sqlite') ? {
+        loadBytes: async () => {
+          const response = await fetch('/api/denim/database/' + encodeURIComponent(doc.path));
+          if (!response.ok) throw new Error(`Failed to read database (${response.status})`);
+          const revision = response.headers.get('ETag');
+          if (!revision) throw new Error('Database response has no revision');
+          return { bytes: new Uint8Array(await response.arrayBuffer()), revision };
+        },
+        saveBytes: async (bytes: Uint8Array, revision: string) => {
+          const response = await fetch('/api/denim/database/' + encodeURIComponent(doc.path), {
+            method: 'PUT', headers: { 'Content-Type': 'application/vnd.sqlite3', 'If-Match': revision }, body: bytes as BodyInit,
+          });
+          if (response.status === 412) throw new SourceConflictError('This database changed elsewhere. Reload it before saving.');
+          if (!response.ok) throw new Error(`Failed to save database (${response.status})`);
+          const nextRevision = response.headers.get('ETag');
+          if (!nextRevision) throw new Error('Save response has no revision');
+          return nextRevision;
+        },
+      } : {}),
     }));
 }

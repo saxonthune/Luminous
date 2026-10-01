@@ -1,28 +1,129 @@
 {
   "documents": [
-    { "path": "sample-primitives.graph.json", "name": "Sample Primitives", "root": "demos" },
-    { "path": "stress-773.graph.json", "name": "Stress Test (773 nodes / 1642 edges)", "root": "demos" },
-    { "path": "fifa-test.merino.json", "name": "FIFA", "root": "demos" },
-    { "path": "nyc-subwhere.merino.json", "name": "NYC Subwhere", "root": "demos" },
-    { "path": "braincrawl.atlas.json", "name": "braincrawl", "root": "demos" },
-    { "path": "luminous.dataflow.json", "name": "Luminous", "root": "demos" },
-    { "path": "sample.dataflow.json", "name": "Sample", "root": "demos" },
-    { "path": "fifa-part-1.dataflow.json", "name": "FIFA — Part 1", "root": "demos" },
-    { "path": "fifa-part-2.dataflow.json", "name": "FIFA — Part 2", "root": "demos" },
-    { "path": "fifa-part-3.dataflow.json", "name": "FIFA — Part 3", "root": "demos" },
-    { "path": "fifa-part-4.dataflow.json", "name": "FIFA — Part 4", "root": "demos" },
-    { "path": "nyc-subwhere.linen.json", "name": "NYC Subwhere", "root": "demos" },
-    { "path": "dotnet-customers.nylon.json", "name": ".NET Customers API", "root": "demos" },
-    { "path": "nyc-subwhere-train-pose.nylon.json", "name": "NYC Subwhere Train Pose", "root": "demos" },
-    {"path":"braincrawl-cli-all-bodies.hemp.json","name":"Braincrawl CLI — all function bodies","root":"demos"},
-    {"path":"braincrawl-cli-bodies.hemp.json","name":"Braincrawl CLI — selected function bodies","root":"demos"},
-    {"path":"braincrawl-cli-bodies.snapshot.hemp.json","name":"Braincrawl CLI — body snapshot","root":"demos"},
-    {"path":"braincrawl-cli-complete.hemp.json","name":"Braincrawl CLI — complete binary and dependencies","root":"demos"},
-    {"path":"braincrawl-cli.hemp.json","name":"Braincrawl CLI — crates and items","root":"demos"},
-    {"path":"braincrawl-ids.hemp.json","name":"Braincrawl L3 — ids.rs","root":"demos"},
-    {"path":"braincrawl.hemp.json","name":"Braincrawl workspace inventory","root":"demos"},
-    {"path":"function-map.hemp2.json","name":"Hemp search map — function_board.rs","root":"demos"},
-    {"path":"function-study.hemp.json","name":"Hemp function study — process_command","root":"demos"},
-    {"path":"two-modules.hemp.json","name":"Hemp two-module example","root":"demos"}
+    {
+      "path": "sample-primitives.graph.json",
+      "name": "Sample Primitives",
+      "root": "demos"
+    },
+    {
+      "path": "stress-773.graph.json",
+      "name": "Stress Test (773 nodes / 1642 edges)",
+      "root": "demos"
+    },
+    {
+      "path": "fifa-test.merino.json",
+      "name": "FIFA",
+      "root": "demos"
+    },
+    {
+      "path": "nyc-subwhere.merino.json",
+      "name": "NYC Subwhere",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl.atlas.json",
+      "name": "braincrawl",
+      "root": "demos"
+    },
+    {
+      "path": "luminous.dataflow.json",
+      "name": "Luminous",
+      "root": "demos"
+    },
+    {
+      "path": "sample.dataflow.json",
+      "name": "Sample",
+      "root": "demos"
+    },
+    {
+      "path": "fifa-part-1.dataflow.json",
+      "name": "FIFA — Part 1",
+      "root": "demos"
+    },
+    {
+      "path": "fifa-part-2.dataflow.json",
+      "name": "FIFA — Part 2",
+      "root": "demos"
+    },
+    {
+      "path": "fifa-part-3.dataflow.json",
+      "name": "FIFA — Part 3",
+      "root": "demos"
+    },
+    {
+      "path": "fifa-part-4.dataflow.json",
+      "name": "FIFA — Part 4",
+      "root": "demos"
+    },
+    {
+      "path": "nyc-subwhere.linen.json",
+      "name": "NYC Subwhere",
+      "root": "demos"
+    },
+    {
+      "path": "dotnet-customers.nylon.json",
+      "name": ".NET Customers API",
+      "root": "demos"
+    },
+    {
+      "path": "nyc-subwhere-train-pose.nylon.json",
+      "name": "NYC Subwhere Train Pose",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl-cli-all-bodies.hemp.json",
+      "name": "Braincrawl CLI — all function bodies",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl-cli-bodies.hemp.json",
+      "name": "Braincrawl CLI — selected function bodies",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl-cli-bodies.snapshot.hemp.json",
+      "name": "Braincrawl CLI — body snapshot",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl-cli-complete.hemp.json",
+      "name": "Braincrawl CLI — complete binary and dependencies",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl-cli.hemp.json",
+      "name": "Braincrawl CLI — crates and items",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl-ids.hemp.json",
+      "name": "Braincrawl L3 — ids.rs",
+      "root": "demos"
+    },
+    {
+      "path": "braincrawl.hemp.json",
+      "name": "Braincrawl workspace inventory",
+      "root": "demos"
+    },
+    {
+      "path": "function-map.hemp2.json",
+      "name": "Hemp search map — function_board.rs",
+      "root": "demos"
+    },
+    {
+      "path": "function-study.hemp.json",
+      "name": "Hemp function study — process_command",
+      "root": "demos"
+    },
+    {
+      "path": "two-modules.hemp.json",
+      "name": "Hemp two-module example",
+      "root": "demos"
+    },
+    {
+      "path": "denim-itself.denim.sqlite",
+      "name": "A user builds a journey",
+      "root": "denim"
+    }
   ]
 }

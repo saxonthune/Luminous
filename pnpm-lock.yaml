@@ -109,6 +109,9 @@ importers:
       d3-zoom:
         specifier: ^3.0.0
         version: 3.0.0
+      lucide-solid:
+        specifier: ^1.49.0
+        version: 1.49.0(solid-js@1.9.15)
       marked:
         specifier: ^18.0.13
         version: 18.0.13
@@ -152,10 +155,16 @@ importers:
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
+      sql.js:
+        specifier: ^1.14.2
+        version: 1.14.2
     devDependencies:
       '@types/node':
         specifier: ^26.6.2
         version: 26.6.2
+      '@types/sql.js':
+        specifier: ^1.4.11
+        version: 1.4.11
       typescript:
         specifier: ~7.0.2
         version: 7.0.2
@@ -1362,11 +1371,17 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/emscripten@1.41.6':
+    resolution: {integrity: sha512-uN+9i8bFT5CUcZfyIEYDrSueACEyKGbUs5kC/72DGlZZoinh84sJfVV0i8UOJD1asdzkvLPBRrKs41kZ8MdEXg==}
+
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
   '@types/node@26.6.2':
     resolution: {integrity: sha512-X1P21scMv4zGKLYqjdGjaKa7COa0RKVYYZZN/NfvLQ1JegxFhdhpZG/Lyn8AXx6CDUavKAd11v6BvfpkDByK8g==}
+
+  '@types/sql.js@1.4.11':
+    resolution: {integrity: sha512-QXIx38p2ZThJaK9vP5ZdqdlRe1FG9I8SmCZOS7FHfB/2qPAjZwkL7/vlfPg6N/oWHuuOaGg/P/IRwfP2W0kWVQ==}
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
@@ -2390,6 +2405,11 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
+  lucide-solid@1.49.0:
+    resolution: {integrity: sha512-ULoV0vXTdfZOODX/FdS/h2V7gj6BnxKfK++XY0NhiX3f7TR8jYdE1pw0gfHBctdfSIqZZB3BnIiOUuSbYGpf9Q==}
+    peerDependencies:
+      solid-js: ^1.4.7
+
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
@@ -2734,6 +2754,9 @@ packages:
   source-map@0.7.6:
     resolution: {integrity: sha512-i5uvt8C3ikiWeNZSVZNWcfZPItFQOsYTUAOkcUPGd8DqDy1uOUikjt5dG+uRlwyvR108Fb9DOd4GvXfT0N2/uQ==}
     engines: {node: '>= 12'}
+
+  sql.js@1.14.2:
+    resolution: {integrity: sha512-3ZGPovObMFrdw79zrUHbfdE/DLIsy8jdNdssmMSQuRAymedU6q84asPt0kgiqrdMYlPegDItiIMfmIXzZnYFcw==}
 
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
@@ -3849,11 +3872,18 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
+  '@types/emscripten@1.41.6': {}
+
   '@types/estree@1.0.9': {}
 
   '@types/node@26.6.2':
     dependencies:
       undici-types: 8.9.0
+
+  '@types/sql.js@1.4.11':
+    dependencies:
+      '@types/emscripten': 1.41.6
+      '@types/node': 26.6.2
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true
@@ -4785,6 +4815,10 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
+  lucide-solid@1.49.0(solid-js@1.9.15):
+    dependencies:
+      solid-js: 1.9.15
+
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
@@ -5216,6 +5250,8 @@ snapshots:
   source-map-js@1.2.1: {}
 
   source-map@0.7.6: {}
+
+  sql.js@1.14.2: {}
 
   stackback@0.0.2: {}
 

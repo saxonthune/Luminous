@@ -24,6 +24,11 @@ import {
   copyDocument,
   moveDocument,
   deleteDocument,
+  isSqlitePath,
+  readDenimDatabase,
+  writeDenimDatabase,
+  databaseRevision,
+  DocumentRevisionConflict,
 } from "./store.js"
 
 const port = Number(process.env.PORT ?? 4080)
@@ -106,8 +111,9 @@ function broadcast(path: string, revision?: string, actionId?: string): void {
 
 function setCorsHeaders(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, If-Match")
+  res.setHeader("Access-Control-Expose-Headers", "ETag")
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -132,6 +138,15 @@ async function parseBody(req: IncomingMessage): Promise<unknown> {
   })
 }
 
+async function parseBinaryBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    req.on("data", (chunk: Buffer) => chunks.push(chunk))
+    req.on("end", () => resolve(Buffer.concat(chunks)))
+    req.on("error", reject)
+  })
+}
+
 function hasTraversal(p: string): boolean {
   return p.includes("..") || p.startsWith("/")
 }
@@ -145,6 +160,39 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   const url = req.url ?? "/"
+
+  if (url.startsWith('/api/denim/database/') && (req.method === 'GET' || req.method === 'PUT')) {
+    const path = decodeURIComponent(url.slice('/api/denim/database/'.length))
+    if (!path || hasTraversal(path) || !isSqlitePath(path)) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
+    }
+    try {
+      if (req.method === 'GET') {
+        const bytes = await readDenimDatabase(path)
+        setCorsHeaders(res)
+        res.writeHead(200, { 'Content-Type': 'application/vnd.sqlite3', ETag: databaseRevision(bytes) })
+        res.end(bytes)
+      } else {
+        const bytes = await parseBinaryBody(req)
+        if (bytes.length === 0) { sendJson(res, 400, { ok: false, error: 'Empty database body' }); return }
+        const expectedRevision = req.headers['if-match']
+        if (typeof expectedRevision !== 'string') { sendJson(res, 428, { ok: false, error: 'If-Match revision is required' }); return }
+        const nextRevision = await writeDenimDatabase(path, bytes, expectedRevision)
+        broadcast(path)
+        setCorsHeaders(res)
+        res.setHeader('ETag', nextRevision)
+        sendJson(res, 200, { ok: true, path })
+      }
+    } catch (cause) {
+      if (cause instanceof DocumentRevisionConflict) {
+        res.setHeader('ETag', cause.currentRevision)
+        sendJson(res, 412, { ok: false, error: 'Database revision changed', revision: cause.currentRevision })
+        return
+      }
+      sendJson(res, req.method === 'GET' ? 404 : 400, { ok: false, error: 'Denim database not found or could not be saved' })
+    }
+    return
+  }
 
   if (url.startsWith('/api/nylon/document/') && req.method === 'GET') {
     const path = decodeURIComponent(url.slice('/api/nylon/document/'.length))

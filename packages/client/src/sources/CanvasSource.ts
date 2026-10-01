@@ -8,4 +8,19 @@ export interface CanvasSource {
   /** Resolved absolute path of the document itself, shown on row hover. */
   absPath?: string;
   load: () => Promise<string>;
+  /** Binary document support, used by app-owned SQLite files. */
+  loadBytes?: () => Promise<LoadedBinaryDocument>;
+  saveBytes?: (bytes: Uint8Array, revision: string) => Promise<string>;
+}
+
+export interface LoadedBinaryDocument {
+  bytes: Uint8Array;
+  revision: string;
+}
+
+export class SourceConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SourceConflictError';
+  }
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fetchServerSources } from '../serverSources';
+import { SourceConflictError } from '../CanvasSource';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -92,5 +93,49 @@ describe('fetchServerSources', () => {
       '/api/document/' + encodeURIComponent('Luminous/sample-primitives.graph.json')
     );
     expect(text).toBe('{"version":3}');
+  });
+
+  it('loads and conditionally saves SQLite bytes using the server revision', async () => {
+    const original = new Uint8Array([1, 2, 3]);
+    const mockFetch = vi.fn((url: string, init?: RequestInit) => {
+      if (url === '/api/documents') return Promise.resolve({
+        json: () => Promise.resolve({ documents: [
+          { path: 'Luminous/design.denim.sqlite', name: 'design', root: 'Luminous', lastModified: 1000 },
+        ] }),
+      });
+      if (url === '/api/denim/database/' + encodeURIComponent('Luminous/design.denim.sqlite') && !init) {
+        return Promise.resolve({
+          ok: true,
+          headers: { get: () => '"rev-1"' },
+          arrayBuffer: () => Promise.resolve(original.buffer),
+        });
+      }
+      if (url === '/api/denim/database/' + encodeURIComponent('Luminous/design.denim.sqlite')) {
+        expect(init?.method).toBe('PUT');
+        expect(new Headers(init?.headers).get('If-Match')).toBe('"rev-1"');
+        return Promise.resolve({ ok: true, headers: { get: () => '"rev-2"' } });
+      }
+      return Promise.reject(new Error('unexpected fetch: ' + url));
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const [source] = await fetchServerSources('.denim.sqlite');
+    const loaded = await source.loadBytes!();
+    expect([...loaded.bytes]).toEqual([...original]);
+    expect(loaded.revision).toBe('"rev-1"');
+    await expect(source.saveBytes!(new Uint8Array([4, 5]), loaded.revision)).resolves.toBe('"rev-2"');
+  });
+
+  it('turns a stale revision response into a save conflict', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+      if (url === '/api/documents') return Promise.resolve({ json: () => Promise.resolve({ documents: [
+        { path: 'design.denim.sqlite', name: 'design', root: 'root', lastModified: 1 },
+      ] }) });
+      if (init?.method === 'PUT') return Promise.resolve({ ok: false, status: 412 });
+      return Promise.reject(new Error('unexpected fetch'));
+    }));
+
+    const [source] = await fetchServerSources('.denim.sqlite');
+    await expect(source.saveBytes!(new Uint8Array([1]), '"old"')).rejects.toBeInstanceOf(SourceConflictError);
   });
 });

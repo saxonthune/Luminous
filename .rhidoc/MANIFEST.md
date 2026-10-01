@@ -36,7 +36,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.00 | `00-index.md` |  |  | — | — | — |
 | doc01.01 | `01-vision.md` | Luminous bridges human visual thinking and AI context — a canvas tool for software design that serves both | vision, visualization, canvas, software-design, ai-context | — | doc01.03.01, doc02.02, doc03.01, doc03.02, doc03.06, doc03.08 | — |
 | doc01.02 | `02-background.md` | Why Luminous was split from Rhidoc — separation of the docs system from the visualization tools | background, history, rhidoc, split | doc02.01 | — | — |
-| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc01.13.01, doc01.14.01, doc02.21.03, doc02.22.01 | — |
+| doc01.04 | `04-platform-of-apps.md` | Luminous is a platform of software design tools sharing one canvas engine and one wrapper. | apps, platform, architecture | — | doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.11.01, doc01.12.01, doc01.12.02, doc01.13.01, doc01.14.01, doc01.15.01, doc02.21.03, doc02.22.01 | — |
 
 ### Milestones
 
@@ -159,6 +159,18 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.14.00 | `14-twill/00-index.md` |  |  | — | — | — |
 | doc01.14.01 | `14-twill/01-initial-transcript.md` | Initial conversation establishing Twill's codebase-query model, data model, and progressive module-and-contract map. | twill, transcript, code-query, modules, contracts, source-analysis | doc01.04 | — | — |
 
+### Denim
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.15.00 | `15-denim/00-index.md` |  |  | — | — | — |
+| doc01.15.01 | `15-denim/01-about.md` | Denim is a graph-based design system for describing user journeys, capabilities, resources, implementation structure, and contracts. | denim, graph, design, requirements, journeys | doc01.04 | doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05 | — |
+| doc01.15.02 | `15-denim/02-requirements.md` | Pending user-supported requirements for Denim's journey graph, node editing, query-backed views, and resource selection. | denim, requirements, ui, graph, views | doc01.15.01, doc01.15.03 | doc01.15.03, doc01.15.04 | — |
+| doc01.15.03 | `15-denim/03-glossary.md` | Pending Denim terms for graph structure, views, and toolbar controls. | denim, glossary, vocabulary, graph | doc01.15.01, doc01.15.02 | doc01.15.02, doc01.15.05 | — |
+| doc01.15.04 | `15-denim/04-data-access-architecture.md` | Denim separates SQLite access from canvas components through a per-database session that owns view state, edits, and saving. | denim, architecture, sqlite, components, testing, state | doc01.15.01, doc01.15.02 | — | — |
+| doc01.15.05 | `15-denim/05-denim-ui-requirements.md` | Denim's views, tabs, toolbars, and node component behavior. | denim, ui, requirements, toolbar, tabs, views, nodes, icons, dragging | doc01.15.01, doc01.15.03 | — | — |
+
 ## 02-design — Design
 
 | Ref | File | Summary | Tags | Deps | Refs | Attachments |
@@ -263,7 +275,7 @@ Quick lookup for file-path→doc mapping:
 | `animation` | doc02.17 |
 | `api` | doc02.03, doc02.04, doc02.05.02, doc02.20 |
 | `apps` | doc01.04, doc01.05.01, doc01.07.01, doc01.08.01, doc01.09.01, doc01.10.01, doc01.12.02, doc01.13.01, doc02.21.03 |
-| `architecture` | doc01.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
+| `architecture` | doc01.04, doc01.15.04, doc02.01, doc02.04, doc02.05.01, doc02.05.04, doc02.06.01, doc02.11, doc03.01, doc03.03 |
 | `arcs` | doc01.12.03, doc01.12.05 |
 | `atlas` | doc01.07.01, doc01.07.02, doc01.07.03, doc01.07.04, doc01.07.06 |
 | `authoring` | doc01.12.06 |
@@ -292,7 +304,7 @@ Quick lookup for file-path→doc mapping:
 | `comfyui` | doc01.06.01.07 |
 | `commercial` | doc01.06.01.06 |
 | `component-tree` | doc02.19 |
-| `components` | doc02.05.02, doc02.13 |
+| `components` | doc01.15.04, doc02.05.02, doc02.13 |
 | `concepts` | doc02.02, doc02.10.03, doc03.02 |
 | `containment` | doc01.07.06 |
 | `contract` | doc02.03, doc02.05.05, doc02.14, doc02.18, doc02.21.01 |
@@ -308,10 +320,11 @@ Quick lookup for file-path→doc mapping:
 | `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc01.07.01, doc01.07.02, doc02.21.01, doc02.21.02, doc02.21.03 |
 | `debugger` | doc01.11.01 |
 | `decoration` | doc02.17 |
+| `denim` | doc01.15.01, doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05 |
 | `dependencies` | doc01.13.03 |
 | `deployments` | doc01.10.01 |
 | `derivation` | doc02.13 |
-| `design` | doc01.05.01, doc02.02, doc02.08 |
+| `design` | doc01.05.01, doc01.15.01, doc02.02, doc02.08 |
 | `desktop-library` | doc01.06.01.08 |
 | `diagram-engine` | doc01.06.01.06 |
 | `differentiation` | doc01.10.01, doc01.12.02, doc01.12.04, doc01.12.06 |
@@ -319,6 +332,7 @@ Quick lookup for file-path→doc mapping:
 | `discriminant` | doc02.06.02 |
 | `docs` | doc00.01, doc00.02, doc00.03, doc00.04, doc00.05 |
 | `dogfooding` | doc01.03.02, doc03.06, doc03.08 |
+| `dragging` | doc01.15.05 |
 | `dsl` | doc03.05 |
 | `ecs` | doc03.01, doc03.03 |
 | `edges` | doc01.07.06, doc02.08 |
@@ -332,9 +346,9 @@ Quick lookup for file-path→doc mapping:
 | `function-info` | doc01.13.06 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.13.05 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.13.05, doc01.15.03 |
 | `gojs` | doc01.06.01.06 |
-| `graph` | doc02.15 |
+| `graph` | doc01.15.01, doc01.15.02, doc01.15.03, doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
 | `groups` | doc02.05.06 |
 | `guidelines` | doc01.12.06 |
@@ -344,10 +358,12 @@ Quick lookup for file-path→doc mapping:
 | `hooks` | doc02.05.02 |
 | `houdini` | doc01.06.01.11 |
 | `http` | doc02.03 |
+| `icons` | doc01.15.05 |
 | `identity` | doc02.17 |
 | `interfaces` | doc01.07.01 |
 | `iteration` | doc02.15 |
 | `jackson` | doc02.02 |
+| `journeys` | doc01.15.01 |
 | `json-schema` | doc02.10.02 |
 | `konva` | doc01.06.01.04 |
 | `labor` | doc03.08 |
@@ -371,7 +387,7 @@ Quick lookup for file-path→doc mapping:
 | `node` | doc02.09 |
 | `node-and-edge` | doc01.06.01.02 |
 | `node-editor` | doc01.06.01.09, doc01.06.01.10, doc01.06.01.11 |
-| `nodes` | doc01.12.03, doc03.03 |
+| `nodes` | doc01.12.03, doc01.15.05, doc03.03 |
 | `notion` | doc03.03 |
 | `nylon` | doc01.12.01, doc01.12.02, doc01.12.03, doc01.12.04, doc01.12.05, doc01.12.06 |
 | `openapi` | doc02.10.02 |
@@ -408,7 +424,7 @@ Quick lookup for file-path→doc mapping:
 | `relations` | doc01.07.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.21.03, doc03.05 |
-| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04, doc01.13.04 |
+| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04, doc01.13.04, doc01.15.01, doc01.15.02, doc01.15.05 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
@@ -432,34 +448,38 @@ Quick lookup for file-path→doc mapping:
 | `spatial` | doc01.07.05 |
 | `split` | doc01.02 |
 | `sql` | doc02.10.02 |
+| `sqlite` | doc01.15.04 |
+| `state` | doc01.15.04 |
 | `statechart` | doc02.10.03, doc02.12, doc02.22.01 |
 | `static-analysis` | doc01.03.01, doc01.13.06, doc02.07, doc02.10.01 |
 | `style` | doc00.04 |
 | `subtypes` | doc00.05 |
 | `symbols` | doc01.09.01 |
 | `syntax` | doc01.13.06 |
-| `tabs` | doc01.12.03, doc01.12.04 |
+| `tabs` | doc01.12.03, doc01.12.04, doc01.15.05 |
+| `testing` | doc01.15.04 |
 | `theme` | doc02.22.01 |
 | `theming` | doc02.05.05 |
 | `theory` | doc00.01 |
 | `tinyforum` | doc01.03.02, doc03.06 |
 | `tldraw` | doc01.06.01.03, doc03.03 |
+| `toolbar` | doc01.15.05 |
 | `tools` | doc02.04, doc02.15, doc02.21.02 |
 | `transcript` | doc01.14.01 |
 | `transformations` | doc01.12.02, doc01.12.03, doc01.12.05 |
 | `twill` | doc01.14.01 |
 | `types` | doc02.05.02, doc02.06.02 |
 | `typography` | doc03.07 |
-| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc01.12.04, doc02.12, doc02.22.01 |
+| `ui` | doc01.05.04, doc01.07.04, doc01.07.06, doc01.10.02, doc01.12.04, doc01.15.02, doc01.15.05, doc02.12, doc02.22.01 |
 | `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `unreal` | doc01.06.01.09 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
-| `views` | doc01.12.01, doc01.12.03, doc01.12.04, doc02.11 |
+| `views` | doc01.12.01, doc01.12.03, doc01.12.04, doc01.15.02, doc01.15.05, doc02.11 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc01.11.01, doc03.04 |
-| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc03.02 |
+| `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.15.03, doc03.02 |
 | `web-library` | doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07 |
 | `whiteboard` | doc01.06.01.03 |
 | `workbench` | doc03.08 |

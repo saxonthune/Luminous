@@ -26,3 +26,6 @@ pipeline-produced source inventory.
 
 Twill (doc01.14) queries source entities, module relationships, and contracts,
 then renders query results as progressively disclosed code maps.
+
+Denim (doc01.15) is a graph-based design system for user Journeys,
+Capabilities, Resources, and their implementation details.

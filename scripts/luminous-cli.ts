@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import {
+  addDenimNode, connectDenimChild, createDenimChild, exportDenimDatabase, getDenimGraph,
+  getJourneyGraph, listCapabilities, listJourneys, listTopLevelResources,
+  openDenimDatabase, seedDenimDatabase, updateDenimNode,
+} from '../packages/core/src/denim/database.ts';
 import {
   checkNylonDocument, doctorNylonDocument, parseNylonDocument, serializeNylonDocument,
   type DifferentiateOptions, type NylonDocument, type NylonBatchOperation,
@@ -32,6 +37,16 @@ const dryRun = takeFlag('--dry-run');
 function usage(): never {
   console.error(`Usage:
   luminous hemp generate|items|crates|list|read|check|write|layout|move (run 'luminous hemp' for help)
+  luminous denim journeys <database>
+  luminous denim list [--server URL]
+  luminous denim journey <database> <journey-id>
+  luminous denim capabilities <database>
+  luminous denim resources <database>
+  luminous denim init <database>
+  luminous denim seed <database>
+  luminous denim node add <database> --id ID --type TYPE --text TEXT [--parent ID]
+  luminous denim node set <database> <node-id> [--type TYPE] [--text TEXT]
+  luminous denim connect <database> <parent-id> <existing-node-id>
   luminous nylon list [--server URL]
   luminous nylon read <path> [--server URL]
   luminous nylon history <path> [--server URL]
@@ -86,6 +101,86 @@ async function readSnapshot(path: string): Promise<NylonSnapshot> {
 
 async function readDocument(path: string): Promise<NylonDocument> {
   return (await readSnapshot(path)).document;
+}
+
+async function denimCli(): Promise<void> {
+  const command = argv.shift();
+  if (command === 'help' || command === undefined) { usage(); return; }
+  if (command === 'list') {
+    if (argv.length) usage();
+    const response = await request('/api/documents');
+    const body = await response.json() as { documents?: Array<{ path: string }> };
+    for (const item of body.documents ?? []) if (item.path.endsWith('.denim.sqlite')) console.log(item.path);
+    return;
+  }
+  if (command === 'init') {
+    const path = argv.shift(); if (!path || argv.length) usage();
+    const db = await openDenimDatabase();
+    await writeFile(path, exportDenimDatabase(db), { flag: 'wx' });
+    console.log(JSON.stringify({ ok: true, path })); return;
+  }
+  if (command === 'seed') {
+    const path = argv.shift(); if (!path || argv.length) usage();
+    const db = await openDenimDatabase();
+    seedDenimDatabase(db);
+    await writeFile(path, exportDenimDatabase(db), { flag: 'wx' });
+    console.log(JSON.stringify({ ok: true, path, graph: getDenimGraph(db) }, null, 2)); return;
+  }
+  if (command === 'node') {
+    const action = argv.shift();
+    const path = argv.shift(); if (!path) usage();
+    if (action === 'add') {
+      const id = requiredOption('--id');
+      const type = requiredOption('--type');
+      const text = requiredOption('--text');
+      const parent = takeOption('--parent');
+      if (argv.length) usage();
+      const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
+      if (parent) createDenimChild(db, parent, { id, type, text }, `${parent}-${id}`);
+      else addDenimNode(db, { id, type, text });
+      await writeFile(path, exportDenimDatabase(db));
+      console.log(JSON.stringify({ ok: true, id, type, text, parent }, null, 2)); return;
+    }
+    if (action === 'set') {
+      const id = argv.shift(); if (!id) usage();
+      const type = takeOption('--type');
+      const text = takeOption('--text');
+      if (argv.length || (type === undefined && text === undefined)) usage();
+      const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
+      updateDenimNode(db, id, { type, text });
+      await writeFile(path, exportDenimDatabase(db));
+      console.log(JSON.stringify(getDenimGraph(db).nodes.find((node) => node.id === id), null, 2)); return;
+    }
+    usage();
+  }
+  const path = argv.shift();
+  if (!path) usage();
+  const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
+  const save = async () => writeFile(path, exportDenimDatabase(db));
+  if (command === 'journeys') {
+    if (argv.length) usage();
+    console.log(JSON.stringify(listJourneys(db), null, 2)); return;
+  }
+  if (command === 'journey') {
+    const id = argv.shift(); if (!id || argv.length) usage();
+    console.log(JSON.stringify(getJourneyGraph(db, id), null, 2)); return;
+  }
+  if (command === 'capabilities') {
+    if (argv.length) usage();
+    console.log(JSON.stringify(listCapabilities(db), null, 2)); return;
+  }
+  if (command === 'resources') {
+    if (argv.length) usage();
+    console.log(JSON.stringify(listTopLevelResources(db), null, 2)); return;
+  }
+  if (command === 'connect') {
+    const parentId = argv.shift(); const existingId = argv.shift();
+    if (!parentId || !existingId || argv.length) usage();
+    connectDenimChild(db, parentId, existingId, `${parentId}-${existingId}-${crypto.randomUUID().slice(0, 8)}`);
+    await save();
+    console.log(JSON.stringify({ ok: true, parentId, existingId }, null, 2)); return;
+  }
+  usage();
 }
 
 function requiredOption(name: string): string {
@@ -158,6 +253,10 @@ async function main(): Promise<void> {
   if (argv[0] === 'hemp') {
     const { hempCli } = await import('./hemp-cli.ts');
     return hempCli(argv.slice(1), serverUrl, dryRun);
+  }
+  if (argv[0] === 'denim') {
+    argv.shift();
+    return denimCli();
   }
   if (argv.shift() !== 'nylon') usage();
   const command = argv.shift();
