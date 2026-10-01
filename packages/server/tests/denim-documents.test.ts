@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { scanDocuments } from '../src/workspace.js';
-import { databaseRevision, DocumentRevisionConflict, readDenimDatabase, setRootDir, writeDenimDatabase } from '../src/store.js';
+import { createDenimDatabase, databaseRevision, DocumentRevisionConflict, readDenimDatabase, setRootDir, writeDenimDatabase } from '../src/store.js';
 
 let tmpDir: string;
 
@@ -15,6 +15,14 @@ beforeEach(async () => {
 afterEach(async () => rm(tmpDir, { recursive: true, force: true }));
 
 describe('Denim database files', () => {
+  it('creates a new SQLite project without overwriting an existing file', async () => {
+    const bytes = new Uint8Array([83, 81, 76, 105, 116, 101]);
+    expect(await createDenimDatabase('new-project.denim.sqlite', bytes)).toBe(databaseRevision(bytes));
+    expect([...await readDenimDatabase('new-project.denim.sqlite')]).toEqual([...bytes]);
+    await expect(createDenimDatabase('new-project.denim.sqlite', new Uint8Array([1])))
+      .rejects.toMatchObject({ code: 'EEXIST' });
+  });
+
   it('lists SQLite sources and round-trips their bytes', async () => {
     const original = new Uint8Array([83, 81, 76, 105, 116, 101]);
     await writeFile(join(tmpDir, 'design.sqlite'), original);

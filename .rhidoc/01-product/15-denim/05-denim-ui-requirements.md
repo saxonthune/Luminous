@@ -20,6 +20,11 @@ extending one global counter.
 - **VT2.** [p] The Journeys, Capabilities, and Resources views behave like pinned tabs.
 - **VT3.** [p] The user can open the same Journey in more than one Tab.
 
+## Project picker
+
+- **PRJ1.** [p] The Denim database picker provides an icon button to create a new project in a listed root.
+- **PRJ2.** [p] Creating a project creates a `.denim.sqlite` database, hydrates it with the starter Journey and Action, and opens it.
+
 ## Tab View content
 
 - **TVC1.** [p] The user can pull additional Nodes into a Tab View independently of the source queries that provide its initial content.
@@ -66,6 +71,7 @@ extending one global counter.
 - **NODE5.** [p] The user can drag a Node by dragging its drag bar or from its top padding.
 - **NODE6.** [p] Each Node has a very thin greyish border.
 - **NODE7.** [p] When the user differentiates a Node, Denim places the new Node below the parent Node.
+- **NODE8.** [p] The drag bar indicator does not change appearance when the pointer hovers over it.
 
 ## Node Toolbar
 
@@ -74,13 +80,39 @@ extending one global counter.
 - **NT3.** [p] Node Toolbar affordances are represented by icons.
 - **NT4.** [p] A Node Toolbar has icons that are always visible and icons that appear on hover.
 - **NT5.** [p] A Node Toolbar appears in the bottom-left of the Node area.
+- **NT6.** [p] Always-visible Node Toolbar actions appear first on the left; hidden actions and their ellipsis appear to their right.
+- **NT7.** [p] The hidden Node Toolbar options end with a trash icon for deleting the Node.
+- **NT8.** [p] Selecting the trash icon opens a menu with a red-text Confirm action; confirming deletes the Node and all Edges connected to it.
 
 ## Node differentiation controls
 
-- **ND1.** [p] The first Node Toolbar icon differentiates the Node and is hidden by default.
-- **ND2.** [p] The second Node Toolbar icon differentiates the Node using an existing Node and is hidden by default.
-- **ND3.** [p] When a Node Toolbar has hidden options, an ellipsis fills the first icon's space and disappears on hover, when the first hidden option takes its place.
+- **ND1.** [p] The first hidden Node Toolbar icon differentiates the Node and is hidden by default.
+- **ND2.** [p] The second hidden Node Toolbar icon differentiates the Node using an existing Node and is hidden by default.
+- **ND3.** [p] When hidden options are not shown, an ellipsis occupies the first hidden option's position; on hover, the ellipsis disappears and that option takes its place.
+
+## Step priority display
+
+- **SP1.** [p] The user can set an Action relationship's numeric priority to reorder the Action among its siblings.
+- **SP2.** [p] The Sequence options dropdown has a control that toggles child Edge labels between raw priority values and derived rank numbers.
+- **SP3.** [p] In ranked display, Denim orders child Actions by ascending priority value and displays ranks starting at 1.
+- **SP4.** [p] Denim displays each Action relationship's raw priority value or derived rank as text at the midpoint of its Edge.
+- **SP5.** [p] Before a Node's child sequence is initialized, its child Edges have no priority values.
+- **SP6.** [p] Initializing a sequence assigns a priority value to every child Edge of the Node.
+- **SP7.** [p] Clearing a sequence removes the priority value from every child Edge of the Node.
+- **SP8.** [p] By default, Denim displays derived ranks on Edges that have priority values.
+- **SP9.** [p] Denim displays each priority label over a white circular badge centered at its Edge label position.
+- **SP10.** [p] Step labels use a heavier font weight and a slightly larger font size.
+- **SP11.** [p] When the user focuses a sequence label badge, Denim shows the raw priority values on every Edge in that sequence.
+- **SP12.** [p] The user can edit a focused sequence label with any finite numeric value, including decimals; Denim saves the value when the input loses focus.
+- **SP13.** [p] While editing, the input may extend beyond the badge and appears above it so the value remains legible.
 
 ## Journey navigation
 
 - **JN1.** [p] Journey Nodes have an always-visible icon that opens the Journey in a new tab.
+
+## Sequence options
+
+- **SQ1.** [p] The hidden section of a Node Toolbar includes a Sequence options icon.
+- **SQ2.** [p] Clicking Sequence options opens a dropdown.
+- **SQ3.** [p] The dropdown offers initialize sequence followed by clear sequence.
+- **SQ4.** [p] The Sequence options dropdown opens below its icon.

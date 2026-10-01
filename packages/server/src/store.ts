@@ -82,6 +82,15 @@ export async function writeDenimDatabase(relativePath: string, bytes: Uint8Array
   }
 }
 
+/** Create a new Denim SQLite file without overwriting an existing project. */
+export async function createDenimDatabase(relativePath: string, bytes: Uint8Array): Promise<string> {
+  if (!isSqlitePath(relativePath)) throw new Error("not a SQLite database path")
+  const absPath = resolveDocPath(relativePath)
+  await writeFile(absPath, bytes, { flag: "wx" })
+  recentWrites.set(absPath, Date.now())
+  return databaseRevision(bytes)
+}
+
 /** Raw-JSON document paths — read via getRawDocument, not the v3 action pipeline. */
 export function isRawDocPath(relativePath: string): boolean {
   return relativePath.endsWith('.hemp.json') || relativePath.endsWith('.hemp2.json') || relativePath.endsWith('.hemp2-part.json') || isDataflowPath(relativePath) || isAtlasPath(relativePath) || isLinenPath(relativePath) || isMerinoPath(relativePath) || isNylonPath(relativePath)

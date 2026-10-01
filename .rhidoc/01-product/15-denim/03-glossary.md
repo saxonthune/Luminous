@@ -57,3 +57,7 @@ relationships and contents were not specified in the source request.
 ## Graph relationship
 
 - **DTERM10.** [p] Any node type can be a parent or child in a parent/child relationship. `parent-of(child, parent)`
+
+## Relationship priority
+
+- **DTERM17.** [p] **Priority value** — a numerical value on the Edge connecting a step to its parent; lower values come earlier in ascending rank order.

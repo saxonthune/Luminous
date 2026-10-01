@@ -256,6 +256,61 @@ describe('Canvas edge rendering', () => {
     cleanup();
   });
 
+  it('allows an edge label without backing shape or halo and with host typography', () => {
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={[{
+        id: 'step',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        labelText: '1',
+        labelBackground: false,
+        labelFontScale: 1.15,
+        labelFontWeight: 600,
+      }]}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const labels = container.querySelector('[data-cactus-edge-layer-labels]')!;
+    const text = labels.querySelector('text')!;
+    expect(labels.querySelector('rect')).toBeNull();
+    expect(text.getAttribute('stroke-width')).toBe('0');
+    expect(text.getAttribute('font-weight')).toBe('600');
+    expect(Number(text.getAttribute('font-size'))).toBeGreaterThan(10);
+
+    cleanup();
+  });
+
+  it('renders a host-configured circular label badge', () => {
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={[{
+        id: 'step',
+        sourceId: 'node-a',
+        targetId: 'node-b',
+        labelText: '1',
+        labelBackgroundShape: 'circle',
+        labelBackgroundColor: '#fff',
+        labelFontScale: 1.15,
+        labelFontWeight: 600,
+      }]}>
+        <NodeContainer nodeId="node-a" x={() => 100} y={() => 100} w={() => 60} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 300} y={() => 200} w={() => 60} h={() => 40} />
+      </Canvas>
+    ));
+
+    const labels = container.querySelector('[data-cactus-edge-layer-labels]')!;
+    const badge = labels.querySelector('rect')!;
+    const text = labels.querySelector('text')!;
+    expect(badge.getAttribute('fill')).toBe('#fff');
+    expect(Number(badge.getAttribute('width'))).toBeCloseTo(Number(badge.getAttribute('height')));
+    expect(Number(badge.getAttribute('rx'))).toBeCloseTo(Number(badge.getAttribute('width')) / 2);
+    expect(text.getAttribute('font-weight')).toBe('600');
+    expect(Number(text.getAttribute('font-size'))).toBeGreaterThan(10);
+
+    cleanup();
+  });
+
   it('reveals full labelText in a foreignObject on click, collapses on second click', async () => {
     const longLabel = 'this label is definitely longer than twenty-eight characters';
     const edges: EdgeDeclaration[] = [
@@ -487,6 +542,39 @@ describe('Canvas edge rendering', () => {
     const lines = linesLayer?.querySelectorAll('line') ?? [];
     expect(lines.length).toBe(0);
 
+    cleanup();
+  });
+
+  it('lets the host make edge labels editable and commits on blur', () => {
+    const edited: string[] = [];
+    let focusCount = 0;
+    let blurCount = 0;
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={[{
+        id: 'ranked', sourceId: 'a', targetId: 'b', labelText: '1', onLabelEdit: (value) => edited.push(value),
+        labelEditValue: '1.25', onLabelEditFocus: () => focusCount++, onLabelEditBlur: () => blurCount++,
+        labelBackgroundShape: 'circle',
+      }]}>
+        <NodeContainer nodeId="a" x={() => 0} y={() => 0} w={() => 40} h={() => 40} />
+        <NodeContainer nodeId="b" x={() => 200} y={() => 100} w={() => 40} h={() => 40} />
+      </Canvas>
+    ));
+
+    container.querySelector('[data-cactus-edge-layer-labels] text')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const input = container.querySelector('[data-cactus-edge-layer-labels] foreignObject input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('1.25');
+    expect(input.type).toBe('text');
+    expect(input.inputMode).toBe('decimal');
+    input.dispatchEvent(new Event('focus'));
+    input.value = '8.75';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('blur'));
+
+    expect(edited).toEqual(['8.75']);
+    expect(focusCount).toBe(1);
+    expect(blurCount).toBe(1);
     cleanup();
   });
 });

@@ -30,6 +30,23 @@ export interface EdgeDeclaration {
   styling?: EdgeStyling;
   /** Raw label text. When present, cactus renders it truncated and click-revealable. */
   labelText?: string;
+  /** When supplied, clicking the label opens an inline editor and blur commits its value. */
+  onLabelEdit?: (value: string) => void;
+  /** Optional value used to initialize the editor when the display label is derived. */
+  labelEditValue?: string;
+  /** Called when the inline label editor receives or loses focus. */
+  onLabelEditFocus?: () => void;
+  onLabelEditBlur?: () => void;
+  /** False omits the label backing shape and text halo. Defaults to true. */
+  labelBackground?: boolean;
+  /** Color of the label backing shape and matching text halo. */
+  labelBackgroundColor?: string;
+  /** Shape of the label backing. Defaults to the existing rounded rectangle. */
+  labelBackgroundShape?: 'rounded' | 'circle';
+  /** Multiplicative adjustment to the normal zoom-aware label font size. */
+  labelFontScale?: number;
+  /** SVG font weight for this edge label. */
+  labelFontWeight?: number | string;
   /** Optional Solid component rendered at the path midpoint. */
   label?: () => JSX.Element;
   /** Optional host-owned route projection. Return null to use cactus's direct route. */

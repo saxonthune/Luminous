@@ -19,9 +19,18 @@ interface DocumentManifest {
 export async function fetchStaticSources(suffix?: string): Promise<CanvasSource[]> {
   const res = await fetch(`${import.meta.env.BASE_URL}canvases/index.json`);
   const data: DocumentManifest = await res.json();
-  const entries = suffix
+  const bundled = suffix
     ? data.documents.filter((entry) => entry.path.endsWith(suffix))
     : data.documents;
+  const savedPaths = suffix === '.denim.sqlite' ? await listSavedDatabasePaths() : [];
+  const knownPaths = new Set(bundled.map((entry) => entry.path));
+  const entries = [...bundled, ...savedPaths
+    .filter((path) => !knownPaths.has(path))
+    .map((path) => ({
+      path,
+      name: path.slice(path.lastIndexOf('/') + 1),
+      root: path.includes('/') ? path.slice(0, path.indexOf('/')) : 'workspace',
+    }))];
   return entries.map((entry) => ({
     id: entry.path,
     label: entry.name,
@@ -44,6 +53,17 @@ function openStaticDbStore(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+}
+
+async function listSavedDatabasePaths(): Promise<string[]> {
+  const store = await openStaticDbStore();
+  const paths = await new Promise<string[]>((resolve, reject) => {
+    const request = store.transaction('databases', 'readonly').objectStore('databases').getAllKeys();
+    request.onsuccess = () => resolve((request.result as string[]).filter((path) => path.endsWith('.denim.sqlite')));
+    request.onerror = () => reject(request.error);
+  });
+  store.close();
+  return paths;
 }
 
 interface StaticDatabaseRecord { bytes: ArrayBuffer | Uint8Array; revision: string }
@@ -85,6 +105,25 @@ async function saveStaticDatabase(path: string, bytes: Uint8Array, expectedRevis
       transaction.onerror = () => reject(transaction.error ?? new Error('Database save failed'));
     });
     return nextRevision;
+  } finally {
+    store.close();
+  }
+}
+
+/** Persist a newly created local Denim project in the static demo's IndexedDB store. */
+export async function createStaticDatabase(path: string, bytes: Uint8Array): Promise<void> {
+  if (!path.endsWith('.denim.sqlite')) throw new Error('Expected a Denim SQLite path');
+  const store = await openStaticDbStore();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = store.transaction('databases', 'readwrite');
+      const objectStore = transaction.objectStore('databases');
+      const request = objectStore.add({ bytes: bytes.slice().buffer, revision: crypto.randomUUID() } satisfies StaticDatabaseRecord, path);
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = () => reject(transaction.error ?? new Error('Project creation was cancelled'));
+      transaction.onerror = () => reject(transaction.error ?? new Error('Project creation failed'));
+    });
   } finally {
     store.close();
   }

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { addDenimNode, exportDenimDatabase, listDenimWorkspaces, openDenimDatabase, putDenimWorkspace } from '@luminous/core/denim';
+import { addDenimNode, createDenimChild, exportDenimDatabase, getDenimGraph, listDenimWorkspaces, openDenimDatabase, putDenimWorkspace } from '@luminous/core/denim';
 import { createDenimSession, DenimPersistenceConflict } from '../DenimSession';
 
 const wasmBinary = new Uint8Array(await readFile(new URL('../../../../../core/node_modules/sql.js/dist/sql-wasm.wasm', import.meta.url)));
@@ -112,6 +112,42 @@ describe('DenimSession', () => {
     await session.dispose();
   });
 
+  it('deletes a node and removes it from tab view state', async () => {
+    const database = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
+    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
+    await session.openJourney('journey');
+    await session.moveNode('action', { x: 120, y: 180 });
+
+    await session.deleteNode('action');
+
+    expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey']);
+    expect(getDenimGraph(database).edges).toEqual([]);
+    expect(session.state.tabs.find((tab) => tab.id === session.state.activeTabId)?.positions.action).toBeUndefined();
+    await session.dispose();
+  });
+
+  it('updates a sequence priority and persists the edge edit', async () => {
+    const database = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
+    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    const saved: Uint8Array[] = [];
+    const session = createDenimSession(database, async (bytes, revision) => {
+      saved.push(bytes.slice());
+      return `${revision}-next`;
+    }, 'r1');
+    await session.openJourney('journey');
+    saved.length = 0;
+
+    await session.setEdgePriority('journey-action', 7.25);
+
+    expect(session.state.graph.edges[0].priority).toBe(7.25);
+    expect(session.state.dirty).toBe(false);
+    expect(saved).toHaveLength(1);
+    await session.dispose();
+  });
+
   it('composes multiple source queries into one Tab View', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
@@ -124,12 +160,17 @@ describe('DenimSession', () => {
       sources: [{ kind: 'journey', journeyId: 'journey' }, { kind: 'capabilities' }],
       includedNodeIds: [],
       positions: {},
+      sequenceModes: {},
     } });
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
 
     session.activateTab('combined');
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'capability']);
+    await session.setSequenceMode('journey', 'priority');
+    expect(session.state.tabs.find((tab) => tab.id === 'combined')?.sequenceModes.journey).toBe('priority');
+    session.selectView('journeys');
+    expect(session.state.tabs.find((tab) => tab.id === 'pinned:journeys')?.sequenceModes.journey).toBeUndefined();
     await session.dispose();
   });
 });

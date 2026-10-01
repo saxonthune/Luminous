@@ -153,6 +153,9 @@ function chooseLabelAnchor(
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
+  const [editingId, setEditingId] = createSignal<string | null>(null);
+  const [editingText, setEditingText] = createSignal('');
+  let editingInput: HTMLInputElement | undefined;
 
   // Counter-scale label text so on-screen size stays readable across zoom levels.
   const labelFontSize = createMemo(() => {
@@ -186,7 +189,6 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   const labelAnchors = createMemo(() => {
     const rects = props.getNodeRects?.() ?? new Map<string, NodeRect>();
     const r = routed();
-    const fs = LABEL_ANCHOR_REF_FS;
     const map = new Map<string, { x: number; y: number }>();
     const placed: LabelRect[] = [];
     for (const edge of props.edges) {
@@ -196,8 +198,13 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
         map.set(edge.id, { x: pts.labelX, y: pts.labelY });
         continue;
       }
+      const fs = LABEL_ANCHOR_REF_FS * (edge.labelFontScale ?? 1);
       const text = truncate(edge.labelText);
-      const box = { w: text.length * fs * 0.56 + 10, h: fs * 1.4 };
+      const textWidth = text.length * fs * 0.56 + 10;
+      const textHeight = fs * 1.4;
+      const box = edge.labelBackgroundShape === 'circle'
+        ? { w: Math.max(textWidth, textHeight), h: Math.max(textWidth, textHeight) }
+        : { w: textWidth, h: textHeight };
       const anchor = chooseLabelAnchor(pts, box, edge.sourceId, edge.targetId, rects, placed);
       map.set(edge.id, anchor);
       placed.push({ x: anchor.x - box.w / 2, y: anchor.y - box.h / 2, w: box.w, h: box.h });
@@ -227,11 +234,12 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           const labelBox = createMemo(() => {
             if (!edge.labelText) return null;
             const text = truncate(edge.labelText);
-            const fs = labelFontSize();
-            return {
-              w: text.length * fs * 0.56 + 10,
-              h: fs * 1.4,
-            };
+            const fs = labelFontSize() * (edge.labelFontScale ?? 1);
+            const textWidth = text.length * fs * 0.56 + 10;
+            const textHeight = fs * 1.4;
+            return edge.labelBackgroundShape === 'circle'
+              ? { w: Math.max(textWidth, textHeight), h: Math.max(textWidth, textHeight) }
+              : { w: textWidth, h: textHeight };
           });
 
           const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
@@ -345,44 +353,103 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                     </For>
                   </Show>
                   <Show when={props.layer === 'labels' && lodStyle().labelVisible !== false && !!(edge.labelText || edge.label)}>
-                    <Show when={labelBox()}>
-                      {(box) => (
-                        <rect
-                          x={(labelAnchors().get(edge.id)?.x ?? pts().labelX) - box().w / 2}
-                          y={(labelAnchors().get(edge.id)?.y ?? pts().labelY) - box().h / 2}
-                          width={box().w}
-                          height={box().h}
-                          rx={3}
-                          fill="var(--cactus-canvas-bg, #ffffff)"
-                          opacity={opacity()}
-                          style={{ 'pointer-events': 'none' }}
-                        />
-                      )}
+                    <Show when={edge.labelBackground !== false}>
+                      <Show when={labelBox()}>
+                        {(box) => (
+                          <rect
+                            x={(labelAnchors().get(edge.id)?.x ?? pts().labelX) - box().w / 2}
+                            y={(labelAnchors().get(edge.id)?.y ?? pts().labelY) - box().h / 2}
+                            width={box().w}
+                            height={box().h}
+                            rx={edge.labelBackgroundShape === 'circle' ? Math.max(box().w, box().h) / 2 : 3}
+                            fill={edge.labelBackgroundColor ?? 'var(--cactus-canvas-bg, #ffffff)'}
+                            opacity={opacity()}
+                            style={{ 'pointer-events': 'none' }}
+                          />
+                        )}
+                      </Show>
                     </Show>
-                    <text
-                      x={labelAnchors().get(edge.id)?.x ?? pts().labelX}
-                      y={labelAnchors().get(edge.id)?.y ?? pts().labelY}
-                      text-anchor="middle"
-                      dominant-baseline="middle"
-                      font-size={`${labelFontSize()}`}
-                      fill={color}
-                      stroke="var(--cactus-canvas-bg, #ffffff)"
-                      stroke-width={labelHaloWidth()}
-                      stroke-linejoin="round"
-                      paint-order="stroke fill"
-                      opacity={opacity()}
-                      style={{
-                        'pointer-events': edge.labelText ? 'auto' : 'none',
-                        cursor: edge.labelText ? 'pointer' : undefined,
-                      }}
-                      onClick={
-                        edge.labelText
-                          ? () => setRevealedId((id) => (id === edge.id ? null : edge.id))
-                          : undefined
-                      }
-                    >
-                      {edge.labelText ? truncate(edge.labelText) : edge.label?.()}
-                    </text>
+                    <Show when={editingId() === edge.id && edge.onLabelEdit} fallback={
+                      <text
+                        x={labelAnchors().get(edge.id)?.x ?? pts().labelX}
+                        y={labelAnchors().get(edge.id)?.y ?? pts().labelY}
+                        text-anchor="middle"
+                        dominant-baseline="middle"
+                        font-size={`${labelFontSize() * (edge.labelFontScale ?? 1)}`}
+                        font-weight={edge.labelFontWeight ?? 'normal'}
+                        fill={color}
+                        stroke={edge.labelBackgroundColor ?? 'var(--cactus-canvas-bg, #ffffff)'}
+                        stroke-width={edge.labelBackground === false ? 0 : labelHaloWidth()}
+                        stroke-linejoin="round"
+                        paint-order="stroke fill"
+                        opacity={opacity()}
+                        style={{
+                          'pointer-events': edge.labelText ? 'auto' : 'none',
+                          cursor: edge.labelText ? 'pointer' : undefined,
+                        }}
+                        onClick={(event) => {
+                          if (!edge.labelText) return;
+                          event.stopPropagation();
+                          if (edge.onLabelEdit) {
+                            setRevealedId(null);
+                            setEditingText(edge.labelEditValue ?? edge.labelText);
+                            setEditingId(edge.id);
+                            requestAnimationFrame(() => { editingInput?.focus(); editingInput?.select(); });
+                          } else {
+                            setRevealedId((id) => (id === edge.id ? null : edge.id));
+                          }
+                        }}
+                      >
+                        {edge.labelText ? truncate(edge.labelText) : edge.label?.()}
+                      </text>
+                    }>
+                      <Show when={labelBox()}>{(box) => {
+                        const anchor = () => labelAnchors().get(edge.id) ?? { x: pts().labelX, y: pts().labelY };
+                        const width = () => Math.max(box().w, 52 / props.zoom());
+                        const height = () => Math.max(box().h, 30 / props.zoom());
+                        function finishEdit(cancel: boolean) {
+                          if (!cancel) {
+                            const text = editingText().trim();
+                            const value = Number(text);
+                            if (text !== '' && Number.isFinite(value) && String(value) !== (edge.labelEditValue ?? edge.labelText)) {
+                              edge.onLabelEdit?.(String(value));
+                            }
+                          }
+                          edge.onLabelEditBlur?.();
+                          setEditingId(null);
+                        }
+                        return <foreignObject
+                          x={anchor().x - width() / 2}
+                          y={anchor().y - height() / 2}
+                          width={width()}
+                          height={height()}
+                          style={{ overflow: 'visible' }}>
+                          <input ref={(element) => { editingInput = element; }} type="text" inputmode="decimal" value={editingText()}
+                            aria-label="Edit sequence priority"
+                            onInput={(event) => setEditingText(event.currentTarget.value)}
+                            onFocus={() => edge.onLabelEditFocus?.()}
+                            onBlur={() => finishEdit(false)}
+                            onKeyDown={(event) => {
+                              event.stopPropagation();
+                              if (event.key === 'Enter') event.currentTarget.blur();
+                              if (event.key === 'Escape') {
+                                setEditingText(edge.labelText ?? '');
+                                finishEdit(true);
+                              }
+                            }}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                              width: '100%', height: '100%', 'box-sizing': 'border-box', padding: '0',
+                              'border-radius': '8px', border: '1px solid var(--cactus-accent, #8b6f47)',
+                              outline: 'none', background: '#fff', color,
+                              'text-align': 'center', 'font-size': `${labelFontSize() * (edge.labelFontScale ?? 1)}px`,
+                              'font-weight': String(edge.labelFontWeight ?? 600),
+                              'box-shadow': '0 2px 8px rgb(0 0 0 / 18%)',
+                            }} class="selection:bg-accent/30 selection:text-fg" />
+                        </foreignObject>;
+                      }}</Show>
+                    </Show>
                   </Show>
                 </>
               )}

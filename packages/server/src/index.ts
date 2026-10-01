@@ -25,6 +25,7 @@ import {
   moveDocument,
   deleteDocument,
   isSqlitePath,
+  createDenimDatabase,
   readDenimDatabase,
   writeDenimDatabase,
   databaseRevision,
@@ -161,7 +162,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   const url = req.url ?? "/"
 
-  if (url.startsWith('/api/denim/database/') && (req.method === 'GET' || req.method === 'PUT')) {
+  if (url.startsWith('/api/denim/database/') && (req.method === 'GET' || req.method === 'PUT' || req.method === 'POST')) {
     const path = decodeURIComponent(url.slice('/api/denim/database/'.length))
     if (!path || hasTraversal(path) || !isSqlitePath(path)) {
       sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
@@ -172,6 +173,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         setCorsHeaders(res)
         res.writeHead(200, { 'Content-Type': 'application/vnd.sqlite3', ETag: databaseRevision(bytes) })
         res.end(bytes)
+      } else if (req.method === 'POST') {
+        const bytes = await parseBinaryBody(req)
+        if (bytes.length === 0) { sendJson(res, 400, { ok: false, error: 'Empty database body' }); return }
+        const revision = await createDenimDatabase(path, bytes)
+        broadcast(path)
+        setCorsHeaders(res)
+        res.writeHead(201, { 'Content-Type': 'application/json', ETag: revision })
+        res.end(JSON.stringify({ ok: true, path }))
       } else {
         const bytes = await parseBinaryBody(req)
         if (bytes.length === 0) { sendJson(res, 400, { ok: false, error: 'Empty database body' }); return }
@@ -184,6 +193,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         sendJson(res, 200, { ok: true, path })
       }
     } catch (cause) {
+      if (req.method === 'POST' && cause && typeof cause === 'object' && 'code' in cause && cause.code === 'EEXIST') {
+        sendJson(res, 409, { ok: false, error: 'A project with that name already exists' }); return
+      }
       if (cause instanceof DocumentRevisionConflict) {
         res.setHeader('ETag', cause.currentRevision)
         sendJson(res, 412, { ok: false, error: 'Database revision changed', revision: cause.currentRevision })

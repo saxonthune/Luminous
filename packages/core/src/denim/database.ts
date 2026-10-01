@@ -13,6 +13,7 @@ export interface DenimEdge {
   type: string;
   sourceId: string;
   targetId: string;
+  priority: number | null;
 }
 
 export interface DenimGraph {
@@ -49,7 +50,8 @@ const SCHEMA = `
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
     source_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-    target_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE
+    target_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    priority REAL NULL
   );
   CREATE INDEX IF NOT EXISTS nodes_by_type ON nodes(type);
   CREATE INDEX IF NOT EXISTS edges_by_source ON edges(source_id);
@@ -59,13 +61,18 @@ const SCHEMA = `
     id TEXT PRIMARY KEY,
     payload_json TEXT NOT NULL
   );
-  PRAGMA user_version = 2;
+  PRAGMA user_version = 3;
 `;
 
 export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint8Array): Promise<Database> {
   const SQL = await sql(wasm);
   const db = bytes ? new SQL.Database(bytes) : new SQL.Database();
   db.exec(SCHEMA);
+  const edgeColumns = rows<{ name: string }>(db, 'PRAGMA table_info(edges)');
+  if (!edgeColumns.some((column) => column.name === 'priority')) {
+    db.run('ALTER TABLE edges ADD COLUMN priority INTEGER NULL');
+  }
+  db.run('PRAGMA user_version = 3');
   return db;
 }
 
@@ -107,8 +114,8 @@ function rows<T>(db: Database, statement: string, values: unknown[] = []): T[] {
 export function getDenimGraph(db: Database): DenimGraph {
   return {
     nodes: rows<DenimNode>(db, 'SELECT id, type, text FROM nodes ORDER BY rowid'),
-    edges: rows<{ id: string; type: string; source_id: string; target_id: string }>(
-      db, 'SELECT id, type, source_id, target_id FROM edges ORDER BY rowid',
+    edges: rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(
+      db, 'SELECT id, type, source_id, target_id, priority FROM edges ORDER BY rowid',
     ).map(({ source_id, target_id, ...edge }) => ({ ...edge, sourceId: source_id, targetId: target_id })),
   };
 }
@@ -130,8 +137,8 @@ export function getJourneyGraph(db: Database, journeyId: string): DenimGraph {
   const ids = nodes.map((node) => node.id);
   if (ids.length === 0) return { nodes, edges: [] };
   const placeholders = ids.map(() => '?').join(',');
-  const edges = rows<{ id: string; type: string; source_id: string; target_id: string }>(db,
-    `SELECT id, type, source_id, target_id FROM edges WHERE source_id IN (${placeholders}) AND target_id IN (${placeholders}) ORDER BY rowid`,
+  const edges = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(db,
+    `SELECT id, type, source_id, target_id, priority FROM edges WHERE source_id IN (${placeholders}) AND target_id IN (${placeholders}) ORDER BY rowid`,
     [...ids, ...ids],
   ).map(({ source_id, target_id, ...edge }) => ({ ...edge, sourceId: source_id, targetId: target_id }));
   return { nodes, edges };
@@ -151,27 +158,28 @@ export function listTopLevelResources(db: Database): DenimNode[] {
   `, [RESOURCE_TYPE, PARENT_CHILD, RESOURCE_TYPE]);
 }
 
-/** Populate a new Denim database with the starter Journey and Action. */
-export function seedDenimDatabase(db: Database): void {
+/** Starter graph hydrated into a newly created Denim project. */
+export const STARTER_DENIM_GRAPH: DenimGraph = {
+  nodes: [
+    { id: 'a-user-builds-a-journey', type: JOURNEY_TYPE, text: 'A user builds a journey' },
+    { id: 'user-creates-a-new-journey', type: 'Action', text: 'User creates a new journey' },
+  ],
+  edges: [{
+    id: 'journey-has-action-user-creates-a-new-journey', type: PARENT_CHILD,
+    sourceId: 'a-user-builds-a-journey', targetId: 'user-creates-a-new-journey', priority: null,
+  }],
+};
+
+/** Hydrate an initialized database with the starter project graph. */
+export function hydrateDenimDatabase(db: Database, graph: DenimGraph = STARTER_DENIM_GRAPH): void {
   transaction(db, () => {
-    addDenimNode(db, {
-      id: 'a-user-builds-a-journey',
-      type: JOURNEY_TYPE,
-      text: 'A user builds a journey',
-    });
-    addDenimNode(db, {
-      id: 'user-creates-a-new-journey',
-      type: 'Action',
-      text: 'User creates a new journey',
-    });
-    addDenimEdge(db, {
-      id: 'journey-has-action-user-creates-a-new-journey',
-      type: PARENT_CHILD,
-      sourceId: 'a-user-builds-a-journey',
-      targetId: 'user-creates-a-new-journey',
-    });
+    for (const node of graph.nodes) addDenimNode(db, node);
+    for (const edge of graph.edges) addDenimEdge(db, edge);
   });
 }
+
+/** CLI compatibility name: seed an already initialized database. */
+export const seedDenimDatabase = hydrateDenimDatabase;
 
 export function addDenimNode(db: Database, node: DenimNode): void {
   db.run('INSERT INTO nodes (id, type, text) VALUES (?, ?, ?)', [node.id, node.type, node.text]);
@@ -182,7 +190,18 @@ export function updateDenimNode(db: Database, id: string, patch: Partial<Pick<De
   if (patch.text !== undefined) db.run('UPDATE nodes SET text = ? WHERE id = ?', [patch.text, id]);
 }
 
-export function addDenimEdge(db: Database, edge: DenimEdge): void {
+/** Delete a node and all of its incoming and outgoing edges. */
+export function deleteDenimNode(db: Database, id: string): void {
+  db.run('DELETE FROM edges WHERE source_id = ? OR target_id = ?', [id, id]);
+  db.run('DELETE FROM nodes WHERE id = ?', [id]);
+}
+
+export function updateDenimEdgePriority(db: Database, edgeId: string, priority: number): void {
+  if (!Number.isFinite(priority)) throw new Error('Edge priority must be finite');
+  db.run('UPDATE edges SET priority = ? WHERE id = ?', [priority, edgeId]);
+}
+
+export function addDenimEdge(db: Database, edge: Omit<DenimEdge, 'priority'> & { priority?: number | null }): void {
   if (edge.type === PARENT_CHILD) {
     if (edge.sourceId === edge.targetId) throw new Error('A node cannot be its own parent');
     const cycle = db.exec(`
@@ -192,8 +211,45 @@ export function addDenimEdge(db: Database, edge: DenimEdge): void {
     `, [edge.targetId, PARENT_CHILD, edge.sourceId]);
     if (cycle.length > 0) throw new Error('This parent-child edge would create a cycle');
   }
-  db.run('INSERT INTO edges (id, type, source_id, target_id) VALUES (?, ?, ?, ?)',
-    [edge.id, edge.type, edge.sourceId, edge.targetId]);
+  const priority = edge.priority ?? (edge.type === PARENT_CHILD ? nextChildPriority(db, edge.sourceId) : null);
+  db.run('INSERT INTO edges (id, type, source_id, target_id, priority) VALUES (?, ?, ?, ?, ?)',
+    [edge.id, edge.type, edge.sourceId, edge.targetId, priority]);
+}
+
+function nextChildPriority(db: Database, parentId: string): number | null {
+  const values = rows<{ total: number; prioritized: number; max_priority: number | null }>(db, `
+    SELECT COUNT(*) AS total, COUNT(priority) AS prioritized, MAX(priority) AS max_priority FROM edges
+    WHERE type = ? AND source_id = ?
+  `, [PARENT_CHILD, parentId])[0];
+  if (!values || values.prioritized === 0) return null;
+  if (values.prioritized !== values.total) {
+    throw new Error('Child sequence is incomplete; initialize or clear it before adding a child');
+  }
+  return (values.max_priority ?? 0) + 1;
+}
+
+/** Assign sequence priorities in the caller's chosen order for one parent's child edges. */
+export function initializeDenimSequence(db: Database, parentId: string, orderedChildIds: string[]): void {
+  transaction(db, () => {
+    const edges = rows<{ id: string; target_id: string }>(db,
+      'SELECT id, target_id FROM edges WHERE type = ? AND source_id = ?', [PARENT_CHILD, parentId]);
+    const expected = edges.map((edge) => edge.target_id).sort();
+    const supplied = [...orderedChildIds].sort();
+    if (new Set(supplied).size !== supplied.length
+      || expected.length !== supplied.length
+      || expected.some((id, index) => id !== supplied[index])) {
+      throw new Error('Sequence initialization must include each child exactly once');
+    }
+    const edgeByChild = new Map(edges.map((edge) => [edge.target_id, edge.id]));
+    orderedChildIds.forEach((childId, index) => {
+      db.run('UPDATE edges SET priority = ? WHERE id = ?', [index + 1, edgeByChild.get(childId)!]);
+    });
+  });
+}
+
+/** Clear the priority values for every child edge of one parent. */
+export function clearDenimSequence(db: Database, parentId: string): void {
+  db.run('UPDATE edges SET priority = NULL WHERE type = ? AND source_id = ?', [PARENT_CHILD, parentId]);
 }
 
 function transaction(db: Database, run: () => void): void {
@@ -210,13 +266,19 @@ function transaction(db: Database, run: () => void): void {
 export function createDenimChild(db: Database, parentId: string, node: DenimNode, edgeId: string): void {
   transaction(db, () => {
     addDenimNode(db, node);
-    addDenimEdge(db, { id: edgeId, type: PARENT_CHILD, sourceId: parentId, targetId: node.id });
+    addDenimEdge(db, {
+      id: edgeId, type: PARENT_CHILD, sourceId: parentId, targetId: node.id,
+      priority: nextChildPriority(db, parentId),
+    });
   });
 }
 
 export function connectDenimChild(db: Database, parentId: string, childId: string, edgeId: string): void {
   transaction(db, () => {
-    addDenimEdge(db, { id: edgeId, type: PARENT_CHILD, sourceId: parentId, targetId: childId });
+    addDenimEdge(db, {
+      id: edgeId, type: PARENT_CHILD, sourceId: parentId, targetId: childId,
+      priority: nextChildPriority(db, parentId),
+    });
   });
 }
 

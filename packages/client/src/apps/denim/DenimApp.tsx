@@ -1,11 +1,11 @@
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { ChevronLeft, ChevronRight, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, Plus, X, Zap } from 'lucide-solid';
+import { ChevronLeft, ChevronRight, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, ListOrdered, Plus, Trash2, X, Zap } from 'lucide-solid';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useNodeDrag } from '@luminous/cactus';
 import type { CanvasRef, TidyNode } from '@luminous/cactus';
-import { openDenimDatabase, type DenimDatabase, type DenimGraph, type DenimNode } from '@luminous/core/denim';
+import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimEdge, type DenimGraph, type DenimNode } from '@luminous/core/denim';
 import { DocumentPicker } from '../../DocumentPicker';
-import { fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
+import { createStaticDatabase, fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
 import { SourceConflictError } from '../../sources/CanvasSource';
 import { readParam, writeParam } from '../../urlState';
 import {
@@ -16,6 +16,8 @@ import {
   type DenimSession,
 } from './DenimSession';
 import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
+import { NewProjectDialog } from './NewProjectDialog';
+import { NodeToolbarMenu } from './NodeToolbarMenu';
 
 const NODE_W = 232;
 const NODE_H = 142;
@@ -37,6 +39,7 @@ function GraphCanvas(props: {
 }) {
   const session = useDenimSession();
   const graph = () => session.state.graph;
+  const [editingSequenceParent, setEditingSequenceParent] = createSignal<string | null>(null);
   const layoutNodes = createMemo(() => {
     const parents = new Map<string, string>();
     for (const edge of graph().edges) {
@@ -53,6 +56,39 @@ function GraphCanvas(props: {
     .filter((edge) => edge.type === 'parent-child')
     .map((edge) => ({ source: edge.sourceId, target: edge.targetId })));
   const activeTab = () => session.state.tabs.find((tab) => tab.id === session.state.activeTabId)!;
+  const edgeLabels = createMemo(() => {
+    const labels = new Map<string, string>();
+    const grouped = new Map<string, DenimEdge[]>();
+    for (const edge of graph().edges) {
+      if (edge.type !== 'parent-child' || edge.priority === null || edge.priority === undefined) continue;
+      const siblings = grouped.get(edge.sourceId) ?? [];
+      siblings.push(edge);
+      grouped.set(edge.sourceId, siblings);
+    }
+    for (const [parentId, siblings] of grouped) {
+      const mode = editingSequenceParent() === parentId ? 'priority' : activeTab().sequenceModes[parentId] ?? 'rank';
+      const ordered = [...siblings].sort((a, b) => a.priority! - b.priority! || a.targetId.localeCompare(b.targetId));
+      for (const [index, edge] of ordered.entries()) {
+        labels.set(edge.id, mode === 'priority' ? String(edge.priority) : String(index + 1));
+      }
+    }
+    return labels;
+  });
+  function initializeSequence(parentId: string): void {
+    const ordered = graph().edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === parentId)
+      .sort((a, b) => {
+        const pa = positions().get(a.targetId) ?? { x: 0, y: 0 };
+        const pb = positions().get(b.targetId) ?? { x: 0, y: 0 };
+        return pa.x - pb.x || pa.y - pb.y || a.targetId.localeCompare(b.targetId);
+      }).map((edge) => edge.targetId);
+    void session.initializeSequence(parentId, ordered);
+  }
+  function sequenceMode(parentId: string): 'rank' | 'priority' {
+    return activeTab().sequenceModes[parentId] ?? 'rank';
+  }
+  function toggleSequenceMode(parentId: string): void {
+    void session.setSequenceMode(parentId, sequenceMode(parentId) === 'rank' ? 'priority' : 'rank');
+  }
   let canvasRef: CanvasRef | undefined;
   let previousTabId = activeTab().id;
   const positions = createMemo(() => {
@@ -97,6 +133,19 @@ function GraphCanvas(props: {
       id: edge.id,
       sourceId: edge.sourceId,
       targetId: edge.targetId,
+      labelText: edgeLabels().get(edge.id),
+      labelEditValue: edge.priority == null ? undefined : String(edge.priority),
+      onLabelEdit: (value) => {
+        const priority = Number(value);
+        if (Number.isFinite(priority)) void session.setEdgePriority(edge.id, priority);
+      },
+      onLabelEditFocus: () => setEditingSequenceParent(edge.sourceId),
+      onLabelEditBlur: () => setEditingSequenceParent(null),
+      labelBackground: true,
+      labelBackgroundColor: '#fff',
+      labelBackgroundShape: 'circle',
+      labelFontScale: 1.15,
+      labelFontWeight: 600,
       styling: { arrowHead: true, dash: 'solid' as const },
     }))}>
       <CanvasNodes
@@ -106,6 +155,9 @@ function GraphCanvas(props: {
         selectedId={props.selectedId}
         onSelect={session.selectNode}
         openPicker={props.openPicker}
+        sequenceModeFor={sequenceMode}
+        initializeSequence={initializeSequence}
+        toggleSequenceMode={toggleSequenceMode}
       />
     </Canvas>
   );
@@ -118,6 +170,9 @@ function CanvasNodes(props: {
   selectedId: () => string | null;
   onSelect: (id: string | null) => void;
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
+  sequenceModeFor: (parentId: string) => 'rank' | 'priority';
+  initializeSequence: (parentId: string) => void;
+  toggleSequenceMode: (parentId: string) => void;
 }) {
   const session = useDenimSession();
   const ctx = useCanvasContext();
@@ -178,7 +233,13 @@ function CanvasNodes(props: {
       }}>
       <NodeCard node={node} selected={props.selectedId() === node.id} onOpenJourney={() => void session.openJourney(node.id)}
         onDifferentiate={() => void differentiateNode(node.id)}
-        onConnect={(event) => props.openPicker('connect', node.id, event)} />
+        onConnect={(event) => props.openPicker('connect', node.id, event)}
+        hasSequence={props.graph.edges.some((edge) => edge.sourceId === node.id && edge.priority != null)}
+        graphChildCount={props.graph.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === node.id).length}
+        sequenceMode={props.sequenceModeFor(node.id)}
+        onInitializeSequence={() => props.initializeSequence(node.id)}
+        onClearSequence={() => void session.clearSequence(node.id)}
+        onToggleSequenceMode={() => props.toggleSequenceMode(node.id)} />
     </NodeContainer>;
   }}</For>;
 }
@@ -189,8 +250,17 @@ function NodeCard(props: {
   onOpenJourney: () => void;
   onDifferentiate: () => void;
   onConnect: (event: MouseEvent) => void;
+  hasSequence: boolean;
+  graphChildCount: number;
+  sequenceMode: 'rank' | 'priority';
+  onInitializeSequence: () => void;
+  onClearSequence: () => void;
+  onToggleSequenceMode: () => void;
 }) {
   const session = useDenimSession();
+  const [openNodeMenu, setOpenNodeMenu] = createSignal<'sequence' | 'delete' | null>(null);
+  let sequenceOptionsButton: HTMLButtonElement | undefined;
+  let deleteButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([
     'Journey', 'Action', 'Capability', 'Resource', 'Organization', 'Contract', props.node.type,
   ])]);
@@ -218,7 +288,7 @@ function NodeCard(props: {
         <option value="__other__">Other…</option>
       </select>
       <div data-denim-drag-handle data-no-pan="true" aria-label="Drag node" title="Drag node"
-        class="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-fg-muted hover:bg-surface/60 active:cursor-grabbing">
+        class="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-fg-muted active:cursor-grabbing">
         <GripHorizontal size={ICON_SIZE} strokeWidth={1.8} />
       </div>
     </div>
@@ -228,15 +298,6 @@ function NodeCard(props: {
       class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
     <div class="absolute bottom-2 left-2 flex h-7 items-center gap-1" data-node-toolbar
       onPointerDown={(event) => event.stopPropagation()}>
-      <button type="button" aria-label="Differentiate node" title="Differentiate node"
-      class="flex h-7 w-7 items-center justify-center rounded text-fg-muted opacity-0 transition-opacity hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100"
-        onClick={props.onDifferentiate}><GitBranchPlus size={ICON_SIZE} strokeWidth={1.7} /></button>
-      <button type="button" aria-label="Differentiate using an existing node" title="Differentiate using an existing node"
-        class="flex h-7 w-7 items-center justify-center rounded text-fg-muted opacity-0 transition-opacity hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100"
-        onClick={(event) => { event.stopPropagation(); props.onConnect(event); }}><Link2 size={ICON_SIZE} strokeWidth={1.7} /></button>
-      <span class="pointer-events-none absolute left-0 flex h-7 w-7 items-center justify-center text-fg-muted group-hover:hidden">
-        <Ellipsis size={ICON_SIZE} strokeWidth={1.7} />
-      </span>
       <Show when={props.node.type === 'Journey'}>
         <button type="button" aria-label="Open Journey in a new tab" title="Open Journey in a new tab"
           class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
@@ -244,6 +305,59 @@ function NodeCard(props: {
           <ExternalLink size={ICON_SIZE} strokeWidth={1.7} />
         </button>
       </Show>
+      <div class="relative h-7 w-7 shrink-0 transition-[width] group-hover:w-32 group-focus-within:w-32">
+        <span aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center text-fg-muted group-hover:hidden group-focus-within:hidden">
+          <Ellipsis size={ICON_SIZE} strokeWidth={1.7} />
+        </span>
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center gap-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+          <button type="button" aria-label="Differentiate node" title="Differentiate node"
+            class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+            onClick={props.onDifferentiate}><GitBranchPlus size={ICON_SIZE} strokeWidth={1.7} /></button>
+          <button type="button" aria-label="Differentiate using an existing node" title="Differentiate using an existing node"
+            class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+            onClick={(event) => { event.stopPropagation(); props.onConnect(event); }}><Link2 size={ICON_SIZE} strokeWidth={1.7} /></button>
+          <div class="relative h-7 w-7 shrink-0">
+            <button ref={sequenceOptionsButton} type="button" aria-label="Sequence options" title="Sequence options"
+              class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+              aria-expanded={openNodeMenu() === 'sequence'} onClick={(event) => {
+                event.stopPropagation();
+                setOpenNodeMenu((current) => current === 'sequence' ? null : 'sequence');
+              }}><ListOrdered size={ICON_SIZE} strokeWidth={1.7} /></button>
+            <Show when={openNodeMenu() === 'sequence'}>
+              <NodeToolbarMenu anchor={sequenceOptionsButton} alignRight={props.node.type === 'Journey'} label="Sequence options"
+                onClose={() => setOpenNodeMenu(null)}>
+                <button type="button" role="menuitem" disabled={props.graphChildCount === 0}
+                  class="flex w-full items-center rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg disabled:opacity-40"
+                  onClick={() => { props.onInitializeSequence(); setOpenNodeMenu(null); }}>initialize sequence</button>
+                <button type="button" role="menuitem" disabled={!props.hasSequence}
+                  class="flex w-full items-center rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg disabled:opacity-40"
+                  onClick={() => { props.onClearSequence(); setOpenNodeMenu(null); }}>clear sequence</button>
+                <div role="separator" class="my-1 border-t border-border-subtle" />
+                <button type="button" role="menuitemcheckbox" aria-checked={props.sequenceMode === 'rank'} disabled={!props.hasSequence}
+                  class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg disabled:opacity-40"
+                  onClick={props.onToggleSequenceMode}>
+                  <span>Show step numbers</span>
+                  <Show when={props.sequenceMode === 'rank'}><span aria-hidden="true">✓</span></Show>
+                </button>
+              </NodeToolbarMenu>
+            </Show>
+          </div>
+          <div class="relative h-7 w-7 shrink-0">
+            <button ref={deleteButton} type="button" aria-label="Delete node" title="Delete node"
+              class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-red-500/10 hover:text-red-600 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-red-600"
+              aria-expanded={openNodeMenu() === 'delete'} onClick={(event) => {
+                event.stopPropagation();
+                setOpenNodeMenu((current) => current === 'delete' ? null : 'delete');
+              }}><Trash2 size={ICON_SIZE} strokeWidth={1.7} /></button>
+            <Show when={openNodeMenu() === 'delete'}>
+              <NodeToolbarMenu anchor={deleteButton} alignRight label="Delete node" onClose={() => setOpenNodeMenu(null)}>
+                <button type="button" role="menuitem" class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
+                  onClick={() => { setOpenNodeMenu(null); void session.deleteNode(props.node.id); }}>Confirm</button>
+              </NodeToolbarMenu>
+            </Show>
+          </div>
+        </div>
+      </div>
     </div>
   </article>;
 }
@@ -423,6 +537,7 @@ export function DenimApp() {
   const [session, setSession] = createSignal<DenimSession | null>(null);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [creatingIn, setCreatingIn] = createSignal<CanvasSource | null>(null);
   const initialSrc = readParam('src');
 
   async function openSource(item: CanvasSource): Promise<void> {
@@ -477,6 +592,52 @@ export function DenimApp() {
     writeParam('src', null);
   }
 
+  async function createProject(name: string): Promise<void> {
+    const representative = creatingIn();
+    if (!representative) return;
+    const slash = representative.id.lastIndexOf('/');
+    const directory = __STATIC__
+      ? `${representative.root}/`
+      : slash === -1 ? '' : representative.id.slice(0, slash + 1);
+    const path = `${directory}${name}.denim.sqlite`;
+    setCreatingIn(null);
+    setLoading(true);
+    setError(null);
+    let database: DenimDatabase | undefined;
+    try {
+      database = await openDenimDatabase(undefined, `${import.meta.env.BASE_URL}sql-wasm-browser.wasm`);
+      hydrateDenimDatabase(database);
+      const bytes = exportDenimDatabase(database);
+      database.close();
+      database = undefined;
+      if (__STATIC__) {
+        await createStaticDatabase(path, bytes);
+        const list = await fetchStaticSources('.denim.sqlite');
+        setSources(list);
+        const created = list.find((item) => item.id === path);
+        if (!created) throw new Error('Created project was not listed by the database picker');
+        await openSource(created);
+      } else {
+        const response = await fetch(`/api/denim/database/${encodeURIComponent(path)}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/vnd.sqlite3' }, body: bytes as BodyInit,
+        });
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error ?? `Failed to create project (${response.status})`);
+        }
+        const list = await fetchServerSources('.denim.sqlite');
+        setSources(list);
+        const created = list.find((item) => item.id === path);
+        if (!created) throw new Error('Created project was not listed by the database picker');
+        await openSource(created);
+      }
+    } catch (cause) {
+      database?.close();
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setLoading(false);
+    }
+  }
+
   onMount(async () => {
     try {
       const list = await (__STATIC__ ? fetchStaticSources('.denim.sqlite') : fetchServerSources('.denim.sqlite'));
@@ -509,10 +670,14 @@ export function DenimApp() {
       <Show when={error()}>{(message) => <div role="alert" class="px-4 py-2 text-sm text-red-700">{message()}</div>}</Show>
       <Show when={session()} fallback={<Switch>
         <Match when={loading()}><div class="flex flex-1 items-center justify-center text-sm text-fg-muted">Loading…</div></Match>
-        <Match when={!loading()}><DocumentPicker heading="Denim databases" sources={sources()} onSelect={(item) => void openSource(item)} /></Match>
+        <Match when={!loading()}><DocumentPicker heading="Denim databases" sources={sources()} onSelect={(item) => void openSource(item)}
+          createTitle="New project" onCreate={(item) => setCreatingIn(item)} /></Match>
       </Switch>}>
         {(active) => <DenimSessionContext.Provider value={active()}><DenimWorkspace onReload={() => void reloadSource()} /></DenimSessionContext.Provider>}
       </Show>
     </div>
+    <Show when={creatingIn()}>{(representative) => <NewProjectDialog root={representative().rootDir ?? representative().root}
+      existingNames={sources().filter((item) => item.root === representative().root).map((item) => item.label)}
+      onCancel={() => setCreatingIn(null)} onSubmit={(name) => void createProject(name)} />}</Show>
   </>;
 }

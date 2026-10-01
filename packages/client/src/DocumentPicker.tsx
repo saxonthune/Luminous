@@ -1,5 +1,6 @@
 import { For, Show, createSignal, onMount, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import { Plus } from 'lucide-solid';
 import type { CanvasSource } from './sources';
 
 interface DocumentPickerProps {
@@ -10,6 +11,7 @@ interface DocumentPickerProps {
   onRename?: (source: CanvasSource) => void;
   onDuplicate?: (source: CanvasSource) => void;
   onDelete?: (source: CanvasSource) => void;
+  createTitle?: string;
   /** Called with a representative source from the group when its "new document" button is
    * clicked — the caller derives the target directory from that source's id. */
   onCreate?: (representative: CanvasSource) => void;
@@ -111,13 +113,13 @@ export function DocumentPicker(props: DocumentPickerProps) {
                     </div>
                     <Show when={props.onCreate}>
                       <button
+                        type="button"
+                        aria-label={`${props.createTitle ?? 'New document'} in ${group.root}`}
                         onClick={() => props.onCreate!(group.sources[0])}
                         class="rounded p-1 text-fg-muted hover:bg-surface-alt hover:text-fg"
-                        title={`New document in ${group.root}`}
+                        title={`${props.createTitle ?? 'New document'} in ${group.root}`}
                       >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                          <path d="M12 5v14M5 12h14" />
-                        </svg>
+                        <Plus size={14} />
                       </button>
                     </Show>
                   </div>
