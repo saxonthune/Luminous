@@ -128,6 +128,40 @@ describe('DenimSession', () => {
     await session.dispose();
   });
 
+  it('deletes one node while keeping its descendants floating in the active view', async () => {
+    const database = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
+    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Persist it' }, 'action-capability');
+    createDenimChild(database, 'capability', { id: 'resource', type: 'Resource', text: 'Database' }, 'capability-resource');
+    const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
+    await session.openJourney('journey');
+
+    await session.deleteNodeOnly('action');
+
+    expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'capability', 'resource']);
+    expect(session.state.graph.edges.map((edge) => edge.id)).toEqual(['capability-resource']);
+    expect(session.state.tabs.find((tab) => tab.id === session.state.activeTabId)?.includedNodeIds)
+      .toEqual(['capability', 'resource']);
+    expect(getDenimGraph(database).nodes.map((node) => node.id)).toEqual(['journey', 'capability', 'resource']);
+    await session.dispose();
+  });
+
+  it('deletes a node and all descendants through the recursive delete action', async () => {
+    const database = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
+    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Persist it' }, 'action-capability');
+    const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
+    await session.openJourney('journey');
+
+    await session.deleteNode('action');
+
+    expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey']);
+    expect(getDenimGraph(database).nodes.map((node) => node.id)).toEqual(['journey']);
+    await session.dispose();
+  });
+
   it('updates a sequence priority and persists the edge edit', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
@@ -171,6 +205,21 @@ describe('DenimSession', () => {
     expect(session.state.tabs.find((tab) => tab.id === 'combined')?.sequenceModes.journey).toBe('priority');
     session.selectView('journeys');
     expect(session.state.tabs.find((tab) => tab.id === 'pinned:journeys')?.sequenceModes.journey).toBeUndefined();
+    await session.dispose();
+  });
+
+  it('recognizes valid existing-node connection targets', async () => {
+    const database = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Journey' });
+    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Action' }, 'journey-action');
+    createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Capability' }, 'action-capability');
+    addDenimNode(database, { id: 'resource', type: 'Resource', text: 'Resource' });
+    const session = createDenimSession(database, async (_bytes, revision) => revision, 'r1');
+
+    expect(session.canConnectExisting('journey', 'resource')).toBe(true);
+    expect(session.canConnectExisting('journey', 'action')).toBe(false);
+    expect(session.canConnectExisting('capability', 'journey')).toBe(false);
+    expect(session.canConnectExisting('journey', 'journey')).toBe(false);
     await session.dispose();
   });
 });

@@ -62,6 +62,13 @@ extending one global counter.
 - **SS2.** [p] While changes are saving, the badge shows a spinning indicator icon.
 - **SS3.** [p] When changes are saved, the badge shows a check icon.
 
+## Status Toast
+
+- **ST1.** [p] Denim shows a Status Toast immediately to the left of the save-status badge at the bottom-right of the canvas.
+- **ST2.** [p] An in-progress action can provide its own label to the Status Toast.
+- **ST3.** [p] While the user is differentiating to an existing Node and hovers a valid target, the Status Toast reads “Differentiating to "<truncated beginning of target text>" (<target type>)”.
+- **ST4.** [p] The Status Toast is hidden when no action is in progress.
+
 ## Node appearance and movement
 
 - **NODE1.** [p] The user can drag Nodes.
@@ -82,13 +89,26 @@ extending one global counter.
 - **NT5.** [p] A Node Toolbar appears in the bottom-left of the Node area.
 - **NT6.** [p] Always-visible Node Toolbar actions appear first on the left; hidden actions and their ellipsis appear to their right.
 - **NT7.** [p] The hidden Node Toolbar options end with a trash icon for deleting the Node.
-- **NT8.** [p] Selecting the trash icon opens a menu with a red-text Confirm action; confirming deletes the Node and all Edges connected to it.
+
+## Node deletion
+
+- **DEL1.** [p] Selecting the Node Toolbar trash icon opens a menu with “Delete Node” and “Delete Node and Children” options.
+- **DEL2.** [p] Hovering over “Delete Node” opens a confirmation submenu to its right; the submenu stays open while the pointer moves into it.
+- **DEL3.** [p] Hovering over “Delete Node and Children” opens a confirmation submenu to its right; the submenu stays open while the pointer moves into it.
+- **DEL4.** [p] Confirming “Delete Node” removes only the selected Node and its incident Edges; its child Nodes remain and appear in the Tab View as independent Nodes.
+- **DEL5.** [p] Confirming “Delete Node and Children” removes the selected Node, all of its descendant Nodes, and their incident Edges.
 
 ## Node differentiation controls
 
 - **ND1.** [p] The first hidden Node Toolbar icon differentiates the Node and is hidden by default.
 - **ND2.** [p] The second hidden Node Toolbar icon differentiates the Node using an existing Node and is hidden by default.
 - **ND3.** [p] When hidden options are not shown, an ellipsis occupies the first hidden option's position; on hover, the ellipsis disappears and that option takes its place.
+- **ND4.** [p] The Find a node submenu has a circular plus affordance centered in its header row.
+- **ND5.** [p] The user can drag from the circular plus affordance and release on a Node to connect it as the differentiated Node.
+- **ND6.** [p] The user can click the circular plus affordance and then click a Node to connect it as the differentiated Node.
+- **ND7.** [p] While either connection gesture is active, Denim draws a dashed Bezier curve from the circular plus affordance to the pointer.
+- **ND8.** [p] The user can press Escape to cancel an active connection gesture.
+- **ND9.** [p] The Find a node submenu closes when the user clicks outside it or completes a differentiated connection.
 
 ## Step priority display
 

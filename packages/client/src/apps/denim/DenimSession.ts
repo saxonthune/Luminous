@@ -7,6 +7,7 @@ import {
   clearDenimSequence,
   addDenimNode,
   deleteDenimNode,
+  deleteDenimNodeAndChildren,
   exportDenimDatabase,
   getDenimGraph,
   getJourneyGraph,
@@ -64,13 +65,17 @@ export interface DenimSession {
   createJourney(text?: string): Promise<void>;
   differentiate(parentId: string, type?: string, text?: string): Promise<string | undefined>;
   connectExisting(parentId: string, childId: string): Promise<void>;
+  canConnectExisting(parentId: string, childId: string): boolean;
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<void>;
   clearSequence(parentId: string): Promise<void>;
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', tabId?: string): Promise<void>;
   includeNode(nodeId: string, tabId?: string): Promise<void>;
   moveNode(nodeId: string, position: { x: number; y: number }, tabId?: string): Promise<void>;
   updateNode(id: string, patch: Partial<Pick<DenimNode, 'type' | 'text'>>): Promise<void>;
+  /** Delete this node and every descendant connected through parent-child edges. */
   deleteNode(id: string): Promise<void>;
+  /** Delete only this node and preserve its descendants as view nodes. */
+  deleteNodeOnly(id: string): Promise<void>;
   setEdgePriority(edgeId: string, priority: number): Promise<void>;
   findNodesToConnect(query: string): DenimNode[];
   retrySave(): Promise<void>;
@@ -280,6 +285,58 @@ export function createDenimSession(
     }
   }
 
+  function deleteNodeFromSession(id: string, withChildren: boolean): Promise<void> {
+    const graph = getDenimGraph(database);
+    if (!graph.nodes.some((node) => node.id === id)) return Promise.resolve();
+    const childrenByParent = new Map<string, string[]>();
+    for (const edge of graph.edges) {
+      if (edge.type !== 'parent-child') continue;
+      const children = childrenByParent.get(edge.sourceId) ?? [];
+      children.push(edge.targetId);
+      childrenByParent.set(edge.sourceId, children);
+    }
+    const descendants = new Set<string>();
+    const pending = [...(childrenByParent.get(id) ?? [])];
+    while (pending.length > 0) {
+      const childId = pending.pop()!;
+      if (descendants.has(childId)) continue;
+      descendants.add(childId);
+      pending.push(...(childrenByParent.get(childId) ?? []));
+    }
+    const removedIds = new Set([id, ...(withChildren ? descendants : [])]);
+    const visibleTabIds = new Set(state.tabs
+      .filter((tab) => projectTab(database, tab).nodes.some((node) => node.id === id))
+      .map((tab) => tab.id));
+
+    return change(() => {
+      if (withChildren) deleteDenimNodeAndChildren(database, id);
+      else deleteDenimNode(database, id);
+
+      const removedTabs = withChildren
+        ? state.tabs.filter((tab) => tab.kind === 'workspace'
+          && tab.sources.some((source) => source.kind === 'journey' && removedIds.has(source.journeyId)))
+        : [];
+      const removedTabIds = new Set(removedTabs.map((tab) => tab.id));
+      for (const tab of removedTabs) removeDenimWorkspace(database, tab.id);
+      const nextTabs = state.tabs.filter((tab) => !removedTabIds.has(tab.id)).map((tab) => {
+        const includedNodeIds = tab.includedNodeIds.filter((nodeId) => !removedIds.has(nodeId));
+        if (!withChildren && visibleTabIds.has(tab.id)) includedNodeIds.push(...descendants);
+        const next: DenimTabView = {
+          ...tab,
+          includedNodeIds: [...new Set(includedNodeIds)],
+          positions: Object.fromEntries(Object.entries(tab.positions).filter(([nodeId]) => !removedIds.has(nodeId))),
+          sequenceModes: Object.fromEntries(Object.entries(tab.sequenceModes).filter(([nodeId]) => !removedIds.has(nodeId))),
+        };
+        persistTab(next);
+        return next;
+      });
+      const nextActive = removedTabIds.has(state.activeTabId) ? PINNED_TABS[0].id : state.activeTabId;
+      setState({ tabs: nextTabs, activeTabId: nextActive, selectedId: null });
+      setState('cameras', (cameras) => Object.fromEntries(Object.entries(cameras)
+        .filter(([tabId]) => !removedTabIds.has(tabId))));
+    }, null);
+  }
+
   function persistTab(tab: DenimTabView): void {
     putDenimWorkspace(database, { id: tab.id, payload: tab });
   }
@@ -367,6 +424,30 @@ export function createDenimSession(
     connectExisting(parentId, childId) {
       return change(() => connectDenimChild(database, parentId, childId, newId('parent-child')), childId);
     },
+    canConnectExisting(parentId, childId) {
+      if (parentId === childId) return false;
+      const graph = getDenimGraph(database);
+      const nodeIds = new Set(graph.nodes.map((node) => node.id));
+      if (!nodeIds.has(parentId) || !nodeIds.has(childId)) return false;
+      const childIdsByParent = new Map<string, string[]>();
+      for (const edge of graph.edges) {
+        if (edge.type !== 'parent-child') continue;
+        const children = childIdsByParent.get(edge.sourceId) ?? [];
+        children.push(edge.targetId);
+        childIdsByParent.set(edge.sourceId, children);
+      }
+      if ((childIdsByParent.get(parentId) ?? []).includes(childId)) return false;
+      const pending = [childId];
+      const visited = new Set<string>();
+      while (pending.length > 0) {
+        const currentId = pending.pop()!;
+        if (currentId === parentId) return false;
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+        pending.push(...(childIdsByParent.get(currentId) ?? []));
+      }
+      return true;
+    },
     initializeSequence(parentId, orderedChildIds) {
       return change(() => initializeDenimSequence(database, parentId, orderedChildIds));
     },
@@ -403,31 +484,8 @@ export function createDenimSession(
         if (tab.id === state.activeTabId) refreshGraph();
       });
     },
-    deleteNode(id) {
-      const node = getDenimGraph(database).nodes.find((item) => item.id === id);
-      if (!node) return Promise.resolve();
-      return change(() => {
-        deleteDenimNode(database, id);
-        const removedTabs = state.tabs.filter((tab) => tab.kind === 'workspace' && node.type === 'Journey'
-          && tab.sources.some((source) => source.kind === 'journey' && source.journeyId === id));
-        for (const tab of removedTabs) removeDenimWorkspace(database, tab.id);
-        const removedIds = new Set(removedTabs.map((tab) => tab.id));
-        const nextTabs = state.tabs.filter((tab) => !removedIds.has(tab.id)).map((tab) => {
-          const next: DenimTabView = {
-            ...tab,
-            includedNodeIds: tab.includedNodeIds.filter((includedId) => includedId !== id),
-            positions: Object.fromEntries(Object.entries(tab.positions).filter(([nodeId]) => nodeId !== id)),
-            sequenceModes: Object.fromEntries(Object.entries(tab.sequenceModes).filter(([nodeId]) => nodeId !== id)),
-          };
-          persistTab(next);
-          return next;
-        });
-        const nextActive = removedIds.has(state.activeTabId) ? PINNED_TABS[0].id : state.activeTabId;
-        setState({ tabs: nextTabs, activeTabId: nextActive, selectedId: null });
-        setState('cameras', (cameras) => Object.fromEntries(Object.entries(cameras)
-          .filter(([tabId]) => !removedIds.has(tabId))));
-      }, null);
-    },
+    deleteNode(id) { return deleteNodeFromSession(id, true); },
+    deleteNodeOnly(id) { return deleteNodeFromSession(id, false); },
     setEdgePriority(edgeId, priority) {
       return change(() => updateDenimEdgePriority(database, edgeId, priority));
     },

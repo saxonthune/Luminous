@@ -196,6 +196,22 @@ export function deleteDenimNode(db: Database, id: string): void {
   db.run('DELETE FROM nodes WHERE id = ?', [id]);
 }
 
+/** Delete a node and every node reachable through its parent-child edges. */
+export function deleteDenimNodeAndChildren(db: Database, id: string): void {
+  transaction(db, () => {
+    const descendants = rows<{ id: string }>(db, `
+      WITH RECURSIVE descendants(id) AS (
+        SELECT id FROM nodes WHERE id = ?
+        UNION
+        SELECT edges.target_id FROM edges
+        JOIN descendants ON edges.source_id = descendants.id
+        WHERE edges.type = ?
+      ) SELECT id FROM descendants
+    `, [id, PARENT_CHILD]).map((row) => row.id);
+    for (const descendantId of descendants) deleteDenimNode(db, descendantId);
+  });
+}
+
 export function updateDenimEdgePriority(db: Database, edgeId: string, priority: number): void {
   if (!Number.isFinite(priority)) throw new Error('Edge priority must be finite');
   db.run('UPDATE edges SET priority = ? WHERE id = ?', [priority, edgeId]);

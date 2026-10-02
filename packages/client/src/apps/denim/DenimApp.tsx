@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { ChevronLeft, ChevronRight, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, ListOrdered, Plus, Trash2, X, Zap } from 'lucide-solid';
+import { ChevronLeft, ChevronRight, CirclePlus, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, ListOrdered, Plus, Trash2, X, Zap } from 'lucide-solid';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useNodeDrag } from '@luminous/cactus';
 import type { CanvasRef, TidyNode } from '@luminous/cactus';
 import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimEdge, type DenimGraph, type DenimNode } from '@luminous/core/denim';
@@ -16,6 +16,7 @@ import {
   type DenimSession,
 } from './DenimSession';
 import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
+import { DenimStatusToast } from './DenimStatusToast';
 import { NewProjectDialog } from './NewProjectDialog';
 import { NodeToolbarMenu } from './NodeToolbarMenu';
 
@@ -259,8 +260,12 @@ function NodeCard(props: {
 }) {
   const session = useDenimSession();
   const [openNodeMenu, setOpenNodeMenu] = createSignal<'sequence' | 'delete' | null>(null);
+  const [deleteSubmenu, setDeleteSubmenu] = createSignal<'single' | 'children' | null>(null);
+  const deleteMenuRoots = new Set<HTMLElement>();
   let sequenceOptionsButton: HTMLButtonElement | undefined;
   let deleteButton: HTMLButtonElement | undefined;
+  let deleteSingleButton: HTMLButtonElement | undefined;
+  let deleteChildrenButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([
     'Journey', 'Action', 'Capability', 'Resource', 'Organization', 'Contract', props.node.type,
   ])]);
@@ -347,12 +352,45 @@ function NodeCard(props: {
               class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-red-500/10 hover:text-red-600 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-red-600"
               aria-expanded={openNodeMenu() === 'delete'} onClick={(event) => {
                 event.stopPropagation();
-                setOpenNodeMenu((current) => current === 'delete' ? null : 'delete');
+                setOpenNodeMenu((current) => {
+                  const next = current === 'delete' ? null : 'delete';
+                  if (!next) setDeleteSubmenu(null);
+                  return next;
+                });
               }}><Trash2 size={ICON_SIZE} strokeWidth={1.7} /></button>
             <Show when={openNodeMenu() === 'delete'}>
-              <NodeToolbarMenu anchor={deleteButton} alignRight label="Delete node" onClose={() => setOpenNodeMenu(null)}>
-                <button type="button" role="menuitem" class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
-                  onClick={() => { setOpenNodeMenu(null); void session.deleteNode(props.node.id); }}>Confirm</button>
+              <NodeToolbarMenu anchor={deleteButton} alignRight label="Delete node" relatedMenus={deleteMenuRoots}
+                onClose={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); }}>
+                <div onPointerEnter={() => setDeleteSubmenu('single')} onFocusIn={() => setDeleteSubmenu('single')}>
+                  <button ref={deleteSingleButton} type="button" role="menuitem" aria-haspopup="menu"
+                    aria-expanded={deleteSubmenu() === 'single'}
+                    class="flex w-full items-center justify-between gap-4 rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg">
+                    <span>Delete Node</span><ChevronRight size={14} />
+                  </button>
+                  <Show when={deleteSubmenu() === 'single'}>
+                    <NodeToolbarMenu anchor={deleteSingleButton} side="right" label="Confirm deleting node"
+                      relatedMenus={deleteMenuRoots} onClose={() => setDeleteSubmenu(null)}>
+                      <button type="button" role="menuitem"
+                        class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
+                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void session.deleteNodeOnly(props.node.id); }}>Confirm</button>
+                    </NodeToolbarMenu>
+                  </Show>
+                </div>
+                <div onPointerEnter={() => setDeleteSubmenu('children')} onFocusIn={() => setDeleteSubmenu('children')}>
+                  <button ref={deleteChildrenButton} type="button" role="menuitem" aria-haspopup="menu"
+                    aria-expanded={deleteSubmenu() === 'children'}
+                    class="flex w-full items-center justify-between gap-4 rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg">
+                    <span>Delete Node and Children</span><ChevronRight size={14} />
+                  </button>
+                  <Show when={deleteSubmenu() === 'children'}>
+                    <NodeToolbarMenu anchor={deleteChildrenButton} side="right" label="Confirm deleting node and children"
+                      relatedMenus={deleteMenuRoots} onClose={() => setDeleteSubmenu(null)}>
+                      <button type="button" role="menuitem"
+                        class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
+                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void session.deleteNode(props.node.id); }}>Confirm</button>
+                    </NodeToolbarMenu>
+                  </Show>
+                </div>
               </NodeToolbarMenu>
             </Show>
           </div>
@@ -455,6 +493,7 @@ function DenimWorkspace(props: { onReload: () => void }) {
   const session = useDenimSession();
   const [picker, setPicker] = createSignal<PickerState | null>(null);
   const [query, setQuery] = createSignal('');
+  const [statusToast, setStatusToast] = createSignal<string | null>(null);
   const activeTab = () => session.state.tabs.find((tab) => tab.id === session.state.activeTabId)!;
   const journeysView = () => activeTab().id === 'pinned:journeys';
   const results = createMemo(() => session.findNodesToConnect(query()));
@@ -472,6 +511,12 @@ function DenimWorkspace(props: { onReload: () => void }) {
       ? session.connectExisting(current.parentId, node.id)
       : session.includeNode(node.id);
     void task;
+    setPicker(null);
+  }
+
+  async function connectToNode(parentId: string | undefined, childId: string): Promise<void> {
+    if (!parentId || parentId === childId) return;
+    await session.connectExisting(parentId, childId);
     setPicker(null);
   }
 
@@ -500,35 +545,183 @@ function DenimWorkspace(props: { onReload: () => void }) {
           onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></button>
       </div>
       <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker} />
-      <DenimSaveStatusBadge saving={() => session.state.saving} error={() => session.state.error} />
+      <div class="pointer-events-none absolute bottom-3 right-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center justify-end gap-2">
+        <DenimStatusToast message={statusToast} />
+        <DenimSaveStatusBadge saving={() => session.state.saving} error={() => session.state.error} />
+      </div>
     </div>
     <Show when={picker()}>
-      {(current) => <Portal mount={document.body}>
-        <div role="dialog" aria-label={current().mode === 'include' ? 'Add node to view' : 'Choose node to connect'}
-          class="fixed z-50 w-72 rounded-lg border border-border-subtle bg-surface p-2 shadow-xl"
-          style={{ left: `${current().x}px`, top: `${current().y}px` }}>
-          <div class="flex items-center gap-1">
-            <input autofocus value={query()} onInput={(event) => setQuery(event.currentTarget.value)}
-              onKeyDown={(event) => { if (event.key === 'Escape') setPicker(null); }}
-              placeholder="Find a node" aria-label="Find a node"
-              class="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-fg outline-none placeholder:text-fg-muted" />
-            <button type="button" aria-label="Close" class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface-alt hover:text-fg"
-              onClick={() => setPicker(null)}><X size={14} /></button>
-          </div>
-          <div class="max-h-64 overflow-y-auto">
-            <Show when={results().length > 0} fallback={<p class="px-2 py-3 text-xs text-fg-muted">No matching nodes</p>}>
-              <For each={results()}>{(node) => <button type="button"
-                class="flex w-full flex-col rounded px-2 py-2 text-left hover:bg-surface-alt focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-                onClick={() => chooseNode(node)}>
-                <span class="text-sm text-fg">{node.text || 'Untitled'}</span>
-                <span class="text-xs text-fg-muted">{node.type}</span>
-              </button>}</For>
-            </Show>
-          </div>
-        </div>
-      </Portal>}
+      {(current) => <FindNodePicker mode={current().mode} parentId={current().parentId}
+        x={current().x} y={current().y} query={query} setQuery={setQuery} results={results}
+        targetForId={(id) => session.state.graph.nodes.find((node) => node.id === id)}
+        isValidTarget={(id) => Boolean(current().parentId && session.canConnectExisting(current().parentId!, id))}
+        onChoose={chooseNode} onConnect={connectToNode} onClose={() => { setPicker(null); setStatusToast(null); }}
+        onStatus={setStatusToast} />}
     </Show>
   </div>;
+}
+
+type ConnectionGesture = {
+  kind: 'drag' | 'armed';
+  startX: number;
+  startY: number;
+  pointerX: number;
+  pointerY: number;
+};
+
+function FindNodePicker(props: {
+  mode: PickerState['mode'];
+  parentId?: string;
+  x: number;
+  y: number;
+  query: () => string;
+  setQuery: (value: string) => void;
+  results: () => DenimNode[];
+  targetForId: (id: string) => DenimNode | undefined;
+  isValidTarget: (id: string) => boolean;
+  onChoose: (node: DenimNode) => void;
+  onConnect: (parentId: string | undefined, childId: string) => Promise<void>;
+  onClose: () => void;
+  onStatus: (message: string | null) => void;
+}) {
+  const [gesture, setGesture] = createSignal<ConnectionGesture | null>(null);
+  const targetValidity = new Map<string, boolean>();
+  let dialog: HTMLDivElement | undefined;
+  let plusButton: HTMLButtonElement | undefined;
+
+  function nodeIdAt(x: number, y: number): string | null {
+    return document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-container-id]')?.dataset.containerId ?? null;
+  }
+
+  function isValidTarget(id: string): boolean {
+    if (!targetValidity.has(id)) targetValidity.set(id, props.isValidTarget(id));
+    return targetValidity.get(id)!;
+  }
+
+  function finishConnection(childId: string | null): void {
+    const current = gesture();
+    if (!current) return;
+    setGesture(null);
+    props.onStatus(null);
+    if (childId && isValidTarget(childId)) void props.onConnect(props.parentId, childId);
+  }
+
+  function beginGesture(kind: ConnectionGesture['kind']): void {
+    const rect = plusButton?.getBoundingClientRect();
+    if (!rect) return;
+    setGesture({ kind, startX: rect.left + rect.width / 2, startY: rect.top + rect.height / 2,
+      pointerX: rect.left + rect.width / 2, pointerY: rect.top + rect.height / 2 });
+    props.onStatus('Differentiating to existing Node');
+  }
+
+  function cancelGesture(): void {
+    setGesture(null);
+    props.onStatus(null);
+  }
+
+  function onPointerMove(event: PointerEvent): void {
+    const current = gesture();
+    if (!current) return;
+    setGesture({ ...current, pointerX: event.clientX, pointerY: event.clientY });
+    const targetId = nodeIdAt(event.clientX, event.clientY);
+    const target = targetId ? props.targetForId(targetId) : undefined;
+    if (target && isValidTarget(target.id)) {
+      const text = target.text.trim() || 'Untitled';
+      const beginning = text.length > 7 ? `${text.slice(0, 7).trimEnd()}...` : text;
+      props.onStatus(`Differentiating to "${beginning}" (${target.type})`);
+    } else {
+      props.onStatus('Differentiating to existing Node');
+    }
+  }
+
+  function onPointerUp(event: PointerEvent): void {
+    const current = gesture();
+    if (current?.kind !== 'drag') return;
+    const moved = Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 5;
+    if (moved) finishConnection(nodeIdAt(event.clientX, event.clientY));
+    else cancelGesture();
+  }
+
+  function onDocumentPointerDown(event: PointerEvent): void {
+    const target = event.target;
+    if (target instanceof Node && dialog?.contains(target)) return;
+    const current = gesture();
+    if (current?.kind === 'drag') return;
+    if (current?.kind === 'armed') {
+      const childId = nodeIdAt(event.clientX, event.clientY);
+      if (childId) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        finishConnection(childId);
+        return;
+      }
+    }
+    props.onClose();
+  }
+
+  function onKeyDown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (gesture()) cancelGesture();
+    else props.onClose();
+  }
+
+  onMount(() => {
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointerdown', onDocumentPointerDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
+  });
+  onCleanup(() => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    document.removeEventListener('pointerdown', onDocumentPointerDown, true);
+    document.removeEventListener('keydown', onKeyDown, true);
+    props.onStatus(null);
+  });
+
+  function curvePath(current: ConnectionGesture): string {
+    const dx = current.pointerX - current.startX;
+    return `M ${current.startX} ${current.startY} C ${current.startX + dx * 0.35} ${current.startY + 90}, ${current.pointerX - dx * 0.2} ${current.pointerY - 90}, ${current.pointerX} ${current.pointerY}`;
+  }
+
+  return <Portal mount={document.body}>
+    <Show when={gesture()}>{(current) => <svg aria-hidden="true" class="pointer-events-none fixed inset-0 z-[49] h-full w-full overflow-visible">
+      <path d={curvePath(current())} fill="none" stroke="var(--fg-muted)" stroke-width="1.5" stroke-dasharray="5 5" />
+    </svg>}</Show>
+    <div ref={dialog} role="dialog" aria-label={props.mode === 'include' ? 'Add node to view' : 'Choose node to connect'}
+      class="fixed z-50 w-72 rounded-lg border border-border-subtle bg-surface p-2 shadow-xl"
+      style={{ left: `${props.x}px`, top: `${props.y}px` }}>
+      <div class="relative flex items-center gap-1">
+        <input autofocus value={props.query()} onInput={(event) => props.setQuery(event.currentTarget.value)}
+          placeholder="Find a node" aria-label="Find a node"
+          class="min-w-0 flex-1 bg-transparent px-2 py-2 pr-8 text-sm text-fg outline-none placeholder:text-fg-muted" />
+        <Show when={props.mode === 'connect'}>
+          <button ref={plusButton} type="button" aria-label="Start connection" title="Drag to a node or click, then choose a node"
+            class="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-fg-muted hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+            onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); beginGesture('drag'); }}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (gesture()?.kind === 'armed') cancelGesture();
+              else beginGesture('armed');
+            }}><CirclePlus size={20} strokeWidth={1.7} /></button>
+        </Show>
+        <button type="button" aria-label="Close" class="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface-alt hover:text-fg"
+          onClick={props.onClose}><X size={14} /></button>
+      </div>
+      <div class="max-h-64 overflow-y-auto">
+        <Show when={props.results().length > 0} fallback={<p class="px-2 py-3 text-xs text-fg-muted">No matching nodes</p>}>
+          <For each={props.results()}>{(node) => <button type="button"
+            class="flex w-full flex-col rounded px-2 py-2 text-left hover:bg-surface-alt focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+            onClick={() => props.onChoose(node)}>
+            <span class="text-sm text-fg">{node.text || 'Untitled'}</span>
+            <span class="text-xs text-fg-muted">{node.type}</span>
+          </button>}</For>
+        </Show>
+      </div>
+    </div>
+  </Portal>;
 }
 
 export function DenimApp() {

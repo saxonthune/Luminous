@@ -61,3 +61,7 @@ relationships and contents were not specified in the source request.
 ## Relationship priority
 
 - **DTERM17.** [p] **Priority value** — a numerical value on the Edge connecting a step to its parent; lower values come earlier in ascending rank order.
+
+## Status feedback
+
+- **DTERM18.** [p] **Status Toast** — a transient message near the canvas save-status badge that reports an action currently in progress and is hidden when no action is in progress.

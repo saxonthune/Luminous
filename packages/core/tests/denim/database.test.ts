@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import initSqlJs from 'sql.js';
 import {
-  addDenimEdge, addDenimNode, deleteDenimNode, exportDenimDatabase, getDenimGraph,
+  addDenimEdge, addDenimNode, deleteDenimNode, deleteDenimNodeAndChildren, exportDenimDatabase, getDenimGraph,
   clearDenimSequence, connectDenimChild, createDenimChild, getJourneyGraph, initializeDenimSequence,
   listJourneys, listTopLevelResources, openDenimDatabase,
   PARENT_CHILD, updateDenimEdgePriority, updateDenimNode,
@@ -92,6 +92,24 @@ describe('Denim SQLite database', () => {
         { id: 'parent', type: 'Journey', text: 'Journey' },
         { id: 'other', type: 'Resource', text: 'Resource' },
       ],
+      edges: [],
+    });
+  });
+
+  it('deletes all parent-child descendants when requested', async () => {
+    const db = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
+    addDenimNode(db, { id: 'action', type: 'Action', text: 'Action' });
+    addDenimNode(db, { id: 'capability', type: 'Capability', text: 'Capability' });
+    addDenimNode(db, { id: 'resource', type: 'Resource', text: 'Resource' });
+    addDenimEdge(db, { id: 'journey-action', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action' });
+    addDenimEdge(db, { id: 'action-capability', type: PARENT_CHILD, sourceId: 'action', targetId: 'capability' });
+    addDenimEdge(db, { id: 'capability-resource', type: PARENT_CHILD, sourceId: 'capability', targetId: 'resource' });
+
+    deleteDenimNodeAndChildren(db, 'action');
+
+    expect(getDenimGraph(db)).toEqual({
+      nodes: [{ id: 'journey', type: 'Journey', text: 'Journey' }],
       edges: [],
     });
   });
