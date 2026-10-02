@@ -1,46 +1,21 @@
 import { createContext, useContext } from 'solid-js';
 import { createStore, type Store } from 'solid-js/store';
 import {
-  connectDenimChild,
-  createDenimChild,
-  initializeDenimSequence,
-  clearDenimSequence,
-  addDenimNode,
-  deleteDenimNode,
-  deleteDenimNodeAndChildren,
   exportDenimDatabase,
   getDenimGraph,
   getJourneyGraph,
   listCapabilities,
-  listDenimWorkspaces,
   listJourneys,
   listTopLevelResources,
-  putDenimWorkspace,
-  removeDenimWorkspace,
-  updateDenimNode,
-  updateDenimEdgePriority,
   type DenimDatabase,
   type DenimEdge,
   type DenimGraph,
   type DenimNode,
 } from '@luminous/core/denim';
+import { applyDenimAction, DENIM_PINNED_VIEWS, readDenimSnapshot, readDenimViews,
+  type DenimAction, type DenimQuerySource, type DenimTabView } from '@luminous/core/denim/actions';
 
-export type DenimQuerySource =
-  | { kind: 'journeys' }
-  | { kind: 'capabilities' }
-  | { kind: 'resources' }
-  | { kind: 'journey'; journeyId: string };
-
-export interface DenimTabView {
-  version: 1;
-  id: string;
-  kind: 'pinned' | 'workspace';
-  title: string;
-  sources: DenimQuerySource[];
-  includedNodeIds: string[];
-  positions: Record<string, { x: number; y: number }>;
-  sequenceModes: Record<string, 'rank' | 'priority'>;
-}
+export type { DenimQuerySource, DenimTabView } from '@luminous/core/denim/actions';
 
 export interface DenimSessionState {
   tabs: DenimTabView[];
@@ -56,6 +31,7 @@ export interface DenimSessionState {
 
 export interface DenimSession {
   readonly state: Store<DenimSessionState>;
+  dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; tabId?: string }>;
   selectView(view: 'journeys' | 'capabilities' | 'resources'): void;
   activateTab(id: string): void;
   setCamera(id: string, camera: { x: number; y: number; k: number }): void;
@@ -92,59 +68,9 @@ export class DenimPersistenceConflict extends Error {
   }
 }
 
-const PINNED_TABS: DenimTabView[] = [
-  { version: 1, id: 'pinned:journeys', kind: 'pinned', title: 'Journeys', sources: [{ kind: 'journeys' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
-  { version: 1, id: 'pinned:capabilities', kind: 'pinned', title: 'Capabilities', sources: [{ kind: 'capabilities' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
-  { version: 1, id: 'pinned:resources', kind: 'pinned', title: 'Resources', sources: [{ kind: 'resources' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
-];
+const PINNED_TABS = DENIM_PINNED_VIEWS;
 
 const ACTIVE_TAB_KEY = 'denim-active-tab:';
-
-function newId(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
-
-function isQuerySource(value: unknown): value is DenimQuerySource {
-  if (!value || typeof value !== 'object') return false;
-  const source = value as Record<string, unknown>;
-  return source.kind === 'journeys' || source.kind === 'capabilities' || source.kind === 'resources'
-    || (source.kind === 'journey' && typeof source.journeyId === 'string');
-}
-
-function decodeWorkspace(value: unknown): DenimTabView | undefined {
-  if (!value || typeof value !== 'object') return;
-  const tab = value as Partial<DenimTabView>;
-  if (tab.version !== 1 || typeof tab.id !== 'string' || !Array.isArray(tab.sources) || !tab.sources.every(isQuerySource)
-    || !Array.isArray(tab.includedNodeIds) || !tab.includedNodeIds.every((id) => typeof id === 'string')
-    || !tab.positions || typeof tab.positions !== 'object') return;
-  const positions: Record<string, { x: number; y: number }> = {};
-  for (const [id, point] of Object.entries(tab.positions)) {
-    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
-    positions[id] = { x: point.x, y: point.y };
-  }
-  const sequenceModes: Record<string, 'rank' | 'priority'> = {};
-  if (tab.sequenceModes && typeof tab.sequenceModes === 'object') {
-    for (const [id, mode] of Object.entries(tab.sequenceModes)) {
-      if (mode === 'rank' || mode === 'priority') sequenceModes[id] = mode;
-    }
-  }
-  if (tab.kind === 'pinned') {
-    const pinned = PINNED_TABS.find((item) => item.id === tab.id);
-    if (!pinned) return;
-    return { ...pinned, includedNodeIds: [...new Set(tab.includedNodeIds)], positions, sequenceModes };
-  }
-  if (tab.kind !== 'workspace' || typeof tab.title !== 'string' || PINNED_TABS.some((item) => item.id === tab.id)) return;
-  return {
-    version: 1,
-    id: tab.id,
-    kind: 'workspace',
-    title: tab.title,
-    sources: tab.sources,
-    includedNodeIds: [...new Set(tab.includedNodeIds)],
-    positions,
-    sequenceModes,
-  };
-}
 
 function sourceGraph(database: DenimDatabase, source: DenimQuerySource): DenimGraph {
   if (source.kind === 'journey') return getJourneyGraph(database, source.journeyId);
@@ -204,15 +130,7 @@ export function createDenimSession(
   initialRevision: string,
   sourceKey = 'default',
 ): DenimSession {
-  const persisted = listDenimWorkspaces(database)
-    .map(({ payload }) => decodeWorkspace(payload))
-    .filter((tab): tab is DenimTabView => Boolean(tab));
-  const overrides = new Map(persisted.filter((tab) => tab.kind === 'pinned').map((tab) => [tab.id, tab]));
-  const workspaces = persisted.filter((tab) => tab.kind === 'workspace');
-  const tabs = [
-    ...PINNED_TABS.map((tab) => overrides.get(tab.id) ?? tab),
-    ...workspaces,
-  ];
+  const tabs = readDenimViews(database);
   const transient = sessionStorageRead(sourceKey);
   const initialTabId = tabs.some((tab) => tab.id === transient.activeTabId) ? transient.activeTabId! : PINNED_TABS[0].id;
   const [state, setState] = createStore<DenimSessionState>({
@@ -273,86 +191,35 @@ export function createDenimSession(
     }
   }
 
-  async function change(run: () => void, selectedId?: string | null): Promise<void> {
-    if (disposed) throw new Error('Denim session is closed');
+  async function dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; tabId?: string }> {
+    if (disposed) return { ok: false, error: 'Denim session is closed' };
     try {
-      run();
-      if (selectedId !== undefined) setState('selectedId', selectedId);
-      refreshGraph();
-      await persist();
-    } catch (cause) {
-      setState('error', cause instanceof Error ? cause.message : String(cause));
-    }
-  }
-
-  function deleteNodeFromSession(id: string, withChildren: boolean): Promise<void> {
-    const graph = getDenimGraph(database);
-    if (!graph.nodes.some((node) => node.id === id)) return Promise.resolve();
-    const childrenByParent = new Map<string, string[]>();
-    for (const edge of graph.edges) {
-      if (edge.type !== 'parent-child') continue;
-      const children = childrenByParent.get(edge.sourceId) ?? [];
-      children.push(edge.targetId);
-      childrenByParent.set(edge.sourceId, children);
-    }
-    const descendants = new Set<string>();
-    const pending = [...(childrenByParent.get(id) ?? [])];
-    while (pending.length > 0) {
-      const childId = pending.pop()!;
-      if (descendants.has(childId)) continue;
-      descendants.add(childId);
-      pending.push(...(childrenByParent.get(childId) ?? []));
-    }
-    const removedIds = new Set([id, ...(withChildren ? descendants : [])]);
-    const visibleTabIds = new Set(state.tabs
-      .filter((tab) => projectTab(database, tab).nodes.some((node) => node.id === id))
-      .map((tab) => tab.id));
-
-    return change(() => {
-      if (withChildren) deleteDenimNodeAndChildren(database, id);
-      else deleteDenimNode(database, id);
-
-      const removedTabs = withChildren
-        ? state.tabs.filter((tab) => tab.kind === 'workspace'
-          && tab.sources.some((source) => source.kind === 'journey' && removedIds.has(source.journeyId)))
-        : [];
-      const removedTabIds = new Set(removedTabs.map((tab) => tab.id));
-      for (const tab of removedTabs) removeDenimWorkspace(database, tab.id);
-      const nextTabs = state.tabs.filter((tab) => !removedTabIds.has(tab.id)).map((tab) => {
-        const includedNodeIds = tab.includedNodeIds.filter((nodeId) => !removedIds.has(nodeId));
-        if (!withChildren && visibleTabIds.has(tab.id)) includedNodeIds.push(...descendants);
-        const next: DenimTabView = {
-          ...tab,
-          includedNodeIds: [...new Set(includedNodeIds)],
-          positions: Object.fromEntries(Object.entries(tab.positions).filter(([nodeId]) => !removedIds.has(nodeId))),
-          sequenceModes: Object.fromEntries(Object.entries(tab.sequenceModes).filter(([nodeId]) => !removedIds.has(nodeId))),
-        };
-        persistTab(next);
-        return next;
-      });
-      const nextActive = removedTabIds.has(state.activeTabId) ? PINNED_TABS[0].id : state.activeTabId;
-      setState({ tabs: nextTabs, activeTabId: nextActive, selectedId: null });
+      const result = applyDenimAction(database, action);
+      const snapshot = readDenimSnapshot(database);
+      setState('tabs', snapshot.views);
       setState('cameras', (cameras) => Object.fromEntries(Object.entries(cameras)
-        .filter(([tabId]) => !removedTabIds.has(tabId))));
-    }, null);
-  }
-
-  function persistTab(tab: DenimTabView): void {
-    putDenimWorkspace(database, { id: tab.id, payload: tab });
-  }
-
-  async function updateTab(tabId: string, update: (tab: DenimTabView) => DenimTabView): Promise<void> {
-    if (disposed) throw new Error('Denim session is closed');
-    try {
-      const current = state.tabs.find((tab) => tab.id === tabId);
-      if (!current) return;
-      const next = update(current);
-      persistTab(next);
-      setState('tabs', (items) => items.map((tab) => tab.id === tabId ? next : tab));
+        .filter(([tabId]) => snapshot.views.some((tab) => tab.id === tabId))));
+      if (action.op === 'view.openJourney' && result.tabId) {
+        setState({ activeTabId: result.tabId, selectedId: action.journeyId });
+        saveTransient();
+      } else if (action.op === 'view.close' && state.activeTabId === action.tabId) {
+        setState({ activeTabId: PINNED_TABS[0].id, selectedId: null });
+        saveTransient();
+      } else if (action.op === 'node.delete') {
+        if (!state.tabs.some((tab) => tab.id === state.activeTabId)) {
+          setState('activeTabId', PINNED_TABS[0].id);
+          saveTransient();
+        }
+        setState('selectedId', null);
+      } else if (result.nodeId) setState('selectedId', result.nodeId);
       refreshGraph();
-      await persist();
+      if (result.changed) await persist();
+      if (state.dirty && state.error) return { ok: false, error: state.error };
+      return { ...result, ok: true };
     } catch (cause) {
-      setState('error', cause instanceof Error ? cause.message : String(cause));
+      const error = cause instanceof Error ? cause.message : String(cause);
+      setState('error', error);
+      return { ok: false, error };
     }
   }
 
@@ -360,6 +227,7 @@ export function createDenimSession(
 
   return {
     state,
+    dispatchAction,
     selectView(view) {
       const id = `pinned:${view}`;
       if (!state.tabs.some((tab) => tab.id === id)) return;
@@ -378,52 +246,16 @@ export function createDenimSession(
       saveTransient();
       refreshGraph();
     },
-    async openJourney(id) {
-      if (disposed) throw new Error('Denim session is closed');
-      const node = getDenimGraph(database).nodes.find((item) => item.id === id);
-      if (!node || node.type !== 'Journey') return;
-      const tab: DenimTabView = {
-        version: 1, id: newId('journey-tab'), kind: 'workspace', title: node.text,
-        sources: [{ kind: 'journey', journeyId: id }], includedNodeIds: [], positions: {}, sequenceModes: {},
-      };
-      persistTab(tab);
-      setState('tabs', (items) => [...items, tab]);
-      setState({ activeTabId: tab.id, selectedId: id });
-      saveTransient();
-      refreshGraph();
-      await persist();
-    },
-    async closeTab(id) {
-      const tab = state.tabs.find((item) => item.id === id);
-      if (!tab || tab.kind === 'pinned') return;
-      removeDenimWorkspace(database, id);
-      const nextTabs = state.tabs.filter((item) => item.id !== id);
-      const nextActive = state.activeTabId === id ? PINNED_TABS[0].id : state.activeTabId;
-      setState({ tabs: nextTabs, activeTabId: nextActive, selectedId: null });
-      setState('cameras', (cameras) => {
-        const next = { ...cameras };
-        delete next[id];
-        return next;
-      });
-      saveTransient();
-      refreshGraph();
-      await persist();
-    },
+    async openJourney(id) { await dispatchAction({ op: 'view.openJourney', journeyId: id }); },
+    async closeTab(id) { await dispatchAction({ op: 'view.close', tabId: id }); },
     selectNode(id) {
       setState('selectedId', id);
     },
-    createJourney(text = 'New journey') {
-      const node = { id: newId('journey'), type: 'Journey', text };
-      return change(() => addDenimNode(database, node), node.id);
-    },
+    async createJourney(text = 'New journey') { await dispatchAction({ op: 'journey.create', text }); },
     async differentiate(parentId, type = 'Action', text = 'New action') {
-      const node = { id: newId('node'), type, text };
-      await change(() => createDenimChild(database, parentId, node, newId('parent-child')), node.id);
-      return getDenimGraph(database).nodes.some((item) => item.id === node.id) ? node.id : undefined;
+      return (await dispatchAction({ op: 'node.differentiate', parentId, type, text })).nodeId;
     },
-    connectExisting(parentId, childId) {
-      return change(() => connectDenimChild(database, parentId, childId, newId('parent-child')), childId);
-    },
+    async connectExisting(parentId, childId) { await dispatchAction({ op: 'edge.connect', parentId, childId }); },
     canConnectExisting(parentId, childId) {
       if (parentId === childId) return false;
       const graph = getDenimGraph(database);
@@ -448,47 +280,15 @@ export function createDenimSession(
       }
       return true;
     },
-    initializeSequence(parentId, orderedChildIds) {
-      return change(() => initializeDenimSequence(database, parentId, orderedChildIds));
-    },
-    clearSequence(parentId) {
-      return change(() => clearDenimSequence(database, parentId));
-    },
-    setSequenceMode(parentId, mode, tabId = state.activeTabId) {
-      return updateTab(tabId, (tab) => ({
-        ...tab,
-        sequenceModes: { ...tab.sequenceModes, [parentId]: mode },
-      }));
-    },
-    includeNode(nodeId, tabId = state.activeTabId) {
-      return updateTab(tabId, (tab) => ({
-        ...tab,
-        includedNodeIds: tab.includedNodeIds.includes(nodeId) ? tab.includedNodeIds : [...tab.includedNodeIds, nodeId],
-      }));
-    },
-    moveNode(nodeId, position, tabId = state.activeTabId) {
-      if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return Promise.resolve();
-      return updateTab(tabId, (tab) => {
-        return { ...tab, positions: { ...tab.positions, [nodeId]: { x: position.x, y: position.y } } };
-      });
-    },
-    updateNode(id, patch) {
-      const tab = activeTab();
-      const node = getDenimGraph(database).nodes.find((item) => item.id === id);
-      return change(() => updateDenimNode(database, id, patch), undefined).then(async () => {
-        if (node?.type === 'Journey' && patch.text !== undefined) {
-          const affected = state.tabs.filter((item) => item.kind === 'workspace'
-            && item.sources.some((source) => source.kind === 'journey' && source.journeyId === id));
-          for (const item of affected) await updateTab(item.id, (current) => ({ ...current, title: patch.text! }));
-        }
-        if (tab.id === state.activeTabId) refreshGraph();
-      });
-    },
-    deleteNode(id) { return deleteNodeFromSession(id, true); },
-    deleteNodeOnly(id) { return deleteNodeFromSession(id, false); },
-    setEdgePriority(edgeId, priority) {
-      return change(() => updateDenimEdgePriority(database, edgeId, priority));
-    },
+    async initializeSequence(parentId, orderedChildIds) { await dispatchAction({ op: 'sequence.initialize', parentId, orderedChildIds }); },
+    async clearSequence(parentId) { await dispatchAction({ op: 'sequence.clear', parentId }); },
+    async setSequenceMode(parentId, mode, tabId = state.activeTabId) { await dispatchAction({ op: 'view.sequenceMode.set', tabId, parentId, mode }); },
+    async includeNode(nodeId, tabId = state.activeTabId) { await dispatchAction({ op: 'view.includeNode', tabId, nodeId }); },
+    async moveNode(nodeId, position, tabId = state.activeTabId) { await dispatchAction({ op: 'view.node.move', tabId, nodeId, position }); },
+    async updateNode(id, patch) { await dispatchAction({ op: 'node.update', id, patch }); },
+    async deleteNode(id) { await dispatchAction({ op: 'node.delete', id, scope: 'subtree' }); },
+    async deleteNodeOnly(id) { await dispatchAction({ op: 'node.delete', id, scope: 'node' }); },
+    async setEdgePriority(edgeId, priority) { await dispatchAction({ op: 'edge.priority.set', edgeId, priority }); },
     findNodesToConnect(query) {
       const shownIds = new Set(state.graph.nodes.map((node) => node.id));
       const normalized = query.trim().toLowerCase();

@@ -12,6 +12,7 @@
     "./linen": "./src/linen/index.ts",
     "./nylon": "./src/nylon/index.ts",
     "./denim": "./src/denim/database.ts",
+    "./denim/actions": "./src/denim/actions.ts",
     "./hemp": "./src/hemp/index.ts",
     "./nylon/*": "./src/nylon/*.ts",
     "./merino": "./src/merino/index.ts",

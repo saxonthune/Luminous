@@ -6,6 +6,7 @@ import {
   getJourneyGraph, listCapabilities, listJourneys, listTopLevelResources,
   openDenimDatabase, seedDenimDatabase, updateDenimNode,
 } from '../packages/core/src/denim/database.ts';
+import type { DenimAction } from '../packages/core/src/denim/actions.ts';
 import {
   checkNylonDocument, doctorNylonDocument, parseNylonDocument, serializeNylonDocument,
   type DifferentiateOptions, type NylonDocument, type NylonBatchOperation,
@@ -39,6 +40,9 @@ function usage(): never {
   luminous hemp generate|items|crates|list|read|check|write|layout|move (run 'luminous hemp' for help)
   luminous denim journeys <database>
   luminous denim list [--server URL]
+  luminous denim actions [--server URL]
+  luminous denim snapshot <database> [--server URL]
+  luminous denim action <database> <action.json> [--server URL]
   luminous denim journey <database> <journey-id>
   luminous denim capabilities <database>
   luminous denim resources <database>
@@ -111,6 +115,33 @@ async function denimCli(): Promise<void> {
     const response = await request('/api/documents');
     const body = await response.json() as { documents?: Array<{ path: string }> };
     for (const item of body.documents ?? []) if (item.path.endsWith('.denim.sqlite')) console.log(item.path);
+    return;
+  }
+  if (command === 'actions') {
+    if (argv.length) usage();
+    const response = await request('/api/denim/actions');
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
+  if (command === 'snapshot') {
+    const path = argv.shift(); if (!path || argv.length) usage();
+    const response = await request(`/api/denim/snapshot/${encodeURIComponent(path)}`);
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
+  if (command === 'action') {
+    const path = argv.shift(); const actionFile = argv.shift();
+    if (!path || !actionFile || argv.length) usage();
+    let action: DenimAction;
+    try { action = JSON.parse(await readFile(actionFile, 'utf8')) as DenimAction; }
+    catch (cause) { fail(`Could not read Denim action JSON: ${cause instanceof Error ? cause.message : String(cause)}`); }
+    const snapshotResponse = await request(`/api/denim/snapshot/${encodeURIComponent(path)}`);
+    const snapshot = await snapshotResponse.json() as { revision: string };
+    const response = await request('/api/denim/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, baseRevision: snapshot.revision, actionId: crypto.randomUUID(), action }),
+    });
+    console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }
   if (command === 'init') {

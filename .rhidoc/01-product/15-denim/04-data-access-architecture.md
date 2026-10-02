@@ -52,6 +52,20 @@ coordinate a database edit with the visible canvas state.
 - The UI turns an interaction into an action request. A CLI or server API can
   submit the same action vocabulary, so each entry point uses the same Denim
   operations and rules.
+- Graph actions are `journey.create`, `node.differentiate`, `edge.connect`,
+  `node.update`, `node.delete`, `edge.priority.set`, `sequence.initialize`, and
+  `sequence.clear`. `node.delete` names either `node` scope, which keeps
+  descendants as independent Nodes in views where the deleted Node appeared,
+  or `subtree` scope, which removes all descendants.
+- View actions are `view.openJourney`, `view.close`, `view.includeNode`,
+  `view.node.move`, and `view.sequenceMode.set`.
+- A database snapshot exposes its graph and available views so an agent can
+  inspect the current design before submitting an action.
+- The action catalog lists each operation and its required and optional
+  fields. The CLI exposes the catalog, snapshot, and action request commands.
+- Server action requests carry the database path and base revision. The server
+  applies the action, saves with revision checking, and broadcasts the changed
+  path so open Denim views can refresh.
 - The app creates a session and its action API for each open database, then
   provides them to the active canvas subtree through Solid context.
 

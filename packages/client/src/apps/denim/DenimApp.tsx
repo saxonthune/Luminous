@@ -8,6 +8,7 @@ import { DocumentPicker } from '../../DocumentPicker';
 import { createStaticDatabase, fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
 import { SourceConflictError } from '../../sources/CanvasSource';
 import { readParam, writeParam } from '../../urlState';
+import { watchDocuments } from '../../ws/watchClient';
 import {
   createDenimSession,
   DenimSessionContext,
@@ -16,6 +17,7 @@ import {
   type DenimSession,
 } from './DenimSession';
 import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
+import { DenimActionsProvider, useDenimActions } from './DenimActions';
 import { DenimStatusToast } from './DenimStatusToast';
 import { NewProjectDialog } from './NewProjectDialog';
 import { NodeToolbarMenu } from './NodeToolbarMenu';
@@ -39,6 +41,7 @@ function GraphCanvas(props: {
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
 }) {
   const session = useDenimSession();
+  const actions = useDenimActions();
   const graph = () => session.state.graph;
   const [editingSequenceParent, setEditingSequenceParent] = createSignal<string | null>(null);
   const layoutNodes = createMemo(() => {
@@ -82,13 +85,13 @@ function GraphCanvas(props: {
         const pb = positions().get(b.targetId) ?? { x: 0, y: 0 };
         return pa.x - pb.x || pa.y - pb.y || a.targetId.localeCompare(b.targetId);
       }).map((edge) => edge.targetId);
-    void session.initializeSequence(parentId, ordered);
+    void actions.initializeSequence(parentId, ordered);
   }
   function sequenceMode(parentId: string): 'rank' | 'priority' {
     return activeTab().sequenceModes[parentId] ?? 'rank';
   }
   function toggleSequenceMode(parentId: string): void {
-    void session.setSequenceMode(parentId, sequenceMode(parentId) === 'rank' ? 'priority' : 'rank');
+    void actions.setSequenceMode(parentId, sequenceMode(parentId) === 'rank' ? 'priority' : 'rank');
   }
   let canvasRef: CanvasRef | undefined;
   let previousTabId = activeTab().id;
@@ -138,7 +141,7 @@ function GraphCanvas(props: {
       labelEditValue: edge.priority == null ? undefined : String(edge.priority),
       onLabelEdit: (value) => {
         const priority = Number(value);
-        if (Number.isFinite(priority)) void session.setEdgePriority(edge.id, priority);
+        if (Number.isFinite(priority)) void actions.setEdgePriority(edge.id, priority);
       },
       onLabelEditFocus: () => setEditingSequenceParent(edge.sourceId),
       onLabelEditBlur: () => setEditingSequenceParent(null),
@@ -176,6 +179,7 @@ function CanvasNodes(props: {
   toggleSequenceMode: (parentId: string) => void;
 }) {
   const session = useDenimSession();
+  const actions = useDenimActions();
   const ctx = useCanvasContext();
   const [dragOffset, setDragOffset] = createSignal<{ id: string; dx: number; dy: number } | null>(null);
   let releaseFrame = 0;
@@ -191,7 +195,7 @@ function CanvasNodes(props: {
         const offset = dragOffset();
         const position = props.positions().get(id);
         if (offset && position) {
-          void session.moveNode(id, { x: position.x + offset.dx, y: position.y + offset.dy }, props.tabId());
+          void actions.moveNode(id, { x: position.x + offset.dx, y: position.y + offset.dy }, props.tabId());
           // Keep the visual drag position through the pointer-up render. The
           // saved per-tab position is updated synchronously, but its derived
           // layout can settle on the next frame; clearing both in one event
@@ -209,14 +213,14 @@ function CanvasNodes(props: {
   onCleanup(() => cancelAnimationFrame(releaseFrame));
 
   async function differentiateNode(parentId: string): Promise<void> {
-    const childId = await session.differentiate(parentId);
-    if (childId) placeDifferentiatedNode(parentId, childId);
+    const result = await actions.differentiate(parentId);
+    if (result.nodeId) placeDifferentiatedNode(parentId, result.nodeId);
   }
 
   function placeDifferentiatedNode(parentId: string, childId: string): void {
     const parent = props.positions().get(parentId);
     if (!parent) return;
-    void session.moveNode(childId, { x: parent.x, y: parent.y + NODE_H + 80 }, props.tabId());
+    void actions.moveNode(childId, { x: parent.x, y: parent.y + NODE_H + 80 }, props.tabId());
   }
 
   return <For each={props.graph.nodes}>{(node) => {
@@ -232,14 +236,14 @@ function CanvasNodes(props: {
         props.onSelect(node.id);
         drag.onPointerDown(node.id, event);
       }}>
-      <NodeCard node={node} selected={props.selectedId() === node.id} onOpenJourney={() => void session.openJourney(node.id)}
+      <NodeCard node={node} selected={props.selectedId() === node.id} onOpenJourney={() => void actions.openJourney(node.id)}
         onDifferentiate={() => void differentiateNode(node.id)}
         onConnect={(event) => props.openPicker('connect', node.id, event)}
         hasSequence={props.graph.edges.some((edge) => edge.sourceId === node.id && edge.priority != null)}
         graphChildCount={props.graph.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === node.id).length}
         sequenceMode={props.sequenceModeFor(node.id)}
         onInitializeSequence={() => props.initializeSequence(node.id)}
-        onClearSequence={() => void session.clearSequence(node.id)}
+        onClearSequence={() => void actions.clearSequence(node.id)}
         onToggleSequenceMode={() => props.toggleSequenceMode(node.id)} />
     </NodeContainer>;
   }}</For>;
@@ -259,6 +263,7 @@ function NodeCard(props: {
   onToggleSequenceMode: () => void;
 }) {
   const session = useDenimSession();
+  const actions = useDenimActions();
   const [openNodeMenu, setOpenNodeMenu] = createSignal<'sequence' | 'delete' | null>(null);
   const [deleteSubmenu, setDeleteSubmenu] = createSignal<'single' | 'children' | null>(null);
   const deleteMenuRoots = new Set<HTMLElement>();
@@ -284,9 +289,9 @@ function NodeCard(props: {
           const value = event.currentTarget.value;
           if (value === '__other__') {
             const custom = window.prompt('Type name', props.node.type);
-            if (custom?.trim()) void session.updateNode(props.node.id, { type: custom.trim() });
+            if (custom?.trim()) void actions.updateNode(props.node.id, { type: custom.trim() });
             event.currentTarget.value = props.node.type;
-          } else void session.updateNode(props.node.id, { type: value });
+          } else void actions.updateNode(props.node.id, { type: value });
         }}
         class="w-[86%] cursor-pointer appearance-none bg-transparent pr-1 text-xs text-fg-muted outline-none focus-visible:text-fg">
         <For each={types()}>{(type) => <option value={type}>{type}</option>}</For>
@@ -299,7 +304,7 @@ function NodeCard(props: {
     </div>
     <textarea aria-label="Node text" value={props.node.text}
       onPointerDown={(event) => event.stopPropagation()}
-      onBlur={(event) => void session.updateNode(props.node.id, { text: event.currentTarget.value })}
+      onBlur={(event) => void actions.updateNode(props.node.id, { text: event.currentTarget.value })}
       class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
     <div class="absolute bottom-2 left-2 flex h-7 items-center gap-1" data-node-toolbar
       onPointerDown={(event) => event.stopPropagation()}>
@@ -372,7 +377,7 @@ function NodeCard(props: {
                       relatedMenus={deleteMenuRoots} onClose={() => setDeleteSubmenu(null)}>
                       <button type="button" role="menuitem"
                         class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
-                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void session.deleteNodeOnly(props.node.id); }}>Confirm</button>
+                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'node'); }}>Confirm</button>
                     </NodeToolbarMenu>
                   </Show>
                 </div>
@@ -387,7 +392,7 @@ function NodeCard(props: {
                       relatedMenus={deleteMenuRoots} onClose={() => setDeleteSubmenu(null)}>
                       <button type="button" role="menuitem"
                         class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
-                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void session.deleteNode(props.node.id); }}>Confirm</button>
+                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'subtree'); }}>Confirm</button>
                     </NodeToolbarMenu>
                   </Show>
                 </div>
@@ -402,6 +407,7 @@ function NodeCard(props: {
 
 function DenimAppToolbar() {
   const session = useDenimSession();
+  const actions = useDenimActions();
   const [quickSelectOpen, setQuickSelectOpen] = createSignal(false);
   const [overflow, setOverflow] = createSignal(false);
   let strip: HTMLDivElement | undefined;
@@ -476,7 +482,7 @@ function DenimAppToolbar() {
           <Show when={tab.kind === 'workspace'}>
             <button type="button" aria-label={`Close ${tab.title}`} title="Close tab"
               class="mr-1 flex h-6 w-6 items-center justify-center rounded text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-              onClick={() => void session.closeTab(tab.id)}><X size={13} /></button>
+              onClick={() => void actions.closeView(tab.id)}><X size={13} /></button>
           </Show>
         </div>}</For>
       </div>
@@ -491,6 +497,7 @@ function DenimAppToolbar() {
 
 function DenimWorkspace(props: { onReload: () => void }) {
   const session = useDenimSession();
+  const actions = useDenimActions();
   const [picker, setPicker] = createSignal<PickerState | null>(null);
   const [query, setQuery] = createSignal('');
   const [statusToast, setStatusToast] = createSignal<string | null>(null);
@@ -508,15 +515,15 @@ function DenimWorkspace(props: { onReload: () => void }) {
     const current = picker();
     if (!current) return;
     const task = current.mode === 'connect' && current.parentId
-      ? session.connectExisting(current.parentId, node.id)
-      : session.includeNode(node.id);
+      ? actions.connectExisting(current.parentId, node.id)
+      : actions.includeNode(node.id);
     void task;
     setPicker(null);
   }
 
   async function connectToNode(parentId: string | undefined, childId: string): Promise<void> {
     if (!parentId || parentId === childId) return;
-    await session.connectExisting(parentId, childId);
+    await actions.connectExisting(parentId, childId);
     setPicker(null);
   }
 
@@ -538,7 +545,7 @@ function DenimWorkspace(props: { onReload: () => void }) {
         <Show when={journeysView()}>
           <button type="button" aria-label="Add a Journey" title="Add a Journey"
             class="flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-alt hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-            onClick={() => void session.createJourney()}><Plus size={16} strokeWidth={1.8} /></button>
+            onClick={() => void actions.createJourney()}><Plus size={16} strokeWidth={1.8} /></button>
         </Show>
         <button type="button" aria-label="Add a node to this view" title="Add a node to this view"
           class="flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-alt hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
@@ -732,6 +739,7 @@ export function DenimApp() {
   const [error, setError] = createSignal<string | null>(null);
   const [creatingIn, setCreatingIn] = createSignal<CanvasSource | null>(null);
   const initialSrc = readParam('src');
+  let stopWatching: (() => void) | undefined;
 
   async function openSource(item: CanvasSource): Promise<void> {
     setLoading(true);
@@ -742,16 +750,29 @@ export function DenimApp() {
       const loaded = await item.loadBytes();
       database = await openDenimDatabase(loaded.bytes, `${import.meta.env.BASE_URL}sql-wasm-browser.wasm`);
       const previous = session();
+      stopWatching?.();
+      stopWatching = undefined;
       if (previous) await previous.dispose();
       setSource(item);
+      let knownRevision = loaded.revision;
       setSession(createDenimSession(database, async (bytes, revision) => {
         try {
-          return await item.saveBytes!(bytes, revision);
+          knownRevision = await item.saveBytes!(bytes, revision);
+          return knownRevision;
         } catch (cause) {
           if (cause instanceof SourceConflictError) throw new DenimPersistenceConflict(cause.message);
           throw cause;
         }
       }, loaded.revision, item.id));
+      if (!__STATIC__) {
+        const openedSession = session()!;
+        stopWatching = watchDocuments((changedPath, message) => {
+          if (changedPath !== item.id || message?.revision === knownRevision || openedSession.state.dirty || openedSession.state.saving) return;
+          void reloadSource().then(() => {
+            if (message?.activateTabId) session()?.activateTab(message.activateTabId);
+          });
+        });
+      }
       writeParam('src', item.id);
     } catch (cause) {
       database?.close();
@@ -771,6 +792,8 @@ export function DenimApp() {
   }
 
   async function closeSource(): Promise<void> {
+    stopWatching?.();
+    stopWatching = undefined;
     const current = session();
     if (current) {
       try {
@@ -845,6 +868,7 @@ export function DenimApp() {
   });
 
   onCleanup(() => {
+    stopWatching?.();
     const current = session();
     if (current) void current.dispose().catch((cause: unknown) => console.error('[Denim] session closed with unsaved changes', cause));
   });
@@ -866,7 +890,7 @@ export function DenimApp() {
         <Match when={!loading()}><DocumentPicker heading="Denim databases" sources={sources()} onSelect={(item) => void openSource(item)}
           createTitle="New project" onCreate={(item) => setCreatingIn(item)} /></Match>
       </Switch>}>
-        {(active) => <DenimSessionContext.Provider value={active()}><DenimWorkspace onReload={() => void reloadSource()} /></DenimSessionContext.Provider>}
+        {(active) => <DenimSessionContext.Provider value={active()}><DenimActionsProvider session={active()}><DenimWorkspace onReload={() => void reloadSource()} /></DenimActionsProvider></DenimSessionContext.Provider>}
       </Show>
     </div>
     <Show when={creatingIn()}>{(representative) => <NewProjectDialog root={representative().rootDir ?? representative().root}
