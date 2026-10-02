@@ -39,6 +39,28 @@ deps: [doc01.15.01, doc01.15.02]
 This keeps SQL access out of rendering components and gives one place to
 coordinate a database edit with the visible canvas state.
 
+## Actions
+
+- A Denim action names a user intention, such as creating a child Node,
+  changing a Node, or including a Node in a Tab View. It does not expose SQL or
+  database bytes.
+- The action API sits above the session. It receives the session as a
+  dependency and exposes the actions that UI components can request.
+- The session remains responsible for database access, view projection,
+  reactive state, and saving. The action API delegates data changes to the
+  session instead of duplicating those responsibilities.
+- The UI turns an interaction into an action request. A CLI or server API can
+  submit the same action vocabulary, so each entry point uses the same Denim
+  operations and rules.
+- The app creates a session and its action API for each open database, then
+  provides them to the active canvas subtree through Solid context.
+
+This separates the meaning of an edit from the interface that requested it.
+It lets the UI, CLI, and API share Denim actions while keeping database and
+view coordination in the session. Revision checks and change notifications
+remain persistence and transport concerns; the action vocabulary alone does
+not merge concurrent edits.
+
 ## Changes and saving
 
 - Creating a child inserts its node and parent-child edge in one SQLite
