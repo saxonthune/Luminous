@@ -79,6 +79,14 @@ extending one global counter.
 - **NODE6.** [p] Each Node has a very thin greyish border.
 - **NODE7.** [p] When the user differentiates a Node, Denim places the new Node below the parent Node.
 - **NODE8.** [p] The drag bar indicator does not change appearance when the pointer hovers over it.
+- **NODE9.** [p] When the user differentiates a Node, Denim shows the new Node at its final position below the parent without an intermediate layout position.
+
+## Selection
+
+- **SEL1.** [p] Clicking the canvas background deselects all Nodes.
+- **SEL2.** [p] Pressing Escape deselects all Nodes.
+- **SEL3.** [p] Dragging across the canvas background selects Nodes intersected by the selection box.
+- **SEL4.** [p] Dragging a selected Node moves all selected Nodes together.
 
 ## Node Toolbar
 
@@ -89,6 +97,7 @@ extending one global counter.
 - **NT5.** [p] A Node Toolbar appears in the bottom-left of the Node area.
 - **NT6.** [p] Always-visible Node Toolbar actions appear first on the left; hidden actions and their ellipsis appear to their right.
 - **NT7.** [p] The hidden Node Toolbar options end with a trash icon for deleting the Node.
+- **NT8.** [p] A Node Toolbar menu aligns its left edge with the triggering button when space permits and shifts as needed to remain inside the viewport.
 
 ## Node deletion
 
@@ -97,6 +106,12 @@ extending one global counter.
 - **DEL3.** [p] Hovering over “Delete Node and Children” opens a confirmation submenu to its right; the submenu stays open while the pointer moves into it.
 - **DEL4.** [p] Confirming “Delete Node” removes only the selected Node and its incident Edges; its child Nodes remain and appear in the Tab View as independent Nodes.
 - **DEL5.** [p] Confirming “Delete Node and Children” removes the selected Node, all of its descendant Nodes, and their incident Edges.
+
+## Edge deletion
+
+- **EDGE1.** [p] Left-clicking an Edge opens a floating menu below its midpoint with a trash icon and the label “Delete”.
+- **EDGE2.** [p] Clicking “Delete” removes the Edge immediately and keeps its endpoint Nodes; this is the final confirmation action.
+- **EDGE3.** [p] The Edge click target extends beyond the visible line, while Nodes remain on top and receive clicks where they overlap an Edge.
 
 ## Node differentiation controls
 

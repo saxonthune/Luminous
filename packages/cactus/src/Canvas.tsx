@@ -112,6 +112,8 @@ export interface CanvasProps {
   backgroundContextMenu?: (position: CanvasContextMenuPosition) => MenuSchema | undefined;
   /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
   edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
+  /** Fires on a left-click on an Edge hit target with its route midpoint in screen coordinates. */
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number) => void;
   /** Fires whenever the selection changes (click, marquee, clear). */
   onSelectionChange?: (ids: ReadonlyArray<string>) => void;
 }
@@ -713,6 +715,7 @@ export function Canvas(props: CanvasProps) {
                       routeBand={band}
                       zoom={() => transform().k}
                       viewport={edgeViewport}
+                      onEdgeClick={props.onEdgeClick}
                     />
                   </svg>
                 )}

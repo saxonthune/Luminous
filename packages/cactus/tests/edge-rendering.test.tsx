@@ -5,7 +5,7 @@
  * are provided, using the node rect registry populated by NodeContainer.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { render } from 'solid-js/web';
 import { createSignal } from 'solid-js';
 import { Canvas } from '../src/Canvas';
@@ -370,6 +370,34 @@ describe('Canvas edge rendering', () => {
     expect(Number(hitLine!.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(12);
 
     cleanup();
+  });
+
+  it('reports a left-clicked edge at its transformed route midpoint beneath Nodes', () => {
+    const onEdgeClick = vi.fn();
+    vi.stubGlobal('DOMPoint', class {
+      x: number;
+      y: number;
+      constructor(x: number, y: number) { this.x = x; this.y = y; }
+      matrixTransform() { return { x: this.x * 2 + 50, y: this.y * 2 + 100 }; }
+    });
+    const { container, cleanup } = renderIntoContainer(() => (
+      <Canvas edges={[{ id: 'e1', sourceId: 'node-a', targetId: 'node-b' }]} onEdgeClick={onEdgeClick}>
+        <NodeContainer nodeId="node-a" x={() => 0} y={() => 0} w={() => 40} h={() => 40} />
+        <NodeContainer nodeId="node-b" x={() => 200} y={() => 0} w={() => 40} h={() => 40} />
+      </Canvas>
+    ));
+
+    const hitLine = container.querySelector<SVGLineElement>('line[data-edge-id="e1"]')!;
+    Object.defineProperty(hitLine.ownerSVGElement, 'getScreenCTM', { configurable: true, value: () => ({}) });
+    hitLine.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
+
+    expect(onEdgeClick).toHaveBeenCalledWith('e1', 290, 140);
+    const edgeLayer = container.querySelector('[data-cactus-edge-layer-lines]')!;
+    const firstNode = container.querySelector('[data-container-id="node-a"]')!;
+    expect(Boolean(edgeLayer.compareDocumentPosition(firstNode) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+
+    cleanup();
+    vi.unstubAllGlobals();
   });
 
   it('counter-scales edge strokes, dashes, arrowheads, and hit targets while zooming out', () => {

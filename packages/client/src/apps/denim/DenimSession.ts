@@ -39,7 +39,7 @@ export interface DenimSession {
   closeTab(id: string): Promise<void>;
   selectNode(id: string | null): void;
   createJourney(text?: string): Promise<void>;
-  differentiate(parentId: string, type?: string, text?: string): Promise<string | undefined>;
+  differentiate(parentId: string, text?: string, placement?: { tabId: string; x: number; y: number }): Promise<string | undefined>;
   connectExisting(parentId: string, childId: string): Promise<void>;
   canConnectExisting(parentId: string, childId: string): boolean;
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<void>;
@@ -47,6 +47,7 @@ export interface DenimSession {
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', tabId?: string): Promise<void>;
   includeNode(nodeId: string, tabId?: string): Promise<void>;
   moveNode(nodeId: string, position: { x: number; y: number }, tabId?: string): Promise<void>;
+  moveNodes(positions: Record<string, { x: number; y: number }>, tabId?: string): Promise<void>;
   updateNode(id: string, patch: Partial<Pick<DenimNode, 'type' | 'text'>>): Promise<void>;
   /** Delete this node and every descendant connected through parent-child edges. */
   deleteNode(id: string): Promise<void>;
@@ -252,8 +253,8 @@ export function createDenimSession(
       setState('selectedId', id);
     },
     async createJourney(text = 'New journey') { await dispatchAction({ op: 'journey.create', text }); },
-    async differentiate(parentId, type = 'Action', text = 'New action') {
-      return (await dispatchAction({ op: 'node.differentiate', parentId, type, text })).nodeId;
+    async differentiate(parentId, text = 'New action', placement) {
+      return (await dispatchAction({ op: 'node.differentiate', parentId, text, placement })).nodeId;
     },
     async connectExisting(parentId, childId) { await dispatchAction({ op: 'edge.connect', parentId, childId }); },
     canConnectExisting(parentId, childId) {
@@ -285,6 +286,7 @@ export function createDenimSession(
     async setSequenceMode(parentId, mode, tabId = state.activeTabId) { await dispatchAction({ op: 'view.sequenceMode.set', tabId, parentId, mode }); },
     async includeNode(nodeId, tabId = state.activeTabId) { await dispatchAction({ op: 'view.includeNode', tabId, nodeId }); },
     async moveNode(nodeId, position, tabId = state.activeTabId) { await dispatchAction({ op: 'view.node.move', tabId, nodeId, position }); },
+    async moveNodes(positions, tabId = state.activeTabId) { await dispatchAction({ op: 'view.nodes.move', tabId, positions }); },
     async updateNode(id, patch) { await dispatchAction({ op: 'node.update', id, patch }); },
     async deleteNode(id) { await dispatchAction({ op: 'node.delete', id, scope: 'subtree' }); },
     async deleteNodeOnly(id) { await dispatchAction({ op: 'node.delete', id, scope: 'node' }); },

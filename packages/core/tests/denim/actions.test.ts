@@ -24,20 +24,26 @@ describe('Denim actions', () => {
     const child = applyDenimAction(db, {
       op: 'node.differentiate', parentId: 'journey', id: 'action', edgeId: 'journey-action', text: 'Action',
     });
+    const nested = applyDenimAction(db, {
+      op: 'node.differentiate', parentId: 'action', id: 'nested', edgeId: 'action-nested', text: 'Nested',
+    });
     applyDenimAction(db, { op: 'edge.connect', parentId: 'action', childId: 'existing', edgeId: 'action-existing' });
     applyDenimAction(db, { op: 'node.update', id: 'existing', patch: { type: 'Capability', text: 'Updated' } });
 
     expect(created.nodeId).toBe('second');
     expect(child.nodeId).toBe('action');
+    expect(nested.nodeId).toBe('nested');
     expect(getDenimGraph(db)).toMatchObject({
       nodes: [
         { id: 'journey', type: 'Journey', text: 'Journey' },
         { id: 'existing', type: 'Capability', text: 'Updated' },
         { id: 'second', type: 'Journey', text: 'Second' },
-        { id: 'action', type: 'Action', text: 'Action' },
+        { id: 'action', type: 'Journey', text: 'Action' },
+        { id: 'nested', type: 'Journey', text: 'Nested' },
       ],
       edges: [
         { id: 'journey-action', sourceId: 'journey', targetId: 'action' },
+        { id: 'action-nested', sourceId: 'action', targetId: 'nested' },
         { id: 'action-existing', sourceId: 'action', targetId: 'existing' },
       ],
     });
@@ -69,6 +75,24 @@ describe('Denim actions', () => {
     expect(readDenimSnapshot(db).views.map((view) => view.id)).toEqual([
       'pinned:journeys', 'pinned:capabilities', 'pinned:resources',
     ]);
+    db.close();
+  });
+
+  it('deletes a single edge and preserves both endpoint Nodes', async () => {
+    const db = await openDenimDatabase(undefined, wasmBinary);
+    addDenimNode(db, { id: 'parent', type: 'Journey', text: 'Parent' });
+    addDenimNode(db, { id: 'child', type: 'Action', text: 'Child' });
+    applyDenimAction(db, { op: 'edge.connect', parentId: 'parent', childId: 'child', edgeId: 'parent-child' });
+
+    expect(applyDenimAction(db, { op: 'edge.delete', edgeId: 'parent-child' })).toMatchObject({ changed: true });
+    expect(getDenimGraph(db)).toEqual({
+      nodes: [
+        { id: 'parent', type: 'Journey', text: 'Parent' },
+        { id: 'child', type: 'Action', text: 'Child' },
+      ],
+      edges: [],
+    });
+    expect(() => applyDenimAction(db, { op: 'edge.delete', edgeId: 'missing' })).toThrow(/Edge not found/);
     db.close();
   });
 
@@ -105,9 +129,9 @@ describe('Denim actions', () => {
 
   it('publishes a discoverable catalog for the full action vocabulary', () => {
     expect(DENIM_ACTION_CATALOG.map(({ op }) => op)).toEqual([
-      'journey.create', 'node.differentiate', 'edge.connect', 'node.update', 'node.delete',
+      'journey.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'node.update', 'node.delete',
       'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'view.sequenceMode.set',
-      'view.includeNode', 'view.node.move', 'view.openJourney', 'view.close',
+      'view.includeNode', 'view.node.move', 'view.nodes.move', 'view.openJourney', 'view.close',
     ]);
   });
 });

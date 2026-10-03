@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./ui/styles.css";
 
 /* Tailwind v4 auto-detects content in the current package only.
    Cactus is a sibling workspace package, so its class names need to be
@@ -29,6 +30,8 @@ body {
   --accent-hover: #1d4ed8;
   --accent-10: rgba(37, 99, 235, 0.1);
   --accent-subtle: #3b82f6;
+  --danger: #b91c1c;
+  --danger-subtle: #fef2f2;
   /* Merino type badges: the token palette in this theme is dark/saturated
      enough that one fixed foreground reads on every token's fill. */
   --type-badge-fg: #ffffff;
@@ -85,6 +88,8 @@ body {
   --accent-hover: #c07840;
   --accent-10: rgba(212, 145, 90, 0.1);
   --accent-subtle: #d4915a;
+  --danger: #f87171;
+  --danger-subtle: #451a1a;
   /* Dusk's token palette runs light/pastel (it's the dark theme's accent
      hues, lifted to stay visible on a dark surface) — badge text needs to be
      dark, the opposite of --on-accent, to stay readable on those fills. */
@@ -163,6 +168,8 @@ body {
   --accent-hover: color-mix(in oklch, var(--hue-oxide) 75%, var(--tone-6));
   --accent-10: color-mix(in oklch, var(--hue-oxide) 10%, transparent);
   --accent-subtle: color-mix(in oklch, var(--hue-oxide) 70%, var(--tone-2));
+  --danger: #a8525a;
+  --danger-subtle: color-mix(in oklch, var(--hue-rose) 14%, var(--tone-1));
   --edge: var(--tone-3);
   --edge-label: var(--tone-4);
   --dot-grid: color-mix(in oklch, var(--tone-1) 80%, var(--tone-3));

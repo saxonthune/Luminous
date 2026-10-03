@@ -62,6 +62,7 @@ interface EdgeLayerProps {
   routeBand?: number;
   zoom: () => number;
   viewport?: () => { x: number; y: number; w: number; h: number } | null;
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number) => void;
 }
 
 const LABEL_CAP = 28;
@@ -87,6 +88,21 @@ function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8,
   const baseX2 = x2 - size * Math.cos(angle + Math.PI / 6);
   const baseY2 = y2 - size * Math.sin(angle + Math.PI / 6);
   return `M ${x2} ${y2} L ${baseX1} ${baseY1} L ${baseX2} ${baseY2} Z`;
+}
+
+function reportEdgeClick(
+  event: MouseEvent,
+  edgeId: string,
+  midpoint: { x: number; y: number },
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number) => void,
+): void {
+  if (!onEdgeClick) return;
+  event.stopPropagation();
+  const svg = (event.currentTarget as SVGElement).ownerSVGElement;
+  const matrix = svg?.getScreenCTM();
+  if (!matrix) return;
+  const point = new DOMPoint(midpoint.x, midpoint.y).matrixTransform(matrix);
+  onEdgeClick(edgeId, point.x, point.y);
 }
 
 /** Horizontal-tangent cubic used for freeform relationship cards. The handle
@@ -335,6 +351,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                                 data-edge-id={edge.id}
                                 data-route-segment={index()}
                                 style={{ 'pointer-events': 'stroke' }}
+                                onClick={(event) => reportEdgeClick(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeClick)}
                               />
                             )}>
                               <path
@@ -345,6 +362,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                                 data-edge-id={edge.id}
                                 data-route-segment={index()}
                                 style={{ 'pointer-events': 'stroke' }}
+                                onClick={(event) => reportEdgeClick(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeClick)}
                               />
                             </Show>
                           </Show>

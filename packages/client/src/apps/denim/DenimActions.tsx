@@ -5,8 +5,9 @@ import type { DenimSession } from './DenimSession';
 export interface DenimActionApi {
   dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; tabId?: string }>;
   createJourney(text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
-  differentiate(parentId: string, type?: string, text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
+  differentiate(parentId: string, text?: string, placement?: { tabId: string; x: number; y: number }): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   connectExisting(parentId: string, childId: string): Promise<{ ok: boolean; error?: string }>;
+  deleteEdge(edgeId: string): Promise<{ ok: boolean; error?: string }>;
   updateNode(id: string, patch: { type?: string; text?: string }): Promise<{ ok: boolean; error?: string }>;
   deleteNode(id: string, scope: 'node' | 'subtree'): Promise<{ ok: boolean; error?: string }>;
   setEdgePriority(edgeId: string, priority: number): Promise<{ ok: boolean; error?: string }>;
@@ -15,6 +16,7 @@ export interface DenimActionApi {
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', tabId?: string): Promise<{ ok: boolean; error?: string }>;
   includeNode(nodeId: string, tabId?: string): Promise<{ ok: boolean; error?: string }>;
   moveNode(nodeId: string, position: { x: number; y: number }, tabId?: string): Promise<{ ok: boolean; error?: string }>;
+  moveNodes(positions: Record<string, { x: number; y: number }>, tabId?: string): Promise<{ ok: boolean; error?: string }>;
   openJourney(journeyId: string): Promise<{ ok: boolean; error?: string; tabId?: string }>;
   closeView(tabId: string): Promise<{ ok: boolean; error?: string }>;
 }
@@ -24,8 +26,9 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
   return {
     dispatch,
     createJourney: (text) => dispatch({ op: 'journey.create', text }),
-    differentiate: (parentId, type, text) => dispatch({ op: 'node.differentiate', parentId, type, text }),
+    differentiate: (parentId, text, placement) => dispatch({ op: 'node.differentiate', parentId, text, placement }),
     connectExisting: (parentId, childId) => dispatch({ op: 'edge.connect', parentId, childId }),
+    deleteEdge: (edgeId) => dispatch({ op: 'edge.delete', edgeId }),
     updateNode: (id, patch) => dispatch({ op: 'node.update', id, patch }),
     deleteNode: (id, scope) => dispatch({ op: 'node.delete', id, scope }),
     setEdgePriority: (edgeId, priority) => dispatch({ op: 'edge.priority.set', edgeId, priority }),
@@ -34,6 +37,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     setSequenceMode: (parentId, mode, tabId = session.state.activeTabId) => dispatch({ op: 'view.sequenceMode.set', tabId, parentId, mode }),
     includeNode: (nodeId, tabId = session.state.activeTabId) => dispatch({ op: 'view.includeNode', tabId, nodeId }),
     moveNode: (nodeId, position, tabId = session.state.activeTabId) => dispatch({ op: 'view.node.move', tabId, nodeId, position }),
+    moveNodes: (positions, tabId = session.state.activeTabId) => dispatch({ op: 'view.nodes.move', tabId, positions }),
     openJourney: (journeyId) => dispatch({ op: 'view.openJourney', journeyId }),
     closeView: (tabId) => dispatch({ op: 'view.close', tabId }),
   };

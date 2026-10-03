@@ -20,7 +20,7 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 
 ## Graph editing
 
-- **GED1.** [p] When the user differentiates a node, Denim creates a subnode beneath it.
+- **GED1.** [p] When the user differentiates a node, Denim creates a subnode beneath it with the same type as its parent.
 - **GED2.** [p] The user can change a node's type at will.
 - **GED3.** [p] Denim does not restrict parent/child relationships by the types of their nodes.
 - **GED4.** [p] When differentiating a node, the user can choose an existing node as its subnode instead of creating a new node.

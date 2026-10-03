@@ -5,6 +5,7 @@ import {
   createDenimChild,
   deleteDenimNode,
   deleteDenimNodeAndChildren,
+  deleteDenimEdge,
   getDenimGraph,
   getJourneyGraph,
   initializeDenimSequence,
@@ -45,8 +46,9 @@ export const DENIM_PINNED_VIEWS: DenimTabView[] = [
 
 export type DenimAction =
   | { op: 'journey.create'; id?: string; text?: string }
-  | { op: 'node.differentiate'; parentId: string; id?: string; edgeId?: string; type?: string; text?: string }
+  | { op: 'node.differentiate'; parentId: string; id?: string; edgeId?: string; text?: string; placement?: { tabId: string; x: number; y: number } }
   | { op: 'edge.connect'; parentId: string; childId: string; edgeId?: string }
+  | { op: 'edge.delete'; edgeId: string }
   | { op: 'node.update'; id: string; patch: Partial<Pick<DenimNode, 'type' | 'text'>> }
   | { op: 'node.delete'; id: string; scope: 'node' | 'subtree' }
   | { op: 'edge.priority.set'; edgeId: string; priority: number }
@@ -55,13 +57,15 @@ export type DenimAction =
   | { op: 'view.sequenceMode.set'; tabId: string; parentId: string; mode: 'rank' | 'priority' }
   | { op: 'view.includeNode'; tabId: string; nodeId: string }
   | { op: 'view.node.move'; tabId: string; nodeId: string; position: { x: number; y: number } }
+  | { op: 'view.nodes.move'; tabId: string; positions: Record<string, { x: number; y: number }> }
   | { op: 'view.openJourney'; journeyId: string; tabId?: string }
   | { op: 'view.close'; tabId: string };
 
 export const DENIM_ACTION_CATALOG = [
   { op: 'journey.create', required: [], optional: ['id', 'text'], purpose: 'Create a Journey Node.' },
-  { op: 'node.differentiate', required: ['parentId'], optional: ['id', 'edgeId', 'type', 'text'], purpose: 'Create a child Node and connect it to its parent.' },
+  { op: 'node.differentiate', required: ['parentId'], optional: ['id', 'edgeId', 'text', 'placement'], purpose: 'Create a child Node with the same type as its parent and connect it to its parent; optionally place it in a view.' },
   { op: 'edge.connect', required: ['parentId', 'childId'], optional: ['edgeId'], purpose: 'Connect an existing Node as a child.' },
+  { op: 'edge.delete', required: ['edgeId'], optional: [], purpose: 'Delete one edge while keeping its endpoint Nodes.' },
   { op: 'node.update', required: ['id', 'patch'], optional: [], purpose: 'Change a Node type or text.' },
   { op: 'node.delete', required: ['id', 'scope'], optional: [], purpose: 'Delete one Node or its full descendant subtree; scope is node or subtree.' },
   { op: 'edge.priority.set', required: ['edgeId', 'priority'], optional: [], purpose: 'Set an edge sequence priority.' },
@@ -70,6 +74,7 @@ export const DENIM_ACTION_CATALOG = [
   { op: 'view.sequenceMode.set', required: ['tabId', 'parentId', 'mode'], optional: [], purpose: 'Set a view parent label mode to rank or priority.' },
   { op: 'view.includeNode', required: ['tabId', 'nodeId'], optional: [], purpose: 'Include a Node in a view.' },
   { op: 'view.node.move', required: ['tabId', 'nodeId', 'position'], optional: [], purpose: 'Save a Node position in a view.' },
+  { op: 'view.nodes.move', required: ['tabId', 'positions'], optional: [], purpose: 'Save multiple Node positions in a view as one action.' },
   { op: 'view.openJourney', required: ['journeyId'], optional: ['tabId'], purpose: 'Create a workspace view sourced from a Journey.' },
   { op: 'view.close', required: ['tabId'], optional: [], purpose: 'Close a workspace view; pinned views cannot be closed.' },
 ] as const;
@@ -172,11 +177,16 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       return { ok: true, changed: true, nodeId };
     }
     case 'node.differentiate': {
-      if (action.type !== undefined && typeof action.type !== 'string') throw new Error('Node type must be text');
       if (action.text !== undefined && typeof action.text !== 'string') throw new Error('Node text must be text');
-      requireNode(db, action.parentId);
+      if (action.placement && ![action.placement.x, action.placement.y].every(Number.isFinite)) {
+        throw new Error('Node position must contain finite x and y values');
+      }
+      const placementView = action.placement ? requireView(db, action.placement.tabId) : undefined;
+      const parent = requireNode(db, action.parentId);
       const nodeId = action.id ?? newId('node');
-      createDenimChild(db, action.parentId, { id: nodeId, type: action.type ?? 'Action', text: action.text ?? 'New action' }, action.edgeId ?? newId('parent-child'));
+      createDenimChild(db, action.parentId, { id: nodeId, type: parent.type, text: action.text ?? 'New action' }, action.edgeId ?? newId('parent-child'));
+      if (action.placement && placementView) putView(db, { ...placementView,
+        positions: { ...placementView.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
       return { ok: true, changed: true, nodeId };
     }
     case 'edge.connect':
@@ -188,6 +198,10 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       }
       connectDenimChild(db, action.parentId, action.childId, action.edgeId ?? newId('parent-child'));
       return { ok: true, changed: true, nodeId: action.childId };
+    case 'edge.delete':
+      if (!getDenimGraph(db).edges.some((edge) => edge.id === action.edgeId)) throw new Error(`Edge not found: ${action.edgeId}`);
+      deleteDenimEdge(db, action.edgeId);
+      return { ok: true, changed: true };
     case 'node.update': {
       if (!action.patch || typeof action.patch !== 'object' || Array.isArray(action.patch)) throw new Error('Node patch must be an object');
       const previous = requireNode(db, action.id);
@@ -261,6 +275,17 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       const view = requireView(db, action.tabId); requireNode(db, action.nodeId);
       if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
       putView(db, { ...view, positions: { ...view.positions, [action.nodeId]: action.position } });
+      return { ok: true, changed: true, tabId: view.id };
+    }
+    case 'view.nodes.move': {
+      const view = requireView(db, action.tabId);
+      if (!action.positions || typeof action.positions !== 'object' || Array.isArray(action.positions)) throw new Error('Node positions must be an object');
+      const graphNodeIds = new Set(getDenimGraph(db).nodes.map((node) => node.id));
+      for (const [id, position] of Object.entries(action.positions)) {
+        if (!graphNodeIds.has(id)) throw new Error(`Node not found: ${id}`);
+        if (![position?.x, position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
+      }
+      putView(db, { ...view, positions: { ...view.positions, ...action.positions } });
       return { ok: true, changed: true, tabId: view.id };
     }
     case 'view.openJourney': {

@@ -196,6 +196,11 @@ export function deleteDenimNode(db: Database, id: string): void {
   db.run('DELETE FROM nodes WHERE id = ?', [id]);
 }
 
+/** Delete one edge without changing either endpoint node. */
+export function deleteDenimEdge(db: Database, id: string): void {
+  db.run('DELETE FROM edges WHERE id = ?', [id]);
+}
+
 /** Delete a node and every node reachable through its parent-child edges. */
 export function deleteDenimNodeAndChildren(db: Database, id: string): void {
   transaction(db, () => {

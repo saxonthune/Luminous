@@ -1,10 +1,11 @@
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { ChevronLeft, ChevronRight, CirclePlus, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, ListOrdered, Plus, Trash2, X, Zap } from 'lucide-solid';
-import { Canvas, NodeContainer, dagLayout, useCanvasContext, useNodeDrag } from '@luminous/cactus';
+import { Canvas, NodeContainer, dagLayout, useCanvasContext, useGesture } from '@luminous/cactus';
 import type { CanvasRef, TidyNode } from '@luminous/cactus';
 import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimEdge, type DenimGraph, type DenimNode } from '@luminous/core/denim';
 import { DocumentPicker } from '../../DocumentPicker';
+import { AnchoredMenu, Button, computeAnchoredPosition, IconButton, MenuItem, MenuSeparator, MenuSubmenu, ToolbarSurface } from '../../ui';
 import { createStaticDatabase, fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
 import { SourceConflictError } from '../../sources/CanvasSource';
 import { readParam, writeParam } from '../../urlState';
@@ -20,7 +21,6 @@ import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
 import { DenimActionsProvider, useDenimActions } from './DenimActions';
 import { DenimStatusToast } from './DenimStatusToast';
 import { NewProjectDialog } from './NewProjectDialog';
-import { NodeToolbarMenu } from './NodeToolbarMenu';
 
 const NODE_W = 232;
 const NODE_H = 142;
@@ -34,11 +34,12 @@ const NODE_THEME_SLOT: Record<string, number> = {
   Contract: 8,
 };
 
-type PickerState = { mode: 'include' | 'connect'; parentId?: string; x: number; y: number };
+type PickerState = { mode: 'include' | 'connect'; parentId?: string; anchor: HTMLElement };
 
 function GraphCanvas(props: {
   selectedId: () => string | null;
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
+  onEdgeClick: (edgeId: string, screenX: number, screenY: number) => void;
 }) {
   const session = useDenimSession();
   const actions = useDenimActions();
@@ -124,11 +125,23 @@ function GraphCanvas(props: {
 
   onMount(() => {
     if (!session.state.cameras[activeTab().id]) requestFit();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+      canvasRef?.clearSelection();
+      session.selectNode(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    onCleanup(() => window.removeEventListener('keydown', onKeyDown));
   });
   onCleanup(() => cancelAnimationFrame(pendingFit));
 
   return (
     <Canvas ref={(handle) => { canvasRef = handle; }}
+      onEdgeClick={props.onEdgeClick}
+      boxSelect={{ trigger: 'drag' }}
+      onSelectionChange={(ids) => session.selectNode(ids.at(-1) ?? null)}
       viewportOptions={{
         initialTransform: session.state.cameras[activeTab().id] ?? { x: 0, y: 0, k: 1 },
         onTransformChange: (camera) => session.setCamera(activeTab().id, camera),
@@ -158,6 +171,7 @@ function GraphCanvas(props: {
         tabId={() => activeTab().id}
         selectedId={props.selectedId}
         onSelect={session.selectNode}
+        onSelectInCanvas={(id) => canvasRef?.setSelectedIds([id])}
         openPicker={props.openPicker}
         sequenceModeFor={sequenceMode}
         initializeSequence={initializeSequence}
@@ -173,6 +187,7 @@ function CanvasNodes(props: {
   tabId: () => string;
   selectedId: () => string | null;
   onSelect: (id: string | null) => void;
+  onSelectInCanvas: (id: string) => void;
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
   sequenceModeFor: (parentId: string) => 'rank' | 'priority';
   initializeSequence: (parentId: string) => void;
@@ -181,62 +196,65 @@ function CanvasNodes(props: {
   const session = useDenimSession();
   const actions = useDenimActions();
   const ctx = useCanvasContext();
-  const [dragOffset, setDragOffset] = createSignal<{ id: string; dx: number; dy: number } | null>(null);
+  const [dragOffsets, setDragOffsets] = createSignal<Record<string, { dx: number; dy: number }>>({});
+  let dragStarts: Record<string, { x: number; y: number }> = {};
   let releaseFrame = 0;
-  const drag = useNodeDrag({
+  const drag = useGesture({
     zoomScale: () => ctx.transform().k,
-    handleSelector: '[data-denim-drag-handle]',
+    dragGroup: (nodeId) => ctx.isSelected(nodeId) ? ctx.selectedIds() : [nodeId],
     callbacks: {
-      onDrag: (id, dx, dy) => {
-        cancelAnimationFrame(releaseFrame);
-        setDragOffset({ id, dx, dy });
+      onDragStart: (_id, ids) => {
+        dragStarts = Object.fromEntries(ids.flatMap((id) => {
+          const position = props.positions().get(id);
+          return position ? [[id, position]] : [];
+        }));
       },
-      onDragEnd: (id) => {
-        const offset = dragOffset();
-        const position = props.positions().get(id);
-        if (offset && position) {
-          void actions.moveNode(id, { x: position.x + offset.dx, y: position.y + offset.dy }, props.tabId());
-          // Keep the visual drag position through the pointer-up render. The
-          // saved per-tab position is updated synchronously, but its derived
-          // layout can settle on the next frame; clearing both in one event
-          // briefly exposes the old position and makes the node jump.
+      onDrag: (_id, dx, dy, ids) => {
+        cancelAnimationFrame(releaseFrame);
+        setDragOffsets(Object.fromEntries(ids.map((id) => [id, { dx, dy }])));
+      },
+      onDragEnd: (_id, dx, dy, ids) => {
+        const positions = Object.fromEntries(ids.flatMap((id) => {
+          const start = dragStarts[id];
+          return start ? [[id, { x: start.x + dx, y: start.y + dy }]] : [];
+        }));
+        if (Object.keys(positions).length) {
+          void actions.moveNodes(positions, props.tabId());
+          // Hold the preview until the saved positions become the layout source.
           releaseFrame = requestAnimationFrame(() => {
             releaseFrame = 0;
-            setDragOffset(null);
+            setDragOffsets({});
           });
         } else {
-          setDragOffset(null);
+          setDragOffsets({});
         }
+        dragStarts = {};
       },
     },
   });
   onCleanup(() => cancelAnimationFrame(releaseFrame));
 
   async function differentiateNode(parentId: string): Promise<void> {
-    const result = await actions.differentiate(parentId);
-    if (result.nodeId) placeDifferentiatedNode(parentId, result.nodeId);
-  }
-
-  function placeDifferentiatedNode(parentId: string, childId: string): void {
     const parent = props.positions().get(parentId);
-    if (!parent) return;
-    void actions.moveNode(childId, { x: parent.x, y: parent.y + NODE_H + 80 }, props.tabId());
+    const placement = parent ? { tabId: props.tabId(), x: parent.x, y: parent.y + NODE_H + 80 } : undefined;
+    const result = await actions.differentiate(parentId, undefined, placement);
+    if (result.nodeId) props.onSelectInCanvas(result.nodeId);
   }
 
   return <For each={props.graph.nodes}>{(node) => {
     const basePosition = () => props.positions().get(node.id) ?? { x: 0, y: 0 };
     const pos = () => {
-      const offset = dragOffset();
+      const offset = dragOffsets()[node.id];
       const base = basePosition();
-      return offset?.id === node.id ? { x: base.x + offset.dx, y: base.y + offset.dy } : base;
+      return offset ? { x: base.x + offset.dx, y: base.y + offset.dy } : base;
     };
     return <NodeContainer nodeId={node.id} x={() => pos().x} y={() => pos().y} w={() => NODE_W} h={() => NODE_H}
       onPointerDown={(event) => {
         ctx.onNodePointerDown(node.id, event);
         props.onSelect(node.id);
-        drag.onPointerDown(node.id, event);
+        if ((event.target as HTMLElement).closest('[data-denim-drag-handle]')) drag.beginPress(node.id, event);
       }}>
-      <NodeCard node={node} selected={props.selectedId() === node.id} onOpenJourney={() => void actions.openJourney(node.id)}
+      <NodeCard node={node} selected={props.selectedId() === node.id || ctx.isSelected(node.id)} onOpenJourney={() => void actions.openJourney(node.id)}
         onDifferentiate={() => void differentiateNode(node.id)}
         onConnect={(event) => props.openPicker('connect', node.id, event)}
         hasSequence={props.graph.edges.some((edge) => edge.sourceId === node.id && edge.priority != null)}
@@ -269,12 +287,10 @@ function NodeCard(props: {
   const deleteMenuRoots = new Set<HTMLElement>();
   let sequenceOptionsButton: HTMLButtonElement | undefined;
   let deleteButton: HTMLButtonElement | undefined;
-  let deleteSingleButton: HTMLButtonElement | undefined;
-  let deleteChildrenButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([
     'Journey', 'Action', 'Capability', 'Resource', 'Organization', 'Contract', props.node.type,
   ])]);
-  return <article class="group relative flex h-full flex-col gap-2 rounded-lg p-3 transition-shadow"
+  return <article class="lui-node-card relative flex h-full flex-col gap-2 rounded-lg p-3 transition-shadow"
     style={{
       background: `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
       border: '1px solid var(--theme-node-border)',
@@ -306,55 +322,47 @@ function NodeCard(props: {
       onPointerDown={(event) => event.stopPropagation()}
       onBlur={(event) => void actions.updateNode(props.node.id, { text: event.currentTarget.value })}
       class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
-    <div class="absolute bottom-2 left-2 flex h-7 items-center gap-1" data-node-toolbar
+    <ToolbarSurface variant="node" class="absolute bottom-2 left-2" data-node-toolbar
       onPointerDown={(event) => event.stopPropagation()}>
       <Show when={props.node.type === 'Journey'}>
-        <button type="button" aria-label="Open Journey in a new tab" title="Open Journey in a new tab"
-          class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+        <IconButton aria-label="Open Journey in a new tab" title="Open Journey in a new tab"
           onClick={(event) => { event.stopPropagation(); props.onOpenJourney(); }}>
           <ExternalLink size={ICON_SIZE} strokeWidth={1.7} />
-        </button>
+        </IconButton>
       </Show>
-      <div class="relative h-7 w-7 shrink-0 transition-[width] group-hover:w-32 group-focus-within:w-32">
-        <span aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center text-fg-muted group-hover:hidden group-focus-within:hidden">
+      <div class="lui-node-toolbar__more">
+        <span aria-hidden="true" class="lui-node-toolbar__expander">
           <Ellipsis size={ICON_SIZE} strokeWidth={1.7} />
         </span>
-        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center gap-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
-          <button type="button" aria-label="Differentiate node" title="Differentiate node"
-            class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-            onClick={props.onDifferentiate}><GitBranchPlus size={ICON_SIZE} strokeWidth={1.7} /></button>
-          <button type="button" aria-label="Differentiate using an existing node" title="Differentiate using an existing node"
-            class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-            onClick={(event) => { event.stopPropagation(); props.onConnect(event); }}><Link2 size={ICON_SIZE} strokeWidth={1.7} /></button>
-          <div class="relative h-7 w-7 shrink-0">
-            <button ref={sequenceOptionsButton} type="button" aria-label="Sequence options" title="Sequence options"
-              class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-surface/70 hover:text-fg focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+        <div class="lui-node-toolbar__actions">
+          <IconButton aria-label="Differentiate node" title="Differentiate node" class="lui-node-toolbar__action"
+            onClick={props.onDifferentiate}><GitBranchPlus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+          <IconButton aria-label="Differentiate using an existing node" title="Differentiate using an existing node" class="lui-node-toolbar__action"
+            onClick={(event) => { event.stopPropagation(); props.onConnect(event); }}><Link2 size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+          <div class="lui-node-toolbar__menu-anchor">
+            <IconButton ref={sequenceOptionsButton} aria-label="Sequence options" title="Sequence options" class="lui-node-toolbar__action"
               aria-expanded={openNodeMenu() === 'sequence'} onClick={(event) => {
                 event.stopPropagation();
                 setOpenNodeMenu((current) => current === 'sequence' ? null : 'sequence');
-              }}><ListOrdered size={ICON_SIZE} strokeWidth={1.7} /></button>
+              }}><ListOrdered size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
             <Show when={openNodeMenu() === 'sequence'}>
-              <NodeToolbarMenu anchor={sequenceOptionsButton} alignRight={props.node.type === 'Journey'} label="Sequence options"
+              <AnchoredMenu anchor={sequenceOptionsButton} label="Sequence options"
                 onClose={() => setOpenNodeMenu(null)}>
-                <button type="button" role="menuitem" disabled={props.graphChildCount === 0}
-                  class="flex w-full items-center rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg disabled:opacity-40"
-                  onClick={() => { props.onInitializeSequence(); setOpenNodeMenu(null); }}>initialize sequence</button>
-                <button type="button" role="menuitem" disabled={!props.hasSequence}
-                  class="flex w-full items-center rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg disabled:opacity-40"
-                  onClick={() => { props.onClearSequence(); setOpenNodeMenu(null); }}>clear sequence</button>
-                <div role="separator" class="my-1 border-t border-border-subtle" />
-                <button type="button" role="menuitemcheckbox" aria-checked={props.sequenceMode === 'rank'} disabled={!props.hasSequence}
-                  class="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg disabled:opacity-40"
+                <MenuItem disabled={props.graphChildCount === 0}
+                  onClick={() => { props.onInitializeSequence(); setOpenNodeMenu(null); }}>initialize sequence</MenuItem>
+                <MenuItem disabled={!props.hasSequence}
+                  onClick={() => { props.onClearSequence(); setOpenNodeMenu(null); }}>clear sequence</MenuItem>
+                <MenuSeparator />
+                <MenuItem role="menuitemcheckbox" aria-checked={props.sequenceMode === 'rank'} selected={props.sequenceMode === 'rank'} disabled={!props.hasSequence}
                   onClick={props.onToggleSequenceMode}>
                   <span>Show step numbers</span>
                   <Show when={props.sequenceMode === 'rank'}><span aria-hidden="true">✓</span></Show>
-                </button>
-              </NodeToolbarMenu>
+                </MenuItem>
+              </AnchoredMenu>
             </Show>
           </div>
-          <div class="relative h-7 w-7 shrink-0">
-            <button ref={deleteButton} type="button" aria-label="Delete node" title="Delete node"
-              class="flex h-7 w-7 items-center justify-center rounded text-fg-muted hover:bg-red-500/10 hover:text-red-600 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-red-600"
+          <div class="lui-node-toolbar__menu-anchor">
+            <IconButton ref={deleteButton} aria-label="Delete node" title="Delete node" danger class="lui-node-toolbar__action"
               aria-expanded={openNodeMenu() === 'delete'} onClick={(event) => {
                 event.stopPropagation();
                 setOpenNodeMenu((current) => {
@@ -362,46 +370,26 @@ function NodeCard(props: {
                   if (!next) setDeleteSubmenu(null);
                   return next;
                 });
-              }}><Trash2 size={ICON_SIZE} strokeWidth={1.7} /></button>
+              }}><Trash2 size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
             <Show when={openNodeMenu() === 'delete'}>
-              <NodeToolbarMenu anchor={deleteButton} alignRight label="Delete node" relatedMenus={deleteMenuRoots}
+              <AnchoredMenu anchor={deleteButton} label="Delete node" relatedMenus={deleteMenuRoots}
                 onClose={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); }}>
-                <div onPointerEnter={() => setDeleteSubmenu('single')} onFocusIn={() => setDeleteSubmenu('single')}>
-                  <button ref={deleteSingleButton} type="button" role="menuitem" aria-haspopup="menu"
-                    aria-expanded={deleteSubmenu() === 'single'}
-                    class="flex w-full items-center justify-between gap-4 rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg">
-                    <span>Delete Node</span><ChevronRight size={14} />
-                  </button>
-                  <Show when={deleteSubmenu() === 'single'}>
-                    <NodeToolbarMenu anchor={deleteSingleButton} side="right" label="Confirm deleting node"
-                      relatedMenus={deleteMenuRoots} onClose={() => setDeleteSubmenu(null)}>
-                      <button type="button" role="menuitem"
-                        class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
-                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'node'); }}>Confirm</button>
-                    </NodeToolbarMenu>
-                  </Show>
-                </div>
-                <div onPointerEnter={() => setDeleteSubmenu('children')} onFocusIn={() => setDeleteSubmenu('children')}>
-                  <button ref={deleteChildrenButton} type="button" role="menuitem" aria-haspopup="menu"
-                    aria-expanded={deleteSubmenu() === 'children'}
-                    class="flex w-full items-center justify-between gap-4 rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg">
-                    <span>Delete Node and Children</span><ChevronRight size={14} />
-                  </button>
-                  <Show when={deleteSubmenu() === 'children'}>
-                    <NodeToolbarMenu anchor={deleteChildrenButton} side="right" label="Confirm deleting node and children"
-                      relatedMenus={deleteMenuRoots} onClose={() => setDeleteSubmenu(null)}>
-                      <button type="button" role="menuitem"
-                        class="flex w-full items-center rounded px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-500/10"
-                        onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'subtree'); }}>Confirm</button>
-                    </NodeToolbarMenu>
-                  </Show>
-                </div>
-              </NodeToolbarMenu>
+                <MenuSubmenu label="Confirm deleting node" open={deleteSubmenu() === 'single'}
+                  onOpen={() => setDeleteSubmenu('single')} onClose={() => setDeleteSubmenu(null)} relatedMenus={deleteMenuRoots}
+                  trigger={<><span>Delete Node</span><ChevronRight size={14} /></>}>
+                  <MenuItem danger onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'node'); }}>Confirm</MenuItem>
+                </MenuSubmenu>
+                <MenuSubmenu label="Confirm deleting node and children" open={deleteSubmenu() === 'children'}
+                  onOpen={() => setDeleteSubmenu('children')} onClose={() => setDeleteSubmenu(null)} relatedMenus={deleteMenuRoots}
+                  trigger={<><span>Delete Node and Children</span><ChevronRight size={14} /></>}>
+                  <MenuItem danger onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'subtree'); }}>Confirm</MenuItem>
+                </MenuSubmenu>
+              </AnchoredMenu>
             </Show>
           </div>
         </div>
       </div>
-    </div>
+    </ToolbarSurface>
   </article>;
 }
 
@@ -410,6 +398,7 @@ function DenimAppToolbar() {
   const actions = useDenimActions();
   const [quickSelectOpen, setQuickSelectOpen] = createSignal(false);
   const [overflow, setOverflow] = createSignal(false);
+  let quickSelectButton: HTMLButtonElement | undefined;
   let strip: HTMLDivElement | undefined;
   let resizeObserver: ResizeObserver | undefined;
   const refreshOverflow = () => setOverflow(Boolean(strip && strip.scrollWidth > strip.clientWidth + 1));
@@ -443,56 +432,47 @@ function DenimAppToolbar() {
     strip?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[to]?.focus();
   }
 
-  return <div class="relative z-20 flex h-11 shrink-0 items-center border-b border-border-subtle bg-surface px-2">
-    <div class="relative flex h-full shrink-0 items-center border-r border-border-subtle pr-2">
-      <button type="button" aria-label="Quick Select" title="Quick Select" aria-expanded={quickSelectOpen()}
-        class="flex h-8 w-8 items-center justify-center rounded text-fg-muted hover:bg-surface-alt hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-        onClick={() => setQuickSelectOpen((open) => !open)}><Zap size={17} strokeWidth={1.8} /></button>
+  return <ToolbarSurface variant="app" class="relative">
+    <div class="lui-toolbar__section">
+      <IconButton ref={quickSelectButton} aria-label="Quick Select" title="Quick Select" aria-expanded={quickSelectOpen()}
+        onClick={() => setQuickSelectOpen((open) => !open)}><Zap size={17} strokeWidth={1.8} /></IconButton>
       <Show when={quickSelectOpen()}>
-        <>
-          <button class="fixed inset-0 z-30 cursor-default" aria-label="Close Quick Select" onClick={() => setQuickSelectOpen(false)} />
-          <div role="menu" aria-label="Saved views" class="absolute left-0 top-10 z-40 min-w-44 rounded-md border border-border-subtle bg-surface p-1 shadow-lg">
-            <For each={tabs().filter((tab) => tab.kind === 'pinned')}>
-              {(tab) => <button role="menuitem" class="flex w-full items-center rounded px-3 py-2 text-left text-sm text-fg-muted hover:bg-surface-alt hover:text-fg"
-                onClick={() => activate(tab.id)}>{tab.title}</button>}
-            </For>
-          </div>
-        </>
+        <AnchoredMenu anchor={quickSelectButton} label="Saved views" class="lui-menu-panel--wide" onClose={() => setQuickSelectOpen(false)}>
+          <For each={tabs().filter((tab) => tab.kind === 'pinned')}>
+            {(tab) => <MenuItem onClick={() => activate(tab.id)}>{tab.title}</MenuItem>}
+          </For>
+        </AnchoredMenu>
       </Show>
     </div>
-    <div class="flex min-w-0 flex-1 items-center">
+    <div class="lui-toolbar__tab-area">
       <Show when={overflow()}>
-        <button type="button" aria-label="Scroll tabs left" title="Scroll tabs left"
-          class="flex h-8 w-7 shrink-0 items-center justify-center text-fg-muted hover:text-fg"
-          onClick={() => strip?.scrollBy({ left: -180, behavior: 'smooth' })}><ChevronLeft size={16} /></button>
+        <IconButton aria-label="Scroll tabs left" title="Scroll tabs left" class="lui-tab-scroll"
+          onClick={() => strip?.scrollBy({ left: -180, behavior: 'smooth' })}><ChevronLeft size={16} /></IconButton>
       </Show>
-      <div ref={strip} role="tablist" aria-label="Denim views" class="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      <div ref={strip} role="tablist" aria-label="Denim views" class="lui-tab-strip"
         onWheel={(event) => {
           if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
             event.preventDefault();
             if (strip) strip.scrollLeft += event.deltaY;
           }
         }}>
-        <For each={tabs()}>{(tab, index) => <div class="flex shrink-0 items-center border-r border-border-subtle"
-          classList={{ 'bg-surface-alt': session.state.activeTabId === tab.id }}>
+        <For each={tabs()}>{(tab, index) => <div class="lui-tab-item"
+          aria-selected={session.state.activeTabId === tab.id}>
           <button type="button" role="tab" aria-selected={session.state.activeTabId === tab.id}
-            tabIndex={session.state.activeTabId === tab.id ? 0 : -1} title={tab.title}
-            class="max-w-52 truncate px-3 py-2 text-sm text-fg-muted hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+            tabIndex={session.state.activeTabId === tab.id ? 0 : -1} title={tab.title} class="lui-tab"
             onClick={() => activate(tab.id)} onKeyDown={(event) => tabKey(event, index())}>{tab.title}</button>
           <Show when={tab.kind === 'workspace'}>
-            <button type="button" aria-label={`Close ${tab.title}`} title="Close tab"
-              class="mr-1 flex h-6 w-6 items-center justify-center rounded text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-              onClick={() => void actions.closeView(tab.id)}><X size={13} /></button>
+            <IconButton aria-label={`Close ${tab.title}`} title="Close tab" class="lui-tab-close"
+              onClick={() => void actions.closeView(tab.id)}><X size={13} /></IconButton>
           </Show>
         </div>}</For>
       </div>
       <Show when={overflow()}>
-        <button type="button" aria-label="Scroll tabs right" title="Scroll tabs right"
-          class="flex h-8 w-7 shrink-0 items-center justify-center text-fg-muted hover:text-fg"
-          onClick={() => strip?.scrollBy({ left: 180, behavior: 'smooth' })}><ChevronRight size={16} /></button>
+        <IconButton aria-label="Scroll tabs right" title="Scroll tabs right" class="lui-tab-scroll"
+          onClick={() => strip?.scrollBy({ left: 180, behavior: 'smooth' })}><ChevronRight size={16} /></IconButton>
       </Show>
     </div>
-  </div>;
+  </ToolbarSurface>;
 }
 
 function DenimWorkspace(props: { onReload: () => void }) {
@@ -501,14 +481,14 @@ function DenimWorkspace(props: { onReload: () => void }) {
   const [picker, setPicker] = createSignal<PickerState | null>(null);
   const [query, setQuery] = createSignal('');
   const [statusToast, setStatusToast] = createSignal<string | null>(null);
+  const [edgeMenu, setEdgeMenu] = createSignal<{ edgeId: string; x: number; y: number } | null>(null);
   const activeTab = () => session.state.tabs.find((tab) => tab.id === session.state.activeTabId)!;
   const journeysView = () => activeTab().id === 'pinned:journeys';
   const results = createMemo(() => session.findNodesToConnect(query()));
 
   function openPicker(mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent): void {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     setQuery('');
-    setPicker({ mode, parentId, x: Math.min(rect.left, window.innerWidth - 300), y: Math.min(rect.bottom + 6, window.innerHeight - 340) });
+    setPicker({ mode, parentId, anchor: event.currentTarget as HTMLElement });
   }
 
   function chooseNode(node: DenimNode): void {
@@ -540,26 +520,37 @@ function DenimWorkspace(props: { onReload: () => void }) {
       </div>}
     </Show>
     <DenimAppToolbar />
-    <div class="relative min-h-0 flex-1">
-      <div class="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-border-subtle bg-surface/95 p-1 shadow-sm backdrop-blur">
+    <div class="relative min-h-0 flex-1" onPointerDown={() => setEdgeMenu(null)}>
+      <ToolbarSurface variant="floating" class="absolute left-1/2 top-3 z-10 -translate-x-1/2">
         <Show when={journeysView()}>
-          <button type="button" aria-label="Add a Journey" title="Add a Journey"
-            class="flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-alt hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-            onClick={() => void actions.createJourney()}><Plus size={16} strokeWidth={1.8} /></button>
+          <IconButton aria-label="Add a Journey" title="Add a Journey"
+            onClick={() => void actions.createJourney()}><Plus size={16} strokeWidth={1.8} /></IconButton>
         </Show>
-        <button type="button" aria-label="Add a node to this view" title="Add a node to this view"
-          class="flex h-8 w-8 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-alt hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
-          onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></button>
-      </div>
-      <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker} />
-      <div class="pointer-events-none absolute bottom-3 right-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center justify-end gap-2">
+        <IconButton aria-label="Add a node to this view" title="Add a node to this view"
+          onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></IconButton>
+      </ToolbarSurface>
+      <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker}
+        onEdgeClick={(edgeId, x, y) => setEdgeMenu({ edgeId, x, y })} />
+      <div class="lui-feedback-tray pointer-events-none absolute bottom-3 right-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center justify-end gap-2">
         <DenimStatusToast message={statusToast} />
         <DenimSaveStatusBadge saving={() => session.state.saving} error={() => session.state.error} />
       </div>
     </div>
+    <Show when={edgeMenu()}>
+      {(menu) => <Portal>
+        <div class="lui-edge-delete-anchor" style={{ left: `${Math.max(8, Math.min(menu().x - 34, window.innerWidth - 76))}px`, top: `${Math.max(8, Math.min(menu().y + 8, window.innerHeight - 40))}px` }}>
+          <Button aria-label="Delete edge" title="Delete edge" tone="danger" class="lui-edge-delete"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => { const edgeId = menu().edgeId; setEdgeMenu(null); void actions.deleteEdge(edgeId); }}>
+            <Trash2 size={13} strokeWidth={1.8} />
+            <span>Delete</span>
+          </Button>
+        </div>
+      </Portal>}
+    </Show>
     <Show when={picker()}>
-      {(current) => <FindNodePicker mode={current().mode} parentId={current().parentId}
-        x={current().x} y={current().y} query={query} setQuery={setQuery} results={results}
+      {(current) => <FindNodePicker mode={current().mode} parentId={current().parentId} anchor={current().anchor}
+        query={query} setQuery={setQuery} results={results}
         targetForId={(id) => session.state.graph.nodes.find((node) => node.id === id)}
         isValidTarget={(id) => Boolean(current().parentId && session.canConnectExisting(current().parentId!, id))}
         onChoose={chooseNode} onConnect={connectToNode} onClose={() => { setPicker(null); setStatusToast(null); }}
@@ -579,8 +570,7 @@ type ConnectionGesture = {
 function FindNodePicker(props: {
   mode: PickerState['mode'];
   parentId?: string;
-  x: number;
-  y: number;
+  anchor: HTMLElement;
   query: () => string;
   setQuery: (value: string) => void;
   results: () => DenimNode[];
@@ -592,9 +582,21 @@ function FindNodePicker(props: {
   onStatus: (message: string | null) => void;
 }) {
   const [gesture, setGesture] = createSignal<ConnectionGesture | null>(null);
+  const [position, setPosition] = createSignal<{ left: number; top: number }>();
   const targetValidity = new Map<string, boolean>();
   let dialog: HTMLDivElement | undefined;
   let plusButton: HTMLButtonElement | undefined;
+  let positionFrame = 0;
+  let positionObserver: ResizeObserver | undefined;
+
+  function updatePosition(): void {
+    if (!dialog || !props.anchor.isConnected) return;
+    positionFrame = 0;
+    setPosition(computeAnchoredPosition(props.anchor.getBoundingClientRect(), dialog.getBoundingClientRect(), {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    }, { gap: 6 }));
+  }
 
   function nodeIdAt(x: number, y: number): string | null {
     return document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-container-id]')?.dataset.containerId ?? null;
@@ -675,12 +677,24 @@ function FindNodePicker(props: {
   }
 
   onMount(() => {
+    positionFrame = requestAnimationFrame(updatePosition);
+    window.addEventListener('resize', updatePosition);
+    document.addEventListener('scroll', updatePosition, true);
+    if (typeof ResizeObserver !== 'undefined') {
+      positionObserver = new ResizeObserver(updatePosition);
+      if (dialog) positionObserver.observe(dialog);
+      positionObserver.observe(props.anchor);
+    }
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     document.addEventListener('pointerdown', onDocumentPointerDown, true);
     document.addEventListener('keydown', onKeyDown, true);
   });
   onCleanup(() => {
+    cancelAnimationFrame(positionFrame);
+    positionObserver?.disconnect();
+    window.removeEventListener('resize', updatePosition);
+    document.removeEventListener('scroll', updatePosition, true);
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     document.removeEventListener('pointerdown', onDocumentPointerDown, true);
@@ -690,7 +704,27 @@ function FindNodePicker(props: {
 
   function curvePath(current: ConnectionGesture): string {
     const dx = current.pointerX - current.startX;
-    return `M ${current.startX} ${current.startY} C ${current.startX + dx * 0.35} ${current.startY + 90}, ${current.pointerX - dx * 0.2} ${current.pointerY - 90}, ${current.pointerX} ${current.pointerY}`;
+    const dy = current.pointerY - current.startY;
+    const distance = Math.hypot(dx, dy);
+    if (distance < 1) return `M ${current.startX} ${current.startY} L ${current.pointerX} ${current.pointerY}`;
+
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const nx = -uy;
+    const ny = ux;
+    const bend = Math.min(100, Math.max(32, distance * 0.2));
+    const midX = current.startX + dx * 0.5;
+    const midY = current.startY + dy * 0.5;
+    const quarterX = dx * 0.25;
+    const quarterY = dy * 0.25;
+    const bendX = nx * bend;
+    const bendY = ny * bend;
+
+    return `M ${current.startX} ${current.startY}`
+      + ` C ${current.startX + quarterX + bendX} ${current.startY + quarterY + bendY}`
+      + `, ${midX - quarterX + bendX} ${midY - quarterY + bendY}, ${midX} ${midY}`
+      + ` C ${midX + quarterX - bendX} ${midY + quarterY - bendY}`
+      + `, ${current.pointerX - quarterX - bendX} ${current.pointerY - quarterY - bendY}, ${current.pointerX} ${current.pointerY}`;
   }
 
   return <Portal mount={document.body}>
@@ -698,8 +732,8 @@ function FindNodePicker(props: {
       <path d={curvePath(current())} fill="none" stroke="var(--fg-muted)" stroke-width="1.5" stroke-dasharray="5 5" />
     </svg>}</Show>
     <div ref={dialog} role="dialog" aria-label={props.mode === 'include' ? 'Add node to view' : 'Choose node to connect'}
-      class="fixed z-50 w-72 rounded-lg border border-border-subtle bg-surface p-2 shadow-xl"
-      style={{ left: `${props.x}px`, top: `${props.y}px` }}>
+      class="fixed z-50 flex max-h-[calc(100vh-16px)] w-72 max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface p-2 shadow-xl"
+      style={{ left: `${position()?.left ?? 0}px`, top: `${position()?.top ?? 0}px`, visibility: position() ? 'visible' : 'hidden' }}>
       <div class="relative flex items-center gap-1">
         <input autofocus value={props.query()} onInput={(event) => props.setQuery(event.currentTarget.value)}
           placeholder="Find a node" aria-label="Find a node"
@@ -717,7 +751,7 @@ function FindNodePicker(props: {
         <button type="button" aria-label="Close" class="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface-alt hover:text-fg"
           onClick={props.onClose}><X size={14} /></button>
       </div>
-      <div class="max-h-64 overflow-y-auto">
+      <div class="min-h-0 max-h-64 flex-1 overflow-y-auto">
         <Show when={props.results().length > 0} fallback={<p class="px-2 py-3 text-xs text-fg-muted">No matching nodes</p>}>
           <For each={props.results()}>{(node) => <button type="button"
             class="flex w-full flex-col rounded px-2 py-2 text-left hover:bg-surface-alt focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
