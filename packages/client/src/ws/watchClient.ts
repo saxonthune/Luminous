@@ -5,7 +5,7 @@ interface ChangedMessage {
   path: string;
   revision?: string;
   actionId?: string;
-  activateTabId?: string;
+  activateBoardId?: string;
 }
 
 function parseChangedMessage(data: string): string | null {

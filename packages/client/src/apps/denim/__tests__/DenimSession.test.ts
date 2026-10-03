@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { addDenimNode, createDenimChild, exportDenimDatabase, getDenimGraph, listDenimWorkspaces, openDenimDatabase, putDenimWorkspace } from '@luminous/core/denim';
+import { addDenimNode, createDenimChild, exportDenimDatabase, getDenimGraph, listDenimBoards, openDenimDatabase, putDenimBoard } from '@luminous/core/denim';
 import { createDenimSession, DenimPersistenceConflict } from '../DenimSession';
 
 const wasmBinary = new Uint8Array(await readFile(new URL('../../../../../core/node_modules/sql.js/dist/sql-wasm.wasm', import.meta.url)));
@@ -57,40 +57,40 @@ describe('DenimSession', () => {
     await session.discard();
   });
 
-  it('keeps duplicate Journey workspaces independent and restores their JSON payloads', async () => {
+  it('keeps duplicate Journey Boards independent and restores their JSON payloads', async () => {
     let database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
     addDenimNode(database, { id: 'extra', type: 'Resource', text: 'Existing API' });
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1', 'tabs-test');
 
     await session.openJourney('journey');
-    const firstId = session.state.activeTabId;
+    const firstId = session.state.activeBoardId;
     await session.openJourney('journey');
-    const secondId = session.state.activeTabId;
+    const secondId = session.state.activeBoardId;
     expect(secondId).not.toBe(firstId);
-    expect(session.state.tabs.filter((tab) => tab.kind === 'workspace')).toHaveLength(2);
+    expect(session.state.boards.filter((board) => board.kind === 'board')).toHaveLength(2);
 
-    session.activateTab(firstId);
+    session.activateBoard(firstId);
     session.setCamera(firstId, { x: 40, y: 60, k: 1.4 });
     await session.includeNode('extra');
     expect(session.state.graph.nodes.map((node) => node.id)).toContain('extra');
     await session.moveNode('extra', { x: 320, y: 180 });
-    expect(session.state.tabs.find((tab) => tab.id === firstId)?.positions.extra).toEqual({ x: 320, y: 180 });
+    expect(session.state.boards.find((board) => board.id === firstId)?.positions.extra).toEqual({ x: 320, y: 180 });
 
-    session.activateTab(secondId);
+    session.activateBoard(secondId);
     session.setCamera(secondId, { x: -30, y: 10, k: 0.8 });
     expect(session.state.graph.nodes.map((node) => node.id)).not.toContain('extra');
-    expect(session.state.tabs.find((tab) => tab.id === secondId)?.positions.extra).toBeUndefined();
+    expect(session.state.boards.find((board) => board.id === secondId)?.positions.extra).toBeUndefined();
     expect(session.state.cameras[firstId]).toEqual({ x: 40, y: 60, k: 1.4 });
     expect(session.state.cameras[secondId]).toEqual({ x: -30, y: 10, k: 0.8 });
-    expect(listDenimWorkspaces(database).map((record) => record.id)).toContain(firstId);
+    expect(listDenimBoards(database).map((record) => record.id)).toContain(firstId);
 
     const bytes = exportDenimDatabase(database);
     await session.dispose();
     database = await openDenimDatabase(bytes, wasmBinary);
     const restored = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r2', 'tabs-test');
-    expect(restored.state.tabs.filter((tab) => tab.kind === 'workspace')).toHaveLength(2);
-    expect(restored.state.tabs.find((tab) => tab.id === firstId)).toMatchObject({
+    expect(restored.state.boards.filter((board) => board.kind === 'board')).toHaveLength(2);
+    expect(restored.state.boards.find((board) => board.id === firstId)).toMatchObject({
       sources: [{ kind: 'journey', journeyId: 'journey' }],
       includedNodeIds: ['extra'],
       positions: { extra: { x: 320, y: 180 } },
@@ -108,11 +108,11 @@ describe('DenimSession', () => {
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'resource']);
     expect(session.state.graph.edges).toEqual([]);
-    expect(listDenimWorkspaces(database)).toHaveLength(1);
+    expect(listDenimBoards(database)).toHaveLength(1);
     await session.dispose();
   });
 
-  it('deletes a node and removes it from tab view state', async () => {
+  it('deletes a node and removes it from board Board state', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
     createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
@@ -124,11 +124,11 @@ describe('DenimSession', () => {
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey']);
     expect(getDenimGraph(database).edges).toEqual([]);
-    expect(session.state.tabs.find((tab) => tab.id === session.state.activeTabId)?.positions.action).toBeUndefined();
+    expect(session.state.boards.find((board) => board.id === session.state.activeBoardId)?.positions.action).toBeUndefined();
     await session.dispose();
   });
 
-  it('deletes one node while keeping its descendants floating in the active view', async () => {
+  it('deletes one node while keeping its descendants floating in the active board', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
     createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
@@ -141,7 +141,7 @@ describe('DenimSession', () => {
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'capability', 'resource']);
     expect(session.state.graph.edges.map((edge) => edge.id)).toEqual(['capability-resource']);
-    expect(session.state.tabs.find((tab) => tab.id === session.state.activeTabId)?.includedNodeIds)
+    expect(session.state.boards.find((board) => board.id === session.state.activeBoardId)?.includedNodeIds)
       .toEqual(['capability', 'resource']);
     expect(getDenimGraph(database).nodes.map((node) => node.id)).toEqual(['journey', 'capability', 'resource']);
     await session.dispose();
@@ -182,15 +182,15 @@ describe('DenimSession', () => {
     await session.dispose();
   });
 
-  it('composes multiple source queries into one Tab View', async () => {
+  it('composes multiple source queries into one Board projection', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
     addDenimNode(database, { id: 'capability', type: 'Capability', text: 'Store journeys' });
-    putDenimWorkspace(database, { id: 'combined', payload: {
+    putDenimBoard(database, { id: 'combined', payload: {
       version: 1,
       id: 'combined',
-      kind: 'workspace',
-      title: 'Combined workspace',
+      kind: 'board',
+      title: 'Combined board',
       sources: [{ kind: 'journey', journeyId: 'journey' }, { kind: 'capabilities' }],
       includedNodeIds: [],
       positions: {},
@@ -198,13 +198,13 @@ describe('DenimSession', () => {
     } });
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
 
-    session.activateTab('combined');
+    session.activateBoard('combined');
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'capability']);
     await session.setSequenceMode('journey', 'priority');
-    expect(session.state.tabs.find((tab) => tab.id === 'combined')?.sequenceModes.journey).toBe('priority');
-    session.selectView('journeys');
-    expect(session.state.tabs.find((tab) => tab.id === 'pinned:journeys')?.sequenceModes.journey).toBeUndefined();
+    expect(session.state.boards.find((board) => board.id === 'combined')?.sequenceModes.journey).toBe('priority');
+    session.selectBoard('journeys');
+    expect(session.state.boards.find((board) => board.id === 'pinned:journeys')?.sequenceModes.journey).toBeUndefined();
     await session.dispose();
   });
 

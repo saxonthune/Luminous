@@ -7,6 +7,7 @@ import {
   openDenimDatabase, seedDenimDatabase, updateDenimNode,
 } from '../packages/core/src/denim/database.ts';
 import type { DenimAction } from '../packages/core/src/denim/actions.ts';
+import { readDenimBoards } from '../packages/core/src/denim/actions.ts';
 import {
   checkNylonDocument, doctorNylonDocument, parseNylonDocument, serializeNylonDocument,
   type DifferentiateOptions, type NylonDocument, type NylonBatchOperation,
@@ -39,6 +40,7 @@ function usage(): never {
   console.error(`Usage:
   luminous hemp generate|items|crates|list|read|check|write|layout|move (run 'luminous hemp' for help)
   luminous denim journeys <database>
+  luminous denim boards <database>
   luminous denim list [--server URL]
   luminous denim actions [--server URL]
   luminous denim snapshot <database> [--server URL]
@@ -191,6 +193,10 @@ async function denimCli(): Promise<void> {
   if (command === 'journeys') {
     if (argv.length) usage();
     console.log(JSON.stringify(listJourneys(db), null, 2)); return;
+  }
+  if (command === 'boards') {
+    if (argv.length) usage();
+    console.log(JSON.stringify(readDenimBoards(db), null, 2)); return;
   }
   if (command === 'journey') {
     const id = argv.shift(); if (!id || argv.length) usage();

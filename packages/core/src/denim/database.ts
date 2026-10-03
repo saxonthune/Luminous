@@ -57,22 +57,36 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS edges_by_source ON edges(source_id);
   CREATE INDEX IF NOT EXISTS edges_by_target ON edges(target_id);
   CREATE INDEX IF NOT EXISTS edges_by_type ON edges(type);
-  CREATE TABLE IF NOT EXISTS denim_workspaces (
+  CREATE TABLE IF NOT EXISTS denim_boards (
     id TEXT PRIMARY KEY,
     payload_json TEXT NOT NULL
   );
-  PRAGMA user_version = 3;
+  PRAGMA user_version = 4;
 `;
 
 export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint8Array): Promise<Database> {
   const SQL = await sql(wasm);
   const db = bytes ? new SQL.Database(bytes) : new SQL.Database();
   db.exec(SCHEMA);
+  const tables = rows<{ name: string }>(db, "SELECT name FROM sqlite_master WHERE type = 'table'");
+  if (tables.some((table) => table.name === 'denim_workspaces')) {
+    const legacy = rows<{ id: string; payload_json: string }>(db,
+      'SELECT id, payload_json FROM denim_workspaces ORDER BY rowid');
+    for (const record of legacy) {
+      let payload: unknown;
+      try { payload = JSON.parse(record.payload_json) as unknown; } catch { continue; }
+      if (payload && typeof payload === 'object' && (payload as { kind?: unknown }).kind === 'workspace') {
+        (payload as { kind: string }).kind = 'board';
+      }
+      db.run('INSERT OR IGNORE INTO denim_boards (id, payload_json) VALUES (?, ?)', [record.id, JSON.stringify(payload)]);
+    }
+    db.run('DROP TABLE denim_workspaces');
+  }
   const edgeColumns = rows<{ name: string }>(db, 'PRAGMA table_info(edges)');
   if (!edgeColumns.some((column) => column.name === 'priority')) {
     db.run('ALTER TABLE edges ADD COLUMN priority INTEGER NULL');
   }
-  db.run('PRAGMA user_version = 3');
+  db.run('PRAGMA user_version = 4');
   return db;
 }
 
@@ -80,29 +94,29 @@ export function exportDenimDatabase(db: Database): Uint8Array {
   return db.export();
 }
 
-/** A workspace payload stays opaque to SQLite so its document shape can evolve. */
-export interface DenimWorkspaceRecord {
+/** A board payload stays opaque to SQLite so its shape can evolve. */
+export interface DenimBoardRecord {
   id: string;
   payload: unknown;
 }
 
-export function listDenimWorkspaces(db: Database): DenimWorkspaceRecord[] {
+export function listDenimBoards(db: Database): DenimBoardRecord[] {
   return rows<{ id: string; payload_json: string }>(db,
-    'SELECT id, payload_json FROM denim_workspaces ORDER BY rowid')
+    'SELECT id, payload_json FROM denim_boards ORDER BY rowid')
     .flatMap(({ id, payload_json }) => {
       try { return [{ id, payload: JSON.parse(payload_json) as unknown }]; }
       catch { return []; }
     });
 }
 
-export function putDenimWorkspace(db: Database, record: DenimWorkspaceRecord): void {
-  db.run(`INSERT INTO denim_workspaces (id, payload_json) VALUES (?, ?)
+export function putDenimBoard(db: Database, record: DenimBoardRecord): void {
+  db.run(`INSERT INTO denim_boards (id, payload_json) VALUES (?, ?)
     ON CONFLICT(id) DO UPDATE SET payload_json = excluded.payload_json`,
   [record.id, JSON.stringify(record.payload)]);
 }
 
-export function removeDenimWorkspace(db: Database, id: string): void {
-  db.run('DELETE FROM denim_workspaces WHERE id = ?', [id]);
+export function removeDenimBoard(db: Database, id: string): void {
+  db.run('DELETE FROM denim_boards WHERE id = ?', [id]);
 }
 
 function rows<T>(db: Database, statement: string, values: unknown[] = []): T[] {

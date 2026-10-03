@@ -60,7 +60,7 @@ function GraphCanvas(props: {
   const layoutEdges = createMemo(() => graph().edges
     .filter((edge) => edge.type === 'parent-child')
     .map((edge) => ({ source: edge.sourceId, target: edge.targetId })));
-  const activeTab = () => session.state.tabs.find((tab) => tab.id === session.state.activeTabId)!;
+  const activeBoard = () => session.state.boards.find((board) => board.id === session.state.activeBoardId)!;
   const edgeLabels = createMemo(() => {
     const labels = new Map<string, string>();
     const grouped = new Map<string, DenimEdge[]>();
@@ -71,7 +71,7 @@ function GraphCanvas(props: {
       grouped.set(edge.sourceId, siblings);
     }
     for (const [parentId, siblings] of grouped) {
-      const mode = editingSequenceParent() === parentId ? 'priority' : activeTab().sequenceModes[parentId] ?? 'rank';
+      const mode = editingSequenceParent() === parentId ? 'priority' : activeBoard().sequenceModes[parentId] ?? 'rank';
       const ordered = [...siblings].sort((a, b) => a.priority! - b.priority! || a.targetId.localeCompare(b.targetId));
       for (const [index, edge] of ordered.entries()) {
         labels.set(edge.id, mode === 'priority' ? String(edge.priority) : String(index + 1));
@@ -89,24 +89,24 @@ function GraphCanvas(props: {
     void actions.initializeSequence(parentId, ordered);
   }
   function sequenceMode(parentId: string): 'rank' | 'priority' {
-    return activeTab().sequenceModes[parentId] ?? 'rank';
+    return activeBoard().sequenceModes[parentId] ?? 'rank';
   }
   function toggleSequenceMode(parentId: string): void {
     void actions.setSequenceMode(parentId, sequenceMode(parentId) === 'rank' ? 'priority' : 'rank');
   }
   let canvasRef: CanvasRef | undefined;
-  let previousTabId = activeTab().id;
+  let previousBoardId = activeBoard().id;
   const positions = createMemo(() => {
     const positions = dagLayout(layoutNodes(), layoutEdges());
-    for (const [id, position] of Object.entries(activeTab().positions)) positions.set(id, position);
+    for (const [id, position] of Object.entries(activeBoard().positions)) positions.set(id, position);
     return positions;
   });
 
   createEffect(() => {
-    const tab = activeTab();
-    if (tab.id === previousTabId) return;
-    previousTabId = tab.id;
-    const camera = session.state.cameras[tab.id];
+    const board = activeBoard();
+    if (board.id === previousBoardId) return;
+    previousBoardId = board.id;
+    const camera = session.state.cameras[board.id];
     if (camera) canvasRef?.setView(camera, false);
     else requestFit();
   });
@@ -124,7 +124,7 @@ function GraphCanvas(props: {
   }
 
   onMount(() => {
-    if (!session.state.cameras[activeTab().id]) requestFit();
+    if (!session.state.cameras[activeBoard().id]) requestFit();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       const target = event.target;
@@ -143,8 +143,8 @@ function GraphCanvas(props: {
       boxSelect={{ trigger: 'drag' }}
       onSelectionChange={(ids) => session.selectNode(ids.at(-1) ?? null)}
       viewportOptions={{
-        initialTransform: session.state.cameras[activeTab().id] ?? { x: 0, y: 0, k: 1 },
-        onTransformChange: (camera) => session.setCamera(activeTab().id, camera),
+        initialTransform: session.state.cameras[activeBoard().id] ?? { x: 0, y: 0, k: 1 },
+        onTransformChange: (camera) => session.setCamera(activeBoard().id, camera),
       }}
       edges={graph().edges.filter((edge) => edge.type === 'parent-child').map((edge) => ({
       id: edge.id,
@@ -168,7 +168,7 @@ function GraphCanvas(props: {
       <CanvasNodes
         graph={graph()}
         positions={positions}
-        tabId={() => activeTab().id}
+        boardId={() => activeBoard().id}
         selectedId={props.selectedId}
         onSelect={session.selectNode}
         onSelectInCanvas={(id) => canvasRef?.setSelectedIds([id])}
@@ -184,7 +184,7 @@ function GraphCanvas(props: {
 function CanvasNodes(props: {
   graph: DenimGraph;
   positions: () => ReadonlyMap<string, { x: number; y: number }>;
-  tabId: () => string;
+  boardId: () => string;
   selectedId: () => string | null;
   onSelect: (id: string | null) => void;
   onSelectInCanvas: (id: string) => void;
@@ -219,7 +219,7 @@ function CanvasNodes(props: {
           return start ? [[id, { x: start.x + dx, y: start.y + dy }]] : [];
         }));
         if (Object.keys(positions).length) {
-          void actions.moveNodes(positions, props.tabId());
+          void actions.moveNodes(positions, props.boardId());
           // Hold the preview until the saved positions become the layout source.
           releaseFrame = requestAnimationFrame(() => {
             releaseFrame = 0;
@@ -236,7 +236,7 @@ function CanvasNodes(props: {
 
   async function differentiateNode(parentId: string): Promise<void> {
     const parent = props.positions().get(parentId);
-    const placement = parent ? { tabId: props.tabId(), x: parent.x, y: parent.y + NODE_H + 80 } : undefined;
+    const placement = parent ? { boardId: props.boardId(), x: parent.x, y: parent.y + NODE_H + 80 } : undefined;
     const result = await actions.differentiate(parentId, undefined, placement);
     if (result.nodeId) props.onSelectInCanvas(result.nodeId);
   }
@@ -325,7 +325,7 @@ function NodeCard(props: {
     <ToolbarSurface variant="node" class="absolute bottom-2 left-2" data-node-toolbar
       onPointerDown={(event) => event.stopPropagation()}>
       <Show when={props.node.type === 'Journey'}>
-        <IconButton aria-label="Open Journey in a new tab" title="Open Journey in a new tab"
+        <IconButton aria-label="Open Journey as a new Board" title="Open Journey as a new Board"
           onClick={(event) => { event.stopPropagation(); props.onOpenJourney(); }}>
           <ExternalLink size={ICON_SIZE} strokeWidth={1.7} />
         </IconButton>
@@ -402,9 +402,9 @@ function DenimAppToolbar() {
   let strip: HTMLDivElement | undefined;
   let resizeObserver: ResizeObserver | undefined;
   const refreshOverflow = () => setOverflow(Boolean(strip && strip.scrollWidth > strip.clientWidth + 1));
-  const tabs = () => session.state.tabs;
+  const tabs = () => session.state.boards;
   const activate = (id: string) => {
-    session.activateTab(id);
+    session.activateBoard(id);
     setQuickSelectOpen(false);
   };
 
@@ -437,9 +437,9 @@ function DenimAppToolbar() {
       <IconButton ref={quickSelectButton} aria-label="Quick Select" title="Quick Select" aria-expanded={quickSelectOpen()}
         onClick={() => setQuickSelectOpen((open) => !open)}><Zap size={17} strokeWidth={1.8} /></IconButton>
       <Show when={quickSelectOpen()}>
-        <AnchoredMenu anchor={quickSelectButton} label="Saved views" class="lui-menu-panel--wide" onClose={() => setQuickSelectOpen(false)}>
-          <For each={tabs().filter((tab) => tab.kind === 'pinned')}>
-            {(tab) => <MenuItem onClick={() => activate(tab.id)}>{tab.title}</MenuItem>}
+        <AnchoredMenu anchor={quickSelectButton} label="Boards" class="lui-menu-panel--wide" onClose={() => setQuickSelectOpen(false)}>
+          <For each={tabs().filter((board) => board.kind === 'pinned')}>
+            {(board) => <MenuItem onClick={() => activate(board.id)}>{board.title}</MenuItem>}
           </For>
         </AnchoredMenu>
       </Show>
@@ -449,21 +449,21 @@ function DenimAppToolbar() {
         <IconButton aria-label="Scroll tabs left" title="Scroll tabs left" class="lui-tab-scroll"
           onClick={() => strip?.scrollBy({ left: -180, behavior: 'smooth' })}><ChevronLeft size={16} /></IconButton>
       </Show>
-      <div ref={strip} role="tablist" aria-label="Denim views" class="lui-tab-strip"
+      <div ref={strip} role="tablist" aria-label="Boards" class="lui-tab-strip"
         onWheel={(event) => {
           if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
             event.preventDefault();
             if (strip) strip.scrollLeft += event.deltaY;
           }
         }}>
-        <For each={tabs()}>{(tab, index) => <div class="lui-tab-item"
-          aria-selected={session.state.activeTabId === tab.id}>
-          <button type="button" role="tab" aria-selected={session.state.activeTabId === tab.id}
-            tabIndex={session.state.activeTabId === tab.id ? 0 : -1} title={tab.title} class="lui-tab"
-            onClick={() => activate(tab.id)} onKeyDown={(event) => tabKey(event, index())}>{tab.title}</button>
-          <Show when={tab.kind === 'workspace'}>
-            <IconButton aria-label={`Close ${tab.title}`} title="Close tab" class="lui-tab-close"
-              onClick={() => void actions.closeView(tab.id)}><X size={13} /></IconButton>
+        <For each={tabs()}>{(board, index) => <div class="lui-tab-item"
+          aria-selected={session.state.activeBoardId === board.id}>
+          <button type="button" role="tab" aria-selected={session.state.activeBoardId === board.id}
+            tabIndex={session.state.activeBoardId === board.id ? 0 : -1} title={board.title} class="lui-tab"
+            onClick={() => activate(board.id)} onKeyDown={(event) => tabKey(event, index())}>{board.title}</button>
+          <Show when={board.kind === 'board'}>
+            <IconButton aria-label={`Close ${board.title}`} title="Close Board" class="lui-tab-close"
+              onClick={() => void actions.closeBoard(board.id)}><X size={13} /></IconButton>
           </Show>
         </div>}</For>
       </div>
@@ -475,15 +475,15 @@ function DenimAppToolbar() {
   </ToolbarSurface>;
 }
 
-function DenimWorkspace(props: { onReload: () => void }) {
+function DenimBoardCanvas(props: { onReload: () => void }) {
   const session = useDenimSession();
   const actions = useDenimActions();
   const [picker, setPicker] = createSignal<PickerState | null>(null);
   const [query, setQuery] = createSignal('');
   const [statusToast, setStatusToast] = createSignal<string | null>(null);
   const [edgeMenu, setEdgeMenu] = createSignal<{ edgeId: string; x: number; y: number } | null>(null);
-  const activeTab = () => session.state.tabs.find((tab) => tab.id === session.state.activeTabId)!;
-  const journeysView = () => activeTab().id === 'pinned:journeys';
+  const activeBoard = () => session.state.boards.find((board) => board.id === session.state.activeBoardId)!;
+  const isJourneysBoard = () => activeBoard().id === 'pinned:journeys';
   const results = createMemo(() => session.findNodesToConnect(query()));
 
   function openPicker(mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent): void {
@@ -522,11 +522,11 @@ function DenimWorkspace(props: { onReload: () => void }) {
     <DenimAppToolbar />
     <div class="relative min-h-0 flex-1" onPointerDown={() => setEdgeMenu(null)}>
       <ToolbarSurface variant="floating" class="absolute left-1/2 top-3 z-10 -translate-x-1/2">
-        <Show when={journeysView()}>
+        <Show when={isJourneysBoard()}>
           <IconButton aria-label="Add a Journey" title="Add a Journey"
             onClick={() => void actions.createJourney()}><Plus size={16} strokeWidth={1.8} /></IconButton>
         </Show>
-        <IconButton aria-label="Add a node to this view" title="Add a node to this view"
+        <IconButton aria-label="Add a node to this Board" title="Add a node to this Board"
           onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></IconButton>
       </ToolbarSurface>
       <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker}
@@ -731,7 +731,7 @@ function FindNodePicker(props: {
     <Show when={gesture()}>{(current) => <svg aria-hidden="true" class="pointer-events-none fixed inset-0 z-[49] h-full w-full overflow-visible">
       <path d={curvePath(current())} fill="none" stroke="var(--fg-muted)" stroke-width="1.5" stroke-dasharray="5 5" />
     </svg>}</Show>
-    <div ref={dialog} role="dialog" aria-label={props.mode === 'include' ? 'Add node to view' : 'Choose node to connect'}
+    <div ref={dialog} role="dialog" aria-label={props.mode === 'include' ? 'Add node to Board' : 'Choose node to connect'}
       class="fixed z-50 flex max-h-[calc(100vh-16px)] w-72 max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface p-2 shadow-xl"
       style={{ left: `${position()?.left ?? 0}px`, top: `${position()?.top ?? 0}px`, visibility: position() ? 'visible' : 'hidden' }}>
       <div class="relative flex items-center gap-1">
@@ -803,7 +803,7 @@ export function DenimApp() {
         stopWatching = watchDocuments((changedPath, message) => {
           if (changedPath !== item.id || message?.revision === knownRevision || openedSession.state.dirty || openedSession.state.saving) return;
           void reloadSource().then(() => {
-            if (message?.activateTabId) session()?.activateTab(message.activateTabId);
+            if (message?.activateBoardId) session()?.activateBoard(message.activateBoardId);
           });
         });
       }
@@ -924,7 +924,7 @@ export function DenimApp() {
         <Match when={!loading()}><DocumentPicker heading="Denim databases" sources={sources()} onSelect={(item) => void openSource(item)}
           createTitle="New project" onCreate={(item) => setCreatingIn(item)} /></Match>
       </Switch>}>
-        {(active) => <DenimSessionContext.Provider value={active()}><DenimActionsProvider session={active()}><DenimWorkspace onReload={() => void reloadSource()} /></DenimActionsProvider></DenimSessionContext.Provider>}
+        {(active) => <DenimSessionContext.Provider value={active()}><DenimActionsProvider session={active()}><DenimBoardCanvas onReload={() => void reloadSource()} /></DenimActionsProvider></DenimSessionContext.Provider>}
       </Show>
     </div>
     <Show when={creatingIn()}>{(representative) => <NewProjectDialog root={representative().rootDir ?? representative().root}

@@ -10,11 +10,11 @@ import {
   getJourneyGraph,
   initializeDenimSequence,
   listCapabilities,
-  listDenimWorkspaces,
+  listDenimBoards,
   listJourneys,
   listTopLevelResources,
-  putDenimWorkspace,
-  removeDenimWorkspace,
+  putDenimBoard,
+  removeDenimBoard,
   updateDenimEdgePriority,
   updateDenimNode,
   type DenimDatabase,
@@ -27,10 +27,10 @@ export type DenimQuerySource =
   | { kind: 'resources' }
   | { kind: 'journey'; journeyId: string };
 
-export interface DenimTabView {
+export interface DenimBoard {
   version: 1;
   id: string;
-  kind: 'pinned' | 'workspace';
+  kind: 'pinned' | 'board';
   title: string;
   sources: DenimQuerySource[];
   includedNodeIds: string[];
@@ -38,7 +38,7 @@ export interface DenimTabView {
   sequenceModes: Record<string, 'rank' | 'priority'>;
 }
 
-export const DENIM_PINNED_VIEWS: DenimTabView[] = [
+export const DENIM_PINNED_BOARDS: DenimBoard[] = [
   { version: 1, id: 'pinned:journeys', kind: 'pinned', title: 'Journeys', sources: [{ kind: 'journeys' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
   { version: 1, id: 'pinned:capabilities', kind: 'pinned', title: 'Capabilities', sources: [{ kind: 'capabilities' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
   { version: 1, id: 'pinned:resources', kind: 'pinned', title: 'Resources', sources: [{ kind: 'resources' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
@@ -46,7 +46,7 @@ export const DENIM_PINNED_VIEWS: DenimTabView[] = [
 
 export type DenimAction =
   | { op: 'journey.create'; id?: string; text?: string }
-  | { op: 'node.differentiate'; parentId: string; id?: string; edgeId?: string; text?: string; placement?: { tabId: string; x: number; y: number } }
+  | { op: 'node.differentiate'; parentId: string; id?: string; edgeId?: string; text?: string; placement?: { boardId: string; x: number; y: number } }
   | { op: 'edge.connect'; parentId: string; childId: string; edgeId?: string }
   | { op: 'edge.delete'; edgeId: string }
   | { op: 'node.update'; id: string; patch: Partial<Pick<DenimNode, 'type' | 'text'>> }
@@ -54,16 +54,16 @@ export type DenimAction =
   | { op: 'edge.priority.set'; edgeId: string; priority: number }
   | { op: 'sequence.initialize'; parentId: string; orderedChildIds: string[] }
   | { op: 'sequence.clear'; parentId: string }
-  | { op: 'view.sequenceMode.set'; tabId: string; parentId: string; mode: 'rank' | 'priority' }
-  | { op: 'view.includeNode'; tabId: string; nodeId: string }
-  | { op: 'view.node.move'; tabId: string; nodeId: string; position: { x: number; y: number } }
-  | { op: 'view.nodes.move'; tabId: string; positions: Record<string, { x: number; y: number }> }
-  | { op: 'view.openJourney'; journeyId: string; tabId?: string }
-  | { op: 'view.close'; tabId: string };
+  | { op: 'board.sequenceMode.set'; boardId: string; parentId: string; mode: 'rank' | 'priority' }
+  | { op: 'board.includeNode'; boardId: string; nodeId: string }
+  | { op: 'board.node.move'; boardId: string; nodeId: string; position: { x: number; y: number } }
+  | { op: 'board.nodes.move'; boardId: string; positions: Record<string, { x: number; y: number }> }
+  | { op: 'board.openJourney'; journeyId: string; boardId?: string }
+  | { op: 'board.close'; boardId: string };
 
 export const DENIM_ACTION_CATALOG = [
   { op: 'journey.create', required: [], optional: ['id', 'text'], purpose: 'Create a Journey Node.' },
-  { op: 'node.differentiate', required: ['parentId'], optional: ['id', 'edgeId', 'text', 'placement'], purpose: 'Create a child Node with the same type as its parent and connect it to its parent; optionally place it in a view.' },
+  { op: 'node.differentiate', required: ['parentId'], optional: ['id', 'edgeId', 'text', 'placement'], purpose: 'Create a child Node with the same type as its parent and connect it to its parent; optionally place it on a Board.' },
   { op: 'edge.connect', required: ['parentId', 'childId'], optional: ['edgeId'], purpose: 'Connect an existing Node as a child.' },
   { op: 'edge.delete', required: ['edgeId'], optional: [], purpose: 'Delete one edge while keeping its endpoint Nodes.' },
   { op: 'node.update', required: ['id', 'patch'], optional: [], purpose: 'Change a Node type or text.' },
@@ -71,29 +71,29 @@ export const DENIM_ACTION_CATALOG = [
   { op: 'edge.priority.set', required: ['edgeId', 'priority'], optional: [], purpose: 'Set an edge sequence priority.' },
   { op: 'sequence.initialize', required: ['parentId', 'orderedChildIds'], optional: [], purpose: 'Assign priorities in the supplied child order.' },
   { op: 'sequence.clear', required: ['parentId'], optional: [], purpose: 'Clear priorities on all child edges.' },
-  { op: 'view.sequenceMode.set', required: ['tabId', 'parentId', 'mode'], optional: [], purpose: 'Set a view parent label mode to rank or priority.' },
-  { op: 'view.includeNode', required: ['tabId', 'nodeId'], optional: [], purpose: 'Include a Node in a view.' },
-  { op: 'view.node.move', required: ['tabId', 'nodeId', 'position'], optional: [], purpose: 'Save a Node position in a view.' },
-  { op: 'view.nodes.move', required: ['tabId', 'positions'], optional: [], purpose: 'Save multiple Node positions in a view as one action.' },
-  { op: 'view.openJourney', required: ['journeyId'], optional: ['tabId'], purpose: 'Create a workspace view sourced from a Journey.' },
-  { op: 'view.close', required: ['tabId'], optional: [], purpose: 'Close a workspace view; pinned views cannot be closed.' },
+  { op: 'board.sequenceMode.set', required: ['boardId', 'parentId', 'mode'], optional: [], purpose: 'Set a parent label mode on a Board to rank or priority.' },
+  { op: 'board.includeNode', required: ['boardId', 'nodeId'], optional: [], purpose: 'Include a Node on a Board.' },
+  { op: 'board.node.move', required: ['boardId', 'nodeId', 'position'], optional: [], purpose: 'Save a Node position on a Board.' },
+  { op: 'board.nodes.move', required: ['boardId', 'positions'], optional: [], purpose: 'Save multiple Node positions on a Board as one action.' },
+  { op: 'board.openJourney', required: ['journeyId'], optional: ['boardId'], purpose: 'Create a persistent Board sourced from a Journey.' },
+  { op: 'board.close', required: ['boardId'], optional: [], purpose: 'Close and remove a Board; pinned Boards cannot be closed.' },
 ] as const;
 
 export interface DenimActionResult {
   ok: true;
   changed: boolean;
   nodeId?: string;
-  tabId?: string;
+  boardId?: string;
 }
 
 const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 
-export function readDenimViews(db: DenimDatabase): DenimTabView[] {
-  const persisted = listDenimWorkspaces(db).map(({ payload }) => decodeView(payload)).filter((v): v is DenimTabView => Boolean(v));
+export function readDenimBoards(db: DenimDatabase): DenimBoard[] {
+  const persisted = listDenimBoards(db).map(({ payload }) => decodeBoard(payload)).filter((v): v is DenimBoard => Boolean(v));
   const overrides = new Map(persisted.filter((v) => v.kind === 'pinned').map((v) => [v.id, v]));
   return [
-    ...DENIM_PINNED_VIEWS.map((view) => overrides.get(view.id) ?? view),
-    ...persisted.filter((v) => v.kind === 'workspace'),
+    ...DENIM_PINNED_BOARDS.map((board) => overrides.get(board.id) ?? board),
+    ...persisted.filter((v) => v.kind === 'board'),
   ];
 }
 
@@ -104,39 +104,39 @@ function isQuerySource(value: unknown): value is DenimQuerySource {
     || (source.kind === 'journey' && typeof source.journeyId === 'string');
 }
 
-function decodeView(value: unknown): DenimTabView | undefined {
+function decodeBoard(value: unknown): DenimBoard | undefined {
   if (!value || typeof value !== 'object') return;
-  const tab = value as Partial<DenimTabView>;
-  if (tab.version !== 1 || typeof tab.id !== 'string' || !Array.isArray(tab.sources) || !tab.sources.every(isQuerySource)
-    || !Array.isArray(tab.includedNodeIds) || !tab.includedNodeIds.every((id) => typeof id === 'string')
-    || !tab.positions || typeof tab.positions !== 'object') return;
-  const positions: DenimTabView['positions'] = {};
-  for (const [id, point] of Object.entries(tab.positions)) {
+  const board = value as Partial<DenimBoard>;
+  if (board.version !== 1 || typeof board.id !== 'string' || !Array.isArray(board.sources) || !board.sources.every(isQuerySource)
+    || !Array.isArray(board.includedNodeIds) || !board.includedNodeIds.every((id) => typeof id === 'string')
+    || !board.positions || typeof board.positions !== 'object') return;
+  const positions: DenimBoard['positions'] = {};
+  for (const [id, point] of Object.entries(board.positions)) {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
     positions[id] = { x: point.x, y: point.y };
   }
-  const sequenceModes: DenimTabView['sequenceModes'] = {};
-  if (tab.sequenceModes && typeof tab.sequenceModes === 'object') {
-    for (const [id, mode] of Object.entries(tab.sequenceModes)) if (mode === 'rank' || mode === 'priority') sequenceModes[id] = mode;
+  const sequenceModes: DenimBoard['sequenceModes'] = {};
+  if (board.sequenceModes && typeof board.sequenceModes === 'object') {
+    for (const [id, mode] of Object.entries(board.sequenceModes)) if (mode === 'rank' || mode === 'priority') sequenceModes[id] = mode;
   }
-  if (tab.kind === 'pinned') {
-    const pinned = DENIM_PINNED_VIEWS.find((view) => view.id === tab.id);
+  if (board.kind === 'pinned') {
+    const pinned = DENIM_PINNED_BOARDS.find((candidate) => candidate.id === board.id);
     if (!pinned) return;
-    return { ...pinned, includedNodeIds: [...new Set(tab.includedNodeIds)], positions, sequenceModes };
+    return { ...pinned, includedNodeIds: [...new Set(board.includedNodeIds)], positions, sequenceModes };
   }
-  if (tab.kind !== 'workspace' || typeof tab.title !== 'string' || DENIM_PINNED_VIEWS.some((view) => view.id === tab.id)) return;
-  return { version: 1, id: tab.id, kind: 'workspace', title: tab.title, sources: tab.sources,
-    includedNodeIds: [...new Set(tab.includedNodeIds)], positions, sequenceModes };
+  if (board.kind !== 'board' || typeof board.title !== 'string' || DENIM_PINNED_BOARDS.some((candidate) => candidate.id === board.id)) return;
+  return { version: 1, id: board.id, kind: 'board', title: board.title, sources: board.sources,
+    includedNodeIds: [...new Set(board.includedNodeIds)], positions, sequenceModes };
 }
 
-function putView(db: DenimDatabase, view: DenimTabView): void {
-  putDenimWorkspace(db, { id: view.id, payload: view });
+function putBoard(db: DenimDatabase, board: DenimBoard): void {
+  putDenimBoard(db, { id: board.id, payload: board });
 }
 
-function graphForView(db: DenimDatabase, view: DenimTabView) {
+function graphForBoard(db: DenimDatabase, board: DenimBoard) {
   const nodes = new Map<string, DenimNode>();
   const edges = new Map<string, ReturnType<typeof getDenimGraph>['edges'][number]>();
-  for (const source of view.sources) {
+  for (const source of board.sources) {
     const graph = source.kind === 'journey' ? getJourneyGraph(db, source.journeyId)
       : source.kind === 'capabilities' ? { nodes: listCapabilities(db), edges: [] }
         : source.kind === 'resources' ? { nodes: listTopLevelResources(db), edges: [] }
@@ -144,9 +144,9 @@ function graphForView(db: DenimDatabase, view: DenimTabView) {
     graph.nodes.forEach((node) => nodes.set(node.id, node));
     graph.edges.forEach((edge) => edges.set(edge.id, edge));
   }
-  if (view.includedNodeIds.length) {
+  if (board.includedNodeIds.length) {
     const graph = getDenimGraph(db);
-    const included = new Set(view.includedNodeIds);
+    const included = new Set(board.includedNodeIds);
     graph.nodes.filter((node) => included.has(node.id)).forEach((node) => nodes.set(node.id, node));
     graph.edges.filter((edge) => nodes.has(edge.sourceId) && nodes.has(edge.targetId)).forEach((edge) => edges.set(edge.id, edge));
   }
@@ -159,10 +159,10 @@ function requireNode(db: DenimDatabase, id: string): DenimNode {
   return node;
 }
 
-function requireView(db: DenimDatabase, id: string): DenimTabView {
-  const view = readDenimViews(db).find((candidate) => candidate.id === id);
-  if (!view) throw new Error(`View not found: ${id}`);
-  return view;
+function requireBoard(db: DenimDatabase, id: string): DenimBoard {
+  const board = readDenimBoards(db).find((candidate) => candidate.id === id);
+  if (!board) throw new Error(`Board not found: ${id}`);
+  return board;
 }
 
 /** Apply one validated Denim domain action to an open database. */
@@ -181,12 +181,12 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       if (action.placement && ![action.placement.x, action.placement.y].every(Number.isFinite)) {
         throw new Error('Node position must contain finite x and y values');
       }
-      const placementView = action.placement ? requireView(db, action.placement.tabId) : undefined;
+      const placementBoard = action.placement ? requireBoard(db, action.placement.boardId) : undefined;
       const parent = requireNode(db, action.parentId);
       const nodeId = action.id ?? newId('node');
       createDenimChild(db, action.parentId, { id: nodeId, type: parent.type, text: action.text ?? 'New action' }, action.edgeId ?? newId('parent-child'));
-      if (action.placement && placementView) putView(db, { ...placementView,
-        positions: { ...placementView.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
+      if (action.placement && placementBoard) putBoard(db, { ...placementBoard,
+        positions: { ...placementBoard.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
       return { ok: true, changed: true, nodeId };
     }
     case 'edge.connect':
@@ -210,8 +210,8 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       if (action.patch.text !== undefined && typeof action.patch.text !== 'string') throw new Error('Node text must be text');
       updateDenimNode(db, action.id, action.patch);
       if (previous.type === 'Journey' && action.patch.text !== undefined) {
-        for (const view of readDenimViews(db)) if (view.kind === 'workspace' && view.sources.some((source) => source.kind === 'journey' && source.journeyId === action.id)) {
-          putView(db, { ...view, title: action.patch.text });
+        for (const board of readDenimBoards(db)) if (board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && source.journeyId === action.id)) {
+          putBoard(db, { ...board, title: action.patch.text });
         }
       }
       return { ok: true, changed: true, nodeId: action.id };
@@ -230,18 +230,18 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
         descendants.add(next); pending.push(...(children.get(next) ?? []));
       }
       const removed = action.scope === 'subtree' ? new Set([action.id, ...descendants]) : new Set([action.id]);
-      const visibleViews = new Set(readDenimViews(db).filter((view) => graphForView(db, view).nodes.some((item) => item.id === action.id)).map((view) => view.id));
+      const visibleBoards = new Set(readDenimBoards(db).filter((board) => graphForBoard(db, board).nodes.some((item) => item.id === action.id)).map((board) => board.id));
       if (action.scope === 'subtree') deleteDenimNodeAndChildren(db, action.id); else deleteDenimNode(db, action.id);
-      for (const view of readDenimViews(db)) {
-        if (action.scope === 'subtree' && view.kind === 'workspace' && view.sources.some((source) => source.kind === 'journey' && removed.has(source.journeyId))) {
-          removeDenimWorkspace(db, view.id);
+      for (const board of readDenimBoards(db)) {
+        if (action.scope === 'subtree' && board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && removed.has(source.journeyId))) {
+          removeDenimBoard(db, board.id);
           continue;
         }
-        let includedNodeIds = view.includedNodeIds.filter((id) => !removed.has(id));
-        if (action.scope === 'node' && visibleViews.has(view.id)) includedNodeIds = [...new Set([...includedNodeIds, ...descendants])];
-        putView(db, { ...view, includedNodeIds,
-          positions: Object.fromEntries(Object.entries(view.positions).filter(([id]) => !removed.has(id))),
-          sequenceModes: Object.fromEntries(Object.entries(view.sequenceModes).filter(([id]) => !removed.has(id))),
+        let includedNodeIds = board.includedNodeIds.filter((id) => !removed.has(id));
+        if (action.scope === 'node' && visibleBoards.has(board.id)) includedNodeIds = [...new Set([...includedNodeIds, ...descendants])];
+        putBoard(db, { ...board, includedNodeIds,
+          positions: Object.fromEntries(Object.entries(board.positions).filter(([id]) => !removed.has(id))),
+          sequenceModes: Object.fromEntries(Object.entries(board.sequenceModes).filter(([id]) => !removed.has(id))),
         });
       }
       return { ok: true, changed: true, nodeId: node.id };
@@ -258,56 +258,56 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
     case 'sequence.clear':
       requireNode(db, action.parentId); clearDenimSequence(db, action.parentId);
       return { ok: true, changed: true };
-    case 'view.sequenceMode.set': {
+    case 'board.sequenceMode.set': {
       if (action.mode !== 'rank' && action.mode !== 'priority') throw new Error('Sequence mode must be rank or priority');
       requireNode(db, action.parentId);
-      const view = requireView(db, action.tabId);
-      putView(db, { ...view, sequenceModes: { ...view.sequenceModes, [action.parentId]: action.mode } });
-      return { ok: true, changed: true, tabId: view.id };
+      const board = requireBoard(db, action.boardId);
+      putBoard(db, { ...board, sequenceModes: { ...board.sequenceModes, [action.parentId]: action.mode } });
+      return { ok: true, changed: true, boardId: board.id };
     }
-    case 'view.includeNode': {
-      const view = requireView(db, action.tabId); requireNode(db, action.nodeId);
-      if (view.includedNodeIds.includes(action.nodeId)) return { ok: true, changed: false, tabId: view.id };
-      putView(db, { ...view, includedNodeIds: [...view.includedNodeIds, action.nodeId] });
-      return { ok: true, changed: true, tabId: view.id };
+    case 'board.includeNode': {
+      const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
+      if (board.includedNodeIds.includes(action.nodeId)) return { ok: true, changed: false, boardId: board.id };
+      putBoard(db, { ...board, includedNodeIds: [...board.includedNodeIds, action.nodeId] });
+      return { ok: true, changed: true, boardId: board.id };
     }
-    case 'view.node.move': {
-      const view = requireView(db, action.tabId); requireNode(db, action.nodeId);
+    case 'board.node.move': {
+      const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
       if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
-      putView(db, { ...view, positions: { ...view.positions, [action.nodeId]: action.position } });
-      return { ok: true, changed: true, tabId: view.id };
+      putBoard(db, { ...board, positions: { ...board.positions, [action.nodeId]: action.position } });
+      return { ok: true, changed: true, boardId: board.id };
     }
-    case 'view.nodes.move': {
-      const view = requireView(db, action.tabId);
+    case 'board.nodes.move': {
+      const board = requireBoard(db, action.boardId);
       if (!action.positions || typeof action.positions !== 'object' || Array.isArray(action.positions)) throw new Error('Node positions must be an object');
       const graphNodeIds = new Set(getDenimGraph(db).nodes.map((node) => node.id));
       for (const [id, position] of Object.entries(action.positions)) {
         if (!graphNodeIds.has(id)) throw new Error(`Node not found: ${id}`);
         if (![position?.x, position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
       }
-      putView(db, { ...view, positions: { ...view.positions, ...action.positions } });
-      return { ok: true, changed: true, tabId: view.id };
+      putBoard(db, { ...board, positions: { ...board.positions, ...action.positions } });
+      return { ok: true, changed: true, boardId: board.id };
     }
-    case 'view.openJourney': {
+    case 'board.openJourney': {
       const journey = requireNode(db, action.journeyId);
       if (journey.type !== 'Journey') throw new Error(`Node is not a Journey: ${action.journeyId}`);
-      const tabId = action.tabId ?? newId('journey-tab');
-      if (readDenimViews(db).some((view) => view.id === tabId)) throw new Error(`View already exists: ${tabId}`);
-      putView(db, { version: 1, id: tabId, kind: 'workspace', title: journey.text,
+      const boardId = action.boardId ?? newId('journey-board');
+      if (readDenimBoards(db).some((board) => board.id === boardId)) throw new Error(`Board already exists: ${boardId}`);
+      putBoard(db, { version: 1, id: boardId, kind: 'board', title: journey.text,
         sources: [{ kind: 'journey', journeyId: journey.id }], includedNodeIds: [], positions: {}, sequenceModes: {} });
-      return { ok: true, changed: true, tabId };
+      return { ok: true, changed: true, boardId };
     }
-    case 'view.close': {
-      const view = requireView(db, action.tabId);
-      if (view.kind === 'pinned') throw new Error('Pinned views cannot be closed');
-      removeDenimWorkspace(db, view.id);
-      return { ok: true, changed: true, tabId: view.id };
+    case 'board.close': {
+      const board = requireBoard(db, action.boardId);
+      if (board.kind === 'pinned') throw new Error('Pinned Boards cannot be closed');
+      removeDenimBoard(db, board.id);
+      return { ok: true, changed: true, boardId: board.id };
     }
     default: throw new Error(`Unknown Denim action: ${(action as { op: string }).op}`);
   }
 }
 
-/** Read the graph and persisted/pinned views agents need to understand a database. */
+/** Read the graph and its persistent Boards so agents can understand a database. */
 export function readDenimSnapshot(db: DenimDatabase) {
-  return { graph: getDenimGraph(db), views: readDenimViews(db) };
+  return { graph: getDenimGraph(db), boards: readDenimBoards(db) };
 }

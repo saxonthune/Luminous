@@ -56,10 +56,11 @@ are not adopted as Denim rules.
 ## Starting direction
 
 Denim begins with a Journey list, a graph of typed nodes and relationships, and
-query-backed canvas views. Users can refine a Journey into child nodes, connect
-existing nodes, and move between a Journey's requirements, Capabilities,
-Resources, and other queried views. Node kinds and their relationships remain
-open to change while the model is being tested.
+persistent Boards for reasoning about that graph. Nodes and Edges belong to the
+database as a whole. Each Board combines queries, optional included Nodes, and
+its own spatial arrangement, so users can shape several useful views of shared
+design data without assigning Nodes to a single Board. Node kinds and their
+relationships remain open to change while the model is being tested.
 
 ## First implementation
 
@@ -67,5 +68,5 @@ The first storage format is a single `.denim.sqlite` file. SQLite stores nodes
 and edges in separate tables; node and edge type names are text values so they
 can change without changing the database schema. One shared TypeScript module
 in `@luminous/core/denim` owns sql.js access for both the browser app and CLI.
-The browser app can edit a workspace database or keep edits to a bundled demo
+The browser app can edit a Denim database or keep edits to a bundled demo
 database in browser storage.

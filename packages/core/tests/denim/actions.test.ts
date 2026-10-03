@@ -54,25 +54,25 @@ describe('Denim actions', () => {
     db.close();
   });
 
-  it('implements both delete scopes and repairs saved view references', async () => {
+  it('implements both delete scopes and repairs saved board references', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
     applyDenimAction(db, { op: 'node.differentiate', parentId: 'journey', id: 'parent', edgeId: 'j-p', text: 'Parent' });
     applyDenimAction(db, { op: 'node.differentiate', parentId: 'parent', id: 'child', edgeId: 'p-c', text: 'Child' });
     addDenimNode(db, { id: 'other-journey', type: 'Journey', text: 'Other Journey' });
     applyDenimAction(db, { op: 'node.differentiate', parentId: 'other-journey', id: 'other-child', edgeId: 'oj-oc', text: 'Other Child' });
-    const opened = applyDenimAction(db, { op: 'view.openJourney', journeyId: 'journey', tabId: 'journey-view' });
+    const opened = applyDenimAction(db, { op: 'board.openJourney', journeyId: 'journey', boardId: 'journey-board' });
 
     applyDenimAction(db, { op: 'node.delete', id: 'parent', scope: 'node' });
     expect(getDenimGraph(db).nodes.map((node) => node.id)).toEqual(['journey', 'child', 'other-journey', 'other-child']);
     expect(getDenimGraph(db).edges.map((edge) => edge.id)).toEqual(['oj-oc']);
-    expect(readDenimSnapshot(db).views.find((view) => view.id === opened.tabId)?.includedNodeIds).toContain('child');
+    expect(readDenimSnapshot(db).boards.find((board) => board.id === opened.boardId)?.includedNodeIds).toContain('child');
 
     applyDenimAction(db, { op: 'node.delete', id: 'journey', scope: 'subtree' });
     expect(getDenimGraph(db).nodes.map((node) => node.id)).toEqual(['child', 'other-journey', 'other-child']);
     applyDenimAction(db, { op: 'node.delete', id: 'other-journey', scope: 'subtree' });
     expect(getDenimGraph(db).nodes.map((node) => node.id)).toEqual(['child']);
-    expect(readDenimSnapshot(db).views.map((view) => view.id)).toEqual([
+    expect(readDenimSnapshot(db).boards.map((board) => board.id)).toEqual([
       'pinned:journeys', 'pinned:capabilities', 'pinned:resources',
     ]);
     db.close();
@@ -96,7 +96,7 @@ describe('Denim actions', () => {
     db.close();
   });
 
-  it('applies view and sequence actions and reports the graph with available views', async () => {
+  it('applies board and sequence actions and reports the graph with available boards', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
     addDenimNode(db, { id: 'a', type: 'Action', text: 'A' });
@@ -106,32 +106,32 @@ describe('Denim actions', () => {
     applyDenimAction(db, { op: 'edge.connect', parentId: 'journey', childId: 'b', edgeId: 'j-b' });
     applyDenimAction(db, { op: 'sequence.initialize', parentId: 'journey', orderedChildIds: ['b', 'a'] });
     applyDenimAction(db, { op: 'edge.priority.set', edgeId: 'j-a', priority: 7.5 });
-    applyDenimAction(db, { op: 'view.includeNode', tabId: 'pinned:journeys', nodeId: 'resource' });
-    applyDenimAction(db, { op: 'view.node.move', tabId: 'pinned:journeys', nodeId: 'resource', position: { x: 60, y: 90 } });
-    applyDenimAction(db, { op: 'view.sequenceMode.set', tabId: 'pinned:journeys', parentId: 'journey', mode: 'priority' });
-    const opened = applyDenimAction(db, { op: 'view.openJourney', journeyId: 'journey', tabId: 'journey-view' });
+    applyDenimAction(db, { op: 'board.includeNode', boardId: 'pinned:journeys', nodeId: 'resource' });
+    applyDenimAction(db, { op: 'board.node.move', boardId: 'pinned:journeys', nodeId: 'resource', position: { x: 60, y: 90 } });
+    applyDenimAction(db, { op: 'board.sequenceMode.set', boardId: 'pinned:journeys', parentId: 'journey', mode: 'priority' });
+    const opened = applyDenimAction(db, { op: 'board.openJourney', journeyId: 'journey', boardId: 'journey-board' });
 
     const snapshot = readDenimSnapshot(db);
-    const journeys = snapshot.views.find((view) => view.id === 'pinned:journeys')!;
+    const journeys = snapshot.boards.find((board) => board.id === 'pinned:journeys')!;
     expect(journeys.includedNodeIds).toContain('resource');
     expect(journeys.positions.resource).toEqual({ x: 60, y: 90 });
     expect(journeys.sequenceModes.journey).toBe('priority');
     expect(snapshot.graph.edges.find((edge) => edge.id === 'j-a')?.priority).toBe(7.5);
-    expect(opened.tabId).toBe('journey-view');
+    expect(opened.boardId).toBe('journey-board');
 
     applyDenimAction(db, { op: 'sequence.clear', parentId: 'journey' });
     expect(getDenimGraph(db).edges.every((edge) => edge.priority === null)).toBe(true);
-    applyDenimAction(db, { op: 'view.close', tabId: 'journey-view' });
-    expect(readDenimSnapshot(db).views.some((view) => view.id === 'journey-view')).toBe(false);
-    expect(() => applyDenimAction(db, { op: 'view.close', tabId: 'pinned:journeys' })).toThrow(/Pinned/);
+    applyDenimAction(db, { op: 'board.close', boardId: 'journey-board' });
+    expect(readDenimSnapshot(db).boards.some((board) => board.id === 'journey-board')).toBe(false);
+    expect(() => applyDenimAction(db, { op: 'board.close', boardId: 'pinned:journeys' })).toThrow(/Pinned/);
     db.close();
   });
 
   it('publishes a discoverable catalog for the full action vocabulary', () => {
     expect(DENIM_ACTION_CATALOG.map(({ op }) => op)).toEqual([
       'journey.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'node.update', 'node.delete',
-      'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'view.sequenceMode.set',
-      'view.includeNode', 'view.node.move', 'view.nodes.move', 'view.openJourney', 'view.close',
+      'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.sequenceMode.set',
+      'board.includeNode', 'board.node.move', 'board.nodes.move', 'board.openJourney', 'board.close',
     ]);
   });
 });

@@ -53,7 +53,7 @@ describe('Denim SQLite database', () => {
     expect(getDenimGraph(migrated).edges).toEqual([{
       id: 'edge', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action', priority: null,
     }]);
-    expect(migrated.exec('PRAGMA user_version')[0].values[0][0]).toBe(3);
+    expect(migrated.exec('PRAGMA user_version')[0].values[0][0]).toBe(4);
   });
 
   it('finds resources without a Resource parent and rejects parent cycles', async () => {

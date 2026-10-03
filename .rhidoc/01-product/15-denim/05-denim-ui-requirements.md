@@ -1,7 +1,7 @@
 ---
 title: UI Requirements
-summary: Denim's views, tabs, toolbars, and node component behavior.
-tags: [denim, ui, requirements, toolbar, tabs, views, nodes, icons, dragging]
+summary: Denim's persistent Boards, tab navigation, toolbars, and node component behavior.
+tags: [denim, ui, requirements, boards, toolbar, tabs, nodes, icons, dragging]
 deps: [doc01.15.01, doc01.15.03]
 ---
 
@@ -14,20 +14,20 @@ for each feature section. If a feature grows, split it into smaller,
 hierarchically nested sections with their own prefixes and sequences instead of
 extending one global counter.
 
-## Views and tabs
+## Boards and tabs
 
-- **VT1.** [p] When the user opens a Journey, Denim opens a tab for it in the app.
-- **VT2.** [p] The Journeys, Capabilities, and Resources views behave like pinned tabs.
-- **VT3.** [p] The user can open the same Journey in more than one Tab.
+- **VT1.** [p] When the user opens a Journey, Denim creates a persistent Board for it and opens that Board in a tab.
+- **VT2.** [p] The Journeys, Capabilities, and Resources Boards behave like pinned tabs.
+- **VT3.** [p] The user can open the same Journey in more than one independent Board.
 
 ## Project picker
 
 - **PRJ1.** [p] The Denim database picker provides an icon button to create a new project in a listed root.
 - **PRJ2.** [p] Creating a project creates a `.denim.sqlite` database, hydrates it with the starter Journey and Action, and opens it.
 
-## Tab View content
+## Board content
 
-- **TVC1.** [p] The user can pull additional Nodes into a Tab View independently of the source queries that provide its initial content.
+- **TVC1.** [p] The user can pull additional Nodes onto a Board independently of the source queries that provide its initial content.
 
 ## App Toolbar
 
@@ -38,23 +38,23 @@ extending one global counter.
 
 ## Quick Select
 
-- **QS1.** [p] Quick Select is a speedy icon that opens a dropdown containing saved views.
-- **QS2.** [p] The default saved views in Quick Select are Journeys, Capabilities, and Resources.
-- **QS3.** [p] For now, the user cannot add their own views to Quick Select.
+- **QS1.** [p] Quick Select is a speedy icon that opens a dropdown containing built-in Boards.
+- **QS2.** [p] The built-in Boards in Quick Select are Journeys, Capabilities, and Resources.
+- **QS3.** [p] For now, the user cannot add their own Boards to Quick Select.
 
-## Tab Viewer
+## Board Strip
 
-- **TV1.** [p] The Tab Viewer is the second section in the Denim App Toolbar and shows a list of tabs.
-- **TV2.** [p] When tabs overflow in the Tab Viewer, chevron icons let the user scroll left and right.
-- **TV3.** [p] The user can scroll the tabs while the pointer is inside the Tab Viewer.
-- **TV4.** [p] When the user opens a Tab View without a saved camera, Denim fits its Nodes into the viewport.
+- **TV1.** [p] The Board Strip is the second section in the Denim App Toolbar and shows open Boards as tabs.
+- **TV2.** [p] When Boards overflow in the Board Strip, chevron icons let the user scroll left and right.
+- **TV3.** [p] The user can scroll the Board Strip while the pointer is inside it.
+- **TV4.** [p] When the user opens a Board without a saved camera, Denim fits its Nodes into the viewport.
 
-## View Toolbar
+## Board Toolbar
 
-- **VWT1.** [p] The View Toolbar contains actions relevant to the content of the current view.
-- **VWT2.** [p] On the Journeys view, the View Toolbar has a button to add a new Journey.
-- **VWT3.** [p] The View Toolbar has rounded corners and floats below the Denim App Toolbar, centered horizontally over the canvas.
-- **VWT4.** [p] The View Toolbar does not show the Add child node, Connect to node, or Query result buttons.
+- **VWT1.** [p] The Board Toolbar contains actions relevant to the current Board.
+- **VWT2.** [p] On the Journeys Board, the Board Toolbar has a button to add a new Journey.
+- **VWT3.** [p] The Board Toolbar has rounded corners and floats below the Denim App Toolbar, centered horizontally over the canvas.
+- **VWT4.** [p] The Board Toolbar does not show the Add child node, Connect to node, or Query result buttons.
 
 ## Save status
 
@@ -104,7 +104,7 @@ extending one global counter.
 - **DEL1.** [p] Selecting the Node Toolbar trash icon opens a menu with “Delete Node” and “Delete Node and Children” options.
 - **DEL2.** [p] Hovering over “Delete Node” opens a confirmation submenu to its right; the submenu stays open while the pointer moves into it.
 - **DEL3.** [p] Hovering over “Delete Node and Children” opens a confirmation submenu to its right; the submenu stays open while the pointer moves into it.
-- **DEL4.** [p] Confirming “Delete Node” removes only the selected Node and its incident Edges; its child Nodes remain and appear in the Tab View as independent Nodes.
+- **DEL4.** [p] Confirming “Delete Node” removes only the selected Node and its incident Edges; its child Nodes remain and appear on the active Board as independent Nodes.
 - **DEL5.** [p] Confirming “Delete Node and Children” removes the selected Node, all of its descendant Nodes, and their incident Edges.
 
 ## Edge deletion
@@ -143,7 +143,7 @@ extending one global counter.
 
 ## Journey navigation
 
-- **JN1.** [p] Journey Nodes have an always-visible icon that opens the Journey in a new tab.
+- **JN1.** [p] Journey Nodes have an always-visible icon that opens the Journey on a new Board.
 
 ## Sequence options
 

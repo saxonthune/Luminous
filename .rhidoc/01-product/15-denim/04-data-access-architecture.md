@@ -1,7 +1,7 @@
 ---
 title: Data Access Architecture
-summary: Denim separates SQLite access from canvas components through a per-database session that owns view state, edits, and saving.
-tags: [denim, architecture, sqlite, components, testing, state]
+summary: Denim separates SQLite access from canvas components through a per-database session that owns Board state, edits, and saving.
+tags: [denim, architecture, sqlite, components, testing, state, boards]
 deps: [doc01.15.01, doc01.15.02]
 ---
 
@@ -12,25 +12,27 @@ deps: [doc01.15.01, doc01.15.02]
 - The `@luminous/core/denim` database module owns sql.js initialization, schema,
   queries, and database mutations. It has no Solid components or canvas state.
 - Each open database has one client-side session. The session owns the database
-  handle, collection of Tab Views, active Tab View, reactive projection, and
+  handle, collection of Boards, active Board, reactive projection, and
   file-save state.
-- A Tab View is a workspace document, not a query result. Its persisted JSON
+- A Board is a persistent document, not a query result. Its persisted JSON
   payload can contain multiple source descriptors, independently included Node
-  IDs, and per-Tab node positions. The SQLite table stores the payload as opaque
-  JSON so the workspace document can change without changing the table schema.
+  IDs, per-Board node positions, and sequence display settings. Nodes and Edges
+  remain shared database data, available to any Board's query or inclusion list.
+  The SQLite table stores the payload as opaque JSON so a Board can evolve
+  without changing the table schema.
 - The current source descriptors are query recipes for Journeys, Capabilities,
   Resources, or one Journey. The session composes all sources with included
-  Nodes by ID, then refreshes source results after graph edits. Future workspace
+  Nodes by ID, then refreshes source results after graph edits. Future Board
   shapes can replace or extend these descriptors without changing the session's
   database storage boundary.
-- The three pinned views have fixed source definitions in code. Their included
-  Nodes and positions are persisted as workspace state. Journey Tabs have
-  unique identities, even when they open the same Journey.
-- The active Tab ID and each Tab's camera are kept in browser session storage
-  per database. Workspace content and per-Tab node positions live in SQLite
+- The three built-in Boards have fixed source definitions in code. Their
+  included Nodes and positions are persisted as Board state. Journey Boards have
+  unique identities, even when they use the same Journey source.
+- The active Board ID and each Board's camera are kept in browser session storage
+  per database. Board content and per-Board node positions live in SQLite
   with the authored graph; camera movement does not trigger a database-file
   save.
-- The session loads the projection for the active Tab View. Node components
+- The session loads the projection for the active Board. Node components
   receive node data as props and report user actions to the session; they do not
   query the database.
 - Solid context provides the session to the active canvas subtree. Components
@@ -42,7 +44,7 @@ coordinate a database edit with the visible canvas state.
 ## Actions
 
 - A Denim action names a user intention, such as creating a child Node,
-  changing a Node, or including a Node in a Tab View. It does not expose SQL or
+  changing a Node, or including a Node on a Board. It does not expose SQL or
   database bytes.
 - The action API sits above the session. It receives the session as a
   dependency and exposes the actions that UI components can request.
@@ -55,23 +57,23 @@ coordinate a database edit with the visible canvas state.
 - Graph actions are `journey.create`, `node.differentiate`, `edge.connect`,
   `node.update`, `node.delete`, `edge.priority.set`, `sequence.initialize`, and
   `sequence.clear`. `node.delete` names either `node` scope, which keeps
-  descendants as independent Nodes in views where the deleted Node appeared,
+  descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.
-- View actions are `view.openJourney`, `view.close`, `view.includeNode`,
-  `view.node.move`, and `view.sequenceMode.set`.
-- A database snapshot exposes its graph and available views so an agent can
+- Board actions are `board.openJourney`, `board.close`, `board.includeNode`,
+  `board.node.move`, `board.nodes.move`, and `board.sequenceMode.set`.
+- A database snapshot exposes its graph and Boards so an agent can
   inspect the current design before submitting an action.
 - The action catalog lists each operation and its required and optional
   fields. The CLI exposes the catalog, snapshot, and action request commands.
 - Server action requests carry the database path and base revision. The server
   applies the action, saves with revision checking, and broadcasts the changed
-  path so open Denim views can refresh.
+  path so open Denim Boards can refresh.
 - The app creates a session and its action API for each open database, then
   provides them to the active canvas subtree through Solid context.
 
 This separates the meaning of an edit from the interface that requested it.
 It lets the UI, CLI, and API share Denim actions while keeping database and
-view coordination in the session. Revision checks and change notifications
+Board coordination in the session. Revision checks and change notifications
 remain persistence and transport concerns; the action vocabulary alone does
 not merge concurrent edits.
 
@@ -79,10 +81,10 @@ not merge concurrent edits.
 
 - Creating a child inserts its node and parent-child edge in one SQLite
   transaction. Connecting an existing node inserts only the edge.
-- Including a Node in a Tab View updates that Tab View's membership without
-  changing graph edges. Dragging a Node saves its position in the active Tab
-  View, so another Tab View can arrange the same Node independently.
-- After a transaction, the session re-runs the active view query and updates
+- Including a Node on a Board updates that Board's membership without changing
+  graph edges. Dragging a Node saves its position on the active Board, so
+  another Board can arrange the same Node independently.
+- After a transaction, the session re-runs the active Board's queries and updates
   its reactive projection from the database.
 - The session serializes database-file saves. A failed save leaves the in-memory
   edit visible and marks the database unsaved so the user can retry.
@@ -93,7 +95,7 @@ not merge concurrent edits.
 ## Testing
 
 - Canvas component tests provide a fake session through the same Solid context
-  used by the app. The fake supplies view state, records requested actions, and
+  used by the app. The fake supplies Board state, records requested actions, and
   can return save errors without opening SQLite or contacting the server.
 - Session tests use an in-memory sql.js database and a fake file saver to check
   query refresh, atomic edits, and save ordering.

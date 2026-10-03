@@ -1,7 +1,7 @@
 ---
 title: Requirements
-summary: Pending user-supported requirements for Denim's journey graph, node editing, query-backed views, and resource selection.
-tags: [denim, requirements, ui, graph, views]
+summary: Pending user-supported requirements for Denim's journey graph, node editing, persistent Boards, and resource selection.
+tags: [denim, requirements, ui, graph, boards]
 deps: [doc01.15.01, doc01.15.03]
 ---
 
@@ -25,25 +25,26 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 - **GED3.** [p] Denim does not restrict parent/child relationships by the types of their nodes.
 - **GED4.** [p] When differentiating a node, the user can choose an existing node as its subnode instead of creating a new node.
 
-## Journey view
+## Journey Board
 
-- **JV1.** [p] The default view of a Journey is a top-to-bottom directed acyclic graph.
-- **JV2.** [p] In the default Journey view, subnodes appear beneath their parent nodes.
-- **JV3.** [p] In the default Journey view, edges represent parent/child placement relationships.
+- **JV1.** [p] The default Board for a Journey presents a top-to-bottom directed acyclic graph.
+- **JV2.** [p] On the default Journey Board, subnodes appear beneath their parent nodes.
+- **JV3.** [p] On the default Journey Board, edges represent parent/child placement relationships.
 
-## Tabs and views
+## Boards
 
-- **VIEW1.** [p] Denim provides tabs for different views.
-- **VIEW2.** [p] When Denim opens, its default view is a list of Journeys.
-- **VIEW3.** [p] Every view shown in a tab is a canvas.
+- **VIEW1.** [p] Denim presents persistent Boards as tabs.
+- **VIEW2.** [p] When Denim opens, its default Board shows a list of Journeys.
+- **VIEW3.** [p] Every Board is a canvas projection of shared database Nodes and Edges.
 - **VIEW4.** [p] The user can render queried data as a table node.
-- **VIEW5.** [p] A view shown in a tab is based on a query.
-- **VIEW6.** [p] The user can open shortcuts to specific views.
-- **VIEW7.** [p] Shortcut views show a list of Capabilities.
+- **VIEW5.** [p] A Board combines one or more query sources and can include Nodes explicitly.
+- **VIEW6.** [p] The user can open shortcuts to the built-in Boards.
+- **VIEW7.** [p] The built-in Capabilities Board shows a list of Capabilities.
+- **VIEW8.** [p] Denim stores each Board's included Nodes and spatial arrangement independently; Nodes and Edges remain shared database data.
 
 ## Journey and Resource queries
 
-- **QUERY1.** [p] The view for a single Journey can query all nodes below that Journey.
+- **QUERY1.** [p] A Board sourced from one Journey can query all nodes below that Journey.
 - **QUERY2.** [p] The user can query for top-level Resources, where a Resource is top-level when it has no parent that is a Resource.
 - **QUERY3.** [p] When the user connects a node to an existing Resource, Denim provides a popup in which the user can find that Resource.
 

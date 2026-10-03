@@ -98,8 +98,8 @@ function wsSendText(socket: Socket, text: string): void {
   socket.write(Buffer.concat([header, payload]))
 }
 
-function broadcast(path: string, revision?: string, actionId?: string, activateTabId?: string): void {
-  const msg = JSON.stringify({ event: "changed", path, revision, actionId, activateTabId })
+function broadcast(path: string, revision?: string, actionId?: string, activateBoardId?: string): void {
+  const msg = JSON.stringify({ event: "changed", path, revision, actionId, activateBoardId })
   for (const socket of clients) {
     try {
       wsSendText(socket, msg)
@@ -256,8 +256,8 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         const bytes = exportDenimDatabase(database)
         nextRevision = await writeDenimDatabase(path, bytes, revision)
         broadcast(path, nextRevision, typeof body.actionId === 'string' ? body.actionId : undefined,
-          body.action && typeof body.action === 'object' && (body.action as { op?: unknown }).op === 'view.openJourney'
-            ? result.tabId : undefined)
+          body.action && typeof body.action === 'object' && (body.action as { op?: unknown }).op === 'board.openJourney'
+            ? result.boardId : undefined)
       }
       res.setHeader('ETag', nextRevision)
       sendJson(res, 200, { ...result, path, revision: nextRevision, ...readDenimSnapshot(database) })

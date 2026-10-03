@@ -1,7 +1,7 @@
 ---
 title: Glossary
-summary: Pending Denim terms for graph structure, views, and toolbar controls.
-tags: [denim, glossary, vocabulary, graph]
+summary: Denim terms for graph structure, persistent Boards, projections, and toolbar controls.
+tags: [denim, glossary, vocabulary, graph, boards]
 deps: [doc01.15.01, doc01.15.02]
 ---
 
@@ -34,25 +34,25 @@ relationships and contents were not specified in the source request.
 
 - **DTERM6.** [p] **Contract** — a node type requested for Denim; its contents and relationships remain unspecified.
 
-## Editing and views
+## Boards and editing
 
 - **DTERM7.** [p] **Differentiate** — create a child node beneath a node, either as a new node or by connecting an existing node.
 
-- **DTERM8.** [p] **View** — a query-based canvas shown in a tab.
+- **DTERM8.** [p] **Board** — a persistent canvas workspace for reasoning about shared graph data. A Board stores query sources, explicitly included Nodes, per-Board Node positions, and display settings; it does not own the Nodes or Edges it presents.
 
 - **DTERM9.** [p] **Table node** — a node that renders queried data as a table.
 
 - **DTERM11.** [p] **Denim App Toolbar** — an always-visible toolbar below the Luminous header bar, organized into sections.
 
-- **DTERM12.** [p] **Quick Select** — a speedy icon in the Denim App Toolbar that opens a dropdown of saved views.
+- **DTERM12.** [p] **Quick Select** — a speedy icon in the Denim App Toolbar that opens a dropdown of built-in Boards.
 
-- **DTERM13.** [p] **Tab Viewer** — the second section of the Denim App Toolbar, which shows a list of tabs.
+- **DTERM13.** [p] **Board Strip** — the second section of the Denim App Toolbar, which shows open Boards using tab navigation.
 
-- **DTERM14.** [p] **View Toolbar** — a floating toolbar below the Denim App Toolbar, centered horizontally over the canvas, with actions relevant to the current view.
+- **DTERM14.** [p] **Board Toolbar** — a floating toolbar below the Denim App Toolbar, centered horizontally over the canvas, with actions relevant to the current Board.
 
 - **DTERM15.** [p] **Node Toolbar** — a toolbar in the bottom-left of a Node area that presents actions as icons; its capabilities may vary by Node type.
 
-- **DTERM16.** [p] **Tab View** — the content shown within one Tab.
+- **DTERM16.** [p] **Projection** — the graph computed from a Board's query sources and included Nodes for display on its canvas. “View” may describe this rendered or queried result, rather than the persistent Board.
 
 ## Graph relationship
 

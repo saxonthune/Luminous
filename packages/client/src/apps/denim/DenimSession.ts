@@ -12,14 +12,14 @@ import {
   type DenimGraph,
   type DenimNode,
 } from '@luminous/core/denim';
-import { applyDenimAction, DENIM_PINNED_VIEWS, readDenimSnapshot, readDenimViews,
-  type DenimAction, type DenimQuerySource, type DenimTabView } from '@luminous/core/denim/actions';
+import { applyDenimAction, DENIM_PINNED_BOARDS, readDenimSnapshot, readDenimBoards,
+  type DenimAction, type DenimQuerySource, type DenimBoard } from '@luminous/core/denim/actions';
 
-export type { DenimQuerySource, DenimTabView } from '@luminous/core/denim/actions';
+export type { DenimQuerySource, DenimBoard } from '@luminous/core/denim/actions';
 
 export interface DenimSessionState {
-  tabs: DenimTabView[];
-  activeTabId: string;
+  boards: DenimBoard[];
+  activeBoardId: string;
   cameras: Record<string, { x: number; y: number; k: number }>;
   selectedId: string | null;
   graph: DenimGraph;
@@ -31,27 +31,27 @@ export interface DenimSessionState {
 
 export interface DenimSession {
   readonly state: Store<DenimSessionState>;
-  dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; tabId?: string }>;
-  selectView(view: 'journeys' | 'capabilities' | 'resources'): void;
-  activateTab(id: string): void;
+  dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; boardId?: string }>;
+  selectBoard(board: 'journeys' | 'capabilities' | 'resources'): void;
+  activateBoard(id: string): void;
   setCamera(id: string, camera: { x: number; y: number; k: number }): void;
   openJourney(id: string): Promise<void>;
-  closeTab(id: string): Promise<void>;
+  closeBoard(id: string): Promise<void>;
   selectNode(id: string | null): void;
   createJourney(text?: string): Promise<void>;
-  differentiate(parentId: string, text?: string, placement?: { tabId: string; x: number; y: number }): Promise<string | undefined>;
+  differentiate(parentId: string, text?: string, placement?: { boardId: string; x: number; y: number }): Promise<string | undefined>;
   connectExisting(parentId: string, childId: string): Promise<void>;
   canConnectExisting(parentId: string, childId: string): boolean;
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<void>;
   clearSequence(parentId: string): Promise<void>;
-  setSequenceMode(parentId: string, mode: 'rank' | 'priority', tabId?: string): Promise<void>;
-  includeNode(nodeId: string, tabId?: string): Promise<void>;
-  moveNode(nodeId: string, position: { x: number; y: number }, tabId?: string): Promise<void>;
-  moveNodes(positions: Record<string, { x: number; y: number }>, tabId?: string): Promise<void>;
+  setSequenceMode(parentId: string, mode: 'rank' | 'priority', boardId?: string): Promise<void>;
+  includeNode(nodeId: string, boardId?: string): Promise<void>;
+  moveNode(nodeId: string, position: { x: number; y: number }, boardId?: string): Promise<void>;
+  moveNodes(positions: Record<string, { x: number; y: number }>, boardId?: string): Promise<void>;
   updateNode(id: string, patch: Partial<Pick<DenimNode, 'type' | 'text'>>): Promise<void>;
   /** Delete this node and every descendant connected through parent-child edges. */
   deleteNode(id: string): Promise<void>;
-  /** Delete only this node and preserve its descendants as view nodes. */
+  /** Delete only this node and preserve its descendants on boards where it appeared. */
   deleteNodeOnly(id: string): Promise<void>;
   setEdgePriority(edgeId: string, priority: number): Promise<void>;
   findNodesToConnect(query: string): DenimNode[];
@@ -69,9 +69,10 @@ export class DenimPersistenceConflict extends Error {
   }
 }
 
-const PINNED_TABS = DENIM_PINNED_VIEWS;
+const PINNED_BOARDS = DENIM_PINNED_BOARDS;
 
-const ACTIVE_TAB_KEY = 'denim-active-tab:';
+const ACTIVE_BOARD_KEY = 'denim-active-board:';
+const LEGACY_ACTIVE_TAB_KEY = 'denim-active-tab:';
 
 function sourceGraph(database: DenimDatabase, source: DenimQuerySource): DenimGraph {
   if (source.kind === 'journey') return getJourneyGraph(database, source.journeyId);
@@ -80,17 +81,17 @@ function sourceGraph(database: DenimDatabase, source: DenimQuerySource): DenimGr
   return { nodes: listJourneys(database), edges: [] };
 }
 
-function projectTab(database: DenimDatabase, tab: DenimTabView): DenimGraph {
+function projectBoard(database: DenimDatabase, board: DenimBoard): DenimGraph {
   const nodes = new Map<string, DenimNode>();
   const edges = new Map<string, DenimEdge>();
-  for (const source of tab.sources) {
+  for (const source of board.sources) {
     const graph = sourceGraph(database, source);
     graph.nodes.forEach((node) => nodes.set(node.id, node));
     graph.edges.forEach((edge) => edges.set(edge.id, edge));
   }
-  if (tab.includedNodeIds.length > 0) {
+  if (board.includedNodeIds.length > 0) {
     const graph = getDenimGraph(database);
-    const included = new Set(tab.includedNodeIds);
+    const included = new Set(board.includedNodeIds);
     graph.nodes.filter((node) => included.has(node.id)).forEach((node) => nodes.set(node.id, node));
     graph.edges.filter((edge) => nodes.has(edge.sourceId) && nodes.has(edge.targetId))
       .forEach((edge) => edges.set(edge.id, edge));
@@ -98,9 +99,10 @@ function projectTab(database: DenimDatabase, tab: DenimTabView): DenimGraph {
   return { nodes: [...nodes.values()], edges: [...edges.values()] };
 }
 
-function sessionStorageRead(sourceKey: string): { activeTabId?: string; cameras: DenimSessionState['cameras'] } {
+function sessionStorageRead(sourceKey: string): { activeBoardId?: string; cameras: DenimSessionState['cameras'] } {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(`${ACTIVE_TAB_KEY}${sourceKey}`) ?? 'null');
+    const saved = JSON.parse(sessionStorage.getItem(`${ACTIVE_BOARD_KEY}${sourceKey}`)
+      ?? sessionStorage.getItem(`${LEGACY_ACTIVE_TAB_KEY}${sourceKey}`) ?? 'null');
     if (!saved || typeof saved !== 'object') return { cameras: {} };
     const cameras: DenimSessionState['cameras'] = {};
     if (saved.cameras && typeof saved.cameras === 'object') {
@@ -111,18 +113,20 @@ function sessionStorageRead(sourceKey: string): { activeTabId?: string; cameras:
         }
       }
     }
-    return { activeTabId: typeof saved.activeTabId === 'string' ? saved.activeTabId : undefined, cameras };
+    const activeBoardId = typeof saved.activeBoardId === 'string' ? saved.activeBoardId
+      : typeof saved.activeTabId === 'string' ? saved.activeTabId : undefined;
+    return { activeBoardId, cameras };
   } catch { return { cameras: {} }; }
 }
 
 function sessionStorageWrite(sourceKey: string, state: DenimSessionState): void {
   try {
-    sessionStorage.setItem(`${ACTIVE_TAB_KEY}${sourceKey}`, JSON.stringify({
-      activeTabId: state.activeTabId,
+    sessionStorage.setItem(`${ACTIVE_BOARD_KEY}${sourceKey}`, JSON.stringify({
+      activeBoardId: state.activeBoardId,
       cameras: state.cameras,
     }));
   }
-  catch { /* Tab navigation remains usable when session storage is unavailable. */ }
+  catch { /* Board navigation remains usable when session storage is unavailable. */ }
 }
 
 export function createDenimSession(
@@ -131,12 +135,12 @@ export function createDenimSession(
   initialRevision: string,
   sourceKey = 'default',
 ): DenimSession {
-  const tabs = readDenimViews(database);
+  const boards = readDenimBoards(database);
   const transient = sessionStorageRead(sourceKey);
-  const initialTabId = tabs.some((tab) => tab.id === transient.activeTabId) ? transient.activeTabId! : PINNED_TABS[0].id;
+  const initialBoardId = boards.some((board) => board.id === transient.activeBoardId) ? transient.activeBoardId! : PINNED_BOARDS[0].id;
   const [state, setState] = createStore<DenimSessionState>({
-    tabs,
-    activeTabId: initialTabId,
+    boards,
+    activeBoardId: initialBoardId,
     cameras: transient.cameras,
     selectedId: null,
     graph: { nodes: [], edges: [] },
@@ -163,13 +167,13 @@ export function createDenimSession(
     transientSaveTimer = setTimeout(saveTransient, 120);
   }
 
-  function activeTab(): DenimTabView {
-    return state.tabs.find((tab) => tab.id === state.activeTabId) ?? state.tabs[0];
+  function activeBoard(): DenimBoard {
+    return state.boards.find((board) => board.id === state.activeBoardId) ?? state.boards[0];
   }
 
   function refreshGraph(): void {
-    const tab = activeTab();
-    setState('graph', projectTab(database, tab));
+    const board = activeBoard();
+    setState('graph', projectBoard(database, board));
   }
 
   async function persist(): Promise<void> {
@@ -192,23 +196,23 @@ export function createDenimSession(
     }
   }
 
-  async function dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; tabId?: string }> {
+  async function dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; boardId?: string }> {
     if (disposed) return { ok: false, error: 'Denim session is closed' };
     try {
       const result = applyDenimAction(database, action);
       const snapshot = readDenimSnapshot(database);
-      setState('tabs', snapshot.views);
+      setState('boards', snapshot.boards);
       setState('cameras', (cameras) => Object.fromEntries(Object.entries(cameras)
-        .filter(([tabId]) => snapshot.views.some((tab) => tab.id === tabId))));
-      if (action.op === 'view.openJourney' && result.tabId) {
-        setState({ activeTabId: result.tabId, selectedId: action.journeyId });
+        .filter(([boardId]) => snapshot.boards.some((board) => board.id === boardId))));
+      if (action.op === 'board.openJourney' && result.boardId) {
+        setState({ activeBoardId: result.boardId, selectedId: action.journeyId });
         saveTransient();
-      } else if (action.op === 'view.close' && state.activeTabId === action.tabId) {
-        setState({ activeTabId: PINNED_TABS[0].id, selectedId: null });
+      } else if (action.op === 'board.close' && state.activeBoardId === action.boardId) {
+        setState({ activeBoardId: PINNED_BOARDS[0].id, selectedId: null });
         saveTransient();
       } else if (action.op === 'node.delete') {
-        if (!state.tabs.some((tab) => tab.id === state.activeTabId)) {
-          setState('activeTabId', PINNED_TABS[0].id);
+        if (!state.boards.some((board) => board.id === state.activeBoardId)) {
+          setState('activeBoardId', PINNED_BOARDS[0].id);
           saveTransient();
         }
         setState('selectedId', null);
@@ -229,10 +233,10 @@ export function createDenimSession(
   return {
     state,
     dispatchAction,
-    selectView(view) {
-      const id = `pinned:${view}`;
-      if (!state.tabs.some((tab) => tab.id === id)) return;
-      setState({ activeTabId: id, selectedId: null, error: null });
+    selectBoard(board) {
+      const id = `pinned:${board}`;
+      if (!state.boards.some((board) => board.id === id)) return;
+      setState({ activeBoardId: id, selectedId: null, error: null });
       saveTransient();
       refreshGraph();
     },
@@ -241,14 +245,14 @@ export function createDenimSession(
       setState('cameras', id, { x: camera.x, y: camera.y, k: camera.k });
       scheduleTransientSave();
     },
-    activateTab(id) {
-      if (!state.tabs.some((tab) => tab.id === id)) return;
-      setState({ activeTabId: id, selectedId: null, error: null });
+    activateBoard(id) {
+      if (!state.boards.some((board) => board.id === id)) return;
+      setState({ activeBoardId: id, selectedId: null, error: null });
       saveTransient();
       refreshGraph();
     },
-    async openJourney(id) { await dispatchAction({ op: 'view.openJourney', journeyId: id }); },
-    async closeTab(id) { await dispatchAction({ op: 'view.close', tabId: id }); },
+    async openJourney(id) { await dispatchAction({ op: 'board.openJourney', journeyId: id }); },
+    async closeBoard(id) { await dispatchAction({ op: 'board.close', boardId: id }); },
     selectNode(id) {
       setState('selectedId', id);
     },
@@ -283,10 +287,10 @@ export function createDenimSession(
     },
     async initializeSequence(parentId, orderedChildIds) { await dispatchAction({ op: 'sequence.initialize', parentId, orderedChildIds }); },
     async clearSequence(parentId) { await dispatchAction({ op: 'sequence.clear', parentId }); },
-    async setSequenceMode(parentId, mode, tabId = state.activeTabId) { await dispatchAction({ op: 'view.sequenceMode.set', tabId, parentId, mode }); },
-    async includeNode(nodeId, tabId = state.activeTabId) { await dispatchAction({ op: 'view.includeNode', tabId, nodeId }); },
-    async moveNode(nodeId, position, tabId = state.activeTabId) { await dispatchAction({ op: 'view.node.move', tabId, nodeId, position }); },
-    async moveNodes(positions, tabId = state.activeTabId) { await dispatchAction({ op: 'view.nodes.move', tabId, positions }); },
+    async setSequenceMode(parentId, mode, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.sequenceMode.set', boardId, parentId, mode }); },
+    async includeNode(nodeId, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.includeNode', boardId, nodeId }); },
+    async moveNode(nodeId, position, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.node.move', boardId, nodeId, position }); },
+    async moveNodes(positions, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.nodes.move', boardId, positions }); },
     async updateNode(id, patch) { await dispatchAction({ op: 'node.update', id, patch }); },
     async deleteNode(id) { await dispatchAction({ op: 'node.delete', id, scope: 'subtree' }); },
     async deleteNodeOnly(id) { await dispatchAction({ op: 'node.delete', id, scope: 'node' }); },
