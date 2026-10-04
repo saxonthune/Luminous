@@ -25,6 +25,16 @@ extending one global counter.
 - **PRJ1.** [p] The Denim database picker provides an icon button to create a new project in a listed root.
 - **PRJ2.** [p] Creating a project creates a `.denim.sqlite` database, hydrates it with the starter Journey and Action, and opens it.
 
+## Startup status
+
+- **STA1.** [p] While Denim is starting or opening a database, a status label shows the current startup phase.
+- **STA2.** [p] Denim provides elapsed timing for startup phases in development tools so slow phases can be diagnosed.
+
+## Startup status
+
+- **STA1.** [p] While Denim loads its database list or opens a database, a status label shows the current startup phase.
+- **STA2.** [p] In development, Denim reports each startup phase's elapsed time to the browser console and performance timeline.
+
 ## Board content
 
 - **TVC1.** [p] The user can pull additional Nodes onto a Board independently of the source queries that provide its initial content.
@@ -86,6 +96,7 @@ extending one global counter.
 - **NODE7.** [p] When the user differentiates a Node, Denim places the new Node below the parent Node.
 - **NODE8.** [p] The drag bar indicator does not change appearance when the pointer hovers over it.
 - **NODE9.** [p] When the user differentiates a Node, Denim shows the new Node at its final position below the parent without an intermediate layout position.
+- **NODE10.** [p] A wheel gesture over overflowing Node text scrolls the text; when it cannot scroll in that direction, the gesture zooms the canvas.
 
 ## Selection
 
@@ -99,11 +110,13 @@ extending one global counter.
 - **NT1.** [p] Each Node has a Node Toolbar.
 - **NT2.** [p] A Node Toolbar may provide different capabilities according to the Node's type, while all Nodes have the same minimal capabilities.
 - **NT3.** [p] Node Toolbar affordances are represented by icons.
-- **NT4.** [p] A Node Toolbar has icons that are always visible and icons that appear on hover.
+- **NT4.** [p] A Node Toolbar is hidden when the pointer is outside its Node and it has no keyboard focus. Hovering the Node reveals the Toolbar with an ellipsis in the hidden-options slot; hovering or focusing within the Toolbar expands its hidden options.
 - **NT5.** [p] A Node Toolbar appears in the bottom-left of the Node area.
-- **NT6.** [p] Always-visible Node Toolbar actions appear first on the left; hidden actions and their ellipsis appear to their right.
+- **NT6.** [p] Present Node Toolbar actions appear first on the left. While the Toolbar is collapsed, an ellipsis marks the first hidden option; when expanded, hidden actions replace the ellipsis and continue to the right.
 - **NT7.** [p] The hidden Node Toolbar options end with a trash icon for deleting the Node.
 - **NT8.** [p] A Node Toolbar menu aligns its left edge with the triggering button when space permits and shifts as needed to remain inside the viewport.
+- **NT9.** [p] A Node Toolbar has an opaque, rounded background matching its Node's type color; a Container Toolbar matches its Container Node's type color. Each Toolbar surface covers all its icons, including the trailing trash icon.
+- **NT10.** [p] Hover highlights for individual Node and Container Toolbar icons are circular.
 
 ## Node deletion
 
@@ -113,11 +126,39 @@ extending one global counter.
 - **DEL4.** [p] Confirming “Delete Node” removes only the selected Node and its incident Edges; its child Nodes remain and appear on the active Board as independent Nodes.
 - **DEL5.** [p] Confirming “Delete Node and Children” removes the selected Node, all of its descendant Nodes, and their incident Edges.
 
-## Edge deletion
+## Edges
 
 - **EDGE1.** [p] Left-clicking an Edge opens a floating menu below its midpoint with a trash icon and the label “Delete”.
 - **EDGE2.** [p] Clicking “Delete” removes the Edge immediately and keeps its endpoint Nodes; this is the final confirmation action.
 - **EDGE3.** [p] The Edge click target extends beyond the visible line, while Nodes remain on top and receive clicks where they overlap an Edge.
+- **EDGE4.** [p] The user can draw a literal line between two Nodes to create an Edge of the literal-line type.
+
+
+## Containers
+
+- **CNT1.** [p] When the user Ctrl-drags a Node into a Container, Denim creates a `contains` Edge from the Container's head Node to the dragged Node, replacing any existing `contains` Edge for that Node.
+- **CNT2.** [p] A Node linked to a Container by a `contains` Edge is in the Contained visual state when its bounds touch or overlap the Container area; while the user drags the Container, each Node in this state moves visually with it, and Denim saves their final positions when the drag ends.
+- **CNT3.** [p] While the user Ctrl-drags a Node to change containment, the Status Toast describes the containment change in progress.
+- **CNT4.** [p] Denim renders a Container's outer border using the same border as a Node.
+- **CNT5.** [p] A Container's top border is taller than its other edges and can be dragged to move the Container.
+- **CNT6.** [p] A dashed curved line connects a Container to the Node it represents.
+- **CNT7.** [p] The user can spawn a Container from any Node's Node Toolbar.
+- **CNT8.** [p] Spawn Container appears in the hidden Node Toolbar options before Sequence options.
+- **CNT9.** [p] A Container's header separator uses the same border as its outer border.
+- **CNT10.** [p] A Container header uses the same background color as its head Node.
+- **CNT11.** [p] The Container label is right-justified in the header, and the Container Toolbar is left-justified in the header.
+- **CNT12.** [p] The bottom-right corner of a Container's area has a resize handle; resizing changes the Container's saved Board bounds.
+- **CNT13.** [p] A Node linked to a Container by a `contains` Edge enters the Detached visual state when its bounds no longer touch or overlap the Container area; the Node remains linked by the Edge and does not move with the Container.
+- **CNT14.** [p] Denim draws a dotted curved Edge from a Container to each Detached Node linked to it by a `contains` Edge.
+- **CNT15.** [p] Hovering over a dotted Edge shows a small badge at its midpoint and opens a fixed-screen Detached Edge Toolbar to its right; the toolbar matches Node and Container Toolbar sizing and stays the same size as the canvas zooms.
+- **CNT16.** [p] The Detached Edge Toolbar contains a trash icon; selecting it reveals “Confirm Detachment”, and selecting that label removes the `contains` Edge while keeping the Node on its current Board at its current position.
+- **CNT17.** [p] When a Container moves, each visually contained Node moves with it; any Container owned by those Nodes moves with them as well.
+
+## Container Toolbar
+
+- **CTB1.** [p] A Container Toolbar is located at the top-left of the Container area, below its header, and uses the Node Toolbar's present and hidden icon pattern.
+- **CTB2.** [p] The first Container Toolbar icon is Create Node.
+- **CTB3.** [p] When the user creates a Node from a Container Toolbar, Denim creates it inside that Container with the same type as the Container's owner Node.
 
 ## Node differentiation controls
 

@@ -3,7 +3,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import {
   addDenimNode, connectDenimChild, createDenimChild, exportDenimDatabase, getDenimGraph,
-  getJourneyGraph, listCapabilities, listJourneys, listTopLevelResources,
+  getJourneyGraph, listCapabilities, listJourneys, listTopLevelInstances,
   openDenimDatabase, seedDenimDatabase, updateDenimNode,
 } from '../packages/core/src/denim/database.ts';
 import type { DenimAction } from '../packages/core/src/denim/actions.ts';
@@ -208,7 +208,7 @@ async function denimCli(): Promise<void> {
   }
   if (command === 'resources') {
     if (argv.length) usage();
-    console.log(JSON.stringify(listTopLevelResources(db), null, 2)); return;
+    console.log(JSON.stringify(listTopLevelInstances(db), null, 2)); return;
   }
   if (command === 'connect') {
     const parentId = argv.shift(); const existingId = argv.shift();

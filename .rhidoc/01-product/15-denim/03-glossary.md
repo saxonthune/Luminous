@@ -58,6 +58,21 @@ relationships and contents were not specified in the source request.
 
 - **DTERM10.** [p] Any node type can be a parent or child in a parent/child relationship. `parent-of(child, parent)`
 
+
+- **DTERM19.** [p] **Contains edge** — an Edge of type `contains` directed from a Container's head Node to a Node inside it.
+
+- **DTERM20.** [p] **Container** — a canvas component represented by a head Node, with Nodes linked to that head by `contains` Edges inside it.
+
+- **DTERM21.** [p] **Container Toolbar** — a toolbar inside the top-left of a Container's area, below its header, using the Node Toolbar's always-visible and hover-revealed icon pattern.
+
+- **DTERM22.** [p] **Container Node** — the Node represented by a Container and connected to it by a dashed curved line. Its type supplies the default type for Nodes created in that Container.
+
+- **DTERM23.** [p] **Contained visual state** — the visual state of a Node whose rectangle touches or overlaps its Container's area. The Node moves with the Container.
+
+- **DTERM24.** [p] **Detached visual state** — the visual state of a Node that remains connected to its Container by a `contains` Edge but no longer touches or overlaps its area. A dotted curved line represents the Edge; the Node stays in place when the Container moves.
+
+- **DTERM25.** [p] **Detached Edge Toolbar** — a fixed-screen toolbar that opens to the right of a small badge anchored at the midpoint of a dotted Edge while the pointer hovers over it. Its trash icon opens a “Confirm Detachment” action that removes the `contains` Edge.
+
 ## Relationship priority
 
 - **DTERM17.** [p] **Priority value** — a numerical value on the Edge connecting a step to its parent; lower values come earlier in ascending rank order.

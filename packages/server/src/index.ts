@@ -234,7 +234,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (url === '/api/denim/action' && req.method === 'POST') {
-    const body = await parseBody(req) as { path?: unknown; baseRevision?: unknown; actionId?: unknown; action?: unknown }
+    const body = await parseBody(req) as { path?: unknown; baseRevision?: unknown; actionId?: unknown; action?: unknown; actions?: unknown }
     const path = body.path
     if (typeof path !== 'string' || !path || hasTraversal(path) || !isSqlitePath(path) || !path.endsWith('.denim.sqlite')) {
       sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
@@ -250,9 +250,15 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         sendJson(res, 412, { ok: false, error: 'Database revision changed', revision }); return
       }
       database = await openDenimDatabase(new Uint8Array(current))
-      const result = applyDenimAction(database, body.action as DenimAction)
+      const actionList = body.actions === undefined ? [body.action] : body.actions
+      if (!Array.isArray(actionList) || actionList.length === 0) {
+        sendJson(res, 400, { ok: false, error: 'actions must be a nonempty array' }); return
+      }
+      const results = actionList.map((action) => applyDenimAction(database!, action as DenimAction))
+      const result = results.at(-1)!
+      const changed = results.some((item) => item.changed)
       let nextRevision = revision
-      if (result.changed) {
+      if (changed) {
         const bytes = exportDenimDatabase(database)
         nextRevision = await writeDenimDatabase(path, bytes, revision)
         broadcast(path, nextRevision, typeof body.actionId === 'string' ? body.actionId : undefined,
@@ -260,7 +266,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
             ? result.boardId : undefined)
       }
       res.setHeader('ETag', nextRevision)
-      sendJson(res, 200, { ...readDenimSnapshot(database), ...result, path, revision: nextRevision })
+      sendJson(res, 200, { ...readDenimSnapshot(database), ...result, changed, results, path, revision: nextRevision })
     } catch (cause) {
       if (cause instanceof DocumentRevisionConflict) {
         res.setHeader('ETag', cause.currentRevision)

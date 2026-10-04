@@ -62,7 +62,8 @@ interface EdgeLayerProps {
   routeBand?: number;
   zoom: () => number;
   viewport?: () => { x: number; y: number; w: number; h: number } | null;
-  onEdgeClick?: (edgeId: string, screenX: number, screenY: number) => void;
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
+  onEdgeHover?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
 }
 
 const LABEL_CAP = 28;
@@ -94,7 +95,7 @@ function reportEdgeClick(
   event: MouseEvent,
   edgeId: string,
   midpoint: { x: number; y: number },
-  onEdgeClick?: (edgeId: string, screenX: number, screenY: number) => void,
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void,
 ): void {
   if (!onEdgeClick) return;
   event.stopPropagation();
@@ -102,7 +103,16 @@ function reportEdgeClick(
   const matrix = svg?.getScreenCTM();
   if (!matrix) return;
   const point = new DOMPoint(midpoint.x, midpoint.y).matrixTransform(matrix);
-  onEdgeClick(edgeId, point.x, point.y);
+  onEdgeClick(edgeId, point.x, point.y, midpoint.x, midpoint.y);
+}
+
+function reportEdgeHover(event: PointerEvent, edgeId: string, midpoint: { x: number; y: number }, onEdgeHover?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void): void {
+  if (!onEdgeHover) return;
+  const svg = (event.currentTarget as SVGElement).ownerSVGElement;
+  const matrix = svg?.getScreenCTM();
+  if (!matrix) return;
+  const point = new DOMPoint(midpoint.x, midpoint.y).matrixTransform(matrix);
+  onEdgeHover(edgeId, point.x, point.y, midpoint.x, midpoint.y);
 }
 
 /** Horizontal-tangent cubic used for freeform relationship cards. The handle
@@ -351,6 +361,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                                 data-edge-id={edge.id}
                                 data-route-segment={index()}
                                 style={{ 'pointer-events': 'stroke' }}
+                                onPointerEnter={(event) => reportEdgeHover(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeHover)}
                                 onClick={(event) => reportEdgeClick(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeClick)}
                               />
                             )}>
@@ -362,6 +373,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                                 data-edge-id={edge.id}
                                 data-route-segment={index()}
                                 style={{ 'pointer-events': 'stroke' }}
+                                onPointerEnter={(event) => reportEdgeHover(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeHover)}
                                 onClick={(event) => reportEdgeClick(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeClick)}
                               />
                             </Show>

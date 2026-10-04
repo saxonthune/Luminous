@@ -329,6 +329,13 @@ export function createDenimChild(db: Database, parentId: string, node: DenimNode
   });
 }
 
+export function createDenimContainedNode(db: Database, ownerId: string, node: DenimNode, edgeId: string): void {
+  transaction(db, () => {
+    addDenimNode(db, node);
+    addDenimEdge(db, { id: edgeId, type: 'contains', sourceId: ownerId, targetId: node.id, priority: null });
+  });
+}
+
 export function connectDenimChild(db: Database, parentId: string, childId: string, edgeId: string): void {
   transaction(db, () => {
     addDenimEdge(db, {

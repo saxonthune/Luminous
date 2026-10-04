@@ -1,5 +1,6 @@
 import { Show } from 'solid-js';
-import { Check, LoaderCircle } from 'lucide-solid';
+import Check from 'lucide-solid/icons/check';
+import LoaderCircle from 'lucide-solid/icons/loader-circle';
 import { StatusBadge } from '../../ui';
 
 export function DenimSaveStatusBadge(props: { saving: () => boolean; error: () => string | null }) {

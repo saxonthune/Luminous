@@ -3,19 +3,14 @@ import { createStore, type Store } from 'solid-js/store';
 import {
   exportDenimDatabase,
   getDenimGraph,
-  getJourneyGraph,
-  listCapabilities,
-  listJourneys,
-  listTopLevelInstances,
   type DenimDatabase,
-  type DenimEdge,
   type DenimGraph,
   type DenimNode,
 } from '@luminous/core/denim';
-import { applyDenimAction, DENIM_PINNED_BOARDS, readDenimSnapshot, readDenimBoards,
-  type DenimAction, type DenimQuerySource, type DenimBoard } from '@luminous/core/denim/actions';
+import { applyDenimAction, DENIM_PINNED_BOARDS, getDenimBoardGraph, readDenimSnapshot, readDenimBoards,
+  type DenimAction, type DenimBoard } from '@luminous/core/denim/actions';
 
-export type { DenimQuerySource, DenimBoard } from '@luminous/core/denim/actions';
+export type { DenimQuerySource, DenimBoard, DenimBoardContainer } from '@luminous/core/denim/actions';
 
 export interface DenimSessionState {
   boards: DenimBoard[];
@@ -85,29 +80,8 @@ const PINNED_BOARDS = DENIM_PINNED_BOARDS;
 const ACTIVE_BOARD_KEY = 'denim-active-board:';
 const LEGACY_ACTIVE_TAB_KEY = 'denim-active-tab:';
 
-function sourceGraph(database: DenimDatabase, source: DenimQuerySource): DenimGraph {
-  if (source.kind === 'journey') return getJourneyGraph(database, source.journeyId);
-  if (source.kind === 'capabilities') return { nodes: listCapabilities(database), edges: [] };
-  if (source.kind === 'instances') return { nodes: listTopLevelInstances(database), edges: [] };
-  return { nodes: listJourneys(database), edges: [] };
-}
-
 function projectBoard(database: DenimDatabase, board: DenimBoard): DenimGraph {
-  const nodes = new Map<string, DenimNode>();
-  const edges = new Map<string, DenimEdge>();
-  for (const source of board.sources) {
-    const graph = sourceGraph(database, source);
-    graph.nodes.forEach((node) => nodes.set(node.id, node));
-    graph.edges.forEach((edge) => edges.set(edge.id, edge));
-  }
-  if (board.includedNodeIds.length > 0) {
-    const graph = getDenimGraph(database);
-    const included = new Set(board.includedNodeIds);
-    graph.nodes.filter((node) => included.has(node.id)).forEach((node) => nodes.set(node.id, node));
-    graph.edges.filter((edge) => nodes.has(edge.sourceId) && nodes.has(edge.targetId))
-      .forEach((edge) => edges.set(edge.id, edge));
-  }
-  return { nodes: [...nodes.values()], edges: [...edges.values()] };
+  return getDenimBoardGraph(database, board);
 }
 
 function sessionStorageRead(sourceKey: string): { activeBoardId?: string; cameras: DenimSessionState['cameras'] } {

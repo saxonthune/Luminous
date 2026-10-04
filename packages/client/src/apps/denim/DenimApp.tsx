@@ -1,9 +1,22 @@
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { ChevronLeft, ChevronRight, CirclePlus, Ellipsis, ExternalLink, GitBranchPlus, GripHorizontal, Link2, ListOrdered, Plus, Trash2, X, Zap } from 'lucide-solid';
+import ChevronLeft from 'lucide-solid/icons/chevron-left';
+import ChevronRight from 'lucide-solid/icons/chevron-right';
+import CirclePlus from 'lucide-solid/icons/circle-plus';
+import Ellipsis from 'lucide-solid/icons/ellipsis';
+import ExternalLink from 'lucide-solid/icons/external-link';
+import GitBranchPlus from 'lucide-solid/icons/git-branch-plus';
+import GripHorizontal from 'lucide-solid/icons/grip-horizontal';
+import Link2 from 'lucide-solid/icons/link-2';
+import ListOrdered from 'lucide-solid/icons/list-ordered';
+import Plus from 'lucide-solid/icons/plus';
+import SquareDashed from 'lucide-solid/icons/square-dashed';
+import Trash2 from 'lucide-solid/icons/trash';
+import X from 'lucide-solid/icons/x';
+import Zap from 'lucide-solid/icons/zap';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useGesture } from '@luminous/cactus';
-import type { CanvasRef, TidyNode } from '@luminous/cactus';
-import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimEdge, type DenimGraph, type DenimNode } from '@luminous/core/denim';
+import type { CanvasRef, EdgeDeclaration, TidyNode, Transform } from '@luminous/cactus';
+import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimGraph, type DenimNode } from '@luminous/core/denim';
 import { denimBoardToExcalidraw } from '@luminous/core/denim/excalidraw';
 import { DocumentPicker } from '../../DocumentPicker';
 import { AnchoredMenu, Button, computeAnchoredPosition, IconButton, MenuItem, MenuSeparator, MenuSubmenu, ToolbarSurface } from '../../ui';
@@ -17,8 +30,10 @@ import {
   DenimPersistenceConflict,
   useDenimSession,
   type DenimBoard,
+  type DenimBoardContainer,
   type DenimSession,
 } from './DenimSession';
+import { deriveDenimCanvasModel, deriveDenimSequenceLabels, previewDenimContainerDrag, type DenimContainerDragPreview } from './DenimProjection';
 import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
 import { DenimActionsProvider, useDenimActions } from './DenimActions';
 import { DenimStatusToast } from './DenimStatusToast';
@@ -26,7 +41,10 @@ import { NewProjectDialog } from './NewProjectDialog';
 
 const NODE_W = 232;
 const NODE_H = 142;
+const CONTAINER_W = 360;
+const CONTAINER_H = 280;
 const ICON_SIZE = 15;
+const containerVisualId = (headNodeId: string) => `denim-container:${headNodeId}`;
 const NODE_THEME_SLOT: Record<string, number> = {
   Journey: 1,
   Action: 2,
@@ -41,46 +59,70 @@ type PickerState = { mode: 'include' | 'connect'; parentId?: string; anchor: HTM
 function GraphCanvas(props: {
   selectedId: () => string | null;
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
-  onEdgeClick: (edgeId: string, screenX: number, screenY: number) => void;
+  onEdgeClick: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
+  onEdgeHover: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
+  onViewportTransform: (transform: Transform) => void;
+  onStatus: (message: string | null) => void;
 }) {
   const session = useDenimSession();
   const actions = useDenimActions();
   const graph = () => session.state.graph;
   const [editingSequenceParent, setEditingSequenceParent] = createSignal<string | null>(null);
-  const layoutNodes = createMemo(() => {
-    const parents = new Map<string, string>();
-    for (const edge of graph().edges) {
-      if (edge.type === 'parent-child' && !parents.has(edge.targetId)) parents.set(edge.targetId, edge.sourceId);
-    }
-    return graph().nodes.map((node): TidyNode => ({
-      id: node.id,
-      w: NODE_W,
-      h: NODE_H,
-      parentId: parents.get(node.id) ?? null,
-    }));
+  const [containerDragPreview, setContainerDragPreview] = createSignal<DenimContainerDragPreview | null>(null);
+  onMount(() => {
+    if (import.meta.env.DEV) console.info('[Denim startup]', {
+      phase: 'graph canvas mounted', nodeCount: graph().nodes.length, edgeCount: graph().edges.length,
+    });
   });
-  const layoutEdges = createMemo(() => graph().edges
-    .filter((edge) => edge.type === 'parent-child')
-    .map((edge) => ({ source: edge.sourceId, target: edge.targetId })));
   const activeBoard = () => session.state.boards.find((board) => board.id === session.state.activeBoardId)!;
-  const edgeLabels = createMemo(() => {
-    const labels = new Map<string, string>();
-    const grouped = new Map<string, DenimEdge[]>();
-    for (const edge of graph().edges) {
-      if (edge.type !== 'parent-child' || edge.priority === null || edge.priority === undefined) continue;
-      const siblings = grouped.get(edge.sourceId) ?? [];
-      siblings.push(edge);
-      grouped.set(edge.sourceId, siblings);
-    }
-    for (const [parentId, siblings] of grouped) {
-      const mode = editingSequenceParent() === parentId ? 'priority' : activeBoard().sequenceModes[parentId] ?? 'rank';
-      const ordered = [...siblings].sort((a, b) => a.priority! - b.priority! || a.targetId.localeCompare(b.targetId));
-      for (const [index, edge] of ordered.entries()) {
-        labels.set(edge.id, mode === 'priority' ? String(edge.priority) : String(index + 1));
-      }
-    }
-    return labels;
-  });
+  const baseCanvasModel = createMemo(() => deriveDenimCanvasModel({
+    graph: graph(),
+    board: activeBoard(),
+    nodeWidth: NODE_W,
+    nodeHeight: NODE_H,
+    containerHeaderHeight: 44,
+  }));
+  const sequenceLabels = createMemo(() => deriveDenimSequenceLabels(graph(), activeBoard(), editingSequenceParent()));
+  const previewModel = createMemo(() => previewDenimContainerDrag({
+    model: baseCanvasModel(),
+    graph: graph(),
+    board: activeBoard(),
+    nodeWidth: NODE_W,
+    nodeHeight: NODE_H,
+    containerHeaderHeight: 44,
+    preview: containerDragPreview(),
+  }));
+  const positions = createMemo(() => previewModel().positions);
+  const edgeModel = createMemo(() => previewModel().edges);
+  const canvasEdges = createMemo<EdgeDeclaration[]>(() => edgeModel().map((edge) => {
+    if (edge.kind === 'sequence') return {
+      id: edge.id,
+      sourceId: edge.sourceId,
+      targetId: edge.targetId,
+      labelText: sequenceLabels().get(edge.id),
+      labelEditValue: edge.priority == null ? undefined : String(edge.priority),
+      onLabelEdit: (value: string) => {
+        const priority = Number(value);
+        if (Number.isFinite(priority)) void actions.setEdgePriority(edge.id, priority);
+      },
+      onLabelEditFocus: () => setEditingSequenceParent(edge.sourceId),
+      onLabelEditBlur: () => setEditingSequenceParent(null),
+      labelBackground: true,
+      labelBackgroundColor: '#fff',
+      labelBackgroundShape: 'circle' as const,
+      labelFontScale: 1.15,
+      labelFontWeight: 600,
+      styling: { arrowHead: true, dash: 'solid' as const },
+    };
+    if (edge.kind === 'container-owner') return {
+      id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId,
+      styling: { dash: 'dashed' as const, curve: 'bezier' as const, colorToken: 'accent', width: 1.5 },
+    };
+    return {
+      id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId,
+      styling: { dash: 'dotted' as const, curve: 'bezier' as const, colorToken: 'accent', width: 1.5 },
+    };
+  }));
   function initializeSequence(parentId: string): void {
     const ordered = graph().edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === parentId)
       .sort((a, b) => {
@@ -98,11 +140,33 @@ function GraphCanvas(props: {
   }
   let canvasRef: CanvasRef | undefined;
   let previousBoardId = activeBoard().id;
-  const positions = createMemo(() => {
-    const positions = dagLayout(layoutNodes(), layoutEdges());
-    for (const [id, position] of Object.entries(activeBoard().positions)) positions.set(id, position);
-    return positions;
-  });
+  let statusTimer: ReturnType<typeof setTimeout> | undefined;
+  async function spawnContainer(headNodeId: string): Promise<void> {
+    const head = graph().nodes.find((node) => node.id === headNodeId);
+    const position = positions().get(headNodeId);
+    if (!head || !position) return;
+    const boardId = activeBoard().id;
+    const container: DenimBoardContainer = {
+      x: position.x + NODE_W + 100,
+      y: position.y,
+      width: CONTAINER_W,
+      height: CONTAINER_H,
+    };
+    clearTimeout(statusTimer);
+    props.onStatus(`Spawning a Container for ${head.text}…`);
+    const result = await actions.spawnContainer(headNodeId, container, boardId);
+    if (!result.ok) {
+      props.onStatus(`Could not spawn Container: ${result.error ?? 'unknown error'}`);
+      statusTimer = setTimeout(() => props.onStatus(null), 5000);
+      return;
+    }
+    props.onStatus(`Container spawned for ${head.text}`);
+    statusTimer = setTimeout(() => props.onStatus(null), 2400);
+    canvasRef?.fitView([
+      { x: position.x, y: position.y, width: NODE_W, height: NODE_H },
+      { x: container.x, y: container.y, width: container.width, height: container.height },
+    ], 72, false);
+  }
 
   createEffect(() => {
     const board = activeBoard();
@@ -121,6 +185,9 @@ function GraphCanvas(props: {
         const position = positions().get(node.id);
         return position ? [{ x: position.x, y: position.y, width: NODE_W, height: NODE_H }] : [];
       });
+      rects.push(...Object.values(activeBoard().containers).map((container) => ({
+        x: container.x, y: container.y, width: container.width, height: container.height,
+      })));
       if (rects.length > 0) canvasRef?.fitView(rects, 72, false);
     });
   }
@@ -137,44 +204,44 @@ function GraphCanvas(props: {
     window.addEventListener('keydown', onKeyDown);
     onCleanup(() => window.removeEventListener('keydown', onKeyDown));
   });
-  onCleanup(() => cancelAnimationFrame(pendingFit));
+  onCleanup(() => {
+    cancelAnimationFrame(pendingFit);
+    clearTimeout(statusTimer);
+  });
 
   return (
     <Canvas ref={(handle) => { canvasRef = handle; }}
-      onEdgeClick={props.onEdgeClick}
+      onEdgeClick={(edgeId, x, y, canvasX, canvasY) => {
+        const detachedId = edgeId.startsWith('denim-detached:') ? edgeId.slice('denim-detached:'.length) : null;
+        if (detachedId && graph().edges.some((edge) => edge.id === detachedId && edge.type === 'contains')) props.onEdgeClick(detachedId, x, y, canvasX, canvasY);
+        else if (graph().edges.some((edge) => edge.id === edgeId && edge.type === 'parent-child')) props.onEdgeClick(edgeId, x, y, canvasX, canvasY);
+      }}
+      onEdgeHover={(edgeId, x, y, canvasX, canvasY) => {
+        const detachedId = edgeId.startsWith('denim-detached:') ? edgeId.slice('denim-detached:'.length) : null;
+        if (detachedId && graph().edges.some((edge) => edge.id === detachedId && edge.type === 'contains')) props.onEdgeHover(detachedId, x, y, canvasX, canvasY);
+      }}
       boxSelect={{ trigger: 'drag' }}
       onSelectionChange={(ids) => session.selectNode(ids.at(-1) ?? null)}
       viewportOptions={{
         initialTransform: session.state.cameras[activeBoard().id] ?? { x: 0, y: 0, k: 1 },
-        onTransformChange: (camera) => session.setCamera(activeBoard().id, camera),
+        onTransformChange: (camera) => {
+          session.setCamera(activeBoard().id, camera);
+          props.onViewportTransform(camera);
+        },
       }}
-      edges={graph().edges.filter((edge) => edge.type === 'parent-child').map((edge) => ({
-      id: edge.id,
-      sourceId: edge.sourceId,
-      targetId: edge.targetId,
-      labelText: edgeLabels().get(edge.id),
-      labelEditValue: edge.priority == null ? undefined : String(edge.priority),
-      onLabelEdit: (value) => {
-        const priority = Number(value);
-        if (Number.isFinite(priority)) void actions.setEdgePriority(edge.id, priority);
-      },
-      onLabelEditFocus: () => setEditingSequenceParent(edge.sourceId),
-      onLabelEditBlur: () => setEditingSequenceParent(null),
-      labelBackground: true,
-      labelBackgroundColor: '#fff',
-      labelBackgroundShape: 'circle',
-      labelFontScale: 1.15,
-      labelFontWeight: 600,
-      styling: { arrowHead: true, dash: 'solid' as const },
-    }))}>
+      edges={canvasEdges()}>
       <CanvasNodes
         graph={graph()}
         positions={positions}
         boardId={() => activeBoard().id}
+        containers={() => activeBoard().containers}
+        containerDragPreview={containerDragPreview}
+        onContainerDragPreview={setContainerDragPreview}
         selectedId={props.selectedId}
         onSelect={session.selectNode}
         onSelectInCanvas={(id) => canvasRef?.setSelectedIds([id])}
         openPicker={props.openPicker}
+        onSpawnContainer={spawnContainer}
         sequenceModeFor={sequenceMode}
         initializeSequence={initializeSequence}
         toggleSequenceMode={toggleSequenceMode}
@@ -186,11 +253,15 @@ function GraphCanvas(props: {
 function CanvasNodes(props: {
   graph: DenimGraph;
   positions: () => ReadonlyMap<string, { x: number; y: number }>;
+  onContainerDragPreview: (preview: DenimContainerDragPreview | null) => void;
   boardId: () => string;
+  containers: () => DenimBoard['containers'];
+  containerDragPreview: () => DenimContainerDragPreview | null;
   selectedId: () => string | null;
   onSelect: (id: string | null) => void;
   onSelectInCanvas: (id: string) => void;
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
+  onSpawnContainer: (headNodeId: string) => Promise<void>;
   sequenceModeFor: (parentId: string) => 'rank' | 'priority';
   initializeSequence: (parentId: string) => void;
   toggleSequenceMode: (parentId: string) => void;
@@ -243,13 +314,28 @@ function CanvasNodes(props: {
     if (result.nodeId) props.onSelectInCanvas(result.nodeId);
   }
 
-  return <For each={props.graph.nodes}>{(node) => {
+  return <>
+    <For each={Object.keys(props.containers())}>{(headNodeId) => {
+      const head = () => props.graph.nodes.find((node) => node.id === headNodeId);
+      return <Show when={head() ? props.containers()[headNodeId] : undefined}>{(container) => <ContainerVisual
+        head={head()!}
+        boardId={props.boardId}
+        container={() => container()}
+        positions={props.positions}
+        nodes={props.graph.nodes}
+        containers={props.containers}
+        dragPreview={props.containerDragPreview}
+        onDragPreview={props.onContainerDragPreview}
+        onCreated={props.onSelectInCanvas}
+      />}</Show>;
+    }}</For>
+    <For each={props.graph.nodes}>{(node) => {
     const basePosition = () => props.positions().get(node.id) ?? { x: 0, y: 0 };
-    const pos = () => {
+    const pos = createMemo(() => {
       const offset = dragOffsets()[node.id];
       const base = basePosition();
       return offset ? { x: base.x + offset.dx, y: base.y + offset.dy } : base;
-    };
+    });
     return <NodeContainer nodeId={node.id} x={() => pos().x} y={() => pos().y} w={() => NODE_W} h={() => NODE_H}
       onPointerDown={(event) => {
         ctx.onNodePointerDown(node.id, event);
@@ -258,6 +344,8 @@ function CanvasNodes(props: {
       }}>
       <NodeCard node={node} selected={props.selectedId() === node.id || ctx.isSelected(node.id)} onOpenJourney={() => void actions.openJourney(node.id)}
         onDifferentiate={() => void differentiateNode(node.id)}
+        hasContainer={Boolean(props.containers()[node.id])}
+        onSpawnContainer={() => void props.onSpawnContainer(node.id)}
         onConnect={(event) => props.openPicker('connect', node.id, event)}
         hasSequence={props.graph.edges.some((edge) => edge.sourceId === node.id && edge.priority != null)}
         graphChildCount={props.graph.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === node.id).length}
@@ -266,7 +354,131 @@ function CanvasNodes(props: {
         onClearSequence={() => void actions.clearSequence(node.id)}
         onToggleSequenceMode={() => props.toggleSequenceMode(node.id)} />
     </NodeContainer>;
-  }}</For>;
+  }}</For>
+  </>;
+}
+
+function ContainerVisual(props: {
+  head: DenimNode;
+  boardId: () => string;
+  container: () => DenimBoardContainer;
+  positions: () => ReadonlyMap<string, { x: number; y: number }>;
+  nodes: DenimNode[];
+  containers: () => DenimBoard['containers'];
+  dragPreview: () => DenimContainerDragPreview | null;
+  onDragPreview: (preview: DenimContainerDragPreview | null) => void;
+  onCreated: (nodeId: string) => void;
+}) {
+  const actions = useDenimActions();
+  const ctx = useCanvasContext();
+  const id = containerVisualId(props.head.id);
+  const [offset, setOffset] = createSignal<{ x: number; y: number } | null>(null);
+  const [resize, setResize] = createSignal<{ width: number; height: number } | null>(null);
+  let carried: Record<string, { x: number; y: number }> = {};
+  let carriedContainers: Record<string, { x: number; y: number }> = {};
+  const drag = useGesture({
+    zoomScale: () => ctx.transform().k,
+    callbacks: {
+      onDragStart: () => {
+        const box = props.container();
+        carried = Object.fromEntries(props.nodes.flatMap((node) => {
+          if (node.id === props.head.id) return [];
+          const point = props.positions().get(node.id);
+          if (!point) return [];
+          const overlaps = point.x < box.x + box.width && point.x + NODE_W > box.x
+            && point.y < box.y + box.height && point.y + NODE_H > box.y + 44;
+          return overlaps ? [[node.id, point]] : [];
+        }));
+        carriedContainers = Object.fromEntries(Object.entries(props.containers())
+          .filter(([containerHeadId]) => containerHeadId in carried)
+          .map(([containerHeadId, nested]) => [containerHeadId, { x: nested.x, y: nested.y }]));
+      },
+      onDrag: (_nodeId, dx, dy) => {
+        setOffset({ x: dx, y: dy });
+        props.onDragPreview({ headNodeId: props.head.id, dx, dy,
+          carriedNodeIds: Object.keys(carried), carriedContainerIds: Object.keys(carriedContainers) });
+      },
+      onDragEnd: (_nodeId, dx, dy) => {
+        const container = props.container();
+        const carriedPositions = Object.fromEntries(Object.entries(carried).map(([nodeId, point]) => [nodeId, { x: point.x + dx, y: point.y + dy }]));
+        const carriedContainerPositions = Object.fromEntries(Object.entries(carriedContainers)
+          .map(([containerHeadId, point]) => [containerHeadId, { x: point.x + dx, y: point.y + dy }]));
+        void actions.moveContainer(props.head.id, { x: container.x + dx, y: container.y + dy },
+          props.boardId(), carriedPositions, carriedContainerPositions);
+        carried = {};
+        carriedContainers = {};
+        props.onDragPreview(null);
+        setOffset(null);
+      },
+    },
+  });
+  const position = () => {
+    const container = props.container();
+    const ownDelta = offset();
+    const activePreview = props.dragPreview();
+    const inheritedDelta = activePreview && activePreview.headNodeId !== props.head.id
+      && activePreview.carriedContainerIds.includes(props.head.id) ? activePreview : null;
+    const delta = ownDelta ?? (inheritedDelta ? { x: inheritedDelta.dx, y: inheritedDelta.dy } : null);
+    return { x: container.x + (delta?.x ?? 0), y: container.y + (delta?.y ?? 0) };
+  };
+  function beginResize(event: PointerEvent): void {
+    event.preventDefault(); event.stopPropagation();
+    const start = props.container();
+    const startX = event.clientX, startY = event.clientY;
+    const onMove = (move: PointerEvent) => setResize({
+      width: Math.max(220, start.width + (move.clientX - startX) / ctx.transform().k),
+      height: Math.max(140, start.height + (move.clientY - startY) / ctx.transform().k),
+    });
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
+      const next = resize();
+      if (next) void actions.resizeContainer(props.head.id, next, props.boardId());
+      setResize(null);
+    };
+    window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp, { once: true });
+  }
+  const size = () => resize() ?? { width: props.container().width, height: props.container().height };
+  onCleanup(() => props.onDragPreview(null));
+  return <NodeContainer nodeId={id} x={() => position().x} y={() => position().y}
+    w={() => size().width} h={() => size().height}>
+    <div style={{
+      position: 'absolute', inset: '0', overflow: 'hidden',
+      border: '1px solid var(--theme-node-border)', 'border-radius': '8px',
+      background: 'var(--surface)', color: 'var(--fg)',
+    }}>
+      <div style={{
+        position: 'relative', display: 'flex', height: '44px', 'align-items': 'center', padding: '0 12px',
+        'justify-content': 'flex-end',
+        background: `var(--theme-bg-${NODE_THEME_SLOT[props.head.type] ?? 1})`,
+        'border-bottom': '1px solid var(--theme-node-border)',
+        'user-select': 'none',
+        'font-size': '12px', 'font-weight': '600', color: 'var(--fg-muted)',
+      }}>
+        <div data-container-drag-handle data-no-pan="true" onPointerDown={(event) => {
+          event.stopPropagation(); drag.beginPress(id, event);
+        }} style={{ position: 'absolute', inset: '0', cursor: 'grab' }} />
+        <ToolbarSurface variant="node" class="absolute left-2 top-1 z-10" data-container-toolbar
+          style={{ '--lui-node-toolbar-bg': `var(--theme-bg-${NODE_THEME_SLOT[props.head.type] ?? 1})` }}
+          onPointerDown={(event) => event.stopPropagation()}>
+          <div class="lui-node-toolbar__more">
+            <span aria-hidden="true" class="lui-node-toolbar__expander"><Ellipsis size={ICON_SIZE} strokeWidth={1.7} /></span>
+            <div class="lui-node-toolbar__actions">
+              <IconButton aria-label="Create Node" title="Create Node" class="lui-node-toolbar__action" onClick={() => {
+                void actions.createContainerNode(props.head.id, props.boardId()).then((result) => {
+                  if (result.nodeId) props.onCreated(result.nodeId);
+                });
+              }}><Plus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+            </div>
+          </div>
+        </ToolbarSurface>
+        <span style={{ 'pointer-events': 'none' }}>Container</span>
+      </div>
+      <div data-no-pan="true" aria-label="Resize Container" title="Resize Container"
+        onPointerDown={beginResize}
+        style={{ position: 'absolute', right: '1px', bottom: '1px', width: '16px', height: '16px', cursor: 'nwse-resize',
+          background: 'linear-gradient(135deg, transparent 50%, var(--theme-node-border) 50%)' }} />
+    </div>
+  </NodeContainer>;
 }
 
 function NodeCard(props: {
@@ -274,6 +486,8 @@ function NodeCard(props: {
   selected: boolean;
   onOpenJourney: () => void;
   onDifferentiate: () => void;
+  hasContainer: boolean;
+  onSpawnContainer: () => void;
   onConnect: (event: MouseEvent) => void;
   hasSequence: boolean;
   graphChildCount: number;
@@ -296,6 +510,7 @@ function NodeCard(props: {
     style={{
       background: `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
       border: '1px solid var(--theme-node-border)',
+      '--lui-node-toolbar-bg': `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
     }}
     classList={{ 'ring-2 ring-accent': props.selected }}>
     <div data-denim-drag-handle data-no-pan="true" aria-hidden="true"
@@ -322,6 +537,16 @@ function NodeCard(props: {
     </div>
     <textarea aria-label="Node text" value={props.node.text}
       onPointerDown={(event) => event.stopPropagation()}
+      onWheel={(event) => {
+        const content = event.currentTarget;
+        const canScrollVertically = content.scrollHeight > content.clientHeight + 1;
+        const canScrollHorizontally = content.scrollWidth > content.clientWidth + 1;
+        const canScrollY = event.deltaY < 0 ? content.scrollTop > 0
+          : event.deltaY > 0 ? content.scrollTop + content.clientHeight < content.scrollHeight - 1 : false;
+        const canScrollX = event.deltaX < 0 ? content.scrollLeft > 0
+          : event.deltaX > 0 ? content.scrollLeft + content.clientWidth < content.scrollWidth - 1 : false;
+        if ((canScrollVertically && canScrollY) || (canScrollHorizontally && canScrollX)) event.stopPropagation();
+      }}
       onBlur={(event) => void actions.updateNode(props.node.id, { text: event.currentTarget.value })}
       class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
     <ToolbarSurface variant="node" class="absolute bottom-2 left-2" data-node-toolbar
@@ -341,6 +566,11 @@ function NodeCard(props: {
             onClick={props.onDifferentiate}><GitBranchPlus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
           <IconButton aria-label="Differentiate using an existing node" title="Differentiate using an existing node" class="lui-node-toolbar__action"
             onClick={(event) => { event.stopPropagation(); props.onConnect(event); }}><Link2 size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+          <IconButton aria-label="Spawn Container" title={props.hasContainer ? 'This Node already has a Container on this Board' : 'Spawn Container'}
+            class="lui-node-toolbar__action" disabled={props.hasContainer}
+            onClick={(event) => { event.stopPropagation(); props.onSpawnContainer(); }}>
+            <SquareDashed size={ICON_SIZE} strokeWidth={1.7} />
+          </IconButton>
           <div class="lui-node-toolbar__menu-anchor">
             <IconButton ref={sequenceOptionsButton} aria-label="Sequence options" title="Sequence options" class="lui-node-toolbar__action"
               aria-expanded={openNodeMenu() === 'sequence'} onClick={(event) => {
@@ -554,9 +784,15 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
   const [picker, setPicker] = createSignal<PickerState | null>(null);
   const [query, setQuery] = createSignal('');
   const [statusToast, setStatusToast] = createSignal<string | null>(null);
-  const [edgeMenu, setEdgeMenu] = createSignal<{ edgeId: string; x: number; y: number } | null>(null);
+  const [edgeMenu, setEdgeMenu] = createSignal<{
+    edgeId: string; x: number; y: number; canvasX: number; canvasY: number;
+    kind: 'delete' | 'detach'; confirming?: boolean;
+  } | null>(null);
   const activeBoard = () => session.state.boards.find((board) => board.id === session.state.activeBoardId)!;
   const isJourneysBoard = () => activeBoard().id === 'pinned:journeys';
+  onMount(() => {
+    if (import.meta.env.DEV) console.info('[Denim startup]', { phase: 'board canvas mounted' });
+  });
   const results = createMemo(() => session.findNodesToConnect(query()));
 
   function openPicker(mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent): void {
@@ -578,6 +814,12 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
     if (!parentId || parentId === childId) return;
     await actions.connectExisting(parentId, childId);
     setPicker(null);
+  }
+
+  function confirmDetachment(edgeId: string): void {
+    const edge = session.state.graph.edges.find((candidate) => candidate.id === edgeId && candidate.type === 'contains');
+    setEdgeMenu(null);
+    if (edge) void actions.detachContainerNode(edge.sourceId, edge.targetId);
   }
 
   return <div class="flex min-h-0 flex-1 flex-col">
@@ -603,7 +845,14 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
           onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></IconButton>
       </ToolbarSurface>
       <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker}
-        onEdgeClick={(edgeId, x, y) => setEdgeMenu({ edgeId, x, y })} />
+        onStatus={setStatusToast}
+        onEdgeClick={(edgeId, x, y, canvasX, canvasY) => setEdgeMenu({ edgeId, x, y, canvasX, canvasY,
+          kind: session.state.graph.edges.some((edge) => edge.id === edgeId && edge.type === 'contains') ? 'detach' : 'delete' })}
+        onEdgeHover={(edgeId, x, y, canvasX, canvasY) => setEdgeMenu((current) => current?.edgeId === edgeId ? current
+          : { edgeId, x, y, canvasX, canvasY, kind: 'detach' })}
+        onViewportTransform={(camera) => setEdgeMenu((current) => current?.kind === 'detach'
+          ? { ...current, x: camera.x + current.canvasX * camera.k, y: camera.y + current.canvasY * camera.k }
+          : current)} />
       <div class="lui-feedback-tray pointer-events-none absolute bottom-3 right-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center justify-end gap-2">
         <DenimStatusToast message={statusToast} />
         <DenimSaveStatusBadge saving={() => session.state.saving} error={() => session.state.error} />
@@ -611,14 +860,29 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
     </div>
     <Show when={edgeMenu()}>
       {(menu) => <Portal>
-        <div class="lui-edge-delete-anchor" style={{ left: `${Math.max(8, Math.min(menu().x - 34, window.innerWidth - 76))}px`, top: `${Math.max(8, Math.min(menu().y + 8, window.innerHeight - 40))}px` }}>
+        <Show when={menu().kind === 'detach'} fallback={<div class="lui-edge-delete-anchor" style={{ left: `${Math.max(8, Math.min(menu().x - 34, window.innerWidth - 120))}px`, top: `${Math.max(8, Math.min(menu().y + 8, window.innerHeight - 44))}px` }}>
           <Button aria-label="Delete edge" title="Delete edge" tone="danger" class="lui-edge-delete"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => { const edgeId = menu().edgeId; setEdgeMenu(null); void actions.deleteEdge(edgeId); }}>
-            <Trash2 size={13} strokeWidth={1.8} />
-            <span>Delete</span>
+            <Trash2 size={13} strokeWidth={1.8} /><span>Delete</span>
           </Button>
-        </div>
+        </div>}>
+          <div class="lui-detached-edge-anchor" classList={{ 'is-left': menu().x > window.innerWidth - 180 }}
+            style={{ left: `${menu().x}px`, top: `${Math.max(18, Math.min(menu().y, window.innerHeight - 18))}px` }}>
+            <span aria-hidden="true" class="lui-detached-edge-badge" />
+            <ToolbarSurface variant="node" class="lui-detached-edge-tools" onPointerDown={(event) => event.stopPropagation()}>
+              <Show when={menu().confirming} fallback={<IconButton aria-label="Detach Node" title="Detach Node" danger
+                onClick={() => setEdgeMenu({ ...menu(), confirming: true })}>
+                <Trash2 size={13} strokeWidth={1.8} />
+              </IconButton>}>
+                <Button aria-label="Confirm Detachment" title="Confirm Detachment" tone="danger" class="lui-edge-delete"
+                  onClick={() => confirmDetachment(menu().edgeId)}>
+                  <Trash2 size={13} strokeWidth={1.8} /><span>Confirm Detachment</span>
+                </Button>
+              </Show>
+            </ToolbarSurface>
+          </div>
+        </Show>
       </Portal>}
     </Show>
     <Show when={picker()}>
@@ -843,10 +1107,53 @@ export function DenimApp() {
   const [source, setSource] = createSignal<CanvasSource | null>(null);
   const [session, setSession] = createSignal<DenimSession | null>(null);
   const [loading, setLoading] = createSignal(true);
+  const [startupStatus, setStartupStatus] = createSignal('Starting Denim…');
   const [error, setError] = createSignal<string | null>(null);
   const [creatingIn, setCreatingIn] = createSignal<CanvasSource | null>(null);
   const initialSrc = readParam('src');
+  const startupStartedAt = performance.now();
+  const startupRunId = Math.round(startupStartedAt);
+  let startupStep = 0;
+  let startupPhaseStartedAt = startupStartedAt;
+  let startupPhaseName = 'Starting Denim';
+  let startupPhaseMark = `denim:${startupRunId}:${startupStep}:starting-denim`;
+  if (import.meta.env.DEV) performance.mark(startupPhaseMark);
   let stopWatching: (() => void) | undefined;
+
+  function startupPhase(name: string, status: string): void {
+    const now = performance.now();
+    if (import.meta.env.DEV) {
+      const endMark = `${startupPhaseMark}:end`;
+      performance.mark(endMark);
+      performance.measure(`denim:${startupRunId}:${startupPhaseName}`, startupPhaseMark, endMark);
+      console.info('[Denim startup]', {
+        completed: startupPhaseName,
+        durationMs: Math.round(now - startupPhaseStartedAt),
+        next: name,
+        elapsedMs: Math.round(now - startupStartedAt),
+      });
+    }
+    startupPhaseName = name;
+    startupPhaseStartedAt = now;
+    startupPhaseMark = `denim:${startupRunId}:${++startupStep}:${name}`;
+    if (import.meta.env.DEV) performance.mark(startupPhaseMark);
+    setStartupStatus(status);
+  }
+
+  function finishStartup(): void {
+    const now = performance.now();
+    if (import.meta.env.DEV) {
+      const endMark = `${startupPhaseMark}:end`;
+      performance.mark(endMark);
+      performance.measure(`denim:${startupRunId}:${startupPhaseName}`, startupPhaseMark, endMark);
+      console.info('[Denim startup]', {
+        completed: startupPhaseName,
+        durationMs: Math.round(now - startupPhaseStartedAt),
+        totalMs: Math.round(now - startupStartedAt),
+      });
+    }
+    setStartupStatus('');
+  }
 
   async function openSource(item: CanvasSource): Promise<void> {
     setLoading(true);
@@ -854,12 +1161,16 @@ export function DenimApp() {
     let database: DenimDatabase | undefined;
     try {
       if (!item.loadBytes || !item.saveBytes) throw new Error('This source cannot read and save SQLite databases');
+      startupPhase('database-bytes', 'Reading Denim database…');
       const loaded = await item.loadBytes();
+      startupPhase('sqlite-init', 'Initializing SQLite…');
       database = await openDenimDatabase(loaded.bytes, `${import.meta.env.BASE_URL}sql-wasm-browser.wasm`);
+      startupPhase('previous-session-dispose', 'Preparing Denim session…');
       const previous = session();
       stopWatching?.();
       stopWatching = undefined;
       if (previous) await previous.dispose();
+      startupPhase('session-create', 'Preparing Denim Board…');
       setSource(item);
       let knownRevision = loaded.revision;
       setSession(createDenimSession(database, async (bytes, revision) => {
@@ -871,6 +1182,7 @@ export function DenimApp() {
           throw cause;
         }
       }, loaded.revision, item.id));
+      startupPhase('file-watch-subscribe', 'Connecting to file updates…');
       if (!__STATIC__) {
         const openedSession = session()!;
         stopWatching = watchDocuments((changedPath, message) => {
@@ -881,9 +1193,11 @@ export function DenimApp() {
         });
       }
       writeParam('src', item.id);
+      finishStartup();
     } catch (cause) {
       database?.close();
       setError(cause instanceof Error ? cause.message : String(cause));
+      finishStartup();
     } finally {
       setLoading(false);
     }
@@ -928,6 +1242,7 @@ export function DenimApp() {
     setError(null);
     let database: DenimDatabase | undefined;
     try {
+      startupPhase('create-database', 'Creating Denim database…');
       database = await openDenimDatabase(undefined, `${import.meta.env.BASE_URL}sql-wasm-browser.wasm`);
       hydrateDenimDatabase(database);
       const bytes = exportDenimDatabase(database);
@@ -957,18 +1272,22 @@ export function DenimApp() {
     } catch (cause) {
       database?.close();
       setError(cause instanceof Error ? cause.message : String(cause));
+      finishStartup();
       setLoading(false);
     }
   }
 
   onMount(async () => {
     try {
+      startupPhase('database-list', 'Finding Denim databases…');
       const list = await (__STATIC__ ? fetchStaticSources('.denim.sqlite') : fetchServerSources('.denim.sqlite'));
       setSources(list);
       const initial = initialSrc && list.find((item) => item.id === initialSrc);
       if (initial) await openSource(initial);
+      else finishStartup();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
+      finishStartup();
     } finally {
       setLoading(false);
     }
@@ -992,8 +1311,8 @@ export function DenimApp() {
     </Portal>
     <div class="flex min-h-0 flex-1 flex-col">
       <Show when={error()}>{(message) => <div role="alert" class="px-4 py-2 text-sm text-red-700">{message()}</div>}</Show>
-      <Show when={session()} fallback={<Switch>
-        <Match when={loading()}><div class="flex flex-1 items-center justify-center text-sm text-fg-muted">Loading…</div></Match>
+      <Show when={!loading() ? session() : null} fallback={<Switch>
+        <Match when={loading()}><div role="status" aria-live="polite" class="flex flex-1 items-center justify-center text-sm text-fg-muted">{startupStatus()}</div></Match>
         <Match when={!loading()}><DocumentPicker heading="Denim databases" sources={sources()} onSelect={(item) => void openSource(item)}
           createTitle="New project" onCreate={(item) => setCreatingIn(item)} /></Match>
       </Switch>}>

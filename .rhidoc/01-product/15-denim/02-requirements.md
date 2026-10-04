@@ -25,6 +25,12 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 - **GED3.** [p] Denim does not restrict parent/child relationships by the types of their nodes.
 - **GED4.** [p] When differentiating a node, the user can choose an existing node as its subnode instead of creating a new node.
 
+- **GED5.** [p] Denim persists literal-line Edges and `contains` Edges as distinct Edge types.
+- **GED6.** [p] Denim derives an Edge's semantic meaning from its Edge type and the types of its endpoint Nodes.
+- **GED7.** [p] A Node can belong to at most one Container.
+- **GED8.** [p] Denim derives nested containment from `contains` Edges.
+- **GED9.** [p] Creating a Node inside a Container creates a `contains` Edge from the Container's owner Node, and the new Node has the same type as its owner.
+
 ## Journey Board
 
 - **JV1.** [p] The default Board for a Journey presents a top-to-bottom directed acyclic graph.

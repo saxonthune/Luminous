@@ -169,6 +169,25 @@
 .lui-toolbar--node {
   height: 1.75rem;
   gap: var(--lui-space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--lui-node-toolbar-bg, var(--surface));
+  box-shadow: var(--shadow-sm);
+}
+
+.lui-node-card [data-node-toolbar],
+[data-container-id] [data-container-toolbar] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.lui-node-card:hover [data-node-toolbar],
+.lui-node-card:focus-within [data-node-toolbar],
+[data-container-id]:hover [data-container-toolbar],
+[data-container-id]:focus-within [data-container-toolbar] {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .lui-node-toolbar__more {
@@ -181,8 +200,11 @@
 
 .lui-node-toolbar__menu-anchor { position: relative; width: 1.75rem; height: 1.75rem; flex: 0 0 auto; }
 
-.lui-node-card:hover .lui-node-toolbar__more,
-.lui-node-card:focus-within .lui-node-toolbar__more { width: 8rem; }
+[data-node-toolbar]:hover .lui-node-toolbar__more,
+[data-node-toolbar]:focus-within .lui-node-toolbar__more { width: 10rem; }
+
+[data-container-toolbar]:hover .lui-node-toolbar__more,
+[data-container-toolbar]:focus-within .lui-node-toolbar__more { width: 1.75rem; }
 
 .lui-node-toolbar__expander {
   position: absolute;
@@ -194,8 +216,10 @@
   pointer-events: none;
 }
 
-.lui-node-card:hover .lui-node-toolbar__expander,
-.lui-node-card:focus-within .lui-node-toolbar__expander { display: none; }
+[data-node-toolbar]:hover .lui-node-toolbar__expander,
+[data-node-toolbar]:focus-within .lui-node-toolbar__expander,
+[data-container-toolbar]:hover .lui-node-toolbar__expander,
+[data-container-toolbar]:focus-within .lui-node-toolbar__expander { display: none; }
 
 .lui-node-toolbar__actions {
   position: absolute;
@@ -209,13 +233,16 @@
   transition: opacity 150ms ease;
 }
 
-.lui-node-card:hover .lui-node-toolbar__actions,
-.lui-node-card:focus-within .lui-node-toolbar__actions { opacity: 1; pointer-events: auto; }
+[data-node-toolbar]:hover .lui-node-toolbar__actions,
+[data-node-toolbar]:focus-within .lui-node-toolbar__actions,
+[data-container-toolbar]:hover .lui-node-toolbar__actions,
+[data-container-toolbar]:focus-within .lui-node-toolbar__actions { opacity: 1; pointer-events: auto; }
 
 .lui-node-toolbar__action:focus-visible { pointer-events: auto; opacity: 1; }
 .lui-toolbar--node .lui-icon-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--surface) 70%, transparent);
 }
+.lui-toolbar--node .lui-icon-button { border-radius: 999px; }
 
 .lui-toolbar__tab-area { display: flex; min-width: 0; flex: 1; align-items: center; }
 .lui-tab-scroll { width: 1.75rem; flex: 0 0 auto; }
@@ -224,6 +251,42 @@
 
 .lui-edge-delete-anchor { position: fixed; z-index: 50; }
 .lui-edge-delete { height: 1.75rem; padding: 0 var(--lui-space-2); box-shadow: var(--shadow-sm); font-size: 0.75rem; }
+.lui-detached-edge-anchor { position: fixed; z-index: 50; width: 0; height: 0; pointer-events: none; }
+.lui-detached-edge-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translate(-50%, -50%);
+}
+.lui-detached-edge-tools {
+  position: absolute;
+  top: -0.875rem;
+  left: 0.75rem;
+  height: 1.75rem;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--lui-radius-xs);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  pointer-events: auto;
+  animation: lui-edge-tools-in 140ms ease-out both;
+  transform-origin: left center;
+}
+.lui-detached-edge-anchor.is-left .lui-detached-edge-tools {
+  right: 0.75rem;
+  left: auto;
+  transform-origin: right center;
+}
+.lui-detached-edge-tools .lui-button { min-height: 1.75rem; padding: 0 var(--lui-space-2); font-size: 0.75rem; }
+@keyframes lui-edge-tools-in { from { opacity: 0; transform: scaleX(0.35); } to { opacity: 1; transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .lui-detached-edge-tools { animation: none; } }
 .lui-status-badge.is-passive { pointer-events: none; }
 .lui-save-spinner { animation: lui-spin 1s linear infinite; }
 @keyframes lui-spin { to { transform: rotate(360deg); } }

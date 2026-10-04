@@ -12,7 +12,7 @@ interface AppHeaderProps {
 export function AppHeader(props: AppHeaderProps) {
   return (
     <header
-      class="flex items-center justify-between border-b border-border-subtle bg-surface px-4"
+      class="relative z-30 flex items-center justify-between border-b border-border-subtle bg-surface px-4"
       style={{ height: '44px', 'flex-shrink': 0 }}
     >
       <div class="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { For, Show, createSignal, onMount, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import { Plus } from 'lucide-solid';
+import Plus from 'lucide-solid/icons/plus';
 import type { CanvasSource } from './sources';
 
 interface DocumentPickerProps {
