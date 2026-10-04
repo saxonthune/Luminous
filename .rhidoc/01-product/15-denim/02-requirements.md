@@ -1,6 +1,6 @@
 ---
 title: Requirements
-summary: Pending user-supported requirements for Denim's journey graph, node editing, persistent Boards, and resource selection.
+summary: Pending user-supported requirements for Denim's journey graph, node editing, persistent Boards, and instance selection.
 tags: [denim, requirements, ui, graph, boards]
 deps: [doc01.15.01, doc01.15.03]
 ---
@@ -42,11 +42,11 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 - **VIEW7.** [p] The built-in Capabilities Board shows a list of Capabilities.
 - **VIEW8.** [p] Denim stores each Board's included Nodes and spatial arrangement independently; Nodes and Edges remain shared database data.
 
-## Journey and Resource queries
+## Journey and Instance queries
 
 - **QUERY1.** [p] A Board sourced from one Journey can query all nodes below that Journey.
-- **QUERY2.** [p] The user can query for top-level Resources, where a Resource is top-level when it has no parent that is a Resource.
-- **QUERY3.** [p] When the user connects a node to an existing Resource, Denim provides a popup in which the user can find that Resource.
+- **QUERY2.** [p] The user can query for top-level Instances, where an Instance is top-level when it has no parent that is an Instance.
+- **QUERY3.** [p] When the user connects a node to an existing Instance, Denim provides a popup in which the user can find that Instance.
 
 ## Canvas presentation
 

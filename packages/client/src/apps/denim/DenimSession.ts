@@ -6,7 +6,7 @@ import {
   getJourneyGraph,
   listCapabilities,
   listJourneys,
-  listTopLevelResources,
+  listTopLevelInstances,
   type DenimDatabase,
   type DenimEdge,
   type DenimGraph,
@@ -31,8 +31,9 @@ export interface DenimSessionState {
 
 export interface DenimSession {
   readonly state: Store<DenimSessionState>;
-  dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; boardId?: string }>;
-  selectBoard(board: 'journeys' | 'capabilities' | 'resources'): void;
+  dispatchAction(action: DenimAction): Promise<DenimDispatchResult>;
+  readBoard(boardId: string): Promise<DenimDispatchResult>;
+  selectBoard(board: 'journeys' | 'capabilities' | 'instances'): void;
   activateBoard(id: string): void;
   setCamera(id: string, camera: { x: number; y: number; k: number }): void;
   openJourney(id: string): Promise<void>;
@@ -60,6 +61,16 @@ export interface DenimSession {
   discard(): Promise<void>;
 }
 
+export interface DenimDispatchResult {
+  ok: boolean;
+  error?: string;
+  nodeId?: string;
+  boardId?: string;
+  board?: DenimBoard;
+  graph?: DenimGraph;
+  changed?: boolean;
+}
+
 export type DenimFileSaver = (bytes: Uint8Array, revision: string) => Promise<string>;
 
 export class DenimPersistenceConflict extends Error {
@@ -77,7 +88,7 @@ const LEGACY_ACTIVE_TAB_KEY = 'denim-active-tab:';
 function sourceGraph(database: DenimDatabase, source: DenimQuerySource): DenimGraph {
   if (source.kind === 'journey') return getJourneyGraph(database, source.journeyId);
   if (source.kind === 'capabilities') return { nodes: listCapabilities(database), edges: [] };
-  if (source.kind === 'resources') return { nodes: listTopLevelResources(database), edges: [] };
+  if (source.kind === 'instances') return { nodes: listTopLevelInstances(database), edges: [] };
   return { nodes: listJourneys(database), edges: [] };
 }
 
@@ -196,7 +207,7 @@ export function createDenimSession(
     }
   }
 
-  async function dispatchAction(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; boardId?: string }> {
+  async function dispatchAction(action: DenimAction): Promise<DenimDispatchResult> {
     if (disposed) return { ok: false, error: 'Denim session is closed' };
     try {
       const result = applyDenimAction(database, action);
@@ -233,6 +244,7 @@ export function createDenimSession(
   return {
     state,
     dispatchAction,
+    async readBoard(boardId) { return dispatchAction({ op: 'board.read', boardId }); },
     selectBoard(board) {
       const id = `pinned:${board}`;
       if (!state.boards.some((board) => board.id === id)) return;

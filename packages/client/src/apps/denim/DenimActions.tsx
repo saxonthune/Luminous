@@ -1,9 +1,12 @@
 import { createContext, useContext, type ParentProps } from 'solid-js';
 import type { DenimAction } from '@luminous/core/denim/actions';
 import type { DenimSession } from './DenimSession';
+import type { DenimBoard } from '@luminous/core/denim/actions';
+import type { DenimGraph } from '@luminous/core/denim';
 
 export interface DenimActionApi {
-  dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; boardId?: string }>;
+  dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; boardId?: string; board?: DenimBoard; graph?: DenimGraph; changed?: boolean }>;
+  readBoard(boardId: string): Promise<{ ok: boolean; error?: string; board?: DenimBoard; graph?: DenimGraph }>;
   createJourney(text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   differentiate(parentId: string, text?: string, placement?: { boardId: string; x: number; y: number }): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   connectExisting(parentId: string, childId: string): Promise<{ ok: boolean; error?: string }>;
@@ -25,6 +28,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
   const dispatch = (action: DenimAction) => session.dispatchAction(action);
   return {
     dispatch,
+    readBoard: (boardId) => dispatch({ op: 'board.read', boardId }),
     createJourney: (text) => dispatch({ op: 'journey.create', text }),
     differentiate: (parentId, text, placement) => dispatch({ op: 'node.differentiate', parentId, text, placement }),
     connectExisting: (parentId, childId) => dispatch({ op: 'edge.connect', parentId, childId }),

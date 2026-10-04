@@ -5,7 +5,7 @@ import initSqlJs from 'sql.js';
 import {
   addDenimEdge, addDenimNode, deleteDenimNode, deleteDenimNodeAndChildren, exportDenimDatabase, getDenimGraph,
   clearDenimSequence, connectDenimChild, createDenimChild, getJourneyGraph, initializeDenimSequence,
-  listJourneys, listTopLevelResources, openDenimDatabase,
+  listJourneys, listTopLevelInstances, openDenimDatabase,
   PARENT_CHILD, updateDenimEdgePriority, updateDenimNode,
   hydrateDenimDatabase,
 } from '../../src/denim/database.ts';
@@ -56,12 +56,12 @@ describe('Denim SQLite database', () => {
     expect(migrated.exec('PRAGMA user_version')[0].values[0][0]).toBe(4);
   });
 
-  it('finds resources without a Resource parent and rejects parent cycles', async () => {
+  it('finds instances without an Instance parent and rejects parent cycles', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
-    addDenimNode(db, { id: 'hosting', type: 'Resource', text: 'Hosting' });
-    addDenimNode(db, { id: 'worker', type: 'Resource', text: 'Worker' });
+    addDenimNode(db, { id: 'hosting', type: 'Instance', text: 'Hosting' });
+    addDenimNode(db, { id: 'worker', type: 'Instance', text: 'Worker' });
     addDenimEdge(db, { id: 'hosting-worker', type: PARENT_CHILD, sourceId: 'hosting', targetId: 'worker' });
-    expect(listTopLevelResources(db).map((node) => node.id)).toEqual(['hosting']);
+    expect(listTopLevelInstances(db).map((node) => node.id)).toEqual(['hosting']);
     expect(() => addDenimEdge(db, { id: 'worker-hosting', type: PARENT_CHILD, sourceId: 'worker', targetId: 'hosting' })).toThrow(/cycle/);
   });
 
@@ -81,7 +81,7 @@ describe('Denim SQLite database', () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'parent', type: 'Journey', text: 'Journey' });
     addDenimNode(db, { id: 'target', type: 'Action', text: 'Action' });
-    addDenimNode(db, { id: 'other', type: 'Resource', text: 'Resource' });
+    addDenimNode(db, { id: 'other', type: 'Instance', text: 'Instance' });
     addDenimEdge(db, { id: 'incoming', type: PARENT_CHILD, sourceId: 'parent', targetId: 'target' });
     addDenimEdge(db, { id: 'outgoing', type: 'uses', sourceId: 'target', targetId: 'other' });
 
@@ -90,7 +90,7 @@ describe('Denim SQLite database', () => {
     expect(getDenimGraph(db)).toEqual({
       nodes: [
         { id: 'parent', type: 'Journey', text: 'Journey' },
-        { id: 'other', type: 'Resource', text: 'Resource' },
+        { id: 'other', type: 'Instance', text: 'Instance' },
       ],
       edges: [],
     });
@@ -101,7 +101,7 @@ describe('Denim SQLite database', () => {
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
     addDenimNode(db, { id: 'action', type: 'Action', text: 'Action' });
     addDenimNode(db, { id: 'capability', type: 'Capability', text: 'Capability' });
-    addDenimNode(db, { id: 'resource', type: 'Resource', text: 'Resource' });
+    addDenimNode(db, { id: 'resource', type: 'Instance', text: 'Instance' });
     addDenimEdge(db, { id: 'journey-action', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action' });
     addDenimEdge(db, { id: 'action-capability', type: PARENT_CHILD, sourceId: 'action', targetId: 'capability' });
     addDenimEdge(db, { id: 'capability-resource', type: PARENT_CHILD, sourceId: 'capability', targetId: 'resource' });

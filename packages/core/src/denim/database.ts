@@ -23,7 +23,7 @@ export interface DenimGraph {
 
 export const PARENT_CHILD = 'parent-child';
 export const JOURNEY_TYPE = 'Journey';
-export const RESOURCE_TYPE = 'Resource';
+export const INSTANCE_TYPE = 'Instance';
 export const CAPABILITY_TYPE = 'Capability';
 
 let sqlPromise: Promise<SqlJsStatic> | undefined;
@@ -68,6 +68,9 @@ export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint
   const SQL = await sql(wasm);
   const db = bytes ? new SQL.Database(bytes) : new SQL.Database();
   db.exec(SCHEMA);
+  // Node kinds are stored as text values, so rename existing Resource nodes
+  // when opening databases created by earlier Denim versions.
+  db.run('UPDATE nodes SET type = ? WHERE type = ?', [INSTANCE_TYPE, 'Resource']);
   const tables = rows<{ name: string }>(db, "SELECT name FROM sqlite_master WHERE type = 'table'");
   if (tables.some((table) => table.name === 'denim_workspaces')) {
     const legacy = rows<{ id: string; payload_json: string }>(db,
@@ -81,6 +84,24 @@ export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint
       db.run('INSERT OR IGNORE INTO denim_boards (id, payload_json) VALUES (?, ?)', [record.id, JSON.stringify(payload)]);
     }
     db.run('DROP TABLE denim_workspaces');
+  }
+  // Preserve pinned Board settings while moving its query source and key.
+  for (const record of rows<{ id: string; payload_json: string }>(db,
+    'SELECT id, payload_json FROM denim_boards ORDER BY rowid')) {
+    try {
+      const payload = JSON.parse(record.payload_json) as { id?: unknown; sources?: unknown };
+      if (payload.id === 'pinned:resources') payload.id = 'pinned:instances';
+      if (Array.isArray(payload.sources)) {
+        for (const source of payload.sources) {
+          if (source && typeof source === 'object' && (source as { kind?: unknown }).kind === 'resources') {
+            (source as { kind: string }).kind = 'instances';
+          }
+        }
+      }
+      const id = record.id === 'pinned:resources' ? 'pinned:instances' : record.id;
+      db.run('INSERT OR REPLACE INTO denim_boards (id, payload_json) VALUES (?, ?)', [id, JSON.stringify(payload)]);
+      if (id !== record.id) db.run('DELETE FROM denim_boards WHERE id = ?', [record.id]);
+    } catch { /* Ignore malformed legacy Board data. */ }
   }
   const edgeColumns = rows<{ name: string }>(db, 'PRAGMA table_info(edges)');
   if (!edgeColumns.some((column) => column.name === 'priority')) {
@@ -162,14 +183,14 @@ export function listCapabilities(db: Database): DenimNode[] {
   return rows(db, 'SELECT id, type, text FROM nodes WHERE type = ? ORDER BY rowid', [CAPABILITY_TYPE]);
 }
 
-export function listTopLevelResources(db: Database): DenimNode[] {
+export function listTopLevelInstances(db: Database): DenimNode[] {
   return rows(db, `
     SELECT n.id, n.type, n.text FROM nodes n
     WHERE n.type = ? AND NOT EXISTS (
       SELECT 1 FROM edges e JOIN nodes parent ON parent.id = e.source_id
       WHERE e.target_id = n.id AND e.type = ? AND parent.type = ?
     ) ORDER BY n.rowid
-  `, [RESOURCE_TYPE, PARENT_CHILD, RESOURCE_TYPE]);
+  `, [INSTANCE_TYPE, PARENT_CHILD, INSTANCE_TYPE]);
 }
 
 /** Starter graph hydrated into a newly created Denim project. */

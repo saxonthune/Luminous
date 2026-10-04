@@ -21,7 +21,7 @@ deps: [doc01.15.01, doc01.15.02]
   The SQLite table stores the payload as opaque JSON so a Board can evolve
   without changing the table schema.
 - The current source descriptors are query recipes for Journeys, Capabilities,
-  Resources, or one Journey. The session composes all sources with included
+  Instances, or one Journey. The session composes all sources with included
   Nodes by ID, then refreshes source results after graph edits. Future Board
   shapes can replace or extend these descriptors without changing the session's
   database storage boundary.
@@ -59,8 +59,11 @@ coordinate a database edit with the visible canvas state.
   `sequence.clear`. `node.delete` names either `node` scope, which keeps
   descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.
-- Board actions are `board.openJourney`, `board.close`, `board.includeNode`,
-  `board.node.move`, `board.nodes.move`, and `board.sequenceMode.set`.
+- Board actions are `board.read`, `board.openJourney`, `board.close`,
+  `board.includeNode`, `board.node.move`, `board.nodes.move`, and
+  `board.sequenceMode.set`. `board.read` returns the Board definition and the
+  graph produced by its query sources and included Nodes without changing the
+  database.
 - A database snapshot exposes its graph and Boards so an agent can
   inspect the current design before submitting an action.
 - The action catalog lists each operation and its required and optional

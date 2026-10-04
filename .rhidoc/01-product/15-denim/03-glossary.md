@@ -20,15 +20,15 @@ relationships and contents were not specified in the source request.
   - An Action can have Actions as child nodes.
   - An Action can have Capabilities as child nodes.
 
-- **DTERM3.** [p] **Capability** — a node type that an Action can have and a Resource can fulfill.
+- **DTERM3.** [p] **Capability** — a node type that an Action can have and an Instance can fulfill.
   - A Capability can have Capabilities as child nodes.
-  - A Resource fulfills a Capability. `fulfills(resource, capability)`
+  - An Instance fulfills a Capability. `fulfills(instance, capability)`
 
-## Resources and implementation
+## Instances and implementation
 
-- **DTERM4.** [p] **Resource** — a server, UI server, worker, store, browser, or similar resource; comparable to a deployment in the source draft.
-  - A Resource can have Resources as child nodes.
-  - A Resource can have Organizations as child nodes.
+- **DTERM4.** [p] **Instance** — a concrete, materialized part of a running software system, such as a UI deployment, API worker, or database table.
+  - An Instance can have Instances as child nodes.
+  - An Instance can have Organizations as child nodes.
 
 - **DTERM5.** [p] **Organization** — a node representing modules, functions, guards, or other implementation details.
 

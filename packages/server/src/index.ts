@@ -260,7 +260,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
             ? result.boardId : undefined)
       }
       res.setHeader('ETag', nextRevision)
-      sendJson(res, 200, { ...result, path, revision: nextRevision, ...readDenimSnapshot(database) })
+      sendJson(res, 200, { ...readDenimSnapshot(database), ...result, path, revision: nextRevision })
     } catch (cause) {
       if (cause instanceof DocumentRevisionConflict) {
         res.setHeader('ETag', cause.currentRevision)

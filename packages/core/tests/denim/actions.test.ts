@@ -18,7 +18,7 @@ describe('Denim actions', () => {
   it('applies graph actions and rejects invalid connections', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
-    addDenimNode(db, { id: 'existing', type: 'Resource', text: 'Existing' });
+    addDenimNode(db, { id: 'existing', type: 'Instance', text: 'Existing' });
 
     const created = applyDenimAction(db, { op: 'journey.create', id: 'second', text: 'Second' });
     const child = applyDenimAction(db, {
@@ -73,7 +73,7 @@ describe('Denim actions', () => {
     applyDenimAction(db, { op: 'node.delete', id: 'other-journey', scope: 'subtree' });
     expect(getDenimGraph(db).nodes.map((node) => node.id)).toEqual(['child']);
     expect(readDenimSnapshot(db).boards.map((board) => board.id)).toEqual([
-      'pinned:journeys', 'pinned:capabilities', 'pinned:resources',
+      'pinned:journeys', 'pinned:capabilities', 'pinned:instances',
     ]);
     db.close();
   });
@@ -101,7 +101,7 @@ describe('Denim actions', () => {
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
     addDenimNode(db, { id: 'a', type: 'Action', text: 'A' });
     addDenimNode(db, { id: 'b', type: 'Action', text: 'B' });
-    addDenimNode(db, { id: 'resource', type: 'Resource', text: 'Resource' });
+    addDenimNode(db, { id: 'resource', type: 'Instance', text: 'Instance' });
     applyDenimAction(db, { op: 'edge.connect', parentId: 'journey', childId: 'a', edgeId: 'j-a' });
     applyDenimAction(db, { op: 'edge.connect', parentId: 'journey', childId: 'b', edgeId: 'j-b' });
     applyDenimAction(db, { op: 'sequence.initialize', parentId: 'journey', orderedChildIds: ['b', 'a'] });
@@ -130,7 +130,7 @@ describe('Denim actions', () => {
   it('publishes a discoverable catalog for the full action vocabulary', () => {
     expect(DENIM_ACTION_CATALOG.map(({ op }) => op)).toEqual([
       'journey.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'node.update', 'node.delete',
-      'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.sequenceMode.set',
+      'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.read', 'board.sequenceMode.set',
       'board.includeNode', 'board.node.move', 'board.nodes.move', 'board.openJourney', 'board.close',
     ]);
   });

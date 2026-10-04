@@ -60,7 +60,7 @@ describe('DenimSession', () => {
   it('keeps duplicate Journey Boards independent and restores their JSON payloads', async () => {
     let database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    addDenimNode(database, { id: 'extra', type: 'Resource', text: 'Existing API' });
+    addDenimNode(database, { id: 'extra', type: 'Instance', text: 'Existing API' });
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1', 'tabs-test');
 
     await session.openJourney('journey');
@@ -101,7 +101,7 @@ describe('DenimSession', () => {
   it('persists a pulled-in node separately from graph connections', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    addDenimNode(database, { id: 'resource', type: 'Resource', text: 'Existing API' });
+    addDenimNode(database, { id: 'resource', type: 'Instance', text: 'Existing API' });
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
 
     await session.includeNode('resource', 'pinned:journeys');
@@ -133,7 +133,7 @@ describe('DenimSession', () => {
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
     createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
     createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Persist it' }, 'action-capability');
-    createDenimChild(database, 'capability', { id: 'resource', type: 'Resource', text: 'Database' }, 'capability-resource');
+    createDenimChild(database, 'capability', { id: 'resource', type: 'Instance', text: 'Database' }, 'capability-resource');
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
     await session.openJourney('journey');
 
@@ -213,7 +213,7 @@ describe('DenimSession', () => {
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Journey' });
     createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Action' }, 'journey-action');
     createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Capability' }, 'action-capability');
-    addDenimNode(database, { id: 'resource', type: 'Resource', text: 'Resource' });
+    addDenimNode(database, { id: 'resource', type: 'Instance', text: 'Instance' });
     const session = createDenimSession(database, async (_bytes, revision) => revision, 'r1');
 
     expect(session.canConnectExisting('journey', 'resource')).toBe(true);

@@ -17,7 +17,7 @@ extending one global counter.
 ## Boards and tabs
 
 - **VT1.** [p] When the user opens a Journey, Denim creates a persistent Board for it and opens that Board in a tab.
-- **VT2.** [p] The Journeys, Capabilities, and Resources Boards behave like pinned tabs.
+- **VT2.** [p] The Journeys, Capabilities, and Instances Boards behave like pinned tabs.
 - **VT3.** [p] The user can open the same Journey in more than one independent Board.
 
 ## Project picker
@@ -39,7 +39,7 @@ extending one global counter.
 ## Quick Select
 
 - **QS1.** [p] Quick Select is a speedy icon that opens a dropdown containing built-in Boards.
-- **QS2.** [p] The built-in Boards in Quick Select are Journeys, Capabilities, and Resources.
+- **QS2.** [p] The built-in Boards in Quick Select are Journeys, Capabilities, and Instances.
 - **QS3.** [p] For now, the user cannot add their own Boards to Quick Select.
 
 ## Board Strip
@@ -48,6 +48,12 @@ extending one global counter.
 - **TV2.** [p] When Boards overflow in the Board Strip, chevron icons let the user scroll left and right.
 - **TV3.** [p] The user can scroll the Board Strip while the pointer is inside it.
 - **TV4.** [p] When the user opens a Board without a saved camera, Denim fits its Nodes into the viewport.
+
+## Board tab context menu
+
+- **BCTX1.** [p] Right-clicking a Board tab opens its context menu.
+- **BCTX2.** [p] The Board tab context menu offers Export, with Excalidraw as an export format.
+- **BCTX3.** [p] Choosing Excalidraw downloads the selected Board's visible graph as an editable `.excalidraw` file.
 
 ## Board Toolbar
 

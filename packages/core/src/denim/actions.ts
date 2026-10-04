@@ -12,7 +12,7 @@ import {
   listCapabilities,
   listDenimBoards,
   listJourneys,
-  listTopLevelResources,
+  listTopLevelInstances,
   putDenimBoard,
   removeDenimBoard,
   updateDenimEdgePriority,
@@ -24,7 +24,7 @@ import {
 export type DenimQuerySource =
   | { kind: 'journeys' }
   | { kind: 'capabilities' }
-  | { kind: 'resources' }
+  | { kind: 'instances' }
   | { kind: 'journey'; journeyId: string };
 
 export interface DenimBoard {
@@ -41,7 +41,7 @@ export interface DenimBoard {
 export const DENIM_PINNED_BOARDS: DenimBoard[] = [
   { version: 1, id: 'pinned:journeys', kind: 'pinned', title: 'Journeys', sources: [{ kind: 'journeys' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
   { version: 1, id: 'pinned:capabilities', kind: 'pinned', title: 'Capabilities', sources: [{ kind: 'capabilities' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
-  { version: 1, id: 'pinned:resources', kind: 'pinned', title: 'Resources', sources: [{ kind: 'resources' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
+  { version: 1, id: 'pinned:instances', kind: 'pinned', title: 'Instances', sources: [{ kind: 'instances' }], includedNodeIds: [], positions: {}, sequenceModes: {} },
 ];
 
 export type DenimAction =
@@ -54,6 +54,7 @@ export type DenimAction =
   | { op: 'edge.priority.set'; edgeId: string; priority: number }
   | { op: 'sequence.initialize'; parentId: string; orderedChildIds: string[] }
   | { op: 'sequence.clear'; parentId: string }
+  | { op: 'board.read'; boardId: string }
   | { op: 'board.sequenceMode.set'; boardId: string; parentId: string; mode: 'rank' | 'priority' }
   | { op: 'board.includeNode'; boardId: string; nodeId: string }
   | { op: 'board.node.move'; boardId: string; nodeId: string; position: { x: number; y: number } }
@@ -71,6 +72,7 @@ export const DENIM_ACTION_CATALOG = [
   { op: 'edge.priority.set', required: ['edgeId', 'priority'], optional: [], purpose: 'Set an edge sequence priority.' },
   { op: 'sequence.initialize', required: ['parentId', 'orderedChildIds'], optional: [], purpose: 'Assign priorities in the supplied child order.' },
   { op: 'sequence.clear', required: ['parentId'], optional: [], purpose: 'Clear priorities on all child edges.' },
+  { op: 'board.read', required: ['boardId'], optional: [], purpose: 'Read a Board and its query projection.' },
   { op: 'board.sequenceMode.set', required: ['boardId', 'parentId', 'mode'], optional: [], purpose: 'Set a parent label mode on a Board to rank or priority.' },
   { op: 'board.includeNode', required: ['boardId', 'nodeId'], optional: [], purpose: 'Include a Node on a Board.' },
   { op: 'board.node.move', required: ['boardId', 'nodeId', 'position'], optional: [], purpose: 'Save a Node position on a Board.' },
@@ -84,6 +86,8 @@ export interface DenimActionResult {
   changed: boolean;
   nodeId?: string;
   boardId?: string;
+  board?: DenimBoard;
+  graph?: ReturnType<typeof graphForBoard>;
 }
 
 const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -100,7 +104,7 @@ export function readDenimBoards(db: DenimDatabase): DenimBoard[] {
 function isQuerySource(value: unknown): value is DenimQuerySource {
   if (!value || typeof value !== 'object') return false;
   const source = value as Record<string, unknown>;
-  return source.kind === 'journeys' || source.kind === 'capabilities' || source.kind === 'resources'
+  return source.kind === 'journeys' || source.kind === 'capabilities' || source.kind === 'instances'
     || (source.kind === 'journey' && typeof source.journeyId === 'string');
 }
 
@@ -139,7 +143,7 @@ function graphForBoard(db: DenimDatabase, board: DenimBoard) {
   for (const source of board.sources) {
     const graph = source.kind === 'journey' ? getJourneyGraph(db, source.journeyId)
       : source.kind === 'capabilities' ? { nodes: listCapabilities(db), edges: [] }
-        : source.kind === 'resources' ? { nodes: listTopLevelResources(db), edges: [] }
+        : source.kind === 'instances' ? { nodes: listTopLevelInstances(db), edges: [] }
           : { nodes: listJourneys(db), edges: [] };
     graph.nodes.forEach((node) => nodes.set(node.id, node));
     graph.edges.forEach((edge) => edges.set(edge.id, edge));
@@ -258,6 +262,10 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
     case 'sequence.clear':
       requireNode(db, action.parentId); clearDenimSequence(db, action.parentId);
       return { ok: true, changed: true };
+    case 'board.read': {
+      const board = requireBoard(db, action.boardId);
+      return { ok: true, changed: false, boardId: board.id, board, graph: graphForBoard(db, board) };
+    }
     case 'board.sequenceMode.set': {
       if (action.mode !== 'rank' && action.mode !== 'priority') throw new Error('Sequence mode must be rank or priority');
       requireNode(db, action.parentId);

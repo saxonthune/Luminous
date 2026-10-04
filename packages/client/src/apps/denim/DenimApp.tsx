@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, CirclePlus, Ellipsis, ExternalLink, GitBranc
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useGesture } from '@luminous/cactus';
 import type { CanvasRef, TidyNode } from '@luminous/cactus';
 import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimEdge, type DenimGraph, type DenimNode } from '@luminous/core/denim';
+import { denimBoardToExcalidraw } from '@luminous/core/denim/excalidraw';
 import { DocumentPicker } from '../../DocumentPicker';
 import { AnchoredMenu, Button, computeAnchoredPosition, IconButton, MenuItem, MenuSeparator, MenuSubmenu, ToolbarSurface } from '../../ui';
 import { createStaticDatabase, fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
@@ -15,6 +16,7 @@ import {
   DenimSessionContext,
   DenimPersistenceConflict,
   useDenimSession,
+  type DenimBoard,
   type DenimSession,
 } from './DenimSession';
 import { DenimSaveStatusBadge } from './DenimSaveStatusBadge';
@@ -29,7 +31,7 @@ const NODE_THEME_SLOT: Record<string, number> = {
   Journey: 1,
   Action: 2,
   Capability: 5,
-  Resource: 4,
+  Instance: 4,
   Organization: 6,
   Contract: 8,
 };
@@ -288,7 +290,7 @@ function NodeCard(props: {
   let sequenceOptionsButton: HTMLButtonElement | undefined;
   let deleteButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([
-    'Journey', 'Action', 'Capability', 'Resource', 'Organization', 'Contract', props.node.type,
+    'Journey', 'Action', 'Capability', 'Instance', 'Organization', 'Contract', props.node.type,
   ])]);
   return <article class="lui-node-card relative flex h-full flex-col gap-2 rounded-lg p-3 transition-shadow"
     style={{
@@ -393,20 +395,70 @@ function NodeCard(props: {
   </article>;
 }
 
-function DenimAppToolbar() {
+function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) {
   const session = useDenimSession();
   const actions = useDenimActions();
   const [quickSelectOpen, setQuickSelectOpen] = createSignal(false);
+  const [boardMenu, setBoardMenu] = createSignal<{ board: DenimBoard; anchor: HTMLElement } | null>(null);
+  const [exportSubmenuOpen, setExportSubmenuOpen] = createSignal(false);
   const [overflow, setOverflow] = createSignal(false);
+  const boardMenuRoots = new Set<HTMLElement>();
   let quickSelectButton: HTMLButtonElement | undefined;
   let strip: HTMLDivElement | undefined;
   let resizeObserver: ResizeObserver | undefined;
+  let statusTimer: ReturnType<typeof setTimeout> | undefined;
   const refreshOverflow = () => setOverflow(Boolean(strip && strip.scrollWidth > strip.clientWidth + 1));
   const tabs = () => session.state.boards;
   const activate = (id: string) => {
+    setBoardMenu(null);
+    setExportSubmenuOpen(false);
     session.activateBoard(id);
     setQuickSelectOpen(false);
   };
+
+  function showBoardMenu(board: DenimBoard, anchor: HTMLElement): void {
+    setExportSubmenuOpen(false);
+    setBoardMenu({ board, anchor });
+  }
+
+  async function exportBoard(board: DenimBoard): Promise<void> {
+    setBoardMenu(null);
+    setExportSubmenuOpen(false);
+    try {
+      const result = await actions.readBoard(board.id);
+      if (!result.ok || !result.graph || !result.board) throw new Error(result.error ?? 'Could not read Board');
+      const graph: DenimGraph = {
+        nodes: result.graph.nodes,
+        // Match the edges shown by Denim's current graph canvas.
+        edges: result.graph.edges.filter((edge) => edge.type === 'parent-child'),
+      };
+      const parents = new Map<string, string>();
+      for (const edge of graph.edges) if (!parents.has(edge.targetId)) parents.set(edge.targetId, edge.sourceId);
+      const positions = dagLayout(graph.nodes.map((node): TidyNode => ({
+        id: node.id, w: NODE_W, h: NODE_H, parentId: parents.get(node.id) ?? null,
+      })), graph.edges.map((edge) => ({ source: edge.sourceId, target: edge.targetId })));
+      for (const [id, position] of Object.entries(result.board.positions)) positions.set(id, position);
+
+      const document = denimBoardToExcalidraw(graph, positions);
+      const filename = `${boardFilename(result.board.title)}.excalidraw`;
+      const url = URL.createObjectURL(new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' }));
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      window.document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      props.onStatus(`Exported ${filename}`);
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => props.onStatus(null), 2400);
+    } catch (cause) {
+      props.onStatus(`Export failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => props.onStatus(null), 5000);
+    }
+  }
 
   onMount(() => {
     if (strip) {
@@ -419,7 +471,10 @@ function DenimAppToolbar() {
     tabs();
     queueMicrotask(refreshOverflow);
   });
-  onCleanup(() => resizeObserver?.disconnect());
+  onCleanup(() => {
+    resizeObserver?.disconnect();
+    clearTimeout(statusTimer);
+  });
 
   function tabKey(event: KeyboardEvent, index: number): void {
     const to = event.key === 'ArrowRight' ? Math.min(index + 1, tabs().length - 1)
@@ -460,7 +515,12 @@ function DenimAppToolbar() {
           aria-selected={session.state.activeBoardId === board.id}>
           <button type="button" role="tab" aria-selected={session.state.activeBoardId === board.id}
             tabIndex={session.state.activeBoardId === board.id ? 0 : -1} title={board.title} class="lui-tab"
-            onClick={() => activate(board.id)} onKeyDown={(event) => tabKey(event, index())}>{board.title}</button>
+            onClick={() => activate(board.id)} onKeyDown={(event) => tabKey(event, index())}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              showBoardMenu(board, event.currentTarget);
+            }}>{board.title}</button>
           <Show when={board.kind === 'board'}>
             <IconButton aria-label={`Close ${board.title}`} title="Close Board" class="lui-tab-close"
               onClick={() => void actions.closeBoard(board.id)}><X size={13} /></IconButton>
@@ -472,7 +532,20 @@ function DenimAppToolbar() {
           onClick={() => strip?.scrollBy({ left: 180, behavior: 'smooth' })}><ChevronRight size={16} /></IconButton>
       </Show>
     </div>
+    <Show when={boardMenu()}>{(menu) => <AnchoredMenu anchor={menu().anchor} label={`${menu().board.title} menu`}
+      onClose={() => { setBoardMenu(null); setExportSubmenuOpen(false); }} relatedMenus={boardMenuRoots}>
+      <MenuSubmenu label="Export" open={exportSubmenuOpen()} onOpen={() => setExportSubmenuOpen(true)}
+        onClose={() => setExportSubmenuOpen(false)} relatedMenus={boardMenuRoots}
+        trigger={<><span>Export</span><ChevronRight size={14} /></>}>
+        <MenuItem onClick={() => void exportBoard(menu().board)}>Excalidraw</MenuItem>
+      </MenuSubmenu>
+    </AnchoredMenu>}</Show>
   </ToolbarSurface>;
+}
+
+function boardFilename(title: string): string {
+  const safe = title.trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ');
+  return safe || 'denim-board';
 }
 
 function DenimBoardCanvas(props: { onReload: () => void }) {
@@ -519,7 +592,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
         </Show>
       </div>}
     </Show>
-    <DenimAppToolbar />
+    <DenimAppToolbar onStatus={setStatusToast} />
     <div class="relative min-h-0 flex-1" onPointerDown={() => setEdgeMenu(null)}>
       <ToolbarSurface variant="floating" class="absolute left-1/2 top-3 z-10 -translate-x-1/2">
         <Show when={isJourneysBoard()}>
