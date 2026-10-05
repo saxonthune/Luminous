@@ -7,6 +7,7 @@ import { scanDocuments, resolveRoots } from "./workspace.js"
 import { dispatchNylon, nylonSession } from "./nylon.js"
 import type { NylonActionRequest } from '@luminous/core/nylon/history'
 import { applyDenimAction, DENIM_ACTION_CATALOG, readDenimSnapshot, type DenimAction } from '@luminous/core/denim/actions'
+import { queryDenim, DENIM_QUERY_CATALOG, type DenimQuery } from '@luminous/core/denim/queries'
 import { exportDenimDatabase, openDenimDatabase } from '@luminous/core/denim'
 import {
   getDocument,
@@ -230,6 +231,31 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   if (url === '/api/denim/actions' && req.method === 'GET') {
     sendJson(res, 200, { actions: DENIM_ACTION_CATALOG })
+    return
+  }
+
+  if (url === '/api/denim/queries' && req.method === 'GET') {
+    sendJson(res, 200, { queries: DENIM_QUERY_CATALOG })
+    return
+  }
+
+  if (url === '/api/denim/query' && req.method === 'POST') {
+    const body = await parseBody(req) as { path?: unknown; query?: unknown }
+    const path = body.path
+    if (typeof path !== 'string' || !path || hasTraversal(path) || !isSqlitePath(path) || !path.endsWith('.denim.sqlite')) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
+    }
+    let database: Awaited<ReturnType<typeof openDenimDatabase>> | undefined
+    try {
+      const bytes = await readDenimDatabase(path)
+      database = await openDenimDatabase(new Uint8Array(bytes))
+      const result = queryDenim(database, body.query as DenimQuery)
+      sendJson(res, 200, { ok: true, result, path, revision: databaseRevision(bytes) })
+    } catch (cause) {
+      sendJson(res, 400, { ok: false, error: cause instanceof Error ? cause.message : 'Denim query failed' })
+    } finally {
+      database?.close()
+    }
     return
   }
 

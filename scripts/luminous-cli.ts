@@ -7,6 +7,7 @@ import {
   openDenimDatabase, seedDenimDatabase, updateDenimNode,
 } from '../packages/core/src/denim/database.ts';
 import type { DenimAction } from '../packages/core/src/denim/actions.ts';
+import type { DenimQuery } from '../packages/core/src/denim/queries.ts';
 import { readDenimBoards } from '../packages/core/src/denim/actions.ts';
 import {
   checkNylonDocument, doctorNylonDocument, parseNylonDocument, serializeNylonDocument,
@@ -43,6 +44,8 @@ function usage(): never {
   luminous denim boards <database>
   luminous denim list [--server URL]
   luminous denim actions [--server URL]
+  luminous denim queries [--server URL]
+  luminous denim query <database> <query.json> [--server URL]
   luminous denim snapshot <database> [--server URL]
   luminous denim action <database> <action.json> [--server URL]
   luminous denim journey <database> <journey-id>
@@ -122,6 +125,25 @@ async function denimCli(): Promise<void> {
   if (command === 'actions') {
     if (argv.length) usage();
     const response = await request('/api/denim/actions');
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
+  if (command === 'queries') {
+    if (argv.length) usage();
+    const response = await request('/api/denim/queries');
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
+  if (command === 'query') {
+    const path = argv.shift(); const queryFile = argv.shift();
+    if (!path || !queryFile || argv.length) usage();
+    let query: DenimQuery;
+    try { query = JSON.parse(await readFile(queryFile, 'utf8')) as DenimQuery; }
+    catch (cause) { fail(`Could not read Denim query JSON: ${cause instanceof Error ? cause.message : String(cause)}`); }
+    const response = await request('/api/denim/query', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, query }),
+    });
     console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }

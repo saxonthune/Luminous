@@ -43,15 +43,16 @@ export interface DenimBoard {
   title: string;
   sources: DenimQuerySource[];
   includedNodeIds: string[];
+  hiddenNodeIds: string[];
   positions: Record<string, { x: number; y: number }>;
   sequenceModes: Record<string, 'rank' | 'priority'>;
   containers: Record<string, DenimBoardContainer>;
 }
 
 export const DENIM_PINNED_BOARDS: DenimBoard[] = [
-  { version: 1, id: 'pinned:journeys', kind: 'pinned', title: 'Journeys', sources: [{ kind: 'journeys' }], includedNodeIds: [], positions: {}, sequenceModes: {}, containers: {} },
-  { version: 1, id: 'pinned:capabilities', kind: 'pinned', title: 'Capabilities', sources: [{ kind: 'capabilities' }], includedNodeIds: [], positions: {}, sequenceModes: {}, containers: {} },
-  { version: 1, id: 'pinned:instances', kind: 'pinned', title: 'Instances', sources: [{ kind: 'instances' }], includedNodeIds: [], positions: {}, sequenceModes: {}, containers: {} },
+  { version: 1, id: 'pinned:journeys', kind: 'pinned', title: 'Journeys', sources: [{ kind: 'journeys' }], includedNodeIds: [], hiddenNodeIds: [], positions: {}, sequenceModes: {}, containers: {} },
+  { version: 1, id: 'pinned:capabilities', kind: 'pinned', title: 'Capabilities', sources: [{ kind: 'capabilities' }], includedNodeIds: [], hiddenNodeIds: [], positions: {}, sequenceModes: {}, containers: {} },
+  { version: 1, id: 'pinned:instances', kind: 'pinned', title: 'Instances', sources: [{ kind: 'instances' }], includedNodeIds: [], hiddenNodeIds: [], positions: {}, sequenceModes: {}, containers: {} },
 ];
 
 export type DenimAction =
@@ -75,6 +76,7 @@ export type DenimAction =
   | { op: 'container.nodes.create'; boardId: string; headNodeId: string; nodes: Array<{ id: string; type: string; text: string; position: { x: number; y: number }; edgeId?: string }> }
   | { op: 'board.sequenceMode.set'; boardId: string; parentId: string; mode: 'rank' | 'priority' }
   | { op: 'board.includeNode'; boardId: string; nodeId: string }
+  | { op: 'board.node.visibility.set'; boardId: string; nodeId: string; visible: boolean }
   | { op: 'board.node.move'; boardId: string; nodeId: string; position: { x: number; y: number } }
   | { op: 'board.nodes.move'; boardId: string; positions: Record<string, { x: number; y: number }> }
   | { op: 'board.openJourney'; journeyId: string; boardId?: string }
@@ -101,6 +103,7 @@ export const DENIM_ACTION_CATALOG = [
   { op: 'container.nodes.create', required: ['boardId', 'headNodeId', 'nodes'], optional: [], purpose: 'Create a set of typed Nodes with labels and positions inside one Container.' },
   { op: 'board.sequenceMode.set', required: ['boardId', 'parentId', 'mode'], optional: [], purpose: 'Set a parent label mode on a Board to rank or priority.' },
   { op: 'board.includeNode', required: ['boardId', 'nodeId'], optional: [], purpose: 'Include a Node on a Board.' },
+  { op: 'board.node.visibility.set', required: ['boardId', 'nodeId', 'visible'], optional: [], purpose: 'Show or hide one Node on a Board without changing shared graph data.' },
   { op: 'board.node.move', required: ['boardId', 'nodeId', 'position'], optional: [], purpose: 'Save a Node position on a Board.' },
   { op: 'board.nodes.move', required: ['boardId', 'positions'], optional: [], purpose: 'Save multiple Node positions on a Board as one action.' },
   { op: 'board.openJourney', required: ['journeyId'], optional: ['boardId'], purpose: 'Create a persistent Board sourced from a Journey.' },
@@ -146,6 +149,8 @@ function decodeBoard(value: unknown): DenimBoard | undefined {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
     positions[id] = { x: point.x, y: point.y };
   }
+  const hiddenNodeIds = Array.isArray(board.hiddenNodeIds) && board.hiddenNodeIds.every((id) => typeof id === 'string')
+    ? [...new Set(board.hiddenNodeIds)] : [];
   const sequenceModes: DenimBoard['sequenceModes'] = {};
   if (board.sequenceModes && typeof board.sequenceModes === 'object') {
     for (const [id, mode] of Object.entries(board.sequenceModes)) if (mode === 'rank' || mode === 'priority') sequenceModes[id] = mode;
@@ -162,18 +167,18 @@ function decodeBoard(value: unknown): DenimBoard | undefined {
   if (board.kind === 'pinned') {
     const pinned = DENIM_PINNED_BOARDS.find((candidate) => candidate.id === board.id);
     if (!pinned) return;
-    return { ...pinned, includedNodeIds: [...new Set(board.includedNodeIds)], positions, sequenceModes, containers };
+    return { ...pinned, includedNodeIds: [...new Set(board.includedNodeIds)], hiddenNodeIds, positions, sequenceModes, containers };
   }
   if (board.kind !== 'board' || typeof board.title !== 'string' || DENIM_PINNED_BOARDS.some((candidate) => candidate.id === board.id)) return;
   return { version: 1, id: board.id, kind: 'board', title: board.title, sources: board.sources,
-    includedNodeIds: [...new Set(board.includedNodeIds)], positions, sequenceModes, containers };
+    includedNodeIds: [...new Set(board.includedNodeIds)], hiddenNodeIds, positions, sequenceModes, containers };
 }
 
 function putBoard(db: DenimDatabase, board: DenimBoard): void {
   putDenimBoard(db, { id: board.id, payload: board });
 }
 
-export function getDenimBoardGraph(db: DenimDatabase, board: DenimBoard) {
+export function getDenimBoardGraph(db: DenimDatabase, board: DenimBoard, options: { includeHidden?: boolean } = {}) {
   const nodes = new Map<string, DenimNode>();
   const edges = new Map<string, ReturnType<typeof getDenimGraph>['edges'][number]>();
   for (const source of board.sources) {
@@ -205,7 +210,9 @@ export function getDenimBoardGraph(db: DenimDatabase, board: DenimBoard) {
     graph.nodes.filter((node) => included.has(node.id)).forEach((node) => nodes.set(node.id, node));
     graph.edges.filter((edge) => nodes.has(edge.sourceId) && nodes.has(edge.targetId)).forEach((edge) => edges.set(edge.id, edge));
   }
-  return { nodes: [...nodes.values()], edges: [...edges.values()] };
+  const visibleNodes = [...nodes.values()].filter((node) => options.includeHidden || !board.hiddenNodeIds.includes(node.id));
+  const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
+  return { nodes: visibleNodes, edges: [...edges.values()].filter((edge) => visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId)) };
 }
 
 function requireNode(db: DenimDatabase, id: string): DenimNode {
@@ -476,6 +483,20 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       putBoard(db, { ...board, includedNodeIds: [...board.includedNodeIds, action.nodeId] });
       return { ok: true, changed: true, boardId: board.id };
     }
+    case 'board.node.visibility.set': {
+      if (typeof action.visible !== 'boolean') throw new Error('Node visibility must be true or false');
+      const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
+      const hidden = new Set(board.hiddenNodeIds);
+      if (action.visible) hidden.delete(action.nodeId); else hidden.add(action.nodeId);
+      const hiddenNodeIds = [...hidden];
+      const includedNodeIds = action.visible && !board.includedNodeIds.includes(action.nodeId)
+        ? [...board.includedNodeIds, action.nodeId] : board.includedNodeIds;
+      if (hiddenNodeIds.length === board.hiddenNodeIds.length && includedNodeIds === board.includedNodeIds) {
+        return { ok: true, changed: false, boardId: board.id };
+      }
+      putBoard(db, { ...board, hiddenNodeIds, includedNodeIds });
+      return { ok: true, changed: true, boardId: board.id };
+    }
     case 'board.node.move': {
       const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
       if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
@@ -499,7 +520,7 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
       const boardId = action.boardId ?? newId('journey-board');
       if (readDenimBoards(db).some((board) => board.id === boardId)) throw new Error(`Board already exists: ${boardId}`);
       putBoard(db, { version: 1, id: boardId, kind: 'board', title: journey.text,
-        sources: [{ kind: 'journey', journeyId: journey.id }], includedNodeIds: [], positions: {}, sequenceModes: {}, containers: {} });
+        sources: [{ kind: 'journey', journeyId: journey.id }], includedNodeIds: [], hiddenNodeIds: [], positions: {}, sequenceModes: {}, containers: {} });
       return { ok: true, changed: true, boardId };
     }
     case 'board.close': {

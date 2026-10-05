@@ -13,6 +13,7 @@
     "./nylon": "./src/nylon/index.ts",
     "./denim": "./src/denim/database.ts",
     "./denim/actions": "./src/denim/actions.ts",
+    "./denim/queries": "./src/denim/queries.ts",
     "./denim/excalidraw": "./src/denim/excalidraw.ts",
     "./hemp": "./src/hemp/index.ts",
     "./nylon/*": "./src/nylon/*.ts",

@@ -9,6 +9,7 @@ import {
 } from '@luminous/core/denim';
 import { applyDenimAction, DENIM_PINNED_BOARDS, getDenimBoardGraph, readDenimSnapshot, readDenimBoards,
   type DenimAction, type DenimBoard } from '@luminous/core/denim/actions';
+import { queryDenim, type DenimQuery, type DenimNodeVisibilityEntry } from '@luminous/core/denim/queries';
 
 export type { DenimQuerySource, DenimBoard, DenimBoardContainer } from '@luminous/core/denim/actions';
 
@@ -28,6 +29,8 @@ export interface DenimSession {
   readonly state: Store<DenimSessionState>;
   dispatchAction(action: DenimAction): Promise<DenimDispatchResult>;
   readBoard(boardId: string): Promise<DenimDispatchResult>;
+  databaseGraph(): DenimGraph;
+  queryNodes(query: DenimQuery): Promise<DenimNodeVisibilityEntry[]>;
   selectBoard(board: 'journeys' | 'capabilities' | 'instances'): void;
   activateBoard(id: string): void;
   setCamera(id: string, camera: { x: number; y: number; k: number }): void;
@@ -219,6 +222,8 @@ export function createDenimSession(
     state,
     dispatchAction,
     async readBoard(boardId) { return dispatchAction({ op: 'board.read', boardId }); },
+    databaseGraph() { return getDenimGraph(database); },
+    async queryNodes(query) { return queryDenim(database, query); },
     selectBoard(board) {
       const id = `pinned:${board}`;
       if (!state.boards.some((board) => board.id === id)) return;

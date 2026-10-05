@@ -129,9 +129,11 @@ describe('Denim actions', () => {
 
   it('publishes a discoverable catalog for the full action vocabulary', () => {
     expect(DENIM_ACTION_CATALOG.map(({ op }) => op)).toEqual([
-      'journey.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'node.update', 'node.delete',
-      'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.read', 'board.sequenceMode.set',
-      'board.includeNode', 'board.node.move', 'board.nodes.move', 'board.openJourney', 'board.close',
+      'journey.create', 'node.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'container.attach', 'container.detach',
+      'node.update', 'node.delete', 'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.read',
+      'board.container.spawn', 'board.container.move', 'board.container.resize', 'container.node.create', 'container.nodes.create',
+      'board.sequenceMode.set', 'board.includeNode', 'board.node.visibility.set', 'board.node.move', 'board.nodes.move',
+      'board.openJourney', 'board.close',
     ]);
   });
 });

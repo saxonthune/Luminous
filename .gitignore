@@ -162,6 +162,7 @@ luminous.config.json
 
 # Hemp prior-art specimen, local tools, and generated diagrams
 /braincrawl
+.agents/skills/denim-project-builder/log.md
 /.hemp-tools/
 /.hemp-prior-art/
 /tools/hemp-rust/target/

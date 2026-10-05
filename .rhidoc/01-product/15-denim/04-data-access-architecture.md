@@ -37,6 +37,9 @@ deps: [doc01.15.01, doc01.15.02]
   query the database.
 - Solid context provides the session to the active canvas subtree. Components
   use props for node-specific data and context for shared editing actions.
+- The Node Visibility Menu receives a query function from its caller. The
+  caller chooses Board-wide, downstream, or Container-member data; the menu
+  owns only text filtering and per-Node visibility controls.
 
 This keeps SQL access out of rendering components and gives one place to
 coordinate a database edit with the visible canvas state.
@@ -60,7 +63,7 @@ coordinate a database edit with the visible canvas state.
   descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.
 - Board actions are `board.read`, `board.openJourney`, `board.close`,
-  `board.includeNode`, `board.node.move`, `board.nodes.move`, and
+  `board.includeNode`, `board.node.visibility.set`, `board.node.move`, `board.nodes.move`, and
   `board.sequenceMode.set`. `board.read` returns the Board definition and the
   graph produced by its query sources and included Nodes without changing the
   database.
@@ -68,6 +71,16 @@ coordinate a database edit with the visible canvas state.
   inspect the current design before submitting an action.
 - The action catalog lists each operation and its required and optional
   fields. The CLI exposes the catalog, snapshot, and action request commands.
+- `board.node.visibility.set` shows or hides a Node on one Board. Showing a
+  Node also includes it on that Board when it did not come from a source query;
+  hiding never deletes shared graph data.
+- Read queries are separate from mutation actions. `board.nodes.list` returns
+  all Nodes with per-Board membership and visibility; `node.downstream.list`
+  and `container.members.list` return direct relationship members with those
+  same visibility facts. Each result contains the Node plus `onBoard` and
+  `visible` booleans. `/api/denim/queries` exposes the query catalog and
+  `/api/denim/query` runs a query for a database. The CLI exposes these as
+  `luminous denim queries` and `luminous denim query <database> <query.json>`.
 - Server action requests carry the database path and base revision. The server
   applies the action, saves with revision checking, and broadcasts the changed
   path so open Denim Boards can refresh.

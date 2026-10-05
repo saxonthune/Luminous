@@ -62,6 +62,14 @@ its own spatial arrangement, so users can shape several useful views of shared
 design data without assigning Nodes to a single Board. Node kinds and their
 relationships remain open to change while the model is being tested.
 
+## Design principle
+
+Semantics derive from visual arrangement and UI controls, not the other way
+around. Containment, Edges, and other graph relationships are fundamental
+properties of the design. Instance data and Node types do not dictate the
+canvas projection; the user composes each Board through its visible Nodes,
+relationships, and controls.
+
 ## First implementation
 
 The first storage format is a single `.denim.sqlite` file. SQLite stores nodes

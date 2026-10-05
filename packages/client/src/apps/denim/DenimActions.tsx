@@ -3,10 +3,12 @@ import type { DenimAction } from '@luminous/core/denim/actions';
 import type { DenimSession } from './DenimSession';
 import type { DenimBoard, DenimBoardContainer } from '@luminous/core/denim/actions';
 import type { DenimGraph } from '@luminous/core/denim';
+import type { DenimQuery, DenimNodeVisibilityEntry } from '@luminous/core/denim/queries';
 
 export interface DenimActionApi {
   dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; nodeIds?: string[]; boardId?: string; board?: DenimBoard; graph?: DenimGraph; changed?: boolean }>;
   readBoard(boardId: string): Promise<{ ok: boolean; error?: string; board?: DenimBoard; graph?: DenimGraph }>;
+  queryNodes(query: DenimQuery): Promise<DenimNodeVisibilityEntry[]>;
   createJourney(text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   createNode(type: string, text: string, placement?: { boardId: string; x: number; y: number }, id?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   differentiate(parentId: string, text?: string, placement?: { boardId: string; x: number; y: number }): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
@@ -21,6 +23,7 @@ export interface DenimActionApi {
   clearSequence(parentId: string): Promise<{ ok: boolean; error?: string }>;
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', boardId?: string): Promise<{ ok: boolean; error?: string }>;
   includeNode(nodeId: string, boardId?: string): Promise<{ ok: boolean; error?: string }>;
+  setNodeVisibility(nodeId: string, visible: boolean, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   moveNode(nodeId: string, position: { x: number; y: number }, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   moveNodes(positions: Record<string, { x: number; y: number }>, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   spawnContainer(headNodeId: string, container: DenimBoardContainer, boardId?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
@@ -37,6 +40,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
   return {
     dispatch,
     readBoard: (boardId) => dispatch({ op: 'board.read', boardId }),
+    queryNodes: (query) => session.queryNodes(query),
     createJourney: (text) => dispatch({ op: 'journey.create', text }),
     createNode: (type, text, placement, id) => dispatch({ op: 'node.create', type, text, placement, id }),
     differentiate: (parentId, text, placement) => dispatch({ op: 'node.differentiate', parentId, text, placement }),
@@ -52,6 +56,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     clearSequence: (parentId) => dispatch({ op: 'sequence.clear', parentId }),
     setSequenceMode: (parentId, mode, boardId = session.state.activeBoardId) => dispatch({ op: 'board.sequenceMode.set', boardId, parentId, mode }),
     includeNode: (nodeId, boardId = session.state.activeBoardId) => dispatch({ op: 'board.includeNode', boardId, nodeId }),
+    setNodeVisibility: (nodeId, visible, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.visibility.set', boardId, nodeId, visible }),
     moveNode: (nodeId, position, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.move', boardId, nodeId, position }),
     moveNodes: (positions, boardId = session.state.activeBoardId) => dispatch({ op: 'board.nodes.move', boardId, positions }),
     spawnContainer: (headNodeId, container, boardId = session.state.activeBoardId) =>

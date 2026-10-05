@@ -153,12 +153,33 @@ extending one global counter.
 - **CNT15.** [p] Hovering over a dotted Edge shows a small badge at its midpoint and opens a fixed-screen Detached Edge Toolbar to its right; the toolbar matches Node and Container Toolbar sizing and stays the same size as the canvas zooms.
 - **CNT16.** [p] The Detached Edge Toolbar contains a trash icon; selecting it reveals “Confirm Detachment”, and selecting that label removes the `contains` Edge while keeping the Node on its current Board at its current position.
 - **CNT17.** [p] When a Container moves, each visually contained Node moves with it; any Container owned by those Nodes moves with them as well.
+- **CNT18.** [p] Nested Containers alternate between the default surface and a slightly greyer surface.
+- **CNT19.** [p] A dashed curved line connects a Container Node to its Container when both are nested inside another Container.
 
 ## Container Toolbar
 
 - **CTB1.** [p] A Container Toolbar is located at the top-left of the Container area, below its header, and uses the Node Toolbar's present and hidden icon pattern.
 - **CTB2.** [p] The first Container Toolbar icon is Create Node.
 - **CTB3.** [p] When the user creates a Node from a Container Toolbar, Denim creates it inside that Container with the same type as the Container's owner Node.
+
+## Board node visibility
+
+- **VIS1.** [p] A Board can hide an individual Node from its projection without deleting the Node or changing other Boards.
+- **VIS2.** [p] The user can show an individually hidden Node on the active Board.
+- **VIS3.** [p] A Container Population Indicator appears at the top-right of each Container header and shows `N/M` for Nodes linked by direct `contains` Edges that are visible / total; Nodes inside nested Containers are not included.
+- **VIS4.** [p] The Container label is right-justified immediately to the left of the Container Population Indicator.
+- **VIS5.** [p] Clicking the Container Population Indicator opens a placeholder Container Membership component containing only its label.
+- **VIS6.** [p] A Downstream Nodes Indicator appears at the bottom-right of each Node and shows `N/M` for visible direct downstream Nodes / total direct downstream Nodes.
+- **VIS7.** [p] Clicking the Downstream Nodes Indicator opens a placeholder component containing only its label.
+- **VIS8.** [p] The Node Visibility Menu lets the user add, hide, or show Nodes individually on the active Board.
+- **VIS9.** [p] Clicking a Container Population Indicator opens the Node Visibility Menu populated with Nodes directly linked to its Container owner by `contains` Edges.
+- **VIS10.** [p] Clicking a Downstream Nodes Indicator opens the Node Visibility Menu populated with direct downstream Nodes.
+- **VIS11.** [p] The Node Visibility Menu has a header showing its purpose and the number of listed Nodes visible on the active Board.
+- **VIS12.** [p] The Node Visibility Menu has a text input that filters Nodes by their text content; it does not provide a separate type filter.
+- **VIS13.** [p] Each Node Visibility Item is a wide row using the background color associated with the Node's type and shows the Node type and text.
+- **VIS14.** [p] Each Node Visibility Item has a control that shows or hides that Node on the active Board.
+- **BCM1.** [p] Right-clicking the bare canvas background opens the Board Context Menu, whose only option is Add node.
+- **BCM2.** [p] Selecting Add node closes the Board Context Menu and opens the Node Visibility Menu with Nodes from the shared database.
 
 ## Node differentiation controls
 

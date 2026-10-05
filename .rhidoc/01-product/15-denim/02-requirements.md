@@ -47,6 +47,7 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 - **VIEW6.** [p] The user can open shortcuts to the built-in Boards.
 - **VIEW7.** [p] The built-in Capabilities Board shows a list of Capabilities.
 - **VIEW8.** [p] Denim stores each Board's included Nodes and spatial arrangement independently; Nodes and Edges remain shared database data.
+- **VIEW9.** [p] A Board can hide shared Nodes from its projection independently of other Boards, without deleting the Nodes or Edges.
 
 ## Journey and Instance queries
 

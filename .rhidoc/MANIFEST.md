@@ -167,7 +167,7 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.15.00 | `15-denim/00-index.md` |  |  | — | — | — |
 | doc01.15.01 | `15-denim/01-about.md` | Denim is a graph-based design system for describing user journeys, capabilities, software instances, implementation structure, and contracts. | denim, graph, design, requirements, journeys | doc01.04 | doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05 | — |
 | doc01.15.02 | `15-denim/02-requirements.md` | Pending user-supported requirements for Denim's journey graph, node editing, persistent Boards, and instance selection. | denim, requirements, ui, graph, boards | doc01.15.01, doc01.15.03 | doc01.15.03, doc01.15.04 | — |
-| doc01.15.03 | `15-denim/03-glossary.md` | Denim terms for graph structure, persistent Boards, projections, and toolbar controls. | denim, glossary, vocabulary, graph, boards | doc01.15.01, doc01.15.02 | doc01.15.02, doc01.15.05 | — |
+| doc01.15.03 | `15-denim/03-glossary.md` | Denim terms for graph structure, persistent Boards, projections, visibility, and toolbar controls. | denim, glossary, vocabulary, graph, boards, visibility | doc01.15.01, doc01.15.02 | doc01.15.02, doc01.15.05 | — |
 | doc01.15.04 | `15-denim/04-data-access-architecture.md` | Denim separates SQLite access from canvas components through a per-database session that owns Board state, edits, and saving. | denim, architecture, sqlite, components, testing, state, boards | doc01.15.01, doc01.15.02 | — | — |
 | doc01.15.05 | `15-denim/05-denim-ui-requirements.md` | Denim's persistent Boards, tab navigation, toolbars, and node component behavior. | denim, ui, requirements, boards, toolbar, tabs, nodes, icons, dragging | doc01.15.01, doc01.15.03 | — | — |
 
@@ -478,6 +478,7 @@ Quick lookup for file-path→doc mapping:
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
 | `views` | doc01.12.01, doc01.12.03, doc01.12.04, doc02.11 |
+| `visibility` | doc01.15.03 |
 | `vision` | doc01.01, doc01.03.01 |
 | `visualization` | doc01.01, doc01.11.01, doc03.04 |
 | `vocabulary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.15.03, doc03.02 |

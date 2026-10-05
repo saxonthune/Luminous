@@ -223,6 +223,8 @@ body {
   --theme-bg-6: color-mix(in oklch, var(--color-token-indigo) 24%, var(--surface));
   --theme-bg-7: color-mix(in oklch, var(--color-token-oxide) 24%, var(--surface));
   --theme-bg-8: color-mix(in oklch, var(--color-token-rose) 24%, var(--surface));
+  --theme-container-bg-1: var(--surface);
+  --theme-container-bg-2: color-mix(in oklch, var(--surface) 50%, var(--surface-alt));
   --theme-node-border: color-mix(in oklch, var(--fg) 32%, var(--surface));
 
   --cactus-canvas-bg:     var(--canvas);

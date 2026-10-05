@@ -1,7 +1,7 @@
 ---
 title: Glossary
-summary: Denim terms for graph structure, persistent Boards, projections, and toolbar controls.
-tags: [denim, glossary, vocabulary, graph, boards]
+summary: Denim terms for graph structure, persistent Boards, projections, visibility, and toolbar controls.
+tags: [denim, glossary, vocabulary, graph, boards, visibility]
 deps: [doc01.15.01, doc01.15.02]
 ---
 
@@ -35,6 +35,8 @@ relationships and contents were not specified in the source request.
 - **DTERM6.** [p] **Contract** — a node type requested for Denim; its contents and relationships remain unspecified.
 
 ## Boards and editing
+
+- **DTERM26.** [p] **Denim design principle** — Semantics derive from visual arrangement and UI controls, not the other way around. Containment, Edges, and other graph relationships are fundamental properties; Node type or Instance data does not dictate the canvas projection.
 
 - **DTERM7.** [p] **Differentiate** — create a child node beneath a node, either as a new node or by connecting an existing node.
 
@@ -72,6 +74,20 @@ relationships and contents were not specified in the source request.
 - **DTERM24.** [p] **Detached visual state** — the visual state of a Node that remains connected to its Container by a `contains` Edge but no longer touches or overlaps its area. A dotted curved line represents the Edge; the Node stays in place when the Container moves.
 
 - **DTERM25.** [p] **Detached Edge Toolbar** — a fixed-screen toolbar that opens to the right of a small badge anchored at the midpoint of a dotted Edge while the pointer hovers over it. Its trash icon opens a “Confirm Detachment” action that removes the `contains` Edge.
+
+- **DTERM27.** [p] **Container Population Indicator** — a badge in a Container header showing `N/M`, where N is the number of Nodes reached by direct `contains` Edges visible on the active Board and M is the total number reached by those Edges. Nodes inside nested Containers are not counted as direct members.
+
+- **DTERM28.** [p] **Downstream Nodes Indicator** — a badge at the bottom-right of a Node showing `N/M`, where N is the number of its direct downstream Nodes visible on the active Board and M is the total number of direct downstream Nodes.
+
+- **DTERM29.** [p] **Upstream / Downstream** — for a directed Edge `A → B`, A is upstream of B and B is downstream of A. On a differentiated Node relationship, the parent is upstream and its child is downstream; downstream follows the Edge arrow direction.
+
+- **DTERM30.** [p] **Hidden Node** — a Node omitted from one Board's projection while remaining in the shared graph and available to other Boards.
+
+- **DTERM31.** [p] **Board Context Menu** — a context menu opened by right-clicking the bare canvas background. It currently offers Add node.
+
+- **DTERM32.** [p] **Node Visibility Menu** — a shared component that lists Nodes returned by a caller-provided query and lets the user show or hide each Node on a Board.
+
+- **DTERM33.** [p] **Node Visibility Item** — a wide, type-colored row in the Node Visibility Menu showing one Node's type and text with a control to show or hide it on the current Board.
 
 ## Relationship priority
 
