@@ -96,14 +96,11 @@ function GraphCanvas(props: {
   const sequenceLabels = createMemo(() => deriveDenimSequenceLabels(graph(), activeBoard(), editingSequenceParent()));
   const previewModel = createMemo(() => previewDenimContainerDrag({
     model: baseCanvasModel(),
-    graph: graph(),
-    board: activeBoard(),
-    nodeWidth: NODE_W,
-    nodeHeight: NODE_H,
-    containerHeaderHeight: 44,
     preview: containerDragPreview(),
   }));
   const positions = createMemo(() => previewModel().positions);
+  const nodeDepths = createMemo(() => previewModel().nodeDepths);
+  const containerDepths = createMemo(() => previewModel().containerDepths);
   const edgeModel = createMemo(() => previewModel().edges);
   const canvasEdges = createMemo<EdgeDeclaration[]>(() => edgeModel().map((edge) => {
     if (edge.kind === 'sequence') return {
@@ -247,6 +244,7 @@ function GraphCanvas(props: {
       }}
       boxSelect={{ trigger: 'drag' }}
       onSelectionChange={(ids) => session.selectNode(ids.at(-1) ?? null)}
+      freezeEdgeRouting={() => containerDragPreview() !== null}
       viewportOptions={{
         initialTransform: session.state.cameras[activeBoard().id] ?? { x: 0, y: 0, k: 1 },
         onTransformChange: (camera) => {
@@ -260,8 +258,8 @@ function GraphCanvas(props: {
         databaseGraph={databaseGraph}
         onOpenNodeVisibility={props.onOpenNodeVisibility}
         positions={positions}
-        nodeDepths={() => previewModel().nodeDepths}
-        containerDepths={() => previewModel().containerDepths}
+        nodeDepths={nodeDepths}
+        containerDepths={containerDepths}
         boardId={() => activeBoard().id}
         containers={() => activeBoard().containers}
         containerDragPreview={containerDragPreview}
@@ -379,7 +377,7 @@ function CanvasNodes(props: {
         props.onSelect(node.id);
         if ((event.target as HTMLElement).closest('[data-denim-drag-handle]')) drag.beginPress(node.id, event);
       }}>
-      <NodeCard node={node} selected={props.selectedId() === node.id || ctx.isSelected(node.id)} onOpenJourney={() => void actions.openJourney(node.id)}
+      <NodeCard node={node} onOpenJourney={() => void actions.openJourney(node.id)}
         databaseGraph={props.databaseGraph}
         onOpenNodeVisibility={props.onOpenNodeVisibility}
         onDifferentiate={() => void differentiateNode(node.id)}
@@ -425,22 +423,51 @@ function ContainerVisual(props: {
   const [resize, setResize] = createSignal<{ width: number; height: number } | null>(null);
   let carried: Record<string, { x: number; y: number }> = {};
   let carriedContainers: Record<string, { x: number; y: number }> = {};
+  let dragRootIds: string[] = [];
   const drag = useGesture({
     zoomScale: () => ctx.transform().k,
+    dragGroup: (nodeId) => ctx.isSelected(nodeId)
+      ? ctx.selectedIds().filter((selectedId) => selectedId.startsWith('denim-container:'))
+      : [nodeId],
     callbacks: {
-      onDragStart: () => {
-        const box = props.container();
+      onDragStart: (_id, ids) => {
+        const containers = props.containers();
+        const roots = ids.map((id) => id.startsWith('denim-container:') ? id.slice('denim-container:'.length) : '')
+          .filter((headId) => Boolean(containers[headId]));
+        dragRootIds = roots.length > 0 ? [...new Set(roots)] : [props.head.id];
+        const graph = props.databaseGraph();
+        const parentByNode = new Map(graph.edges
+          .filter((edge) => edge.type === 'contains')
+          .map((edge) => [edge.targetId, edge.sourceId]));
+        const movedContainerIds = new Set(dragRootIds);
+        const pendingParents = [...dragRootIds];
+        while (pendingParents.length > 0) {
+          const parentHeadId = pendingParents.shift()!;
+          const parentBox = containers[parentHeadId];
+          if (!parentBox) continue;
+          for (const [containerHeadId, nested] of Object.entries(containers)) {
+            if (movedContainerIds.has(containerHeadId) || parentByNode.get(containerHeadId) !== parentHeadId) continue;
+            const overlapsParentContent = nested.x < parentBox.x + parentBox.width
+              && nested.x + nested.width > parentBox.x
+              && nested.y < parentBox.y + parentBox.height
+              && nested.y + nested.height > parentBox.y + 44;
+            if (!overlapsParentContent) continue;
+            movedContainerIds.add(containerHeadId);
+            pendingParents.push(containerHeadId);
+          }
+        }
+        carriedContainers = Object.fromEntries([...movedContainerIds]
+          .filter((headId) => headId !== props.head.id)
+          .flatMap((headId) => containers[headId] ? [[headId, { x: containers[headId].x, y: containers[headId].y }]] : []));
+        const movingBoxes = [...movedContainerIds].flatMap((headId) => containers[headId] ? [containers[headId]] : []);
         carried = Object.fromEntries(props.nodes.flatMap((node) => {
           if (node.id === props.head.id) return [];
           const point = props.positions().get(node.id);
           if (!point) return [];
-          const overlaps = point.x < box.x + box.width && point.x + NODE_W > box.x
-            && point.y < box.y + box.height && point.y + NODE_H > box.y + 44;
-          return overlaps ? [[node.id, point]] : [];
+          const overlapsContent = movingBoxes.some((box) => point.x < box.x + box.width && point.x + NODE_W > box.x
+            && point.y < box.y + box.height && point.y + NODE_H > box.y + 44);
+          return overlapsContent ? [[node.id, point]] : [];
         }));
-        carriedContainers = Object.fromEntries(Object.entries(props.containers())
-          .filter(([containerHeadId]) => containerHeadId in carried)
-          .map(([containerHeadId, nested]) => [containerHeadId, { x: nested.x, y: nested.y }]));
       },
       onDrag: (_nodeId, dx, dy) => {
         setOffset({ x: dx, y: dy });
@@ -454,6 +481,7 @@ function ContainerVisual(props: {
           .map(([containerHeadId, point]) => [containerHeadId, { x: point.x + dx, y: point.y + dy }]));
         void actions.moveContainer(props.head.id, { x: container.x + dx, y: container.y + dy },
           props.boardId(), carriedPositions, carriedContainerPositions);
+        dragRootIds = [];
         carried = {};
         carriedContainers = {};
         props.onDragPreview(null);
@@ -496,6 +524,9 @@ function ContainerVisual(props: {
       border: '1px solid var(--theme-node-border)', 'border-radius': '8px',
       background: props.depth() % 2 === 0 ? 'var(--theme-container-bg-1)' : 'var(--theme-container-bg-2)', color: 'var(--fg)',
     }}>
+      <div data-box-select-surface="true" style={{
+        position: 'absolute', top: '44px', right: '0', bottom: '0', left: '0', 'pointer-events': 'none',
+      }} />
       <div style={{
         position: 'relative', display: 'flex', height: '44px', 'align-items': 'center', padding: '0 12px',
         'justify-content': 'flex-end',
@@ -505,7 +536,9 @@ function ContainerVisual(props: {
         'font-size': '12px', 'font-weight': '600', color: 'var(--fg-muted)',
       }}>
         <div data-container-drag-handle data-no-pan="true" onPointerDown={(event) => {
-          event.stopPropagation(); drag.beginPress(id, event);
+          event.stopPropagation();
+          ctx.onNodePointerDown(id, event);
+          drag.beginPress(id, event);
         }} style={{ position: 'absolute', inset: '0', cursor: 'grab' }} />
         <ToolbarSurface variant="node" class="absolute left-2 top-1 z-10" data-container-toolbar
           style={{ '--lui-node-toolbar-bg': `var(--theme-bg-${NODE_THEME_SLOT[props.head.type] ?? 1})` }}
@@ -548,7 +581,6 @@ function NodeCard(props: {
   node: DenimNode;
   databaseGraph: () => DenimGraph;
   onOpenNodeVisibility: OpenNodeVisibility;
-  selected: boolean;
   onOpenJourney: () => void;
   onDifferentiate: () => void;
   hasContainer: boolean;
@@ -582,8 +614,7 @@ function NodeCard(props: {
       background: `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
       border: '1px solid var(--theme-node-border)',
       '--lui-node-toolbar-bg': `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
-    }}
-    classList={{ 'ring-2 ring-accent': props.selected }}>
+    }}>
     <div data-denim-drag-handle data-no-pan="true" aria-hidden="true"
       class="absolute inset-x-0 top-0 z-10 h-3 cursor-grab active:cursor-grabbing" />
     <div class="flex w-full shrink-0 items-center justify-between gap-2">

@@ -382,19 +382,25 @@ export function useGesture(options: UseGestureOptions): UseGestureResult {
         if (trigger === 'shift-drag' && !e.shiftKey) return;
 
         const target = e.target as HTMLElement;
+        const noPanEl = target.closest?.('[data-no-pan]');
+        const nodeEl = target.closest?.('[data-container-id]');
+        // Interactive controls inside a Container (resize handles, toolbars,
+        // and buttons) keep their own pointer gestures. Only the Container
+        // root itself may opt into marquee selection through its content area.
+        if (noPanEl && noPanEl !== nodeEl) return;
+
         // A press inside some node's own box bails out, UNLESS it lands on
         // that node's `[data-soft-container]` interior (Atlas's container
         // body) — a container-interior press marquees instead of moving the
-        // node. This must be decided before the `[data-no-pan]` bail:
+        // node. This must be decided after the child-control `[data-no-pan]` bail:
         // NodeContainer's root div carries data-no-pan itself, so checking
         // no-pan first would swallow every node press, interior included.
         // Dataflow's boxes have no soft-container interior, so
         // isOverContainerInterior is always false for them and this collapses
         // to the old "any node press bails" behavior.
-        const nodeEl = target.closest?.('[data-container-id]');
         if (nodeEl) {
           if (!isOverContainerInterior(nodeEl, e.clientX, e.clientY)) return;
-        } else if (target.closest?.('[data-no-pan]')) {
+        } else if (noPanEl) {
           return;
         }
 

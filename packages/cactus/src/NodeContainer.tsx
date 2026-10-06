@@ -117,6 +117,20 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         />
       </Show>
       {props.children}
+      <Show when={ctx.isSelected(props.nodeId)}>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: '0',
+            'z-index': '20',
+            border: `${Math.max(1, 1.75 / ctx.transform().k)}px solid var(--cactus-selection-outline, var(--cactus-accent, #2563eb))`,
+            'border-radius': 'var(--cactus-node-radius, 8px)',
+            'box-sizing': 'border-box',
+            'pointer-events': 'none',
+          }}
+        />
+      </Show>
       <Show when={props.isContainer?.()}>
         <div
           data-layout-picker

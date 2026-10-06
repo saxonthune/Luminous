@@ -103,8 +103,9 @@ extending one global counter.
 
 - **SEL1.** [p] Clicking the canvas background deselects all Nodes.
 - **SEL2.** [p] Pressing Escape deselects all Nodes.
-- **SEL3.** [p] Dragging across the canvas background selects Nodes intersected by the selection box.
+- **SEL3.** [p] Dragging across the canvas selects Nodes and Containers intersected by the selection box, including when the drag starts in a Container's content area.
 - **SEL4.** [p] Dragging a selected Node moves all selected Nodes together.
+- **SEL5.** [p] Dragging a selected Container moves all selected Containers together, along with each Container's visually contained Nodes and nested Containers.
 
 ## Node Toolbar
 
@@ -139,7 +140,7 @@ extending one global counter.
 ## Containers
 
 - **CNT1.** [p] When the user Ctrl-drags a Node into a Container, Denim creates a `contains` Edge from the Container's head Node to the dragged Node, replacing any existing `contains` Edge for that Node.
-- **CNT2.** [p] A Node linked to a Container by a `contains` Edge is in the Contained visual state when its bounds touch or overlap the Container area; while the user drags the Container, each Node in this state moves visually with it, and Denim saves their final positions when the drag ends.
+- **CNT2.** [p] A Node linked to a Container by a `contains` Edge is in the Contained visual state when its bounds touch or overlap the Container area; while the user drags the Container, each Node in this state moves visually with it, and Denim saves their final positions when the drag ends. A nested Container moves with its containing Container only when its own bounds touch or overlap the containing Container's content area, and nested movement propagates only through overlapping Containers.
 - **CNT3.** [p] While the user Ctrl-drags a Node to change containment, the Status Toast describes the containment change in progress.
 - **CNT4.** [p] Denim renders a Container's outer border using the same border as a Node.
 - **CNT5.** [p] A Container's top border is taller than its other edges and can be dragged to move the Container.

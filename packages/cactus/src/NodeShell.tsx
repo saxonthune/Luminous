@@ -1,4 +1,4 @@
-import type { JSX } from 'solid-js';
+import { Show, type JSX } from 'solid-js';
 import { useCanvasContext } from './CanvasContext.js';
 import { ConnectionHandle } from './ConnectionHandle.js';
 import type { ResizeDirection } from './interactions/useGesture.js';
@@ -16,7 +16,7 @@ export interface NodeShellProps {
 }
 
 export function NodeShell(props: NodeShellProps): JSX.Element {
-  const { startConnection, isSelected, onNodePointerDown } = useCanvasContext();
+  const { startConnection, isSelected, onNodePointerDown, transform } = useCanvasContext();
 
   const selected = () => isSelected(props.nodeId);
 
@@ -36,13 +36,11 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
         'pointer-events': 'auto',
         'box-shadow': 'var(--cactus-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05))',
         background: 'var(--cactus-surface, #ffffff)',
-        ...(selected()
-          ? { 'outline-color': 'var(--cactus-accent-subtle, #3b82f6)' }
-          : { 'border-color': 'var(--cactus-border, #e5e7eb)' }),
+        'border-color': selected()
+          ? 'var(--cactus-selection-outline, var(--cactus-accent, #2563eb))'
+          : 'var(--cactus-border, #e5e7eb)',
       }}
-      class={`rounded-lg flex flex-col select-none ${
-        selected() ? 'outline outline-2' : 'border'
-      }`}
+      class="rounded-lg border flex flex-col select-none"
       onPointerDown={(e) => {
         onNodePointerDown(props.nodeId, e);
         props.onDragPointerDown(props.nodeId, e);
@@ -89,6 +87,20 @@ export function NodeShell(props: NodeShellProps): JSX.Element {
           props.onResizePointerDown(props.nodeId, { horizontal: 'right', vertical: 'bottom' }, e);
         }}
       />
+      <Show when={selected()}>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: '0',
+            'z-index': '20',
+            border: `${Math.max(1, 1.75 / transform().k)}px solid var(--cactus-selection-outline, var(--cactus-accent, #2563eb))`,
+            'border-radius': 'inherit',
+            'box-sizing': 'border-box',
+            'pointer-events': 'none',
+          }}
+        />
+      </Show>
     </div>
   );
 }
