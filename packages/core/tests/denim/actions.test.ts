@@ -66,7 +66,7 @@ describe('Denim actions', () => {
     applyDenimAction(db, { op: 'node.delete', id: 'parent', scope: 'node' });
     expect(getDenimGraph(db).nodes.map((node) => node.id)).toEqual(['journey', 'child', 'other-journey', 'other-child']);
     expect(getDenimGraph(db).edges.map((edge) => edge.id)).toEqual(['oj-oc']);
-    expect(readDenimSnapshot(db).boards.find((board) => board.id === opened.boardId)?.includedNodeIds).toContain('child');
+    expect(readDenimSnapshot(db).boards.find((board) => board.id === opened.boardId)?.loadedNodeIds).toContain('child');
 
     applyDenimAction(db, { op: 'node.delete', id: 'journey', scope: 'subtree' });
     expect(getDenimGraph(db).nodes.map((node) => node.id)).toEqual(['child', 'other-journey', 'other-child']);
@@ -106,14 +106,14 @@ describe('Denim actions', () => {
     applyDenimAction(db, { op: 'edge.connect', parentId: 'journey', childId: 'b', edgeId: 'j-b' });
     applyDenimAction(db, { op: 'sequence.initialize', parentId: 'journey', orderedChildIds: ['b', 'a'] });
     applyDenimAction(db, { op: 'edge.priority.set', edgeId: 'j-a', priority: 7.5 });
-    applyDenimAction(db, { op: 'board.includeNode', boardId: 'pinned:journeys', nodeId: 'resource' });
+    applyDenimAction(db, { op: 'board.node.load.set', boardId: 'pinned:journeys', nodeId: 'resource', loaded: true });
     applyDenimAction(db, { op: 'board.node.move', boardId: 'pinned:journeys', nodeId: 'resource', position: { x: 60, y: 90 } });
     applyDenimAction(db, { op: 'board.sequenceMode.set', boardId: 'pinned:journeys', parentId: 'journey', mode: 'priority' });
     const opened = applyDenimAction(db, { op: 'board.openJourney', journeyId: 'journey', boardId: 'journey-board' });
 
     const snapshot = readDenimSnapshot(db);
     const journeys = snapshot.boards.find((board) => board.id === 'pinned:journeys')!;
-    expect(journeys.includedNodeIds).toContain('resource');
+    expect(journeys.loadedNodeIds).toContain('resource');
     expect(journeys.positions.resource).toEqual({ x: 60, y: 90 });
     expect(journeys.sequenceModes.journey).toBe('priority');
     expect(snapshot.graph.edges.find((edge) => edge.id === 'j-a')?.priority).toBe(7.5);
@@ -132,7 +132,7 @@ describe('Denim actions', () => {
       'journey.create', 'node.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'container.attach', 'container.detach',
       'node.update', 'node.delete', 'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.read',
       'board.container.spawn', 'board.container.move', 'board.container.resize', 'container.node.create', 'container.nodes.create',
-      'board.sequenceMode.set', 'board.includeNode', 'board.node.visibility.set', 'board.node.move', 'board.nodes.move',
+      'board.sequenceMode.set', 'board.node.load.set', 'board.node.move', 'board.nodes.move',
       'board.openJourney', 'board.close',
     ]);
   });

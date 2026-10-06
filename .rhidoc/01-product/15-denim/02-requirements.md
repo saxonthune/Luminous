@@ -43,11 +43,11 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 - **VIEW2.** [p] When Denim opens, its default Board shows a list of Journeys.
 - **VIEW3.** [p] Every Board is a canvas projection of shared database Nodes and Edges.
 - **VIEW4.** [p] The user can render queried data as a table node.
-- **VIEW5.** [p] A Board combines one or more query sources and can include Nodes explicitly.
+- **VIEW5.** [p] A Board is seeded from one or more query sources and stores its exact set of loaded Nodes independently.
 - **VIEW6.** [p] The user can open shortcuts to the built-in Boards.
 - **VIEW7.** [p] The built-in Capabilities Board shows a list of Capabilities.
-- **VIEW8.** [p] Denim stores each Board's included Nodes and spatial arrangement independently; Nodes and Edges remain shared database data.
-- **VIEW9.** [p] A Board can hide shared Nodes from its projection independently of other Boards, without deleting the Nodes or Edges.
+- **VIEW8.** [p] Denim stores each Board's loaded Nodes and spatial arrangement independently; Nodes and Edges remain shared database data.
+- **VIEW9.** [p] The user can load a shared Node onto or unload it from one Board without deleting the Node or its Edges.
 
 ## Journey and Instance queries
 

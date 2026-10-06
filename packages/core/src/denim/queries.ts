@@ -1,12 +1,10 @@
 import { getDenimGraph, type DenimDatabase, type DenimNode } from './database.ts';
-import { getDenimBoardGraph, readDenimBoards, type DenimBoard } from './actions.ts';
+import { readDenimBoards, type DenimBoard } from './actions.ts';
 
 export interface DenimNodeVisibilityEntry {
   node: DenimNode;
-  /** True when the Node is part of the Board's query or explicit inclusion. */
-  onBoard: boolean;
-  /** True when the Node is currently visible in the Board's projection. */
-  visible: boolean;
+  /** True when the Node is loaded onto the Board. */
+  loaded: boolean;
 }
 
 export type DenimQuery =
@@ -15,9 +13,9 @@ export type DenimQuery =
   | { op: 'container.members.list'; boardId: string; containerNodeId: string };
 
 export const DENIM_QUERY_CATALOG = [
-  { op: 'board.nodes.list', required: ['boardId'], purpose: 'List all Nodes and whether each is on or visible on a Board.' },
-  { op: 'node.downstream.list', required: ['boardId', 'nodeId'], purpose: 'List direct downstream Nodes and their Board visibility.' },
-  { op: 'container.members.list', required: ['boardId', 'containerNodeId'], purpose: 'List Nodes directly linked to a Container by contains Edges and their Board visibility.' },
+  { op: 'board.nodes.list', required: ['boardId'], purpose: 'List all Nodes and whether each is loaded onto a Board.' },
+  { op: 'node.downstream.list', required: ['boardId', 'nodeId'], purpose: 'List direct downstream Nodes and whether each is loaded onto a Board.' },
+  { op: 'container.members.list', required: ['boardId', 'containerNodeId'], purpose: 'List Nodes directly linked to a Container by contains Edges and whether each is loaded onto a Board.' },
 ] as const;
 
 function requireBoard(db: DenimDatabase, boardId: string): DenimBoard {
@@ -28,17 +26,16 @@ function requireBoard(db: DenimDatabase, boardId: string): DenimBoard {
 
 function nodeEntries(db: DenimDatabase, board: DenimBoard, nodeIds: Iterable<string>): DenimNodeVisibilityEntry[] {
   const allNodes = new Map(getDenimGraph(db).nodes.map((node) => [node.id, node]));
-  const onBoard = new Set(getDenimBoardGraph(db, board, { includeHidden: true }).nodes.map((node) => node.id));
-  const visible = new Set(getDenimBoardGraph(db, board).nodes.map((node) => node.id));
+  const loaded = new Set(board.loadedNodeIds);
   const result: DenimNodeVisibilityEntry[] = [];
   for (const id of nodeIds) {
     const node = allNodes.get(id);
-    if (node) result.push({ node, onBoard: onBoard.has(id), visible: visible.has(id) });
+    if (node) result.push({ node, loaded: loaded.has(id) });
   }
   return result;
 }
 
-/** Read Nodes for the shared visibility manager, without mutating graph data. */
+/** Read Nodes for the shared Board loader, without mutating graph data. */
 export function queryDenim(db: DenimDatabase, query: DenimQuery): DenimNodeVisibilityEntry[] {
   const board = requireBoard(db, query.boardId);
   const graph = getDenimGraph(db);

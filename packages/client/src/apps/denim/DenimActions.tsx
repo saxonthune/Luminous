@@ -22,8 +22,7 @@ export interface DenimActionApi {
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<{ ok: boolean; error?: string }>;
   clearSequence(parentId: string): Promise<{ ok: boolean; error?: string }>;
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', boardId?: string): Promise<{ ok: boolean; error?: string }>;
-  includeNode(nodeId: string, boardId?: string): Promise<{ ok: boolean; error?: string }>;
-  setNodeVisibility(nodeId: string, visible: boolean, boardId?: string): Promise<{ ok: boolean; error?: string }>;
+  setNodeLoaded(nodeId: string, loaded: boolean, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   moveNode(nodeId: string, position: { x: number; y: number }, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   moveNodes(positions: Record<string, { x: number; y: number }>, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   spawnContainer(headNodeId: string, container: DenimBoardContainer, boardId?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
@@ -55,8 +54,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     initializeSequence: (parentId, orderedChildIds) => dispatch({ op: 'sequence.initialize', parentId, orderedChildIds }),
     clearSequence: (parentId) => dispatch({ op: 'sequence.clear', parentId }),
     setSequenceMode: (parentId, mode, boardId = session.state.activeBoardId) => dispatch({ op: 'board.sequenceMode.set', boardId, parentId, mode }),
-    includeNode: (nodeId, boardId = session.state.activeBoardId) => dispatch({ op: 'board.includeNode', boardId, nodeId }),
-    setNodeVisibility: (nodeId, visible, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.visibility.set', boardId, nodeId, visible }),
+    setNodeLoaded: (nodeId, loaded, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.load.set', boardId, nodeId, loaded }),
     moveNode: (nodeId, position, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.move', boardId, nodeId, position }),
     moveNodes: (positions, boardId = session.state.activeBoardId) => dispatch({ op: 'board.nodes.move', boardId, positions }),
     spawnContainer: (headNodeId, container, boardId = session.state.activeBoardId) =>

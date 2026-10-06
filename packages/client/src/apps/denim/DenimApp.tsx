@@ -415,9 +415,9 @@ function ContainerVisual(props: {
   const id = containerVisualId(props.head.id);
   const memberCounts = () => {
     const all = props.databaseGraph();
-    const visible = new Set(session.state.graph.nodes.map((node) => node.id));
+    const loaded = new Set(session.state.graph.nodes.map((node) => node.id));
     const members = all.edges.filter((edge) => edge.type === 'contains' && edge.sourceId === props.head.id);
-    return { shown: members.filter((edge) => visible.has(edge.targetId)).length, total: members.length };
+    return { loaded: members.filter((edge) => loaded.has(edge.targetId)).length, total: members.length };
   };
   const [offset, setOffset] = createSignal<{ x: number; y: number } | null>(null);
   const [resize, setResize] = createSignal<{ width: number; height: number } | null>(null);
@@ -525,7 +525,7 @@ function ContainerVisual(props: {
           onClick={(event) => {
             event.stopPropagation();
             props.onOpenNodeVisibility('container', props.head.id, { x: event.clientX, y: event.clientY });
-          }} class="denim-population-indicator" data-no-pan="true">{memberCounts().shown}/{memberCounts().total}</button>
+          }} class="denim-population-indicator" data-no-pan="true">{memberCounts().loaded}/{memberCounts().total}</button>
       </div>
       <div data-no-pan="true" aria-label="Resize Container" title="Resize Container"
         onPointerDown={beginResize}
@@ -564,9 +564,9 @@ function NodeCard(props: {
   ])]);
   const downstreamCounts = () => {
     const all = props.databaseGraph();
-    const visible = new Set(session.state.graph.nodes.map((node) => node.id));
+    const loaded = new Set(session.state.graph.nodes.map((node) => node.id));
     const children = all.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === props.node.id);
-    return { shown: children.filter((edge) => visible.has(edge.targetId)).length, total: children.length };
+    return { loaded: children.filter((edge) => loaded.has(edge.targetId)).length, total: children.length };
   };
   return <article class="lui-node-card relative flex h-full flex-col gap-2 rounded-lg p-3 transition-shadow"
     style={{
@@ -691,7 +691,7 @@ function NodeCard(props: {
         event.stopPropagation();
         props.onOpenNodeVisibility('downstream', props.node.id, { x: event.clientX, y: event.clientY });
       }}>
-      {downstreamCounts().shown}/{downstreamCounts().total}
+      {downstreamCounts().loaded}/{downstreamCounts().total}
     </button>
   </article>;
 }
@@ -730,7 +730,7 @@ function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) 
       if (!result.ok || !result.graph || !result.board) throw new Error(result.error ?? 'Could not read Board');
       const graph: DenimGraph = {
         nodes: result.graph.nodes,
-        // Match the edges shown by Denim's current graph canvas.
+        // Match the edges loaded into Denim's current Board projection.
         edges: result.graph.edges.filter((edge) => edge.type === 'parent-child'),
       };
       const parents = new Map<string, string>();
@@ -885,7 +885,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
     if (!current) return;
     const task = current.mode === 'connect' && current.parentId
       ? actions.connectExisting(current.parentId, node.id)
-      : actions.setNodeVisibility(node.id, true, activeBoard().id);
+      : actions.setNodeLoaded(node.id, true, activeBoard().id);
     void task;
     setPicker(null);
   }
@@ -982,7 +982,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
         : menu().kind === 'downstream'
           ? { op: 'node.downstream.list', boardId: menu().boardId, nodeId: menu().nodeId! }
           : { op: 'container.members.list', boardId: menu().boardId, containerNodeId: menu().nodeId! })}
-      setNodeVisibility={(nodeId, visible, boardId) => actions.setNodeVisibility(nodeId, visible, boardId)}
+      setNodeLoaded={(nodeId, loaded, boardId) => actions.setNodeLoaded(nodeId, loaded, boardId)}
       onClose={() => setVisibilityMenu(null)} />}</Show>
   </div>;
 }

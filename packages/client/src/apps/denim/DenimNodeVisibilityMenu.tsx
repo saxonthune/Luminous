@@ -21,7 +21,7 @@ export interface DenimNodeVisibilityMenuProps {
   position: { x: number; y: number };
   /** The caller supplies the relationship-specific or whole-Board query. */
   queryNodes: () => Promise<DenimNodeVisibilityEntry[]>;
-  setNodeVisibility: (nodeId: string, visible: boolean, boardId: string) => Promise<{ ok: boolean; error?: string }>;
+  setNodeLoaded: (nodeId: string, loaded: boolean, boardId: string) => Promise<{ ok: boolean; error?: string }>;
   onClose: () => void;
 }
 
@@ -35,7 +35,7 @@ export function DenimNodeVisibilityMenu(props: DenimNodeVisibilityMenuProps) {
   let search: HTMLInputElement | undefined;
   let positionFrame = 0;
 
-  const shownCount = createMemo(() => entries().filter((entry) => entry.visible).length);
+  const loadedCount = createMemo(() => entries().filter((entry) => entry.loaded).length);
   const filteredEntries = createMemo(() => {
     const query = filter().trim().toLocaleLowerCase();
     const nodes = entries();
@@ -52,10 +52,10 @@ export function DenimNodeVisibilityMenu(props: DenimNodeVisibilityMenuProps) {
   }
 
   async function toggle(entry: DenimNodeVisibilityEntry): Promise<void> {
-    const result = await props.setNodeVisibility(entry.node.id, !entry.visible, props.boardId);
+    const result = await props.setNodeLoaded(entry.node.id, !entry.loaded, props.boardId);
     if (!result.ok) { setError(result.error ?? 'Could not change Node visibility'); return; }
     setEntries((current) => current.map((item) => item.node.id === entry.node.id
-      ? { ...item, onBoard: true, visible: !entry.visible } : item));
+      ? { ...item, loaded: !entry.loaded } : item));
   }
 
   function updatePosition(): void {
@@ -101,7 +101,7 @@ export function DenimNodeVisibilityMenu(props: DenimNodeVisibilityMenuProps) {
       <header class="denim-node-visibility-menu__header">
         <div class="denim-node-visibility-menu__heading">
           <strong>{props.title}</strong>
-          <span>{shownCount()} of {entries().length} shown on “{props.boardTitle}”</span>
+          <span>{loadedCount()} of {entries().length} loaded on “{props.boardTitle}”</span>
         </div>
         <button type="button" class="denim-node-visibility-menu__close" aria-label="Close Node Visibility Menu" onClick={props.onClose}>
           <X size={15} />
@@ -130,13 +130,12 @@ function DenimNodeVisibilityItem(props: { entry: DenimNodeVisibilityEntry; onTog
     <div class="denim-node-visibility-item__content">
       <span class="denim-node-visibility-item__type">{props.entry.node.type}</span>
       <span class="denim-node-visibility-item__text">{props.entry.node.text || '(untitled)'}</span>
-      <Show when={!props.entry.onBoard}><span class="denim-node-visibility-item__state">Not on Board</span></Show>
-      <Show when={props.entry.onBoard && !props.entry.visible}><span class="denim-node-visibility-item__state">Hidden</span></Show>
+      <span class="denim-node-visibility-item__state">{props.entry.loaded ? 'Loaded on Board' : 'Not on Board'}</span>
     </div>
-    <button type="button" class="denim-node-visibility-item__toggle" aria-pressed={props.entry.visible}
-      aria-label={`${props.entry.visible ? 'Hide' : 'Show'} ${props.entry.node.type} ${props.entry.node.text} on this Board`}
-      title={props.entry.visible ? 'Hide on this Board' : 'Show on this Board'} onClick={props.onToggle}>
-      {props.entry.visible ? <Eye size={16} /> : <EyeOff size={16} />}
+    <button type="button" class="denim-node-visibility-item__toggle" aria-pressed={props.entry.loaded}
+      aria-label={`${props.entry.loaded ? 'Unload' : 'Load'} ${props.entry.node.type} ${props.entry.node.text} ${props.entry.loaded ? 'from' : 'onto'} this Board`}
+      title={props.entry.loaded ? 'Unload from this Board' : 'Load onto this Board'} onClick={props.onToggle}>
+      {props.entry.loaded ? <Eye size={16} /> : <EyeOff size={16} />}
     </button>
   </div>;
 }

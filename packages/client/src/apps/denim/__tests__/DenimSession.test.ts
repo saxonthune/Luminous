@@ -72,7 +72,7 @@ describe('DenimSession', () => {
 
     session.activateBoard(firstId);
     session.setCamera(firstId, { x: 40, y: 60, k: 1.4 });
-    await session.includeNode('extra');
+    await session.setNodeLoaded('extra', true);
     expect(session.state.graph.nodes.map((node) => node.id)).toContain('extra');
     await session.moveNode('extra', { x: 320, y: 180 });
     expect(session.state.boards.find((board) => board.id === firstId)?.positions.extra).toEqual({ x: 320, y: 180 });
@@ -92,7 +92,7 @@ describe('DenimSession', () => {
     expect(restored.state.boards.filter((board) => board.kind === 'board')).toHaveLength(2);
     expect(restored.state.boards.find((board) => board.id === firstId)).toMatchObject({
       sources: [{ kind: 'journey', journeyId: 'journey' }],
-      includedNodeIds: ['extra'],
+      loadedNodeIds: expect.arrayContaining(['extra']),
       positions: { extra: { x: 320, y: 180 } },
     });
     await restored.dispose();
@@ -104,7 +104,7 @@ describe('DenimSession', () => {
     addDenimNode(database, { id: 'resource', type: 'Instance', text: 'Existing API' });
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
 
-    await session.includeNode('resource', 'pinned:journeys');
+    await session.setNodeLoaded('resource', true, 'pinned:journeys');
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'resource']);
     expect(session.state.graph.edges).toEqual([]);
@@ -141,7 +141,7 @@ describe('DenimSession', () => {
 
     expect(session.state.graph.nodes.map((node) => node.id)).toEqual(['journey', 'capability', 'resource']);
     expect(session.state.graph.edges.map((edge) => edge.id)).toEqual(['capability-resource']);
-    expect(session.state.boards.find((board) => board.id === session.state.activeBoardId)?.includedNodeIds)
+    expect(session.state.boards.find((board) => board.id === session.state.activeBoardId)?.loadedNodeIds)
       .toEqual(['capability', 'resource']);
     expect(getDenimGraph(database).nodes.map((node) => node.id)).toEqual(['journey', 'capability', 'resource']);
     await session.dispose();
@@ -192,7 +192,6 @@ describe('DenimSession', () => {
       kind: 'board',
       title: 'Combined board',
       sources: [{ kind: 'journey', journeyId: 'journey' }, { kind: 'capabilities' }],
-      includedNodeIds: [],
       positions: {},
       sequenceModes: {},
     } });

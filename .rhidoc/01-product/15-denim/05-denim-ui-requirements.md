@@ -164,20 +164,20 @@ extending one global counter.
 
 ## Board node visibility
 
-- **VIS1.** [p] A Board can hide an individual Node from its projection without deleting the Node or changing other Boards.
-- **VIS2.** [p] The user can show an individually hidden Node on the active Board.
-- **VIS3.** [p] A Container Population Indicator appears at the top-right of each Container header and shows `N/M` for Nodes linked by direct `contains` Edges that are visible / total; Nodes inside nested Containers are not included.
+- **VIS1.** [p] A Board stores the exact set of Nodes loaded into its projection, independently from other Boards.
+- **VIS2.** [p] The user can load an individual Node onto or unload it from the active Board without deleting the Node or its Edges.
+- **VIS3.** [p] A Container Population Indicator appears at the top-right of each Container header and shows `N/M` for Nodes linked by direct `contains` Edges that are loaded on the active Board / total; Nodes inside nested Containers are not included.
 - **VIS4.** [p] The Container label is right-justified immediately to the left of the Container Population Indicator.
 - **VIS5.** [p] Clicking the Container Population Indicator opens a placeholder Container Membership component containing only its label.
-- **VIS6.** [p] A Downstream Nodes Indicator appears at the bottom-right of each Node and shows `N/M` for visible direct downstream Nodes / total direct downstream Nodes.
+- **VIS6.** [p] A Downstream Nodes Indicator appears at the bottom-right of each Node and shows `N/M` for direct downstream Nodes loaded on the active Board / total direct downstream Nodes.
 - **VIS7.** [p] Clicking the Downstream Nodes Indicator opens a placeholder component containing only its label.
-- **VIS8.** [p] The Node Visibility Menu lets the user add, hide, or show Nodes individually on the active Board.
+- **VIS8.** [p] The Node Visibility Menu lets the user load or unload Nodes individually on the active Board.
 - **VIS9.** [p] Clicking a Container Population Indicator opens the Node Visibility Menu populated with Nodes directly linked to its Container owner by `contains` Edges.
 - **VIS10.** [p] Clicking a Downstream Nodes Indicator opens the Node Visibility Menu populated with direct downstream Nodes.
-- **VIS11.** [p] The Node Visibility Menu has a header showing its purpose and the number of listed Nodes visible on the active Board.
+- **VIS11.** [p] The Node Visibility Menu has a header showing its purpose and the number of listed Nodes loaded on the active Board.
 - **VIS12.** [p] The Node Visibility Menu has a text input that filters Nodes by their text content; it does not provide a separate type filter.
 - **VIS13.** [p] Each Node Visibility Item is a wide row using the background color associated with the Node's type and shows the Node type and text.
-- **VIS14.** [p] Each Node Visibility Item has a control that shows or hides that Node on the active Board.
+- **VIS14.** [p] Each Node Visibility Item shows whether the Node is loaded on the active Board and has a control that loads or unloads it.
 - **BCM1.** [p] Right-clicking the bare canvas background opens the Board Context Menu, whose only option is Add node.
 - **BCM2.** [p] Selecting Add node closes the Board Context Menu and opens the Node Visibility Menu with Nodes from the shared database.
 

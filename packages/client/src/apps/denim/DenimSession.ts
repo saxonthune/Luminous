@@ -44,7 +44,7 @@ export interface DenimSession {
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<void>;
   clearSequence(parentId: string): Promise<void>;
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', boardId?: string): Promise<void>;
-  includeNode(nodeId: string, boardId?: string): Promise<void>;
+  setNodeLoaded(nodeId: string, loaded: boolean, boardId?: string): Promise<void>;
   moveNode(nodeId: string, position: { x: number; y: number }, boardId?: string): Promise<void>;
   moveNodes(positions: Record<string, { x: number; y: number }>, boardId?: string): Promise<void>;
   updateNode(id: string, patch: Partial<Pick<DenimNode, 'type' | 'text'>>): Promise<void>;
@@ -279,7 +279,7 @@ export function createDenimSession(
     async initializeSequence(parentId, orderedChildIds) { await dispatchAction({ op: 'sequence.initialize', parentId, orderedChildIds }); },
     async clearSequence(parentId) { await dispatchAction({ op: 'sequence.clear', parentId }); },
     async setSequenceMode(parentId, mode, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.sequenceMode.set', boardId, parentId, mode }); },
-    async includeNode(nodeId, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.includeNode', boardId, nodeId }); },
+    async setNodeLoaded(nodeId, loaded, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.node.load.set', boardId, nodeId, loaded }); },
     async moveNode(nodeId, position, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.node.move', boardId, nodeId, position }); },
     async moveNodes(positions, boardId = state.activeBoardId) { await dispatchAction({ op: 'board.nodes.move', boardId, positions }); },
     async updateNode(id, patch) { await dispatchAction({ op: 'node.update', id, patch }); },

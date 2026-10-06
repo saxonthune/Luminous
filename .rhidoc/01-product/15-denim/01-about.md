@@ -57,10 +57,11 @@ are not adopted as Denim rules.
 
 Denim begins with a Journey list, a graph of typed nodes and relationships, and
 persistent Boards for reasoning about that graph. Nodes and Edges belong to the
-database as a whole. Each Board combines queries, optional included Nodes, and
-its own spatial arrangement, so users can shape several useful views of shared
-design data without assigning Nodes to a single Board. Node kinds and their
-relationships remain open to change while the model is being tested.
+database as a whole. Each Board is seeded from queries, then stores its exact
+set of loaded Nodes and its own spatial arrangement. Users can shape several
+useful views of shared design data without assigning Nodes to a single Board.
+Node kinds and their relationships remain open to change while the model is
+being tested.
 
 ## Design principle
 

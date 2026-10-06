@@ -40,7 +40,7 @@ relationships and contents were not specified in the source request.
 
 - **DTERM7.** [p] **Differentiate** — create a child node beneath a node, either as a new node or by connecting an existing node.
 
-- **DTERM8.** [p] **Board** — a persistent canvas workspace for reasoning about shared graph data. A Board stores query sources, explicitly included Nodes, per-Board Node positions, and display settings; it does not own the Nodes or Edges it presents.
+- **DTERM8.** [p] **Board** — a persistent canvas workspace for reasoning about shared graph data. A Board is seeded from query sources and stores its exact set of loaded Nodes, per-Board Node positions, and display settings; it does not own the Nodes or Edges it presents.
 
 - **DTERM9.** [p] **Table node** — a node that renders queried data as a table.
 
@@ -54,7 +54,7 @@ relationships and contents were not specified in the source request.
 
 - **DTERM15.** [p] **Node Toolbar** — a toolbar in the bottom-left of a Node area that presents actions as icons; its capabilities may vary by Node type.
 
-- **DTERM16.** [p] **Projection** — the graph computed from a Board's query sources and included Nodes for display on its canvas. “View” may describe this rendered or queried result, rather than the persistent Board.
+- **DTERM16.** [p] **Projection** — the graph of loaded Nodes and their connecting Edges rendered on a Board's canvas. Query sources seed a Board's initial loaded set; the Board then stores that exact set. “View” may describe this rendered or queried result, rather than the persistent Board.
 
 ## Graph relationship
 
@@ -75,19 +75,17 @@ relationships and contents were not specified in the source request.
 
 - **DTERM25.** [p] **Detached Edge Toolbar** — a fixed-screen toolbar that opens to the right of a small badge anchored at the midpoint of a dotted Edge while the pointer hovers over it. Its trash icon opens a “Confirm Detachment” action that removes the `contains` Edge.
 
-- **DTERM27.** [p] **Container Population Indicator** — a badge in a Container header showing `N/M`, where N is the number of Nodes reached by direct `contains` Edges visible on the active Board and M is the total number reached by those Edges. Nodes inside nested Containers are not counted as direct members.
+- **DTERM27.** [p] **Container Population Indicator** — a badge in a Container header showing `N/M`, where N is the number of Nodes reached by direct `contains` Edges loaded on the active Board and M is the total number reached by those Edges. Nodes inside nested Containers are not counted as direct members.
 
-- **DTERM28.** [p] **Downstream Nodes Indicator** — a badge at the bottom-right of a Node showing `N/M`, where N is the number of its direct downstream Nodes visible on the active Board and M is the total number of direct downstream Nodes.
+- **DTERM28.** [p] **Downstream Nodes Indicator** — a badge at the bottom-right of a Node showing `N/M`, where N is the number of its direct downstream Nodes loaded on the active Board and M is the total number of direct downstream Nodes.
 
 - **DTERM29.** [p] **Upstream / Downstream** — for a directed Edge `A → B`, A is upstream of B and B is downstream of A. On a differentiated Node relationship, the parent is upstream and its child is downstream; downstream follows the Edge arrow direction.
 
-- **DTERM30.** [p] **Hidden Node** — a Node omitted from one Board's projection while remaining in the shared graph and available to other Boards.
-
 - **DTERM31.** [p] **Board Context Menu** — a context menu opened by right-clicking the bare canvas background. It currently offers Add node.
 
-- **DTERM32.** [p] **Node Visibility Menu** — a shared component that lists Nodes returned by a caller-provided query and lets the user show or hide each Node on a Board.
+- **DTERM32.** [p] **Node Visibility Menu** — a shared component that lists Nodes returned by a caller-provided query and lets the user load or unload each Node on a Board. Visibility means Board membership: loaded Nodes appear in the projection; Nodes not loaded onto the Board do not.
 
-- **DTERM33.** [p] **Node Visibility Item** — a wide, type-colored row in the Node Visibility Menu showing one Node's type and text with a control to show or hide it on the current Board.
+- **DTERM33.** [p] **Node Visibility Item** — a wide, type-colored row in the Node Visibility Menu showing one Node's type and text with a control to load it onto or unload it from the current Board.
 
 ## Relationship priority
 

@@ -15,18 +15,18 @@ deps: [doc01.15.01, doc01.15.02]
   handle, collection of Boards, active Board, reactive projection, and
   file-save state.
 - A Board is a persistent document, not a query result. Its persisted JSON
-  payload can contain multiple source descriptors, independently included Node
-  IDs, per-Board node positions, and sequence display settings. Nodes and Edges
-  remain shared database data, available to any Board's query or inclusion list.
+  payload can contain multiple source descriptors, the exact loaded Node ID set,
+  per-Board node positions, and sequence display settings. Nodes and Edges
+  remain shared database data; Boards store references to the Nodes they load.
   The SQLite table stores the payload as opaque JSON so a Board can evolve
   without changing the table schema.
-- The current source descriptors are query recipes for Journeys, Capabilities,
-  Instances, or one Journey. The session composes all sources with included
-  Nodes by ID, then refreshes source results after graph edits. Future Board
+- The current source descriptors seed Boards from Journeys, Capabilities,
+  Instances, or one Journey. Once seeded, the loaded Node ID set is authoritative
+  until a load action changes it. Future Board
   shapes can replace or extend these descriptors without changing the session's
   database storage boundary.
 - The three built-in Boards have fixed source definitions in code. Their
-  included Nodes and positions are persisted as Board state. Journey Boards have
+  loaded Nodes and positions are persisted as Board state after edits. Journey Boards have
   unique identities, even when they use the same Journey source.
 - The active Board ID and each Board's camera are kept in browser session storage
   per database. Board content and per-Board node positions live in SQLite
@@ -39,7 +39,7 @@ deps: [doc01.15.01, doc01.15.02]
   use props for node-specific data and context for shared editing actions.
 - The Node Visibility Menu receives a query function from its caller. The
   caller chooses Board-wide, downstream, or Container-member data; the menu
-  owns only text filtering and per-Node visibility controls.
+  owns only text filtering and per-Node load/unload controls.
 
 This keeps SQL access out of rendering components and gives one place to
 coordinate a database edit with the visible canvas state.
@@ -47,7 +47,7 @@ coordinate a database edit with the visible canvas state.
 ## Actions
 
 - A Denim action names a user intention, such as creating a child Node,
-  changing a Node, or including a Node on a Board. It does not expose SQL or
+  changing a Node, or loading a Node onto a Board. It does not expose SQL or
   database bytes.
 - The action API sits above the session. It receives the session as a
   dependency and exposes the actions that UI components can request.
@@ -63,22 +63,21 @@ coordinate a database edit with the visible canvas state.
   descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.
 - Board actions are `board.read`, `board.openJourney`, `board.close`,
-  `board.includeNode`, `board.node.visibility.set`, `board.node.move`, `board.nodes.move`, and
+  `board.node.load.set`, `board.node.move`, `board.nodes.move`, and
   `board.sequenceMode.set`. `board.read` returns the Board definition and the
-  graph produced by its query sources and included Nodes without changing the
+  graph produced from its loaded Nodes without changing the
   database.
 - A database snapshot exposes its graph and Boards so an agent can
   inspect the current design before submitting an action.
 - The action catalog lists each operation and its required and optional
   fields. The CLI exposes the catalog, snapshot, and action request commands.
-- `board.node.visibility.set` shows or hides a Node on one Board. Showing a
-  Node also includes it on that Board when it did not come from a source query;
-  hiding never deletes shared graph data.
+- `board.node.load.set` adds a Node to or removes it from a Board's exact loaded
+  Node set. Loading or unloading never deletes shared graph data or Edges.
 - Read queries are separate from mutation actions. `board.nodes.list` returns
-  all Nodes with per-Board membership and visibility; `node.downstream.list`
+  all Nodes with per-Board loaded state; `node.downstream.list`
   and `container.members.list` return direct relationship members with those
-  same visibility facts. Each result contains the Node plus `onBoard` and
-  `visible` booleans. `/api/denim/queries` exposes the query catalog and
+  same loaded state. Each result contains the Node plus a `loaded` boolean.
+  `/api/denim/queries` exposes the query catalog and
   `/api/denim/query` runs a query for a database. The CLI exposes these as
   `luminous denim queries` and `luminous denim query <database> <query.json>`.
 - Server action requests carry the database path and base revision. The server

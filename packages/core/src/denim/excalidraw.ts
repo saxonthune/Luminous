@@ -116,7 +116,7 @@ function edgeElement(edge: DenimEdge, nodes: Map<string, DenimNode>, positions: 
   return element;
 }
 
-/** Convert a Board's visible graph and canvas positions to an editable Excalidraw scene. */
+/** Convert a Board's loaded graph and canvas positions to an editable Excalidraw scene. */
 export function denimBoardToExcalidraw(
   graph: DenimGraph,
   positions: ReadonlyMap<string, DenimExportPoint>,
