@@ -1,5 +1,5 @@
 import { getDenimGraph, type DenimDatabase, type DenimNode } from './database.ts';
-import { readDenimBoards, type DenimBoard } from './actions.ts';
+import { readDenimBoards, type DenimBoard } from './board.ts';
 
 export interface DenimNodeVisibilityEntry {
   node: DenimNode;

@@ -155,6 +155,52 @@ export function getDenimGraph(db: Database): DenimGraph {
   };
 }
 
+export function getDenimNode(db: Database, id: string): DenimNode | undefined {
+  return rows<DenimNode>(db, 'SELECT id, type, text FROM nodes WHERE id = ?', [id])[0];
+}
+
+export function hasDenimEdge(db: Database, type: string, sourceId: string, targetId: string): boolean {
+  return rows<{ present: number }>(db,
+    'SELECT 1 AS present FROM edges WHERE type = ? AND source_id = ? AND target_id = ? LIMIT 1',
+    [type, sourceId, targetId]).length > 0;
+}
+
+export function listDenimNodeIds(db: Database): string[] {
+  return rows<{ id: string }>(db, 'SELECT id FROM nodes ORDER BY rowid').map(({ id }) => id);
+}
+
+export function listDenimDescendantIds(db: Database, nodeId: string): string[] {
+  return rows<{ id: string }>(db, `
+    WITH RECURSIVE descendants(id) AS (
+      SELECT target_id FROM edges WHERE source_id = ? AND type = ?
+      UNION
+      SELECT edges.target_id FROM edges
+      JOIN descendants ON edges.source_id = descendants.id
+      WHERE edges.type = ?
+    ) SELECT id FROM descendants
+  `, [nodeId, PARENT_CHILD, PARENT_CHILD]).map(({ id }) => id);
+}
+
+export function getDenimEdge(db: Database, id: string): DenimEdge | undefined {
+  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(
+    db, 'SELECT id, type, source_id, target_id, priority FROM edges WHERE id = ?', [id],
+  )[0];
+  return edge ? { ...edge, sourceId: edge.source_id, targetId: edge.target_id } : undefined;
+}
+
+export function getDenimContainment(db: Database, nodeId: string): DenimEdge | undefined {
+  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(
+    db, "SELECT id, type, source_id, target_id, priority FROM edges WHERE type = 'contains' AND target_id = ? LIMIT 1", [nodeId],
+  )[0];
+  return edge ? { ...edge, sourceId: edge.source_id, targetId: edge.target_id } : undefined;
+}
+
+export function listDenimContainerMembers(db: Database, ownerId: string): DenimNode[] {
+  return rows<DenimNode>(db, `SELECT n.id, n.type, n.text FROM nodes n
+    JOIN edges e ON e.target_id = n.id
+    WHERE e.type = 'contains' AND e.source_id = ? ORDER BY n.rowid`, [ownerId]);
+}
+
 export function listJourneys(db: Database): DenimNode[] {
   return rows(db, 'SELECT id, type, text FROM nodes WHERE type = ? ORDER BY rowid', [JOURNEY_TYPE]);
 }
@@ -308,7 +354,7 @@ export function clearDenimSequence(db: Database, parentId: string): void {
   db.run('UPDATE edges SET priority = NULL WHERE type = ? AND source_id = ?', [PARENT_CHILD, parentId]);
 }
 
-function transaction(db: Database, run: () => void): void {
+export function runDenimTransaction(db: Database, run: () => void): void {
   db.run('BEGIN');
   try {
     run();
@@ -318,6 +364,8 @@ function transaction(db: Database, run: () => void): void {
     throw error;
   }
 }
+
+const transaction = runDenimTransaction;
 
 export function createDenimChild(db: Database, parentId: string, node: DenimNode, edgeId: string): void {
   transaction(db, () => {
@@ -333,6 +381,16 @@ export function createDenimContainedNode(db: Database, ownerId: string, node: De
   transaction(db, () => {
     addDenimNode(db, node);
     addDenimEdge(db, { id: edgeId, type: 'contains', sourceId: ownerId, targetId: node.id, priority: null });
+  });
+}
+
+/** Replace a node's current containment edge with an edge to the requested owner. */
+export function replaceDenimContainment(db: Database, ownerId: string, nodeId: string, edgeId: string): void {
+  transaction(db, () => {
+    const existing = getDenimContainment(db, nodeId);
+    if (existing?.sourceId === ownerId) return;
+    if (existing) deleteDenimEdge(db, existing.id);
+    addDenimEdge(db, { id: edgeId, type: 'contains', sourceId: ownerId, targetId: nodeId, priority: null });
   });
 }
 
