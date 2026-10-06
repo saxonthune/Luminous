@@ -235,313 +235,368 @@ function requireBoard(db: DenimDatabase, id: string): DenimBoard {
   return board;
 }
 
-/** Apply one validated Denim domain action to an open database. */
+type ActionFor<Op extends DenimAction['op']> = Extract<DenimAction, { op: Op }>;
+
+function handleJourneyCreate(db: DenimDatabase, action: ActionFor<'journey.create'>): DenimActionResult {
+  if (action.id !== undefined && typeof action.id !== 'string') throw new Error('Journey ID must be text');
+  if (action.text !== undefined && typeof action.text !== 'string') throw new Error('Journey text must be text');
+  const nodeId = action.id ?? newId('journey');
+  addDenimNode(db, { id: nodeId, type: 'Journey', text: action.text ?? 'New journey' });
+  loadNodeOnSourceBoards(db, nodeId);
+  return { ok: true, changed: true, nodeId };
+}
+
+function handleNodeCreate(db: DenimDatabase, action: ActionFor<'node.create'>): DenimActionResult {
+  if (typeof action.type !== 'string' || !action.type.trim()) throw new Error('Node type must be nonempty text');
+  if (typeof action.text !== 'string') throw new Error('Node text must be text');
+  if (action.placement && ![action.placement.x, action.placement.y].every(Number.isFinite)) {
+    throw new Error('Node placement must contain finite x and y values');
+  }
+  const board = action.placement ? requireBoard(db, action.placement.boardId) : undefined;
+  const nodeId = action.id ?? newId('node');
+  if (getDenimGraph(db).nodes.some((node) => node.id === nodeId)) throw new Error(`Node already exists: ${nodeId}`);
+  addDenimNode(db, { id: nodeId, type: action.type.trim(), text: action.text });
+  loadNodeOnSourceBoards(db, nodeId);
+  if (board && action.placement) {
+    const currentBoard = requireBoard(db, board.id);
+    putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, nodeId])],
+      positions: { ...currentBoard.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
+  }
+  return { ok: true, changed: true, nodeId, boardId: board?.id };
+}
+
+function handleNodeDifferentiate(db: DenimDatabase, action: ActionFor<'node.differentiate'>): DenimActionResult {
+  if (action.text !== undefined && typeof action.text !== 'string') throw new Error('Node text must be text');
+  if (action.placement && ![action.placement.x, action.placement.y].every(Number.isFinite)) {
+    throw new Error('Node position must contain finite x and y values');
+  }
+  const placementBoard = action.placement ? requireBoard(db, action.placement.boardId) : undefined;
+  const parent = requireNode(db, action.parentId);
+  const nodeId = action.id ?? newId('node');
+  createDenimChild(db, action.parentId, { id: nodeId, type: parent.type, text: action.text ?? 'New action' }, action.edgeId ?? newId('parent-child'));
+  loadNodeOnSourceBoards(db, nodeId, parent.id);
+  if (action.placement && placementBoard) {
+    const currentBoard = requireBoard(db, placementBoard.id);
+    putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, nodeId])],
+      positions: { ...currentBoard.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
+  }
+  return { ok: true, changed: true, nodeId };
+}
+
+function handleEdgeConnect(db: DenimDatabase, action: ActionFor<'edge.connect'>): DenimActionResult {
+  requireNode(db, action.parentId); requireNode(db, action.childId);
+  if (action.parentId === action.childId) throw new Error('A node cannot connect to itself');
+  if (getDenimGraph(db).edges.some((edge) => edge.type === 'parent-child'
+    && edge.sourceId === action.parentId && edge.targetId === action.childId)) {
+    throw new Error('These Nodes are already connected');
+  }
+  connectDenimChild(db, action.parentId, action.childId, action.edgeId ?? newId('parent-child'));
+  loadNodeOnSourceBoards(db, action.childId, action.parentId);
+  return { ok: true, changed: true, nodeId: action.childId };
+}
+
+function handleEdgeDelete(db: DenimDatabase, action: ActionFor<'edge.delete'>): DenimActionResult {
+  if (!getDenimGraph(db).edges.some((edge) => edge.id === action.edgeId)) throw new Error(`Edge not found: ${action.edgeId}`);
+  deleteDenimEdge(db, action.edgeId);
+  return { ok: true, changed: true };
+}
+
+function handleContainerAttach(db: DenimDatabase, action: ActionFor<'container.attach'>): DenimActionResult {
+  requireNode(db, action.containerNodeId);
+  requireNode(db, action.nodeId);
+  if (action.containerNodeId === action.nodeId) throw new Error('A Node cannot contain itself');
+  const board = requireBoard(db, action.boardId);
+  if (!board.containers[action.containerNodeId]) throw new Error(`Container not found for Node: ${action.containerNodeId}`);
+  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.containerNodeId)) {
+    throw new Error(`Container owner Node is not on Board: ${action.containerNodeId}`);
+  }
+  if (!getDenimGraph(db).nodes.some((node) => node.id === action.nodeId)) throw new Error(`Node not found: ${action.nodeId}`);
+  if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
+  const graph = getDenimGraph(db);
+  const existing = graph.edges.find((edge) => edge.type === 'contains' && edge.targetId === action.nodeId);
+  if (existing?.sourceId !== action.containerNodeId) {
+    if (existing) deleteDenimEdge(db, existing.id);
+    addDenimEdge(db, { id: newId('contains'), type: 'contains', sourceId: action.containerNodeId, targetId: action.nodeId });
+  }
+  loadNodeOnSourceBoards(db, action.nodeId, action.containerNodeId);
+  putBoard(db, { ...board, loadedNodeIds: [...new Set([...board.loadedNodeIds, action.nodeId])], positions: { ...board.positions, [action.nodeId]: action.position } });
+  return { ok: true, changed: true, nodeId: action.nodeId, boardId: board.id };
+}
+
+function handleContainerDetach(db: DenimDatabase, action: ActionFor<'container.detach'>): DenimActionResult {
+  const edge = getDenimGraph(db).edges.find((candidate) => candidate.type === 'contains'
+    && candidate.sourceId === action.containerNodeId && candidate.targetId === action.nodeId);
+  if (!edge) throw new Error(`Containment Edge not found from ${action.containerNodeId} to ${action.nodeId}`);
+  const boardsToKeepNodeOn = readDenimBoards(db).filter((board) => board.containers[action.containerNodeId]
+    && getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.nodeId));
+  deleteDenimEdge(db, edge.id);
+  for (const board of boardsToKeepNodeOn) {
+    if (board.loadedNodeIds.includes(action.nodeId)) continue;
+    putBoard(db, { ...board, loadedNodeIds: [...board.loadedNodeIds, action.nodeId] });
+  }
+  return { ok: true, changed: true, nodeId: action.nodeId };
+}
+
+function handleNodeUpdate(db: DenimDatabase, action: ActionFor<'node.update'>): DenimActionResult {
+  if (!action.patch || typeof action.patch !== 'object' || Array.isArray(action.patch)) throw new Error('Node patch must be an object');
+  const previous = requireNode(db, action.id);
+  if (action.patch.type === undefined && action.patch.text === undefined) throw new Error('Node update requires type or text');
+  if (action.patch.type !== undefined && typeof action.patch.type !== 'string') throw new Error('Node type must be text');
+  if (action.patch.text !== undefined && typeof action.patch.text !== 'string') throw new Error('Node text must be text');
+  updateDenimNode(db, action.id, action.patch);
+  if (previous.type === 'Journey' && action.patch.text !== undefined) {
+    for (const board of readDenimBoards(db)) if (board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && source.journeyId === action.id)) {
+      putBoard(db, { ...board, title: action.patch.text });
+    }
+  }
+  return { ok: true, changed: true, nodeId: action.id };
+}
+
+function handleNodeDelete(db: DenimDatabase, action: ActionFor<'node.delete'>): DenimActionResult {
+  if (action.scope !== 'node' && action.scope !== 'subtree') throw new Error('Node delete scope must be node or subtree');
+  const node = requireNode(db, action.id);
+  const graph = getDenimGraph(db);
+  const children = new Map<string, string[]>();
+  for (const edge of graph.edges) if (edge.type === 'parent-child') children.set(edge.sourceId, [...(children.get(edge.sourceId) ?? []), edge.targetId]);
+  const descendants = new Set<string>();
+  const pending = [...(children.get(action.id) ?? [])];
+  while (pending.length) {
+    const next = pending.pop()!;
+    if (descendants.has(next)) continue;
+    descendants.add(next); pending.push(...(children.get(next) ?? []));
+  }
+  const removed = action.scope === 'subtree' ? new Set([action.id, ...descendants]) : new Set([action.id]);
+  const loadedBoards = new Set(readDenimBoards(db).filter((board) => getDenimBoardGraph(db, board).nodes.some((item) => item.id === action.id)).map((board) => board.id));
+  if (action.scope === 'subtree') deleteDenimNodeAndChildren(db, action.id); else deleteDenimNode(db, action.id);
+  for (const board of readDenimBoards(db)) {
+    if (action.scope === 'subtree' && board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && removed.has(source.journeyId))) {
+      removeDenimBoard(db, board.id);
+      continue;
+    }
+    let loadedNodeIds = board.loadedNodeIds.filter((id) => !removed.has(id));
+    if (action.scope === 'node' && loadedBoards.has(board.id)) loadedNodeIds = [...new Set([...loadedNodeIds, ...descendants])];
+    putBoard(db, { ...board, loadedNodeIds,
+      positions: Object.fromEntries(Object.entries(board.positions).filter(([id]) => !removed.has(id))),
+      sequenceModes: Object.fromEntries(Object.entries(board.sequenceModes).filter(([id]) => !removed.has(id))),
+      containers: Object.fromEntries(Object.entries(board.containers).filter(([headNodeId]) => !removed.has(headNodeId))),
+    });
+  }
+  return { ok: true, changed: true, nodeId: node.id };
+}
+
+function handleEdgePrioritySet(db: DenimDatabase, action: ActionFor<'edge.priority.set'>): DenimActionResult {
+  if (!Number.isFinite(action.priority)) throw new Error('Edge priority must be finite');
+  if (!getDenimGraph(db).edges.some((edge) => edge.id === action.edgeId)) throw new Error(`Edge not found: ${action.edgeId}`);
+  updateDenimEdgePriority(db, action.edgeId, action.priority);
+  return { ok: true, changed: true };
+}
+
+function handleSequenceInitialize(db: DenimDatabase, action: ActionFor<'sequence.initialize'>): DenimActionResult {
+  if (!Array.isArray(action.orderedChildIds) || action.orderedChildIds.some((id) => typeof id !== 'string')) throw new Error('orderedChildIds must be an array of IDs');
+  requireNode(db, action.parentId); initializeDenimSequence(db, action.parentId, action.orderedChildIds);
+  return { ok: true, changed: true };
+}
+
+function handleSequenceClear(db: DenimDatabase, action: ActionFor<'sequence.clear'>): DenimActionResult {
+  requireNode(db, action.parentId); clearDenimSequence(db, action.parentId);
+  return { ok: true, changed: true };
+}
+
+function handleBoardRead(db: DenimDatabase, action: ActionFor<'board.read'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  return { ok: true, changed: false, boardId: board.id, board, graph: getDenimBoardGraph(db, board) };
+}
+
+function handleBoardContainerSpawn(db: DenimDatabase, action: ActionFor<'board.container.spawn'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  requireNode(db, action.headNodeId);
+  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.headNodeId)) {
+    throw new Error(`Container head Node is not on Board: ${action.headNodeId}`);
+  }
+  if (![action.container?.x, action.container?.y, action.container?.width, action.container?.height].every(Number.isFinite)
+    || action.container.width <= 0 || action.container.height <= 0) {
+    throw new Error('Container bounds must have finite position and positive size');
+  }
+  if (board.containers[action.headNodeId]) return { ok: true, changed: false, nodeId: action.headNodeId, boardId: board.id };
+  putBoard(db, { ...board, containers: { ...board.containers, [action.headNodeId]: action.container } });
+  return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
+}
+
+function handleBoardContainerMove(db: DenimDatabase, action: ActionFor<'board.container.move'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  const container = board.containers[action.headNodeId];
+  if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
+  if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Container position must contain finite x and y values');
+  const carriedPositions = action.carriedPositions ?? {};
+  const carriedContainers = action.carriedContainers ?? {};
+  const graphNodeIds = new Set(getDenimGraph(db).nodes.map((node) => node.id));
+  for (const [id, point] of Object.entries(carriedPositions)) {
+    if (!graphNodeIds.has(id)) throw new Error(`Node not found: ${id}`);
+    if (![point?.x, point?.y].every(Number.isFinite)) throw new Error('Carried Node positions must contain finite x and y values');
+  }
+  const containers = { ...board.containers, [action.headNodeId]: { ...container, ...action.position } };
+  for (const [id, position] of Object.entries(carriedContainers)) {
+    const nested = containers[id];
+    if (!nested) throw new Error(`Nested Container not found: ${id}`);
+    if (![position?.x, position?.y].every(Number.isFinite)) throw new Error('Carried Container positions must contain finite x and y values');
+    containers[id] = { ...nested, ...position };
+  }
+  putBoard(db, { ...board, positions: { ...board.positions, ...carriedPositions }, containers });
+  return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
+}
+
+function handleBoardContainerResize(db: DenimDatabase, action: ActionFor<'board.container.resize'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  const container = board.containers[action.headNodeId];
+  if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
+  if (![action.size?.width, action.size?.height].every(Number.isFinite) || action.size.width <= 0 || action.size.height <= 0) {
+    throw new Error('Container size must contain positive finite width and height');
+  }
+  putBoard(db, { ...board, containers: { ...board.containers, [action.headNodeId]: { ...container, ...action.size } } });
+  return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
+}
+
+function handleContainerNodeCreate(db: DenimDatabase, action: ActionFor<'container.node.create'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  const container = board.containers[action.headNodeId];
+  if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
+  const owner = requireNode(db, action.headNodeId);
+  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === owner.id)) {
+    throw new Error(`Container owner Node is not on Board: ${owner.id}`);
+  }
+  const nodeId = action.id ?? newId('node');
+  createDenimContainedNode(db, owner.id, { id: nodeId, type: owner.type, text: 'New node' }, action.edgeId ?? newId('contains'));
+  loadNodeOnSourceBoards(db, nodeId, owner.id);
+  const currentBoard = requireBoard(db, board.id);
+  putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, nodeId])], positions: { ...currentBoard.positions, [nodeId]: { x: container.x + 12, y: container.y + 88 } } });
+  return { ok: true, changed: true, nodeId, boardId: board.id };
+}
+
+function handleContainerNodesCreate(db: DenimDatabase, action: ActionFor<'container.nodes.create'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  const container = board.containers[action.headNodeId];
+  if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
+  const owner = requireNode(db, action.headNodeId);
+  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === owner.id)) {
+    throw new Error(`Container owner Node is not on Board: ${owner.id}`);
+  }
+  if (!Array.isArray(action.nodes) || action.nodes.length === 0) throw new Error('Container node batch must be a nonempty array');
+  const graph = getDenimGraph(db);
+  const ids = new Set<string>();
+  const edgeIds = new Set(graph.edges.map((edge) => edge.id));
+  const positions = { ...board.positions };
+  for (const item of action.nodes) {
+    if (!item || typeof item.id !== 'string' || !item.id || ids.has(item.id) || graph.nodes.some((node) => node.id === item.id)) {
+      throw new Error(`Container batch has a missing or duplicate Node ID: ${item?.id ?? ''}`);
+    }
+    if (typeof item.type !== 'string' || !item.type.trim() || typeof item.text !== 'string') throw new Error(`Invalid type or label for Node: ${item.id}`);
+    if (![item.position?.x, item.position?.y].every(Number.isFinite)) throw new Error(`Invalid position for Node: ${item.id}`);
+    const edgeId = item.edgeId ?? `contains-${item.id}`;
+    if (edgeIds.has(edgeId)) throw new Error(`Container batch has a duplicate Edge ID: ${edgeId}`);
+    ids.add(item.id); edgeIds.add(edgeId);
+    positions[item.id] = item.position;
+  }
+  db.run('BEGIN');
+  try {
+    for (const item of action.nodes) {
+      addDenimNode(db, { id: item.id, type: item.type.trim(), text: item.text });
+      addDenimEdge(db, { id: item.edgeId ?? `contains-${item.id}`, type: 'contains', sourceId: action.headNodeId, targetId: item.id });
+    }
+    for (const item of action.nodes) loadNodeOnSourceBoards(db, item.id, action.headNodeId);
+    const currentBoard = requireBoard(db, board.id);
+    putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, ...action.nodes.map((item) => item.id)])], positions });
+    db.run('COMMIT');
+  } catch (error) {
+    db.run('ROLLBACK');
+    throw error;
+  }
+  return { ok: true, changed: true, nodeIds: action.nodes.map((item) => item.id), boardId: board.id };
+}
+
+function handleBoardSequenceModeSet(db: DenimDatabase, action: ActionFor<'board.sequenceMode.set'>): DenimActionResult {
+  if (action.mode !== 'rank' && action.mode !== 'priority') throw new Error('Sequence mode must be rank or priority');
+  requireNode(db, action.parentId);
+  const board = requireBoard(db, action.boardId);
+  putBoard(db, { ...board, sequenceModes: { ...board.sequenceModes, [action.parentId]: action.mode } });
+  return { ok: true, changed: true, boardId: board.id };
+}
+
+function handleBoardNodeLoadSet(db: DenimDatabase, action: ActionFor<'board.node.load.set'>): DenimActionResult {
+  if (typeof action.loaded !== 'boolean') throw new Error('Node loaded state must be true or false');
+  const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
+  const wasLoaded = board.loadedNodeIds.includes(action.nodeId);
+  if (wasLoaded === action.loaded) return { ok: true, changed: false, boardId: board.id };
+  const loaded = new Set(board.loadedNodeIds);
+  if (action.loaded) loaded.add(action.nodeId); else loaded.delete(action.nodeId);
+  putBoard(db, { ...board, loadedNodeIds: [...loaded] });
+  return { ok: true, changed: true, boardId: board.id };
+}
+
+function handleBoardNodeMove(db: DenimDatabase, action: ActionFor<'board.node.move'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
+  if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
+  putBoard(db, { ...board, positions: { ...board.positions, [action.nodeId]: action.position } });
+  return { ok: true, changed: true, boardId: board.id };
+}
+
+function handleBoardNodesMove(db: DenimDatabase, action: ActionFor<'board.nodes.move'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  if (!action.positions || typeof action.positions !== 'object' || Array.isArray(action.positions)) throw new Error('Node positions must be an object');
+  const graphNodeIds = new Set(getDenimGraph(db).nodes.map((node) => node.id));
+  for (const [id, position] of Object.entries(action.positions)) {
+    if (!graphNodeIds.has(id)) throw new Error(`Node not found: ${id}`);
+    if (![position?.x, position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
+  }
+  putBoard(db, { ...board, positions: { ...board.positions, ...action.positions } });
+  return { ok: true, changed: true, boardId: board.id };
+}
+
+function handleBoardOpenJourney(db: DenimDatabase, action: ActionFor<'board.openJourney'>): DenimActionResult {
+  const journey = requireNode(db, action.journeyId);
+  if (journey.type !== 'Journey') throw new Error(`Node is not a Journey: ${action.journeyId}`);
+  const boardId = action.boardId ?? newId('journey-board');
+  if (readDenimBoards(db).some((board) => board.id === boardId)) throw new Error(`Board already exists: ${boardId}`);
+  const sources = [{ kind: 'journey' as const, journeyId: journey.id }];
+  putBoard(db, { version: 1, id: boardId, kind: 'board', title: journey.text,
+    sources, loadedNodeIds: sourceGraph(db, { sources }).nodes.map((node) => node.id), positions: {}, sequenceModes: {}, containers: {} });
+  return { ok: true, changed: true, boardId };
+}
+
+function handleBoardClose(db: DenimDatabase, action: ActionFor<'board.close'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  if (board.kind === 'pinned') throw new Error('Pinned Boards cannot be closed');
+  removeDenimBoard(db, board.id);
+  return { ok: true, changed: true, boardId: board.id };
+}
+
+/** Apply one Denim domain action to an open database. */
 export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimActionResult {
   if (!action || typeof action !== 'object' || typeof action.op !== 'string') throw new Error('Invalid Denim action');
   switch (action.op) {
-    case 'journey.create': {
-      if (action.id !== undefined && typeof action.id !== 'string') throw new Error('Journey ID must be text');
-      if (action.text !== undefined && typeof action.text !== 'string') throw new Error('Journey text must be text');
-      const nodeId = action.id ?? newId('journey');
-      addDenimNode(db, { id: nodeId, type: 'Journey', text: action.text ?? 'New journey' });
-      loadNodeOnSourceBoards(db, nodeId);
-      return { ok: true, changed: true, nodeId };
-    }
-    case 'node.create': {
-      if (typeof action.type !== 'string' || !action.type.trim()) throw new Error('Node type must be nonempty text');
-      if (typeof action.text !== 'string') throw new Error('Node text must be text');
-      if (action.placement && ![action.placement.x, action.placement.y].every(Number.isFinite)) {
-        throw new Error('Node placement must contain finite x and y values');
-      }
-      const board = action.placement ? requireBoard(db, action.placement.boardId) : undefined;
-      const nodeId = action.id ?? newId('node');
-      if (getDenimGraph(db).nodes.some((node) => node.id === nodeId)) throw new Error(`Node already exists: ${nodeId}`);
-      addDenimNode(db, { id: nodeId, type: action.type.trim(), text: action.text });
-      loadNodeOnSourceBoards(db, nodeId);
-      if (board && action.placement) {
-        const currentBoard = requireBoard(db, board.id);
-        putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, nodeId])],
-          positions: { ...currentBoard.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
-      }
-      return { ok: true, changed: true, nodeId, boardId: board?.id };
-    }
-    case 'node.differentiate': {
-      if (action.text !== undefined && typeof action.text !== 'string') throw new Error('Node text must be text');
-      if (action.placement && ![action.placement.x, action.placement.y].every(Number.isFinite)) {
-        throw new Error('Node position must contain finite x and y values');
-      }
-      const placementBoard = action.placement ? requireBoard(db, action.placement.boardId) : undefined;
-      const parent = requireNode(db, action.parentId);
-      const nodeId = action.id ?? newId('node');
-      createDenimChild(db, action.parentId, { id: nodeId, type: parent.type, text: action.text ?? 'New action' }, action.edgeId ?? newId('parent-child'));
-      loadNodeOnSourceBoards(db, nodeId, parent.id);
-      if (action.placement && placementBoard) {
-        const currentBoard = requireBoard(db, placementBoard.id);
-        putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, nodeId])],
-          positions: { ...currentBoard.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
-      }
-      return { ok: true, changed: true, nodeId };
-    }
-    case 'edge.connect':
-      requireNode(db, action.parentId); requireNode(db, action.childId);
-      if (action.parentId === action.childId) throw new Error('A node cannot connect to itself');
-      if (getDenimGraph(db).edges.some((edge) => edge.type === 'parent-child'
-        && edge.sourceId === action.parentId && edge.targetId === action.childId)) {
-        throw new Error('These Nodes are already connected');
-      }
-      connectDenimChild(db, action.parentId, action.childId, action.edgeId ?? newId('parent-child'));
-      loadNodeOnSourceBoards(db, action.childId, action.parentId);
-      return { ok: true, changed: true, nodeId: action.childId };
-    case 'edge.delete':
-      if (!getDenimGraph(db).edges.some((edge) => edge.id === action.edgeId)) throw new Error(`Edge not found: ${action.edgeId}`);
-      deleteDenimEdge(db, action.edgeId);
-      return { ok: true, changed: true };
-    case 'container.attach': {
-      requireNode(db, action.containerNodeId);
-      requireNode(db, action.nodeId);
-      if (action.containerNodeId === action.nodeId) throw new Error('A Node cannot contain itself');
-      const board = requireBoard(db, action.boardId);
-      if (!board.containers[action.containerNodeId]) throw new Error(`Container not found for Node: ${action.containerNodeId}`);
-      if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.containerNodeId)) {
-        throw new Error(`Container owner Node is not on Board: ${action.containerNodeId}`);
-      }
-      if (!getDenimGraph(db).nodes.some((node) => node.id === action.nodeId)) throw new Error(`Node not found: ${action.nodeId}`);
-      if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
-      const graph = getDenimGraph(db);
-      const existing = graph.edges.find((edge) => edge.type === 'contains' && edge.targetId === action.nodeId);
-      if (existing?.sourceId !== action.containerNodeId) {
-        if (existing) deleteDenimEdge(db, existing.id);
-        addDenimEdge(db, { id: newId('contains'), type: 'contains', sourceId: action.containerNodeId, targetId: action.nodeId });
-      }
-      loadNodeOnSourceBoards(db, action.nodeId, action.containerNodeId);
-      putBoard(db, { ...board, loadedNodeIds: [...new Set([...board.loadedNodeIds, action.nodeId])], positions: { ...board.positions, [action.nodeId]: action.position } });
-      return { ok: true, changed: true, nodeId: action.nodeId, boardId: board.id };
-    }
-    case 'container.detach': {
-      const edge = getDenimGraph(db).edges.find((candidate) => candidate.type === 'contains'
-        && candidate.sourceId === action.containerNodeId && candidate.targetId === action.nodeId);
-      if (!edge) throw new Error(`Containment Edge not found from ${action.containerNodeId} to ${action.nodeId}`);
-      const boardsToKeepNodeOn = readDenimBoards(db).filter((board) => board.containers[action.containerNodeId]
-        && getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.nodeId));
-      deleteDenimEdge(db, edge.id);
-      for (const board of boardsToKeepNodeOn) {
-        if (board.loadedNodeIds.includes(action.nodeId)) continue;
-        putBoard(db, { ...board, loadedNodeIds: [...board.loadedNodeIds, action.nodeId] });
-      }
-      return { ok: true, changed: true, nodeId: action.nodeId };
-    }
-    case 'node.update': {
-      if (!action.patch || typeof action.patch !== 'object' || Array.isArray(action.patch)) throw new Error('Node patch must be an object');
-      const previous = requireNode(db, action.id);
-      if (action.patch.type === undefined && action.patch.text === undefined) throw new Error('Node update requires type or text');
-      if (action.patch.type !== undefined && typeof action.patch.type !== 'string') throw new Error('Node type must be text');
-      if (action.patch.text !== undefined && typeof action.patch.text !== 'string') throw new Error('Node text must be text');
-      updateDenimNode(db, action.id, action.patch);
-      if (previous.type === 'Journey' && action.patch.text !== undefined) {
-        for (const board of readDenimBoards(db)) if (board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && source.journeyId === action.id)) {
-          putBoard(db, { ...board, title: action.patch.text });
-        }
-      }
-      return { ok: true, changed: true, nodeId: action.id };
-    }
-    case 'node.delete': {
-      if (action.scope !== 'node' && action.scope !== 'subtree') throw new Error('Node delete scope must be node or subtree');
-      const node = requireNode(db, action.id);
-      const graph = getDenimGraph(db);
-      const children = new Map<string, string[]>();
-      for (const edge of graph.edges) if (edge.type === 'parent-child') children.set(edge.sourceId, [...(children.get(edge.sourceId) ?? []), edge.targetId]);
-      const descendants = new Set<string>();
-      const pending = [...(children.get(action.id) ?? [])];
-      while (pending.length) {
-        const next = pending.pop()!;
-        if (descendants.has(next)) continue;
-        descendants.add(next); pending.push(...(children.get(next) ?? []));
-      }
-      const removed = action.scope === 'subtree' ? new Set([action.id, ...descendants]) : new Set([action.id]);
-      const loadedBoards = new Set(readDenimBoards(db).filter((board) => getDenimBoardGraph(db, board).nodes.some((item) => item.id === action.id)).map((board) => board.id));
-      if (action.scope === 'subtree') deleteDenimNodeAndChildren(db, action.id); else deleteDenimNode(db, action.id);
-      for (const board of readDenimBoards(db)) {
-        if (action.scope === 'subtree' && board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && removed.has(source.journeyId))) {
-          removeDenimBoard(db, board.id);
-          continue;
-        }
-        let loadedNodeIds = board.loadedNodeIds.filter((id) => !removed.has(id));
-        if (action.scope === 'node' && loadedBoards.has(board.id)) loadedNodeIds = [...new Set([...loadedNodeIds, ...descendants])];
-        putBoard(db, { ...board, loadedNodeIds,
-          positions: Object.fromEntries(Object.entries(board.positions).filter(([id]) => !removed.has(id))),
-          sequenceModes: Object.fromEntries(Object.entries(board.sequenceModes).filter(([id]) => !removed.has(id))),
-          containers: Object.fromEntries(Object.entries(board.containers).filter(([headNodeId]) => !removed.has(headNodeId))),
-        });
-      }
-      return { ok: true, changed: true, nodeId: node.id };
-    }
-    case 'edge.priority.set':
-      if (!Number.isFinite(action.priority)) throw new Error('Edge priority must be finite');
-      if (!getDenimGraph(db).edges.some((edge) => edge.id === action.edgeId)) throw new Error(`Edge not found: ${action.edgeId}`);
-      updateDenimEdgePriority(db, action.edgeId, action.priority);
-      return { ok: true, changed: true };
-    case 'sequence.initialize':
-      if (!Array.isArray(action.orderedChildIds) || action.orderedChildIds.some((id) => typeof id !== 'string')) throw new Error('orderedChildIds must be an array of IDs');
-      requireNode(db, action.parentId); initializeDenimSequence(db, action.parentId, action.orderedChildIds);
-      return { ok: true, changed: true };
-    case 'sequence.clear':
-      requireNode(db, action.parentId); clearDenimSequence(db, action.parentId);
-      return { ok: true, changed: true };
-    case 'board.read': {
-      const board = requireBoard(db, action.boardId);
-      return { ok: true, changed: false, boardId: board.id, board, graph: getDenimBoardGraph(db, board) };
-    }
-    case 'board.container.spawn': {
-      const board = requireBoard(db, action.boardId);
-      requireNode(db, action.headNodeId);
-      if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.headNodeId)) {
-        throw new Error(`Container head Node is not on Board: ${action.headNodeId}`);
-      }
-      if (![action.container?.x, action.container?.y, action.container?.width, action.container?.height].every(Number.isFinite)
-        || action.container.width <= 0 || action.container.height <= 0) {
-        throw new Error('Container bounds must have finite position and positive size');
-      }
-      if (board.containers[action.headNodeId]) return { ok: true, changed: false, nodeId: action.headNodeId, boardId: board.id };
-      putBoard(db, { ...board, containers: { ...board.containers, [action.headNodeId]: action.container } });
-      return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
-    }
-    case 'board.container.move': {
-      const board = requireBoard(db, action.boardId);
-      const container = board.containers[action.headNodeId];
-      if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
-      if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Container position must contain finite x and y values');
-      const carriedPositions = action.carriedPositions ?? {};
-      const carriedContainers = action.carriedContainers ?? {};
-      const graphNodeIds = new Set(getDenimGraph(db).nodes.map((node) => node.id));
-      for (const [id, point] of Object.entries(carriedPositions)) {
-        if (!graphNodeIds.has(id)) throw new Error(`Node not found: ${id}`);
-        if (![point?.x, point?.y].every(Number.isFinite)) throw new Error('Carried Node positions must contain finite x and y values');
-      }
-      const containers = { ...board.containers, [action.headNodeId]: { ...container, ...action.position } };
-      for (const [id, position] of Object.entries(carriedContainers)) {
-        const nested = containers[id];
-        if (!nested) throw new Error(`Nested Container not found: ${id}`);
-        if (![position?.x, position?.y].every(Number.isFinite)) throw new Error('Carried Container positions must contain finite x and y values');
-        containers[id] = { ...nested, ...position };
-      }
-      putBoard(db, { ...board, positions: { ...board.positions, ...carriedPositions }, containers });
-      return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
-    }
-    case 'board.container.resize': {
-      const board = requireBoard(db, action.boardId);
-      const container = board.containers[action.headNodeId];
-      if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
-      if (![action.size?.width, action.size?.height].every(Number.isFinite) || action.size.width <= 0 || action.size.height <= 0) {
-        throw new Error('Container size must contain positive finite width and height');
-      }
-      putBoard(db, { ...board, containers: { ...board.containers, [action.headNodeId]: { ...container, ...action.size } } });
-      return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
-    }
-    case 'container.node.create': {
-      const board = requireBoard(db, action.boardId);
-      const container = board.containers[action.headNodeId];
-      if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
-      const owner = requireNode(db, action.headNodeId);
-      if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === owner.id)) {
-        throw new Error(`Container owner Node is not on Board: ${owner.id}`);
-      }
-      const nodeId = action.id ?? newId('node');
-      createDenimContainedNode(db, owner.id, { id: nodeId, type: owner.type, text: 'New node' }, action.edgeId ?? newId('contains'));
-      loadNodeOnSourceBoards(db, nodeId, owner.id);
-      const currentBoard = requireBoard(db, board.id);
-      putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, nodeId])], positions: { ...currentBoard.positions, [nodeId]: { x: container.x + 12, y: container.y + 88 } } });
-      return { ok: true, changed: true, nodeId, boardId: board.id };
-    }
-    case 'container.nodes.create': {
-      const board = requireBoard(db, action.boardId);
-      const container = board.containers[action.headNodeId];
-      if (!container) throw new Error(`Container not found for Node: ${action.headNodeId}`);
-      const owner = requireNode(db, action.headNodeId);
-      if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === owner.id)) {
-        throw new Error(`Container owner Node is not on Board: ${owner.id}`);
-      }
-      if (!Array.isArray(action.nodes) || action.nodes.length === 0) throw new Error('Container node batch must be a nonempty array');
-      const graph = getDenimGraph(db);
-      const ids = new Set<string>();
-      const edgeIds = new Set(graph.edges.map((edge) => edge.id));
-      const positions = { ...board.positions };
-      for (const item of action.nodes) {
-        if (!item || typeof item.id !== 'string' || !item.id || ids.has(item.id) || graph.nodes.some((node) => node.id === item.id)) {
-          throw new Error(`Container batch has a missing or duplicate Node ID: ${item?.id ?? ''}`);
-        }
-        if (typeof item.type !== 'string' || !item.type.trim() || typeof item.text !== 'string') throw new Error(`Invalid type or label for Node: ${item.id}`);
-        if (![item.position?.x, item.position?.y].every(Number.isFinite)) throw new Error(`Invalid position for Node: ${item.id}`);
-        const edgeId = item.edgeId ?? `contains-${item.id}`;
-        if (edgeIds.has(edgeId)) throw new Error(`Container batch has a duplicate Edge ID: ${edgeId}`);
-        ids.add(item.id); edgeIds.add(edgeId);
-        positions[item.id] = item.position;
-      }
-      db.run('BEGIN');
-      try {
-        for (const item of action.nodes) {
-          addDenimNode(db, { id: item.id, type: item.type.trim(), text: item.text });
-          addDenimEdge(db, { id: item.edgeId ?? `contains-${item.id}`, type: 'contains', sourceId: action.headNodeId, targetId: item.id });
-        }
-        for (const item of action.nodes) loadNodeOnSourceBoards(db, item.id, action.headNodeId);
-        const currentBoard = requireBoard(db, board.id);
-        putBoard(db, { ...currentBoard, loadedNodeIds: [...new Set([...currentBoard.loadedNodeIds, ...action.nodes.map((item) => item.id)])], positions });
-        db.run('COMMIT');
-      } catch (error) {
-        db.run('ROLLBACK');
-        throw error;
-      }
-      return { ok: true, changed: true, nodeIds: action.nodes.map((item) => item.id), boardId: board.id };
-    }
-    case 'board.sequenceMode.set': {
-      if (action.mode !== 'rank' && action.mode !== 'priority') throw new Error('Sequence mode must be rank or priority');
-      requireNode(db, action.parentId);
-      const board = requireBoard(db, action.boardId);
-      putBoard(db, { ...board, sequenceModes: { ...board.sequenceModes, [action.parentId]: action.mode } });
-      return { ok: true, changed: true, boardId: board.id };
-    }
-    case 'board.node.load.set': {
-      if (typeof action.loaded !== 'boolean') throw new Error('Node loaded state must be true or false');
-      const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
-      const wasLoaded = board.loadedNodeIds.includes(action.nodeId);
-      if (wasLoaded === action.loaded) return { ok: true, changed: false, boardId: board.id };
-      const loaded = new Set(board.loadedNodeIds);
-      if (action.loaded) loaded.add(action.nodeId); else loaded.delete(action.nodeId);
-      putBoard(db, { ...board, loadedNodeIds: [...loaded] });
-      return { ok: true, changed: true, boardId: board.id };
-    }
-    case 'board.node.move': {
-      const board = requireBoard(db, action.boardId); requireNode(db, action.nodeId);
-      if (![action.position?.x, action.position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
-      putBoard(db, { ...board, positions: { ...board.positions, [action.nodeId]: action.position } });
-      return { ok: true, changed: true, boardId: board.id };
-    }
-    case 'board.nodes.move': {
-      const board = requireBoard(db, action.boardId);
-      if (!action.positions || typeof action.positions !== 'object' || Array.isArray(action.positions)) throw new Error('Node positions must be an object');
-      const graphNodeIds = new Set(getDenimGraph(db).nodes.map((node) => node.id));
-      for (const [id, position] of Object.entries(action.positions)) {
-        if (!graphNodeIds.has(id)) throw new Error(`Node not found: ${id}`);
-        if (![position?.x, position?.y].every(Number.isFinite)) throw new Error('Node position must contain finite x and y values');
-      }
-      putBoard(db, { ...board, positions: { ...board.positions, ...action.positions } });
-      return { ok: true, changed: true, boardId: board.id };
-    }
-    case 'board.openJourney': {
-      const journey = requireNode(db, action.journeyId);
-      if (journey.type !== 'Journey') throw new Error(`Node is not a Journey: ${action.journeyId}`);
-      const boardId = action.boardId ?? newId('journey-board');
-      if (readDenimBoards(db).some((board) => board.id === boardId)) throw new Error(`Board already exists: ${boardId}`);
-      const sources = [{ kind: 'journey' as const, journeyId: journey.id }];
-      putBoard(db, { version: 1, id: boardId, kind: 'board', title: journey.text,
-        sources, loadedNodeIds: sourceGraph(db, { sources }).nodes.map((node) => node.id), positions: {}, sequenceModes: {}, containers: {} });
-      return { ok: true, changed: true, boardId };
-    }
-    case 'board.close': {
-      const board = requireBoard(db, action.boardId);
-      if (board.kind === 'pinned') throw new Error('Pinned Boards cannot be closed');
-      removeDenimBoard(db, board.id);
-      return { ok: true, changed: true, boardId: board.id };
-    }
+    case 'journey.create': return handleJourneyCreate(db, action);
+    case 'node.create': return handleNodeCreate(db, action);
+    case 'node.differentiate': return handleNodeDifferentiate(db, action);
+    case 'edge.connect': return handleEdgeConnect(db, action);
+    case 'edge.delete': return handleEdgeDelete(db, action);
+    case 'container.attach': return handleContainerAttach(db, action);
+    case 'container.detach': return handleContainerDetach(db, action);
+    case 'node.update': return handleNodeUpdate(db, action);
+    case 'node.delete': return handleNodeDelete(db, action);
+    case 'edge.priority.set': return handleEdgePrioritySet(db, action);
+    case 'sequence.initialize': return handleSequenceInitialize(db, action);
+    case 'sequence.clear': return handleSequenceClear(db, action);
+    case 'board.read': return handleBoardRead(db, action);
+    case 'board.container.spawn': return handleBoardContainerSpawn(db, action);
+    case 'board.container.move': return handleBoardContainerMove(db, action);
+    case 'board.container.resize': return handleBoardContainerResize(db, action);
+    case 'container.node.create': return handleContainerNodeCreate(db, action);
+    case 'container.nodes.create': return handleContainerNodesCreate(db, action);
+    case 'board.sequenceMode.set': return handleBoardSequenceModeSet(db, action);
+    case 'board.node.load.set': return handleBoardNodeLoadSet(db, action);
+    case 'board.node.move': return handleBoardNodeMove(db, action);
+    case 'board.nodes.move': return handleBoardNodesMove(db, action);
+    case 'board.openJourney': return handleBoardOpenJourney(db, action);
+    case 'board.close': return handleBoardClose(db, action);
     default: throw new Error(`Unknown Denim action: ${(action as { op: string }).op}`);
   }
 }
