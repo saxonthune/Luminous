@@ -435,6 +435,7 @@ export function Canvas(props: CanvasProps) {
     const bands = new Set<number>();
     for (const geometry of routedEdges().values()) {
       for (const band of geometry.segmentLayers) bands.add(band);
+      for (const overlay of geometry.contentOverlays) bands.add(overlay.band);
     }
     return [...bands].sort((a, b) => a - b);
   });

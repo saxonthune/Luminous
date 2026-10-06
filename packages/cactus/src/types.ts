@@ -7,6 +7,14 @@ export interface RegisteredNodeRect {
   h: number;
 }
 
+/** A clipped repeat of an Edge path in a host-selected visual band. */
+export interface EdgeContentOverlay {
+  /** Canvas-space clip region. The host can omit a Container's header here. */
+  clipRect: RegisteredNodeRect;
+  /** Host-selected band, ordered with NodeContainer visualBand values. */
+  band: number;
+}
+
 export interface RoutePoint {
   x: number;
   y: number;
@@ -51,6 +59,8 @@ export interface EdgeDeclaration {
   label?: () => JSX.Element;
   /** Optional host-owned route projection. Return null to use cactus's direct route. */
   routeBuilder?: (nodeRects: ReadonlyMap<string, RegisteredNodeRect>) => EdgeRoute | null;
+  /** Repeat the routed line, arrow, and hit target above selected underlays. */
+  contentOverlays?: EdgeContentOverlay[];
 }
 
 export interface EdgeStyling {

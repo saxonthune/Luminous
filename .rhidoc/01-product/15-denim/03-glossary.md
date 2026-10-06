@@ -30,7 +30,9 @@ relationships and contents were not specified in the source request.
   - An Instance can have Instances as child nodes.
   - An Instance can have Organizations as child nodes.
 
-- **DTERM5.** [p] **Organization** — a node representing modules, functions, guards, or other implementation details.
+- **DTERM5.** [p] **Organization** — a node representing a concept that groups implementation details, such as Journey, Node, Edge, Container, or Board.
+
+- **DTERM34.** [p] **Module** — a node representing a piece of code, such as an item in Rust.
 
 - **DTERM6.** [p] **Contract** — a node type requested for Denim; its contents and relationships remain unspecified.
 

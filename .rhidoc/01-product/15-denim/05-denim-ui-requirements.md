@@ -97,6 +97,7 @@ extending one global counter.
 - **NODE8.** [p] The drag bar indicator does not change appearance when the pointer hovers over it.
 - **NODE9.** [p] When the user differentiates a Node, Denim shows the new Node at its final position below the parent without an intermediate layout position.
 - **NODE10.** [p] A wheel gesture over overflowing Node text scrolls the text; when it cannot scroll in that direction, the gesture zooms the canvas.
+- **NODE11.** [p] The Node type selector offers Module as a Node type.
 
 ## Selection
 
@@ -132,6 +133,7 @@ extending one global counter.
 - **EDGE2.** [p] Clicking “Delete” removes the Edge immediately and keeps its endpoint Nodes; this is the final confirmation action.
 - **EDGE3.** [p] The Edge click target extends beyond the visible line, while Nodes remain on top and receive clicks where they overlap an Edge.
 - **EDGE4.** [p] The user can draw a literal line between two Nodes to create an Edge of the literal-line type.
+- **EDGE5.** [p] When an Edge connects to a Node in a Container, the portion inside the Container is visible above the Container background and below Nodes, while the Container header remains above the Edge.
 
 
 ## Containers
@@ -155,6 +157,7 @@ extending one global counter.
 - **CNT17.** [p] When a Container moves, each visually contained Node moves with it; any Container owned by those Nodes moves with them as well.
 - **CNT18.** [p] Nested Containers alternate between the default surface and a slightly greyer surface.
 - **CNT19.** [p] A dashed curved line connects a Container Node to its Container when both are nested inside another Container.
+- **CNT20.** [p] A Container header label shows the first 16 characters of its owner Node's text followed by “Container”.
 
 ## Container Toolbar
 

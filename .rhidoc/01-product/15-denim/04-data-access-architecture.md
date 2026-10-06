@@ -79,7 +79,7 @@ coordinate a database edit with the visible canvas state.
   same loaded state. Each result contains the Node plus a `loaded` boolean.
   `/api/denim/queries` exposes the query catalog and
   `/api/denim/query` runs a query for a database. The CLI exposes these as
-  `luminous denim queries` and `luminous denim query <database> <query.json>`.
+  `just denim queries` and `just denim query <database> <query.json>`.
 - Server action requests carry the database path and base revision. The server
   applies the action, saves with revision checking, and broadcasts the changed
   path so open Denim Boards can refresh.
@@ -91,6 +91,37 @@ It lets the UI, CLI, and API share Denim actions while keeping database and
 Board coordination in the session. Revision checks and change notifications
 remain persistence and transport concerns; the action vocabulary alone does
 not merge concurrent edits.
+
+## Denim CLI
+
+Run `just denim` to display Denim-specific command help. The `just denim`
+recipe forwards to `scripts/luminous-cli.ts` and appears directly in `just --list`.
+
+Commands such as `boards` and `journeys` read a local database file:
+
+```sh
+just denim boards .luminous/denim-starter.denim.sqlite
+```
+
+Commands such as `actions`, `queries`, `snapshot`, `query`, and `action` use
+the storage server. The default server is `http://localhost:4080`; pass
+`--server URL` to change it. For example:
+
+```sh
+just denim actions
+just denim snapshot .luminous/denim-starter.denim.sqlite
+  just denim action .luminous/denim-starter.denim.sqlite action.json
+  just denim batch .luminous/denim-starter.denim.sqlite actions.json
+```
+
+The storage server applies `action.json` through the shared Denim action
+executor and persists the database with revision checking. The browser UI
+usually runs on port 5200; CLI server commands connect to the storage server,
+not the browser client.
+
+`batch` accepts an array of Denim actions in `actions.json` and submits them
+as one revision-checked server request. The server applies every action before
+writing the database, then broadcasts one change notification.
 
 ## Changes and saving
 

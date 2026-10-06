@@ -29,27 +29,36 @@ queries over code.
    Board into a file or symbol inventory.
 4. **Make relationships explain something.** Add an edge when its meaning helps
    explain realization, dependency, ownership, data movement, or another
-   decision-relevant relation. Containers group material visually; use their
-   containment relation for that purpose, and use literal edges for other
-   relationships. Reuse existing nodes when they already represent the same
-   concept. Keep uncertain relationships visibly unresolved in the discussion
-   instead of drawing them as fact.
+   decision-relevant relation. A `contains` Edge already expresses membership
+   in a Container. Do not also connect the Container Node to each contained
+   Node with a parent-child Edge by default; add that Edge only when it
+   expresses a separate upstream/downstream relationship or the user asks for
+   it. Reuse existing Nodes when they already represent the same concept. Keep
+   uncertain relationships visibly unresolved in the discussion instead of
+   drawing them as fact.
 5. **Use Denim's supported interface.** Read the target Board before changing
    it. Use the Denim action/session API for persistent edits when available;
    avoid direct database writes. After editing, read the Board again and check
-   that the requested nodes, connections, and placements are present.
+   that the requested Nodes, connections, and placements are present. Briefly
+   report which CLI/session/action/query path you used and whether it was
+   straightforward. When repeated low-level operations, brittle scripts, or
+   awkward temporary files expose a CLI gap, propose the specific command that
+   would simplify it so the user can decide whether to add it.
 6. **Create decision aids.** When a system is too large for one Board, split it
    by a user question or decision. Useful companion artifacts can include an
    outcome-to-capability map, a capability-to-resource map, a system boundary
    view, or a gap list. Choose only what helps the current reader make a
    decision.
-7. **Learn on every invocation.** Append an entry to [log.md](log.md) recording
-   the task, artifacts inspected or changed, what worked or failed, capability
-   gaps the user exposed, and a lesson with its evidence level. Add a dated
-   learning even when the task succeeds without friction. Update this skill's
-   reusable instructions when evidence changes a practice; keep session-specific
-   observations in the log. Do not copy private source content, credentials, or
-   unnecessary transcript text into the log.
+7. **Learn from project-building work.** Add an entry to [log.md](log.md) only
+   when this skill is being used to build or improve a user's Denim project.
+   Record relevant project artifacts, what worked or failed, project-building
+   capability gaps, and a lesson with its evidence level. Do not add entries for
+   developing or maintaining the Denim application itself, its UI, CLI, docs,
+   or tooling. Do not add entries for unrelated repository work. Update this
+   skill's reusable instructions when evidence from project-building work
+   changes a practice; keep session-specific observations in the log. Do not
+   copy private source content, credentials, or unnecessary transcript text
+   into the log.
 
 ## Scope
 

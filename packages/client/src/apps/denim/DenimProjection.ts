@@ -1,4 +1,4 @@
-import { dagLayout, type TidyNode } from '@luminous/cactus';
+import { dagLayout, type EdgeContentOverlay, type TidyNode } from '@luminous/cactus';
 import type { DenimBoard } from '@luminous/core/denim/actions';
 import type { DenimEdge, DenimGraph } from '@luminous/core/denim';
 
@@ -11,13 +11,14 @@ export interface DenimContainerDragPreview {
 }
 
 export type DenimCanvasEdge =
-  | { kind: 'sequence'; id: string; sourceId: string; targetId: string; priority: number | null }
+  | { kind: 'sequence'; id: string; sourceId: string; targetId: string; priority: number | null; contentOverlays: EdgeContentOverlay[] }
   | { kind: 'container-owner'; id: string; sourceId: string; targetId: string; routeBand: number }
   | { kind: 'detached-containment'; id: string; sourceId: string; targetId: string };
 
 export interface DenimCanvasModel {
   positions: Map<string, { x: number; y: number }>;
   nodeDepths: Map<string, number>;
+  nodeContainers: Map<string, string[]>;
   containerDepths: Map<string, number>;
   edges: DenimCanvasEdge[];
 }
@@ -29,7 +30,7 @@ function deriveVisualDepths(input: {
   nodeWidth: number;
   nodeHeight: number;
   containerHeaderHeight: number;
-}): Pick<DenimCanvasModel, 'nodeDepths' | 'containerDepths'> {
+}): Pick<DenimCanvasModel, 'nodeDepths' | 'nodeContainers' | 'containerDepths'> {
   const { positions, containers, nodeIds, nodeWidth, nodeHeight, containerHeaderHeight } = input;
   const entries = Object.entries(containers);
   const areaContainsPoint = (box: DenimBoard['containers'][string], x: number, y: number) =>
@@ -55,19 +56,74 @@ function deriveVisualDepths(input: {
   for (const [headNodeId] of entries) depthOf(headNodeId);
 
   const nodeDepths = new Map<string, number>();
+  const nodeContainers = new Map<string, string[]>();
   for (const nodeId of nodeIds) {
     const point = positions.get(nodeId);
-    if (!point) { nodeDepths.set(nodeId, 0); continue; }
+    if (!point) { nodeDepths.set(nodeId, 0); nodeContainers.set(nodeId, []); continue; }
     const cx = point.x + nodeWidth / 2;
     const cy = point.y + nodeHeight / 2;
     let depth = 0;
+    const containing: string[] = [];
     for (const [headNodeId, box] of entries) {
       if (headNodeId === nodeId) continue;
-      if (areaContainsPoint(box, cx, cy)) depth = Math.max(depth, (containerDepths.get(headNodeId) ?? 0) + 1);
+      if (areaContainsPoint(box, cx, cy)) {
+        depth = Math.max(depth, (containerDepths.get(headNodeId) ?? 0) + 1);
+        containing.push(headNodeId);
+      }
     }
     nodeDepths.set(nodeId, depth);
+    nodeContainers.set(nodeId, containing);
   }
-  return { nodeDepths, containerDepths };
+  return { nodeDepths, nodeContainers, containerDepths };
+}
+
+function containerParentIndex(graph: DenimGraph): Map<string, string> {
+  return new Map(graph.edges.filter((edge) => edge.type === 'contains')
+    .map((edge) => [edge.targetId, edge.sourceId]));
+}
+
+function dataContainerAncestors(parentByMember: ReadonlyMap<string, string>, nodeId: string): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>([nodeId]);
+  let parent = parentByMember.get(nodeId);
+  while (parent && !seen.has(parent)) {
+    result.push(parent);
+    seen.add(parent);
+    parent = parentByMember.get(parent);
+  }
+  return result;
+}
+
+function edgeContentOverlays(input: {
+  edge: Pick<DenimEdge, 'sourceId' | 'targetId'>;
+  parentByMember: ReadonlyMap<string, string>;
+  containers: DenimBoard['containers'];
+  nodeContainers: ReadonlyMap<string, readonly string[]>;
+  containerDepths: ReadonlyMap<string, number>;
+  headerHeight: number;
+}): EdgeContentOverlay[] {
+  const { edge, parentByMember, containers, nodeContainers, containerDepths, headerHeight } = input;
+  const visualByNode = new Map<string, Set<string>>([
+    [edge.sourceId, new Set(nodeContainers.get(edge.sourceId) ?? [])],
+    [edge.targetId, new Set(nodeContainers.get(edge.targetId) ?? [])],
+  ]);
+  const relevant = new Set([
+    ...dataContainerAncestors(parentByMember, edge.sourceId),
+    ...dataContainerAncestors(parentByMember, edge.targetId),
+  ]);
+  const endpointsInContainer = (containerId: string) => [...visualByNode.values()].some((ids) => ids.has(containerId));
+  return [...relevant]
+    .filter((containerId) => containers[containerId] && endpointsInContainer(containerId))
+    .sort((a, b) => (containerDepths.get(a) ?? 0) - (containerDepths.get(b) ?? 0))
+    .flatMap((containerId) => {
+      const container = containers[containerId];
+      const contentHeight = container.height - headerHeight;
+      if (contentHeight <= 0) return [];
+      return [{
+        band: 3 + 2 * (containerDepths.get(containerId) ?? 0),
+        clipRect: { x: container.x, y: container.y + headerHeight, w: container.width, h: contentHeight },
+      }];
+    });
 }
 
 /**
@@ -100,13 +156,6 @@ export function deriveDenimCanvasModel(input: {
   const positions = dagLayout(nodes, layoutEdges);
   for (const [id, position] of Object.entries(board.positions)) positions.set(id, position);
 
-  const edges: DenimCanvasEdge[] = graph.edges
-    .filter((edge) => edge.type === 'parent-child')
-    .map((edge) => ({
-      kind: 'sequence', id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId,
-      priority: edge.priority,
-    }));
-
   const nodeIds = new Set(graph.nodes.map((node) => node.id));
   const visualDepths = deriveVisualDepths({
     positions,
@@ -116,6 +165,16 @@ export function deriveDenimCanvasModel(input: {
     nodeHeight,
     containerHeaderHeight,
   });
+  const containerParents = containerParentIndex(graph);
+  const edges: DenimCanvasEdge[] = graph.edges
+    .filter((edge) => edge.type === 'parent-child')
+    .map((edge) => ({
+      kind: 'sequence', id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId,
+      priority: edge.priority,
+      contentOverlays: edgeContentOverlays({ edge, parentByMember: containerParents, containers: board.containers,
+        nodeContainers: visualDepths.nodeContainers, containerDepths: visualDepths.containerDepths,
+        headerHeight: containerHeaderHeight }),
+    }));
   for (const headNodeId of Object.keys(board.containers)) {
     if (!nodeIds.has(headNodeId)) continue;
     edges.push({
@@ -183,22 +242,6 @@ export function previewDenimContainerDrag(input: {
     const point = positions.get(id);
     if (point) positions.set(id, { x: point.x + preview.dx, y: point.y + preview.dy });
   }
-  const edges: DenimCanvasEdge[] = model.edges.filter((edge) => edge.kind !== 'detached-containment');
-  for (const edge of graph.edges) {
-    if (edge.type !== 'contains') continue;
-    const container = board.containers[edge.sourceId];
-    const point = positions.get(edge.targetId);
-    if (!container || !point) continue;
-    const movesWithDraggedContainer = preview.headNodeId === edge.sourceId || preview.carriedContainerIds.includes(edge.sourceId);
-    const containerX = container.x + (movesWithDraggedContainer ? preview.dx : 0);
-    const containerY = container.y + (movesWithDraggedContainer ? preview.dy : 0);
-    const overlaps = point.x < containerX + container.width && point.x + nodeWidth > containerX
-      && point.y < containerY + container.height && point.y + nodeHeight > containerY + containerHeaderHeight;
-    if (!overlaps) edges.push({
-      kind: 'detached-containment', id: `denim-detached:${edge.id}`,
-      sourceId: `denim-container:${edge.sourceId}`, targetId: edge.targetId,
-    });
-  }
   const containers = { ...board.containers };
   for (const headNodeId of [preview.headNodeId, ...preview.carriedContainerIds]) {
     const container = containers[headNodeId];
@@ -212,8 +255,33 @@ export function previewDenimContainerDrag(input: {
     nodeHeight,
     containerHeaderHeight,
   });
-  const ownerEdges = edges.map((edge) => edge.kind === 'container-owner'
-    ? { ...edge, routeBand: 1 + 2 * (visualDepths.nodeDepths.get(edge.sourceId) ?? 0) }
-    : edge);
-  return { positions, ...visualDepths, edges: ownerEdges };
+  const containerParents = containerParentIndex(graph);
+  const edges: DenimCanvasEdge[] = model.edges
+    .filter((edge) => edge.kind !== 'detached-containment')
+    .map((edge) => {
+      if (edge.kind === 'sequence') return {
+        ...edge,
+        contentOverlays: edgeContentOverlays({ edge, parentByMember: containerParents, containers,
+          nodeContainers: visualDepths.nodeContainers, containerDepths: visualDepths.containerDepths,
+          headerHeight: containerHeaderHeight }),
+      };
+      if (edge.kind === 'container-owner') return {
+        ...edge,
+        routeBand: 1 + 2 * (visualDepths.nodeDepths.get(edge.sourceId) ?? 0),
+      };
+      return edge;
+    });
+  for (const edge of graph.edges) {
+    if (edge.type !== 'contains') continue;
+    const container = containers[edge.sourceId];
+    const point = positions.get(edge.targetId);
+    if (!container || !point) continue;
+    const overlaps = point.x < container.x + container.width && point.x + nodeWidth > container.x
+      && point.y < container.y + container.height && point.y + nodeHeight > container.y + containerHeaderHeight;
+    if (!overlaps) edges.push({
+      kind: 'detached-containment', id: `denim-detached:${edge.id}`,
+      sourceId: `denim-container:${edge.sourceId}`, targetId: edge.targetId,
+    });
+  }
+  return { positions, ...visualDepths, edges };
 }

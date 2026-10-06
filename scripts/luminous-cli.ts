@@ -39,51 +39,48 @@ const dryRun = takeFlag('--dry-run');
 
 function usage(): never {
   console.error(`Usage:
-  luminous hemp generate|items|crates|list|read|check|write|layout|move (run 'luminous hemp' for help)
-  luminous denim journeys <database>
-  luminous denim boards <database>
-  luminous denim list [--server URL]
-  luminous denim actions [--server URL]
-  luminous denim queries [--server URL]
-  luminous denim query <database> <query.json> [--server URL]
-  luminous denim snapshot <database> [--server URL]
-  luminous denim action <database> <action.json> [--server URL]
-  luminous denim journey <database> <journey-id>
-  luminous denim capabilities <database>
-  luminous denim resources <database>
-  luminous denim init <database>
-  luminous denim seed <database>
-  luminous denim node add <database> --id ID --type TYPE --text TEXT [--parent ID]
-  luminous denim node set <database> <node-id> [--type TYPE] [--text TEXT]
-  luminous denim connect <database> <parent-id> <existing-node-id>
-  luminous nylon list [--server URL]
-  luminous nylon read <path> [--server URL]
-  luminous nylon history <path> [--server URL]
-  luminous nylon undo <path> [--server URL]
-  luminous nylon redo <path> [--server URL]
-  luminous nylon export <path> [--server URL]
-  luminous nylon check <path> [--server URL]
-  luminous nylon doctor <path> [--dry-run] [--server URL]
-  luminous nylon write <path> <local-file> [--server URL]
-  luminous nylon batch <path> <operations-file> [--dry-run] [--server URL]
-  luminous nylon action <path> <action-file> [--dry-run] [--server URL]
-  luminous nylon node add <path> <transformation|contract> --id ID --name NAME [--parent ID|root] [--x N --y N] [--kind KIND] [--prose TEXT|--text TEXT] [--needs JSON]
-  luminous nylon node update <path> <id> [--name NAME] [--kind KIND] [--prose TEXT|--text TEXT] [--needs JSON]
-  luminous nylon node reparent <path> <id> <parent-id|root>
-  luminous nylon node move <path> <id> <dx> <dy>
-  luminous nylon node delete <path> <id> [--cascade]
-  luminous nylon arc add <path> <from> <to>
-  luminous nylon arc remove <path> <from> <to>
-  luminous nylon arc replace <path> <old-from> <old-to> <new-from> <new-to>
-  luminous nylon arc insert <path> <from> <to> --transformation-id ID --transformation-name NAME --contract-id ID --contract-name NAME [--parent ID|root] [--transformation-x N --transformation-y N --contract-x N --contract-y N]
-  luminous nylon contract-pair set <path> <transformation-id> --input ID --output ID
-  luminous nylon contract-pair clear <path> <transformation-id>
-  luminous nylon contract-pair move <path> <transformation-id> <dx> <dy>
-  luminous nylon layout dag <path> <transformation-id> <LR|TD|RL|DT>
-  luminous nylon layout space <path> <transformation-id>
-  luminous nylon differentiate <path> <transformation-id> [--first NAME] [--contract NAME] [--second NAME] [--server URL]
+  just cli hemp generate|items|crates|list|read|check|write|layout|move
+  just denim journeys <database>
+  just denim boards <database>
+  just denim list|actions|queries [--server URL]
+  just denim query <database> <query.json> [--server URL]
+  just denim snapshot <database> [--server URL]
+  just denim action <database> <action.json> [--server URL]
+  just denim batch <database> <actions.json> [--server URL]
+  just denim journey <database> <journey-id>
+  just denim capabilities|resources <database>
+  just denim init|seed <database>
+  just denim node add <database> --id ID --type TYPE --text TEXT [--parent ID]
+  just denim node set <database> <node-id> [--type TYPE] [--text TEXT]
+  just denim connect <database> <parent-id> <existing-node-id>
+  just cli nylon list [--server URL]
+  just cli nylon read <path> [--server URL]
+  just cli nylon history <path> [--server URL]
+  just cli nylon undo <path> [--server URL]
+  just cli nylon redo <path> [--server URL]
+  just cli nylon export <path> [--server URL]
+  just cli nylon check <path> [--server URL]
+  just cli nylon doctor <path> [--dry-run] [--server URL]
+  just cli nylon write <path> <local-file> [--server URL]
+  just cli nylon batch <path> <operations-file> [--dry-run] [--server URL]
+  just cli nylon action <path> <action-file> [--dry-run] [--server URL]
+  just cli nylon node add <path> <transformation|contract> --id ID --name NAME [--parent ID|root] [--x N --y N] [--kind KIND] [--prose TEXT|--text TEXT] [--needs JSON]
+  just cli nylon node update <path> <id> [--name NAME] [--kind KIND] [--prose TEXT|--text TEXT] [--needs JSON]
+  just cli nylon node reparent <path> <id> <parent-id|root>
+  just cli nylon node move <path> <id> <dx> <dy>
+  just cli nylon node delete <path> <id> [--cascade]
+  just cli nylon arc add <path> <from> <to>
+  just cli nylon arc remove <path> <from> <to>
+  just cli nylon arc replace <path> <old-from> <old-to> <new-from> <new-to>
+  just cli nylon arc insert <path> <from> <to> --transformation-id ID --transformation-name NAME --contract-id ID --contract-name NAME [--parent ID|root] [--transformation-x N --transformation-y N --contract-x N --contract-y N]
+  just cli nylon contract-pair set <path> <transformation-id> --input ID --output ID
+  just cli nylon contract-pair clear <path> <transformation-id>
+  just cli nylon contract-pair move <path> <transformation-id> <dx> <dy>
+  just cli nylon layout dag <path> <transformation-id> <LR|TD|RL|DT>
+  just cli nylon layout space <path> <transformation-id>
+  just cli nylon differentiate <path> <transformation-id> [--first NAME] [--contract NAME] [--second NAME] [--server URL]
 
-Mutating commands accept --dry-run.
+Nylon mutating commands accept --dry-run.
 Layouts accept --collapsed '["id"]' and --covered '["id"]'; default: all expanded.`);
   process.exit(2);
 }
@@ -112,31 +109,52 @@ async function readDocument(path: string): Promise<NylonDocument> {
   return (await readSnapshot(path)).document;
 }
 
+function denimUsage(): never {
+  console.log(`Usage: just denim <command>
+
+Read a local Denim database:
+  just denim boards <database>
+  just denim journeys <database>
+
+Use the running storage server (default http://localhost:4080):
+  just denim list
+  just denim actions
+  just denim queries
+  just denim snapshot <database>
+  just denim query <database> <query.json>
+  just denim action <database> <action.json>
+  just denim batch <database> <actions.json>
+
+Pass --server URL to use a different storage server. The browser client port
+(usually 5200) is not the storage server port.`);
+  process.exit(0);
+}
+
 async function denimCli(): Promise<void> {
   const command = argv.shift();
-  if (command === 'help' || command === undefined) { usage(); return; }
+  if (command === 'help' || command === '--help' || command === '-h' || command === undefined) denimUsage();
   if (command === 'list') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     const response = await request('/api/documents');
     const body = await response.json() as { documents?: Array<{ path: string }> };
     for (const item of body.documents ?? []) if (item.path.endsWith('.denim.sqlite')) console.log(item.path);
     return;
   }
   if (command === 'actions') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     const response = await request('/api/denim/actions');
     console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }
   if (command === 'queries') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     const response = await request('/api/denim/queries');
     console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }
   if (command === 'query') {
     const path = argv.shift(); const queryFile = argv.shift();
-    if (!path || !queryFile || argv.length) usage();
+    if (!path || !queryFile || argv.length) denimUsage();
     let query: DenimQuery;
     try { query = JSON.parse(await readFile(queryFile, 'utf8')) as DenimQuery; }
     catch (cause) { fail(`Could not read Denim query JSON: ${cause instanceof Error ? cause.message : String(cause)}`); }
@@ -148,14 +166,14 @@ async function denimCli(): Promise<void> {
     return;
   }
   if (command === 'snapshot') {
-    const path = argv.shift(); if (!path || argv.length) usage();
+    const path = argv.shift(); if (!path || argv.length) denimUsage();
     const response = await request(`/api/denim/snapshot/${encodeURIComponent(path)}`);
     console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }
   if (command === 'action') {
     const path = argv.shift(); const actionFile = argv.shift();
-    if (!path || !actionFile || argv.length) usage();
+    if (!path || !actionFile || argv.length) denimUsage();
     let action: DenimAction;
     try { action = JSON.parse(await readFile(actionFile, 'utf8')) as DenimAction; }
     catch (cause) { fail(`Could not read Denim action JSON: ${cause instanceof Error ? cause.message : String(cause)}`); }
@@ -168,14 +186,35 @@ async function denimCli(): Promise<void> {
     console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }
+  if (command === 'batch') {
+    const path = argv.shift(); const actionsFile = argv.shift();
+    if (!path || !actionsFile || argv.length) denimUsage();
+    let actions: DenimAction[];
+    try {
+      const parsed: unknown = JSON.parse(await readFile(actionsFile, 'utf8'));
+      if (!Array.isArray(parsed) || parsed.length === 0) fail('Denim batch file must contain a nonempty array of actions');
+      actions = parsed as DenimAction[];
+    } catch (cause) {
+      if (cause instanceof Error && cause.message.startsWith('Denim batch file')) throw cause;
+      fail(`Could not read Denim batch JSON: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
+    const snapshotResponse = await request(`/api/denim/snapshot/${encodeURIComponent(path)}`);
+    const snapshot = await snapshotResponse.json() as { revision: string };
+    const response = await request('/api/denim/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, baseRevision: snapshot.revision, actionId: crypto.randomUUID(), actions }),
+    });
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
   if (command === 'init') {
-    const path = argv.shift(); if (!path || argv.length) usage();
+    const path = argv.shift(); if (!path || argv.length) denimUsage();
     const db = await openDenimDatabase();
     await writeFile(path, exportDenimDatabase(db), { flag: 'wx' });
     console.log(JSON.stringify({ ok: true, path })); return;
   }
   if (command === 'seed') {
-    const path = argv.shift(); if (!path || argv.length) usage();
+    const path = argv.shift(); if (!path || argv.length) denimUsage();
     const db = await openDenimDatabase();
     seedDenimDatabase(db);
     await writeFile(path, exportDenimDatabase(db), { flag: 'wx' });
@@ -183,13 +222,13 @@ async function denimCli(): Promise<void> {
   }
   if (command === 'node') {
     const action = argv.shift();
-    const path = argv.shift(); if (!path) usage();
+    const path = argv.shift(); if (!path) denimUsage();
     if (action === 'add') {
       const id = requiredOption('--id');
       const type = requiredOption('--type');
       const text = requiredOption('--text');
       const parent = takeOption('--parent');
-      if (argv.length) usage();
+      if (argv.length) denimUsage();
       const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
       if (parent) createDenimChild(db, parent, { id, type, text }, `${parent}-${id}`);
       else addDenimNode(db, { id, type, text });
@@ -197,49 +236,49 @@ async function denimCli(): Promise<void> {
       console.log(JSON.stringify({ ok: true, id, type, text, parent }, null, 2)); return;
     }
     if (action === 'set') {
-      const id = argv.shift(); if (!id) usage();
+      const id = argv.shift(); if (!id) denimUsage();
       const type = takeOption('--type');
       const text = takeOption('--text');
-      if (argv.length || (type === undefined && text === undefined)) usage();
+      if (argv.length || (type === undefined && text === undefined)) denimUsage();
       const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
       updateDenimNode(db, id, { type, text });
       await writeFile(path, exportDenimDatabase(db));
       console.log(JSON.stringify(getDenimGraph(db).nodes.find((node) => node.id === id), null, 2)); return;
     }
-    usage();
+    denimUsage();
   }
   const path = argv.shift();
-  if (!path) usage();
+  if (!path) denimUsage();
   const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
   const save = async () => writeFile(path, exportDenimDatabase(db));
   if (command === 'journeys') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     console.log(JSON.stringify(listJourneys(db), null, 2)); return;
   }
   if (command === 'boards') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     console.log(JSON.stringify(readDenimBoards(db), null, 2)); return;
   }
   if (command === 'journey') {
-    const id = argv.shift(); if (!id || argv.length) usage();
+    const id = argv.shift(); if (!id || argv.length) denimUsage();
     console.log(JSON.stringify(getJourneyGraph(db, id), null, 2)); return;
   }
   if (command === 'capabilities') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     console.log(JSON.stringify(listCapabilities(db), null, 2)); return;
   }
   if (command === 'resources') {
-    if (argv.length) usage();
+    if (argv.length) denimUsage();
     console.log(JSON.stringify(listTopLevelInstances(db), null, 2)); return;
   }
   if (command === 'connect') {
     const parentId = argv.shift(); const existingId = argv.shift();
-    if (!parentId || !existingId || argv.length) usage();
+    if (!parentId || !existingId || argv.length) denimUsage();
     connectDenimChild(db, parentId, existingId, `${parentId}-${existingId}-${crypto.randomUUID().slice(0, 8)}`);
     await save();
     console.log(JSON.stringify({ ok: true, parentId, existingId }, null, 2)); return;
   }
-  usage();
+  denimUsage();
 }
 
 function requiredOption(name: string): string {

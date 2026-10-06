@@ -12,7 +12,7 @@
  * its generic fallback and leaves domain-specific routing outside the engine.
  */
 
-import type { EdgeDeclaration, EdgeRoute, RegisteredNodeRect, RoutePoint } from './types.js';
+import type { EdgeContentOverlay, EdgeDeclaration, EdgeRoute, RegisteredNodeRect, RoutePoint } from './types.js';
 
 export type NodeRect = RegisteredNodeRect;
 
@@ -25,6 +25,7 @@ export interface EdgeGeometry {
   labelY: number;
   points: RoutePoint[];
   segmentLayers: number[];
+  contentOverlays: EdgeContentOverlay[];
 }
 
 const BUNDLE_SPACING = 18;
@@ -174,9 +175,16 @@ export function routeEdges(
 
     const custom = e.routeBuilder?.(nodeRects);
     if (custom && custom.points.length >= 2) {
-      out.set(e.id, { ...toGeometry(custom), segmentLayers: custom.segmentLayers ?? custom.points.slice(1).map(() => 0) });
+      out.set(e.id, {
+        ...toGeometry(custom),
+        segmentLayers: custom.segmentLayers ?? custom.points.slice(1).map(() => 0),
+        contentOverlays: e.contentOverlays ?? [],
+      });
     } else {
-      out.set(e.id, toGeometry({ points: [{ x: x1, y: y1 }, { x: x2, y: y2 }], segmentLayers: [0] }, labelT));
+      out.set(e.id, {
+        ...toGeometry({ points: [{ x: x1, y: y1 }, { x: x2, y: y2 }], segmentLayers: [0] }, labelT),
+        contentOverlays: e.contentOverlays ?? [],
+      });
     }
   }
 

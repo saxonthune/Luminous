@@ -1,7 +1,8 @@
-import { createMemo, createSignal, For, Show, type JSX } from 'solid-js';
+import { createMemo, createSignal, createUniqueId, For, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
 import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
+import type { RoutePoint } from './types.js';
 
 export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
 
@@ -115,6 +116,78 @@ function reportEdgeHover(event: PointerEvent, edgeId: string, midpoint: { x: num
   onEdgeHover(edgeId, point.x, point.y, midpoint.x, midpoint.y);
 }
 
+function svgIdToken(value: string): string {
+  return Array.from(value, (char) => /[a-z\d-]/i.test(char)
+    ? char
+    : `_x${char.codePointAt(0)!.toString(16)}_`).join('');
+}
+
+interface EdgeLineSegmentProps {
+  edge: EdgeDeclaration;
+  start: () => RoutePoint;
+  end: () => RoutePoint;
+  index: number;
+  curved: () => boolean;
+  isFinal: () => boolean;
+  color: string;
+  width: () => number;
+  dashArray: () => string | undefined;
+  opacity: () => number;
+  arrowHead: boolean;
+  arrowSize: () => number;
+  hitWidth: () => number;
+  labelPosition: () => RoutePoint;
+  onEdgeClick?: EdgeLayerProps['onEdgeClick'];
+  onEdgeHover?: EdgeLayerProps['onEdgeHover'];
+}
+
+function EdgeLineSegment(props: EdgeLineSegmentProps) {
+  return <>
+    <Show when={props.curved()} fallback={(
+      <polyline
+        points={`${props.start().x},${props.start().y} ${props.end().x},${props.end().y}`}
+        stroke={props.color}
+        stroke-width={props.width()}
+        stroke-dasharray={props.dashArray()}
+        stroke-linecap="round"
+        fill="none"
+        opacity={props.opacity()}
+      />
+    )}>
+      <path
+        d={bezierSegmentPath(props.start().x, props.start().y, props.end().x, props.end().y)}
+        stroke={props.color}
+        stroke-width={props.width()}
+        stroke-dasharray={props.dashArray()}
+        stroke-linecap="round"
+        fill="none"
+        opacity={props.opacity()}
+      />
+    </Show>
+    <Show when={props.arrowHead && props.isFinal()}>
+      <path d={arrowHeadPath(props.start().x, props.start().y, props.end().x, props.end().y, props.arrowSize(), props.curved())}
+        fill={props.color} opacity={props.opacity()} />
+    </Show>
+    <Show when={props.curved()} fallback={(
+      <line
+        x1={props.start().x} y1={props.start().y} x2={props.end().x} y2={props.end().y}
+        stroke="transparent" stroke-width={props.hitWidth()} data-edge-id={props.edge.id}
+        data-route-segment={props.index} style={{ 'pointer-events': 'stroke' }}
+        onPointerEnter={(event) => reportEdgeHover(event, props.edge.id, props.labelPosition(), props.onEdgeHover)}
+        onClick={(event) => reportEdgeClick(event, props.edge.id, props.labelPosition(), props.onEdgeClick)}
+      />
+    )}>
+      <path
+        d={bezierSegmentPath(props.start().x, props.start().y, props.end().x, props.end().y)}
+        stroke="transparent" stroke-width={props.hitWidth()} fill="none" data-edge-id={props.edge.id}
+        data-route-segment={props.index} style={{ 'pointer-events': 'stroke' }}
+        onPointerEnter={(event) => reportEdgeHover(event, props.edge.id, props.labelPosition(), props.onEdgeHover)}
+        onClick={(event) => reportEdgeClick(event, props.edge.id, props.labelPosition(), props.onEdgeClick)}
+      />
+    </Show>
+  </>;
+}
+
 /** Horizontal-tangent cubic used for freeform relationship cards. The handle
  * direction follows the segment when a target moves past its source. */
 export function bezierSegmentPath(x1: number, y1: number, x2: number, y2: number): string {
@@ -178,6 +251,7 @@ function chooseLabelAnchor(
 }
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
+  const clipNamespace = createUniqueId();
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
   const [editingId, setEditingId] = createSignal<string | null>(null);
   const [editingText, setEditingText] = createSignal('');
@@ -315,72 +389,50 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           // TODO(routing): straight-line routing only. Curve/avoid-containers routing is a follow-up.
           return (
             <Show when={endpoints()}>
-              {(pts) => (
+              {(pts) => {
+                const renderSegments = (includeAllBands: boolean) => <For each={pts().points.slice(1)}>{(_, index) => {
+                  const start = () => pts().points[index()];
+                  const end = () => pts().points[index() + 1];
+                  const segmentBand = () => pts().segmentLayers[index()] ?? 0;
+                  return <Show when={includeAllBands || props.routeBand === undefined || segmentBand() === props.routeBand}>
+                    <EdgeLineSegment
+                      edge={edge}
+                      start={start}
+                      end={end}
+                      index={index()}
+                      curved={() => edge.styling?.curve === 'bezier'}
+                      isFinal={() => index() === pts().points.length - 2}
+                      color={color}
+                      width={width}
+                      dashArray={strokeDasharray}
+                      opacity={opacity}
+                      arrowHead={arrowHead}
+                      arrowSize={arrowSize}
+                      hitWidth={hitWidth}
+                      labelPosition={() => ({ x: pts().labelX, y: pts().labelY })}
+                      onEdgeClick={props.onEdgeClick}
+                      onEdgeHover={props.onEdgeHover}
+                    />
+                  </Show>;
+                }}</For>;
+                return (
                 <>
                   <Show when={props.layer === 'lines'}>
-                    <For each={pts().points.slice(1)}>
-                      {(end, index) => {
-                        const start = () => pts().points[index()];
-                        const curved = () => edge.styling?.curve === 'bezier';
-                        const segmentBand = () => pts().segmentLayers[index()] ?? 0;
-                        const isFinal = () => index() === pts().points.length - 2;
-                        return (
-                          <Show when={props.routeBand === undefined || segmentBand() === props.routeBand}>
-                            <Show when={curved()} fallback={(
-                              <polyline
-                                points={`${start().x},${start().y} ${end.x},${end.y}`}
-                                stroke={color}
-                                stroke-width={width()}
-                                stroke-dasharray={strokeDasharray()}
-                                stroke-linecap="round"
-                                fill="none"
-                                opacity={opacity()}
-                              />
-                            )}>
-                              <path
-                                d={bezierSegmentPath(start().x, start().y, end.x, end.y)}
-                                stroke={color}
-                                stroke-width={width()}
-                                stroke-dasharray={strokeDasharray()}
-                                stroke-linecap="round"
-                                fill="none"
-                                opacity={opacity()}
-                              />
-                            </Show>
-                            <Show when={arrowHead && isFinal()}>
-                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y, arrowSize(), curved())} fill={color} opacity={opacity()} />
-                            </Show>
-                            <Show when={curved()} fallback={(
-                              <line
-                                x1={start().x}
-                                y1={start().y}
-                                x2={end.x}
-                                y2={end.y}
-                                stroke="transparent"
-                                stroke-width={hitWidth()}
-                                data-edge-id={edge.id}
-                                data-route-segment={index()}
-                                style={{ 'pointer-events': 'stroke' }}
-                                onPointerEnter={(event) => reportEdgeHover(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeHover)}
-                                onClick={(event) => reportEdgeClick(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeClick)}
-                              />
-                            )}>
-                              <path
-                                d={bezierSegmentPath(start().x, start().y, end.x, end.y)}
-                                stroke="transparent"
-                                stroke-width={hitWidth()}
-                                fill="none"
-                                data-edge-id={edge.id}
-                                data-route-segment={index()}
-                                style={{ 'pointer-events': 'stroke' }}
-                                onPointerEnter={(event) => reportEdgeHover(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeHover)}
-                                onClick={(event) => reportEdgeClick(event, edge.id, { x: pts().labelX, y: pts().labelY }, props.onEdgeClick)}
-                              />
-                            </Show>
-                          </Show>
-                        );
-                      }}
-                    </For>
+                    {renderSegments(false)}
+                    <For each={pts().contentOverlays}>{(overlay, overlayIndex) => {
+                      const clipId = `cactus-edge-content-${svgIdToken(clipNamespace)}-${svgIdToken(edge.id)}-${props.routeBand}-${overlayIndex()}`;
+                      return <Show when={props.routeBand === overlay.band}>
+                        <defs>
+                          <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+                            <rect x={overlay.clipRect.x} y={overlay.clipRect.y}
+                              width={overlay.clipRect.w} height={overlay.clipRect.h} />
+                          </clipPath>
+                        </defs>
+                        <g clip-path={`url(#${clipId})`}>
+                          {renderSegments(true)}
+                        </g>
+                      </Show>;
+                    }}</For>
                   </Show>
                   <Show when={props.layer === 'labels' && lodStyle().labelVisible !== false && !!(edge.labelText || edge.label)}>
                     <Show when={edge.labelBackground !== false}>
@@ -482,7 +534,8 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                     </Show>
                   </Show>
                 </>
-              )}
+                );
+              }}
             </Show>
           );
         }}

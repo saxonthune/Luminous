@@ -136,6 +136,10 @@ dev-mcp:
 cli *args:
     pnpm exec tsx scripts/luminous-cli.ts {{args}}
 
+# use the Denim action and query CLI
+denim *args:
+    @pnpm exec tsx scripts/luminous-cli.ts denim {{args}}
+
 # preview the production client build
 preview:
     pnpm -C packages/client exec vp preview

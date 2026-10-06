@@ -53,6 +53,7 @@ const NODE_THEME_SLOT: Record<string, number> = {
   Capability: 5,
   Instance: 4,
   Organization: 6,
+  Module: 7,
   Contract: 8,
 };
 
@@ -122,6 +123,7 @@ function GraphCanvas(props: {
       labelBackgroundShape: 'circle' as const,
       labelFontScale: 1.15,
       labelFontWeight: 600,
+      contentOverlays: edge.contentOverlays,
       styling: { arrowHead: true, dash: 'solid' as const },
     };
     if (edge.kind === 'container-owner') return {
@@ -519,7 +521,9 @@ function ContainerVisual(props: {
             </div>
           </div>
         </ToolbarSurface>
-        <span style={{ 'pointer-events': 'none', 'margin-left': 'auto', 'margin-right': '8px' }}>Container</span>
+        <span style={{ 'pointer-events': 'none', 'margin-left': 'auto', 'margin-right': '8px' }}>
+          {containerHeaderLabel(props.head.text)}
+        </span>
         <button type="button" aria-label="Container Membership" title="Container Membership"
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {
@@ -533,6 +537,11 @@ function ContainerVisual(props: {
           background: 'linear-gradient(135deg, transparent 50%, var(--theme-node-border) 50%)' }} />
     </div>
   </NodeContainer>;
+}
+
+function containerHeaderLabel(ownerText: string): string {
+  const owner = ownerText.slice(0, 16).trim();
+  return owner ? `${owner} Container` : 'Container';
 }
 
 function NodeCard(props: {
@@ -560,7 +569,7 @@ function NodeCard(props: {
   let sequenceOptionsButton: HTMLButtonElement | undefined;
   let deleteButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([
-    'Journey', 'Action', 'Capability', 'Instance', 'Organization', 'Contract', props.node.type,
+    'Journey', 'Action', 'Capability', 'Instance', 'Organization', 'Module', 'Contract', props.node.type,
   ])]);
   const downstreamCounts = () => {
     const all = props.databaseGraph();

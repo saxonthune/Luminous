@@ -1,0 +1,4 @@
+interface:
+  display_name: "Denim Project Builder"
+  short_description: "Model software requirements and design in Denim"
+  default_prompt: "Use $denim-project-builder to build an evidence-based Denim project for this software system."

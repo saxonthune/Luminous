@@ -11,6 +11,7 @@ const NODE_THEME_SLOT: Record<string, number> = {
   Capability: 5,
   Instance: 4,
   Organization: 6,
+  Module: 7,
   Contract: 8,
 };
 
