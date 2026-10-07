@@ -12,6 +12,7 @@ import ListOrdered from 'lucide-solid/icons/list-ordered';
 import Plus from 'lucide-solid/icons/plus';
 import SquareDashed from 'lucide-solid/icons/square-dashed';
 import Trash2 from 'lucide-solid/icons/trash';
+import Type from 'lucide-solid/icons/type';
 import X from 'lucide-solid/icons/x';
 import Zap from 'lucide-solid/icons/zap';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useGesture } from '@luminous/cactus';
@@ -58,7 +59,7 @@ const NODE_THEME_SLOT: Record<string, number> = {
 };
 
 type PickerState = { mode: 'include' | 'connect'; parentId?: string; anchor: HTMLElement };
-type VisibilityQueryKind = 'board' | 'downstream' | 'container';
+type VisibilityQueryKind = 'board' | 'upstream' | 'downstream' | 'container';
 type OpenNodeVisibility = (kind: VisibilityQueryKind, nodeId: string | undefined, position: { x: number; y: number }) => void;
 type VisibilityMenuState = { kind: VisibilityQueryKind; nodeId?: string; boardId: string; boardTitle: string; title: string; x: number; y: number };
 
@@ -595,11 +596,12 @@ function NodeCard(props: {
 }) {
   const session = useDenimSession();
   const actions = useDenimActions();
-  const [openNodeMenu, setOpenNodeMenu] = createSignal<'sequence' | 'delete' | null>(null);
+  const [openNodeMenu, setOpenNodeMenu] = createSignal<'type' | 'sequence' | 'delete' | null>(null);
   const [deleteSubmenu, setDeleteSubmenu] = createSignal<'single' | 'children' | null>(null);
   const deleteMenuRoots = new Set<HTMLElement>();
   let sequenceOptionsButton: HTMLButtonElement | undefined;
   let deleteButton: HTMLButtonElement | undefined;
+  let typeChangeButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([
     'Journey', 'Action', 'Capability', 'Instance', 'Organization', 'Module', 'Contract', props.node.type,
   ])]);
@@ -609,29 +611,20 @@ function NodeCard(props: {
     const children = all.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === props.node.id);
     return { loaded: children.filter((edge) => loaded.has(edge.targetId)).length, total: children.length };
   };
-  return <article class="lui-node-card relative flex h-full flex-col gap-2 rounded-lg p-3 transition-shadow"
+  const upstreamCounts = () => {
+    const all = props.databaseGraph();
+    const loaded = new Set(session.state.graph.nodes.map((node) => node.id));
+    const parents = all.edges.filter((edge) => edge.type === 'parent-child' && edge.targetId === props.node.id);
+    return { loaded: parents.filter((edge) => loaded.has(edge.sourceId)).length, total: parents.length };
+  };
+  return <article class="lui-node-card relative flex h-full flex-col gap-2 rounded-lg px-3 pt-3 pb-1 transition-shadow"
     style={{
       background: `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
       border: '1px solid var(--theme-node-border)',
-      '--lui-node-toolbar-bg': `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
     }}>
     <div data-denim-drag-handle data-no-pan="true" aria-hidden="true"
       class="absolute inset-x-0 top-0 z-10 h-3 cursor-grab active:cursor-grabbing" />
-    <div class="flex w-full shrink-0 items-center justify-between gap-2">
-      <select aria-label="Node type" value={props.node.type}
-        onPointerDown={(event) => event.stopPropagation()}
-        onChange={(event) => {
-          const value = event.currentTarget.value;
-          if (value === '__other__') {
-            const custom = window.prompt('Type name', props.node.type);
-            if (custom?.trim()) void actions.updateNode(props.node.id, { type: custom.trim() });
-            event.currentTarget.value = props.node.type;
-          } else void actions.updateNode(props.node.id, { type: value });
-        }}
-        class="w-[86%] cursor-pointer appearance-none bg-transparent pr-1 text-xs text-fg-muted outline-none focus-visible:text-fg">
-        <For each={types()}>{(type) => <option value={type}>{type}</option>}</For>
-        <option value="__other__">Other…</option>
-      </select>
+    <div class="flex h-6 w-full shrink-0 items-center justify-end">
       <div data-denim-drag-handle data-no-pan="true" aria-label="Drag node" title="Drag node"
         class="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded text-fg-muted active:cursor-grabbing">
         <GripHorizontal size={ICON_SIZE} strokeWidth={1.8} />
@@ -651,6 +644,25 @@ function NodeCard(props: {
       }}
       onBlur={(event) => void actions.updateNode(props.node.id, { text: event.currentTarget.value })}
       class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
+    <div class="denim-node-status-bar">
+      <span class="denim-node-type-label">{props.node.type}</span>
+      <div class="denim-node-status-indicators">
+        <button type="button" class="denim-population-indicator denim-node-status-indicator" data-no-pan="true"
+          aria-label="Upstream Nodes" title="Upstream Nodes"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            props.onOpenNodeVisibility('upstream', props.node.id, { x: event.clientX, y: event.clientY });
+          }}>{upstreamCounts().loaded}/{upstreamCounts().total}</button>
+        <button type="button" class="denim-population-indicator denim-node-status-indicator" data-no-pan="true"
+          aria-label="Downstream Nodes" title="Downstream Nodes"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            props.onOpenNodeVisibility('downstream', props.node.id, { x: event.clientX, y: event.clientY });
+          }}>{downstreamCounts().loaded}/{downstreamCounts().total}</button>
+      </div>
+    </div>
     <ToolbarSurface variant="node" class="absolute bottom-2 left-2" data-node-toolbar
       onPointerDown={(event) => event.stopPropagation()}>
       <Show when={props.node.type === 'Journey'}>
@@ -668,6 +680,28 @@ function NodeCard(props: {
             onClick={props.onDifferentiate}><GitBranchPlus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
           <IconButton aria-label="Differentiate using an existing node" title="Differentiate using an existing node" class="lui-node-toolbar__action"
             onClick={(event) => { event.stopPropagation(); props.onConnect(event); }}><Link2 size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+          <div class="lui-node-toolbar__menu-anchor">
+            <IconButton ref={typeChangeButton} aria-label="Change node type" title="Change node type" class="lui-node-toolbar__action"
+              aria-expanded={openNodeMenu() === 'type'} onClick={(event) => {
+                event.stopPropagation();
+                setOpenNodeMenu((current) => current === 'type' ? null : 'type');
+              }}><Type size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+            <Show when={openNodeMenu() === 'type'}>
+              <AnchoredMenu anchor={typeChangeButton} label="Change node type"
+                onClose={() => setOpenNodeMenu(null)}>
+                <For each={types()}>{(type) => <MenuItem selected={type === props.node.type} onClick={() => {
+                  setOpenNodeMenu(null);
+                  if (type !== props.node.type) void actions.updateNode(props.node.id, { type });
+                }}>{type}</MenuItem>}</For>
+                <MenuSeparator />
+                <MenuItem onClick={() => {
+                  setOpenNodeMenu(null);
+                  const custom = window.prompt('Type name', props.node.type);
+                  if (custom?.trim()) void actions.updateNode(props.node.id, { type: custom.trim() });
+                }}>Other…</MenuItem>
+              </AnchoredMenu>
+            </Show>
+          </div>
           <IconButton aria-label="Spawn Container" title={props.hasContainer ? 'This Node already has a Container on this Board' : 'Spawn Container'}
             class="lui-node-toolbar__action" disabled={props.hasContainer}
             onClick={(event) => { event.stopPropagation(); props.onSpawnContainer(); }}>
@@ -724,15 +758,6 @@ function NodeCard(props: {
         </div>
       </div>
     </ToolbarSurface>
-    <button type="button" class="denim-population-indicator denim-downstream-indicator" data-no-pan="true"
-      aria-label="Downstream Nodes" title="Downstream Nodes"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation();
-        props.onOpenNodeVisibility('downstream', props.node.id, { x: event.clientX, y: event.clientY });
-      }}>
-      {downstreamCounts().loaded}/{downstreamCounts().total}
-    </button>
   </article>;
 }
 
@@ -909,7 +934,9 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
 
   function openNodeVisibility(kind: VisibilityQueryKind, nodeId: string | undefined, position: { x: number; y: number }): void {
     const board = activeBoard();
-    const title = kind === 'board' ? 'Add Node to Board' : kind === 'downstream' ? 'Downstream Nodes' : 'Container Membership';
+    const title = kind === 'board' ? 'Add Node to Board'
+      : kind === 'upstream' ? 'Upstream Nodes'
+        : kind === 'downstream' ? 'Downstream Nodes' : 'Container Membership';
     setPicker(null);
     setEdgeMenu(null);
     setVisibilityMenu({ kind, nodeId, boardId: board.id, boardTitle: board.title, title, ...position });
@@ -1019,6 +1046,8 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
       position={{ x: menu().x, y: menu().y }}
       queryNodes={() => actions.queryNodes(menu().kind === 'board'
         ? { op: 'board.nodes.list', boardId: menu().boardId }
+      : menu().kind === 'upstream'
+        ? { op: 'node.upstream.list', boardId: menu().boardId, nodeId: menu().nodeId! }
         : menu().kind === 'downstream'
           ? { op: 'node.downstream.list', boardId: menu().boardId, nodeId: menu().nodeId! }
           : { op: 'container.members.list', boardId: menu().boardId, containerNodeId: menu().nodeId! })}

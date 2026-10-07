@@ -56,6 +56,8 @@ relationships and contents were not specified in the source request.
 
 - **DTERM15.** [p] **Node Toolbar** — a toolbar in the bottom-left of a Node area that presents actions as icons; its capabilities may vary by Node type.
 
+- **DTERM35.** [p] **Node Status Bar** — a dedicated area beneath a Node's content that shows its type label and indicators.
+
 - **DTERM16.** [p] **Projection** — the graph of loaded Nodes and their connecting Edges rendered on a Board's canvas. Query sources seed a Board's initial loaded set; the Board then stores that exact set. “View” may describe this rendered or queried result, rather than the persistent Board.
 
 ## Graph relationship

@@ -11,6 +11,9 @@ deps: [doc01.15.01, doc01.15.02]
 
 - The `@luminous/core/denim` database module owns sql.js initialization, schema,
   queries, and database mutations. It has no Solid components or canvas state.
+- Nodes and Edges keep UUID primary IDs and may also carry one nullable,
+  unique `unique_key` string. The key lets generated or imported records keep
+  their identity across refreshes without replacing their database IDs.
 - Each open database has one client-side session. The session owns the database
   handle, collection of Boards, active Board, reactive projection, and
   file-save state.
@@ -57,9 +60,11 @@ coordinate a database edit with the visible canvas state.
 - The UI turns an interaction into an action request. A CLI or server API can
   submit the same action vocabulary, so each entry point uses the same Denim
   operations and rules.
-- Graph actions are `journey.create`, `node.differentiate`, `edge.connect`,
-  `node.update`, `node.delete`, `edge.priority.set`, `sequence.initialize`, and
-  `sequence.clear`. `node.delete` names either `node` scope, which keeps
+- Graph actions include `journey.create`, `node.create`, `node.upsert`,
+  `node.differentiate`, `node.update`, `node.delete`, `edge.connect`,
+  `edge.upsert`, `edge.delete`, `edge.priority.set`, `sequence.initialize`, and
+  `sequence.clear`. The upsert actions match on `unique_key`, preserve an
+  existing UUID, and create a record when the key is new. `node.delete` names either `node` scope, which keeps
   descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.
 - Board actions are `board.read`, `board.openJourney`, `board.close`,
@@ -122,6 +127,12 @@ not the browser client.
 `batch` accepts an array of Denim actions in `actions.json` and submits them
 as one revision-checked server request. The server applies every action before
 writing the database, then broadcasts one change notification.
+
+`just denim-dependencies <database> <board-id> <action-api-node-id> <query-api-node-id>`
+reads the Denim action handlers and database module, then prints a batch-action
+JSON plan for Module nodes and their read-helper dependencies. It matches
+existing records by `unique_key`, adds missing container membership, and does
+not submit the plan. Review the output before applying it with `just denim batch`.
 
 ## Changes and saving
 

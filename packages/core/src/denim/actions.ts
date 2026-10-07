@@ -21,6 +21,8 @@ import {
   runDenimTransaction,
   updateDenimEdgePriority,
   updateDenimNode,
+  upsertDenimEdge,
+  upsertDenimNode,
   type DenimDatabase,
   type DenimNode,
 } from './database.ts';
@@ -41,12 +43,14 @@ export type { DenimBoard, DenimBoardContainer, DenimQuerySource } from './board.
 export type DenimAction =
   | { op: 'journey.create'; id?: string; text?: string }
   | { op: 'node.create'; id?: string; type: string; text: string; placement?: { boardId: string; x: number; y: number } }
+  | { op: 'node.upsert'; id?: string; uniqueKey: string; type: string; text: string }
+  | { op: 'edge.upsert'; id?: string; uniqueKey: string; type: string; sourceId: string; targetId: string; priority?: number | null }
   | { op: 'node.differentiate'; parentId: string; id?: string; edgeId?: string; text?: string; placement?: { boardId: string; x: number; y: number } }
   | { op: 'edge.connect'; parentId: string; childId: string; edgeId?: string }
   | { op: 'edge.delete'; edgeId: string }
   | { op: 'container.attach'; boardId: string; containerNodeId: string; nodeId: string; position: { x: number; y: number } }
   | { op: 'container.detach'; containerNodeId: string; nodeId: string }
-  | { op: 'node.update'; id: string; patch: Partial<Pick<DenimNode, 'type' | 'text'>> }
+  | { op: 'node.update'; id: string; patch: Partial<Pick<DenimNode, 'type' | 'text' | 'uniqueKey'>> }
   | { op: 'node.delete'; id: string; scope: 'node' | 'subtree' }
   | { op: 'edge.priority.set'; edgeId: string; priority: number }
   | { op: 'sequence.initialize'; parentId: string; orderedChildIds: string[] }
@@ -56,7 +60,7 @@ export type DenimAction =
   | { op: 'board.container.move'; boardId: string; headNodeId: string; position: { x: number; y: number }; carriedPositions?: Record<string, { x: number; y: number }>; carriedContainers?: Record<string, { x: number; y: number }> }
   | { op: 'board.container.resize'; boardId: string; headNodeId: string; size: { width: number; height: number } }
   | { op: 'container.node.create'; boardId: string; headNodeId: string; id?: string; edgeId?: string }
-  | { op: 'container.nodes.create'; boardId: string; headNodeId: string; nodes: Array<{ id: string; type: string; text: string; position: { x: number; y: number }; edgeId?: string }> }
+  | { op: 'container.nodes.create'; boardId: string; headNodeId: string; nodes: Array<{ id: string; type: string; text: string; position: { x: number; y: number }; edgeId?: string; uniqueKey?: string | null }> }
   | { op: 'board.sequenceMode.set'; boardId: string; parentId: string; mode: 'rank' | 'priority' }
   | { op: 'board.node.load.set'; boardId: string; nodeId: string; loaded: boolean }
   | { op: 'board.node.move'; boardId: string; nodeId: string; position: { x: number; y: number } }
@@ -67,6 +71,8 @@ export type DenimAction =
 export const DENIM_ACTION_CATALOG = [
   { op: 'journey.create', required: [], optional: ['id', 'text'], purpose: 'Create a Journey Node.' },
   { op: 'node.create', required: ['type', 'text'], optional: ['id', 'placement'], purpose: 'Create an unconnected Node, optionally placing and including it on a Board.' },
+  { op: 'node.upsert', required: ['uniqueKey', 'type', 'text'], optional: ['id'], purpose: 'Create or update a Node by its stable unique key, preserving its database ID.' },
+  { op: 'edge.upsert', required: ['uniqueKey', 'type', 'sourceId', 'targetId'], optional: ['id', 'priority'], purpose: 'Create or update an Edge by its stable unique key, preserving its database ID.' },
   { op: 'node.differentiate', required: ['parentId'], optional: ['id', 'edgeId', 'text', 'placement'], purpose: 'Create a child Node with the same type as its parent and connect it to its parent; optionally place it on a Board.' },
   { op: 'edge.connect', required: ['parentId', 'childId'], optional: ['edgeId'], purpose: 'Connect an existing Node as a child.' },
   { op: 'edge.delete', required: ['edgeId'], optional: [], purpose: 'Delete one edge while keeping its endpoint Nodes.' },
@@ -96,6 +102,7 @@ export interface DenimActionResult {
   changed: boolean;
   nodeId?: string;
   nodeIds?: string[];
+  edgeId?: string;
   boardId?: string;
   board?: DenimBoard;
   graph?: ReturnType<typeof getDenimBoardGraph>;
@@ -141,6 +148,26 @@ function handleNodeCreate(db: DenimDatabase, action: ActionFor<'node.create'>): 
       positions: { ...currentBoard.positions, [nodeId]: { x: action.placement.x, y: action.placement.y } } });
   }
   return { ok: true, changed: true, nodeId, boardId: board?.id };
+}
+
+function handleNodeUpsert(db: DenimDatabase, action: ActionFor<'node.upsert'>): DenimActionResult {
+  if (typeof action.uniqueKey !== 'string' || !action.uniqueKey.trim()) throw new Error('Node unique key must be nonempty text');
+  if (typeof action.type !== 'string' || !action.type.trim()) throw new Error('Node type must be nonempty text');
+  if (typeof action.text !== 'string') throw new Error('Node text must be text');
+  if (action.id !== undefined && (typeof action.id !== 'string' || !action.id)) throw new Error('Node ID must be nonempty text');
+  const result = upsertDenimNode(db, { id: action.id, uniqueKey: action.uniqueKey, type: action.type.trim(), text: action.text });
+  return { ok: true, changed: result.changed, nodeId: result.id };
+}
+
+function handleEdgeUpsert(db: DenimDatabase, action: ActionFor<'edge.upsert'>): DenimActionResult {
+  if (typeof action.uniqueKey !== 'string' || !action.uniqueKey.trim()) throw new Error('Edge unique key must be nonempty text');
+  if (typeof action.type !== 'string' || !action.type.trim()) throw new Error('Edge type must be nonempty text');
+  if (action.type === 'contains') throw new Error('Use container.attach to create or move a contains Edge');
+  requireNode(db, action.sourceId); requireNode(db, action.targetId);
+  if (action.id !== undefined && (typeof action.id !== 'string' || !action.id)) throw new Error('Edge ID must be nonempty text');
+  if (action.priority !== undefined && action.priority !== null && !Number.isFinite(action.priority)) throw new Error('Edge priority must be finite');
+  const result = upsertDenimEdge(db, { ...action, type: action.type.trim() });
+  return { ok: true, changed: result.changed, edgeId: result.id };
 }
 
 function handleNodeDifferentiate(db: DenimDatabase, action: ActionFor<'node.differentiate'>): DenimActionResult {
@@ -210,9 +237,11 @@ function handleContainerDetach(db: DenimDatabase, action: ActionFor<'container.d
 function handleNodeUpdate(db: DenimDatabase, action: ActionFor<'node.update'>): DenimActionResult {
   if (!action.patch || typeof action.patch !== 'object' || Array.isArray(action.patch)) throw new Error('Node patch must be an object');
   const previous = requireNode(db, action.id);
-  if (action.patch.type === undefined && action.patch.text === undefined) throw new Error('Node update requires type or text');
+  if (action.patch.type === undefined && action.patch.text === undefined && action.patch.uniqueKey === undefined) throw new Error('Node update requires a field');
   if (action.patch.type !== undefined && typeof action.patch.type !== 'string') throw new Error('Node type must be text');
   if (action.patch.text !== undefined && typeof action.patch.text !== 'string') throw new Error('Node text must be text');
+  if (action.patch.uniqueKey !== undefined && action.patch.uniqueKey !== null
+    && (typeof action.patch.uniqueKey !== 'string' || !action.patch.uniqueKey.trim())) throw new Error('Node unique key must be nonempty text or null');
   updateDenimNode(db, action.id, action.patch);
   if (previous.type === 'Journey' && action.patch.text !== undefined) {
     for (const board of readDenimBoards(db)) if (board.kind === 'board' && board.sources.some((source) => source.kind === 'journey' && source.journeyId === action.id)) {
@@ -350,6 +379,8 @@ function handleContainerNodesCreate(db: DenimDatabase, action: ActionFor<'contai
       throw new Error(`Container batch has a missing or duplicate Node ID: ${item?.id ?? ''}`);
     }
     if (typeof item.type !== 'string' || !item.type.trim() || typeof item.text !== 'string') throw new Error(`Invalid type or label for Node: ${item.id}`);
+    if (item.uniqueKey !== undefined && item.uniqueKey !== null
+      && (typeof item.uniqueKey !== 'string' || !item.uniqueKey.trim())) throw new Error(`Invalid unique key for Node: ${item.id}`);
     if (![item.position?.x, item.position?.y].every(Number.isFinite)) throw new Error(`Invalid position for Node: ${item.id}`);
     const edgeId = item.edgeId ?? `contains-${item.id}`;
     if (edgeIds.has(edgeId) || getDenimEdge(db, edgeId)) throw new Error(`Container batch has a duplicate Edge ID: ${edgeId}`);
@@ -358,7 +389,7 @@ function handleContainerNodesCreate(db: DenimDatabase, action: ActionFor<'contai
   }
   runDenimTransaction(db, () => {
     for (const item of action.nodes) {
-      addDenimNode(db, { id: item.id, type: item.type.trim(), text: item.text });
+      addDenimNode(db, { id: item.id, type: item.type.trim(), text: item.text, uniqueKey: item.uniqueKey ?? null });
       addDenimEdge(db, { id: item.edgeId ?? `contains-${item.id}`, type: 'contains', sourceId: action.headNodeId, targetId: item.id });
     }
     for (const item of action.nodes) loadNodeOnSourceBoards(db, item.id, action.headNodeId);
@@ -430,6 +461,8 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
   switch (action.op) {
     case 'journey.create': return handleJourneyCreate(db, action);
     case 'node.create': return handleNodeCreate(db, action);
+    case 'node.upsert': return handleNodeUpsert(db, action);
+    case 'edge.upsert': return handleEdgeUpsert(db, action);
     case 'node.differentiate': return handleNodeDifferentiate(db, action);
     case 'edge.connect': return handleEdgeConnect(db, action);
     case 'edge.delete': return handleEdgeDelete(db, action);

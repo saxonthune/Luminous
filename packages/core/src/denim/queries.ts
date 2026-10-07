@@ -10,11 +10,13 @@ export interface DenimNodeVisibilityEntry {
 export type DenimQuery =
   | { op: 'board.nodes.list'; boardId: string }
   | { op: 'node.downstream.list'; boardId: string; nodeId: string }
+  | { op: 'node.upstream.list'; boardId: string; nodeId: string }
   | { op: 'container.members.list'; boardId: string; containerNodeId: string };
 
 export const DENIM_QUERY_CATALOG = [
   { op: 'board.nodes.list', required: ['boardId'], purpose: 'List all Nodes and whether each is loaded onto a Board.' },
   { op: 'node.downstream.list', required: ['boardId', 'nodeId'], purpose: 'List direct downstream Nodes and whether each is loaded onto a Board.' },
+  { op: 'node.upstream.list', required: ['boardId', 'nodeId'], purpose: 'List direct upstream Nodes and whether each is loaded onto a Board.' },
   { op: 'container.members.list', required: ['boardId', 'containerNodeId'], purpose: 'List Nodes directly linked to a Container by contains Edges and whether each is loaded onto a Board.' },
 ] as const;
 
@@ -44,6 +46,11 @@ export function queryDenim(db: DenimDatabase, query: DenimQuery): DenimNodeVisib
     if (!graph.nodes.some((node) => node.id === query.nodeId)) throw new Error(`Node not found: ${query.nodeId}`);
     return nodeEntries(db, board, graph.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === query.nodeId)
       .map((edge) => edge.targetId));
+  }
+  if (query.op === 'node.upstream.list') {
+    if (!graph.nodes.some((node) => node.id === query.nodeId)) throw new Error(`Node not found: ${query.nodeId}`);
+    return nodeEntries(db, board, graph.edges.filter((edge) => edge.type === 'parent-child' && edge.targetId === query.nodeId)
+      .map((edge) => edge.sourceId));
   }
   if (!board.containers[query.containerNodeId]) throw new Error(`Container not found on Board: ${query.containerNodeId}`);
   return nodeEntries(db, board, graph.edges.filter((edge) => edge.type === 'contains' && edge.sourceId === query.containerNodeId)

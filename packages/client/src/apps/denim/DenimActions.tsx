@@ -6,7 +6,7 @@ import type { DenimGraph } from '@luminous/core/denim';
 import type { DenimQuery, DenimNodeVisibilityEntry } from '@luminous/core/denim/queries';
 
 export interface DenimActionApi {
-  dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; nodeIds?: string[]; boardId?: string; board?: DenimBoard; graph?: DenimGraph; changed?: boolean }>;
+  dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; nodeIds?: string[]; edgeId?: string; boardId?: string; board?: DenimBoard; graph?: DenimGraph; changed?: boolean }>;
   readBoard(boardId: string): Promise<{ ok: boolean; error?: string; board?: DenimBoard; graph?: DenimGraph }>;
   queryNodes(query: DenimQuery): Promise<DenimNodeVisibilityEntry[]>;
   createJourney(text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;

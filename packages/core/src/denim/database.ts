@@ -6,6 +6,8 @@ export interface DenimNode {
   id: string;
   type: string;
   text: string;
+  /** Stable importer identity; null for nodes without a managed source identity. */
+  uniqueKey?: string | null;
 }
 
 export interface DenimEdge {
@@ -14,6 +16,8 @@ export interface DenimEdge {
   sourceId: string;
   targetId: string;
   priority: number | null;
+  /** Stable importer identity; null for edges without a managed source identity. */
+  uniqueKey?: string | null;
 }
 
 export interface DenimGraph {
@@ -44,14 +48,16 @@ const SCHEMA = `
   CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
-    text TEXT NOT NULL
+    text TEXT NOT NULL,
+    unique_key TEXT NULL
   );
   CREATE TABLE IF NOT EXISTS edges (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
     source_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
     target_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-    priority REAL NULL
+    priority REAL NULL,
+    unique_key TEXT NULL
   );
   CREATE INDEX IF NOT EXISTS nodes_by_type ON nodes(type);
   CREATE INDEX IF NOT EXISTS edges_by_source ON edges(source_id);
@@ -61,7 +67,6 @@ const SCHEMA = `
     id TEXT PRIMARY KEY,
     payload_json TEXT NOT NULL
   );
-  PRAGMA user_version = 4;
 `;
 
 export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint8Array): Promise<Database> {
@@ -107,7 +112,18 @@ export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint
   if (!edgeColumns.some((column) => column.name === 'priority')) {
     db.run('ALTER TABLE edges ADD COLUMN priority INTEGER NULL');
   }
-  db.run('PRAGMA user_version = 4');
+  const nodeColumns = rows<{ name: string }>(db, 'PRAGMA table_info(nodes)');
+  if (!nodeColumns.some((column) => column.name === 'unique_key')) {
+    db.run('ALTER TABLE nodes ADD COLUMN unique_key TEXT NULL');
+  }
+  if (!edgeColumns.some((column) => column.name === 'unique_key')) {
+    db.run('ALTER TABLE edges ADD COLUMN unique_key TEXT NULL');
+  }
+  // SQLite permits multiple NULLs in a unique index, so manual/unmanaged
+  // records can remain unkeyed while importer-managed identities stay unique.
+  db.run('CREATE UNIQUE INDEX IF NOT EXISTS nodes_by_unique_key ON nodes(unique_key)');
+  db.run('CREATE UNIQUE INDEX IF NOT EXISTS edges_by_unique_key ON edges(unique_key)');
+  db.run('PRAGMA user_version = 5');
   return db;
 }
 
@@ -148,15 +164,27 @@ function rows<T>(db: Database, statement: string, values: unknown[] = []): T[] {
 
 export function getDenimGraph(db: Database): DenimGraph {
   return {
-    nodes: rows<DenimNode>(db, 'SELECT id, type, text FROM nodes ORDER BY rowid'),
-    edges: rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(
-      db, 'SELECT id, type, source_id, target_id, priority FROM edges ORDER BY rowid',
-    ).map(({ source_id, target_id, ...edge }) => ({ ...edge, sourceId: source_id, targetId: target_id })),
+    nodes: rows<{ id: string; type: string; text: string; unique_key: string | null }>(
+      db, 'SELECT id, type, text, unique_key FROM nodes ORDER BY rowid',
+    ).map(({ unique_key, ...node }) => ({ ...node, uniqueKey: unique_key })),
+    edges: rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null; unique_key: string | null }>(
+      db, 'SELECT id, type, source_id, target_id, priority, unique_key FROM edges ORDER BY rowid',
+    ).map(({ source_id, target_id, unique_key, ...edge }) => ({ ...edge, uniqueKey: unique_key, sourceId: source_id, targetId: target_id })),
   };
 }
 
 export function getDenimNode(db: Database, id: string): DenimNode | undefined {
-  return rows<DenimNode>(db, 'SELECT id, type, text FROM nodes WHERE id = ?', [id])[0];
+  const node = rows<{ id: string; type: string; text: string; unique_key: string | null }>(
+    db, 'SELECT id, type, text, unique_key FROM nodes WHERE id = ?', [id],
+  )[0];
+  return node ? { id: node.id, type: node.type, text: node.text, uniqueKey: node.unique_key } : undefined;
+}
+
+export function getDenimNodeByUniqueKey(db: Database, uniqueKey: string): DenimNode | undefined {
+  const node = rows<{ id: string; type: string; text: string; unique_key: string | null }>(
+    db, 'SELECT id, type, text, unique_key FROM nodes WHERE unique_key = ?', [uniqueKey],
+  )[0];
+  return node ? { id: node.id, type: node.type, text: node.text, uniqueKey: node.unique_key } : undefined;
 }
 
 export function hasDenimEdge(db: Database, type: string, sourceId: string, targetId: string): boolean {
@@ -182,27 +210,34 @@ export function listDenimDescendantIds(db: Database, nodeId: string): string[] {
 }
 
 export function getDenimEdge(db: Database, id: string): DenimEdge | undefined {
-  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(
-    db, 'SELECT id, type, source_id, target_id, priority FROM edges WHERE id = ?', [id],
+  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null; unique_key: string | null }>(
+    db, 'SELECT id, type, source_id, target_id, priority, unique_key FROM edges WHERE id = ?', [id],
   )[0];
-  return edge ? { ...edge, sourceId: edge.source_id, targetId: edge.target_id } : undefined;
+  return edge ? { id: edge.id, type: edge.type, sourceId: edge.source_id, targetId: edge.target_id, priority: edge.priority, uniqueKey: edge.unique_key } : undefined;
+}
+
+export function getDenimEdgeByUniqueKey(db: Database, uniqueKey: string): DenimEdge | undefined {
+  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null; unique_key: string | null }>(
+    db, 'SELECT id, type, source_id, target_id, priority, unique_key FROM edges WHERE unique_key = ?', [uniqueKey],
+  )[0];
+  return edge ? { id: edge.id, type: edge.type, sourceId: edge.source_id, targetId: edge.target_id, priority: edge.priority, uniqueKey: edge.unique_key } : undefined;
 }
 
 export function getDenimContainment(db: Database, nodeId: string): DenimEdge | undefined {
-  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(
-    db, "SELECT id, type, source_id, target_id, priority FROM edges WHERE type = 'contains' AND target_id = ? LIMIT 1", [nodeId],
+  const edge = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null; unique_key: string | null }>(
+    db, "SELECT id, type, source_id, target_id, priority, unique_key FROM edges WHERE type = 'contains' AND target_id = ? LIMIT 1", [nodeId],
   )[0];
-  return edge ? { ...edge, sourceId: edge.source_id, targetId: edge.target_id } : undefined;
+  return edge ? { id: edge.id, type: edge.type, sourceId: edge.source_id, targetId: edge.target_id, priority: edge.priority, uniqueKey: edge.unique_key } : undefined;
 }
 
 export function listDenimContainerMembers(db: Database, ownerId: string): DenimNode[] {
-  return rows<DenimNode>(db, `SELECT n.id, n.type, n.text FROM nodes n
+  return rows<DenimNode>(db, `SELECT n.id, n.type, n.text, n.unique_key AS uniqueKey FROM nodes n
     JOIN edges e ON e.target_id = n.id
     WHERE e.type = 'contains' AND e.source_id = ? ORDER BY n.rowid`, [ownerId]);
 }
 
 export function listJourneys(db: Database): DenimNode[] {
-  return rows(db, 'SELECT id, type, text FROM nodes WHERE type = ? ORDER BY rowid', [JOURNEY_TYPE]);
+  return rows(db, 'SELECT id, type, text, unique_key AS uniqueKey FROM nodes WHERE type = ? ORDER BY rowid', [JOURNEY_TYPE]);
 }
 
 export function getJourneyGraph(db: Database, journeyId: string): DenimGraph {
@@ -213,25 +248,25 @@ export function getJourneyGraph(db: Database, journeyId: string): DenimGraph {
       SELECT e.target_id FROM edges e JOIN descendants d ON e.source_id = d.id
       WHERE e.type = ?
     )
-    SELECT n.id, n.type, n.text FROM nodes n JOIN descendants d ON d.id = n.id ORDER BY n.rowid
+    SELECT n.id, n.type, n.text, n.unique_key AS uniqueKey FROM nodes n JOIN descendants d ON d.id = n.id ORDER BY n.rowid
   `, [journeyId, PARENT_CHILD]);
   const ids = nodes.map((node) => node.id);
   if (ids.length === 0) return { nodes, edges: [] };
   const placeholders = ids.map(() => '?').join(',');
-  const edges = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null }>(db,
-    `SELECT id, type, source_id, target_id, priority FROM edges WHERE source_id IN (${placeholders}) AND target_id IN (${placeholders}) ORDER BY rowid`,
+  const edges = rows<{ id: string; type: string; source_id: string; target_id: string; priority: number | null; unique_key: string | null }>(db,
+    `SELECT id, type, source_id, target_id, priority, unique_key FROM edges WHERE source_id IN (${placeholders}) AND target_id IN (${placeholders}) ORDER BY rowid`,
     [...ids, ...ids],
-  ).map(({ source_id, target_id, ...edge }) => ({ ...edge, sourceId: source_id, targetId: target_id }));
+  ).map(({ source_id, target_id, unique_key, ...edge }) => ({ ...edge, uniqueKey: unique_key, sourceId: source_id, targetId: target_id }));
   return { nodes, edges };
 }
 
 export function listCapabilities(db: Database): DenimNode[] {
-  return rows(db, 'SELECT id, type, text FROM nodes WHERE type = ? ORDER BY rowid', [CAPABILITY_TYPE]);
+  return rows(db, 'SELECT id, type, text, unique_key AS uniqueKey FROM nodes WHERE type = ? ORDER BY rowid', [CAPABILITY_TYPE]);
 }
 
 export function listTopLevelInstances(db: Database): DenimNode[] {
   return rows(db, `
-    SELECT n.id, n.type, n.text FROM nodes n
+    SELECT n.id, n.type, n.text, n.unique_key AS uniqueKey FROM nodes n
     WHERE n.type = ? AND NOT EXISTS (
       SELECT 1 FROM edges e JOIN nodes parent ON parent.id = e.source_id
       WHERE e.target_id = n.id AND e.type = ? AND parent.type = ?
@@ -263,12 +298,32 @@ export function hydrateDenimDatabase(db: Database, graph: DenimGraph = STARTER_D
 export const seedDenimDatabase = hydrateDenimDatabase;
 
 export function addDenimNode(db: Database, node: DenimNode): void {
-  db.run('INSERT INTO nodes (id, type, text) VALUES (?, ?, ?)', [node.id, node.type, node.text]);
+  db.run('INSERT INTO nodes (id, type, text, unique_key) VALUES (?, ?, ?, ?)', [node.id, node.type, node.text, node.uniqueKey ?? null]);
 }
 
-export function updateDenimNode(db: Database, id: string, patch: Partial<Pick<DenimNode, 'type' | 'text'>>): void {
+export function updateDenimNode(db: Database, id: string, patch: Partial<Pick<DenimNode, 'type' | 'text' | 'uniqueKey'>>): void {
   if (patch.type !== undefined) db.run('UPDATE nodes SET type = ? WHERE id = ?', [patch.type, id]);
   if (patch.text !== undefined) db.run('UPDATE nodes SET text = ? WHERE id = ?', [patch.text, id]);
+  if (patch.uniqueKey !== undefined) db.run('UPDATE nodes SET unique_key = ? WHERE id = ?', [patch.uniqueKey, id]);
+}
+
+export function upsertDenimNode(
+  db: Database,
+  node: { id?: string; type: string; text: string; uniqueKey: string },
+): { id: string; changed: boolean } {
+  const existing = getDenimNodeByUniqueKey(db, node.uniqueKey)
+    ?? (node.id ? getDenimNode(db, node.id) : undefined);
+  if (!existing) {
+    if (!node.id) throw new Error('A Node ID is required when creating a keyed Node');
+    addDenimNode(db, { ...node, id: node.id });
+    return { id: node.id, changed: true };
+  }
+  if (existing.uniqueKey && existing.uniqueKey !== node.uniqueKey) {
+    throw new Error(`Node ID ${existing.id} already has a different unique key`);
+  }
+  const changed = existing.type !== node.type || existing.text !== node.text || existing.uniqueKey !== node.uniqueKey;
+  if (changed) updateDenimNode(db, existing.id, { type: node.type, text: node.text, uniqueKey: node.uniqueKey });
+  return { id: existing.id, changed };
 }
 
 /** Delete a node and all of its incoming and outgoing edges. */
@@ -304,18 +359,58 @@ export function updateDenimEdgePriority(db: Database, edgeId: string, priority: 
 }
 
 export function addDenimEdge(db: Database, edge: Omit<DenimEdge, 'priority'> & { priority?: number | null }): void {
-  if (edge.type === PARENT_CHILD) {
-    if (edge.sourceId === edge.targetId) throw new Error('A node cannot be its own parent');
-    const cycle = db.exec(`
-      WITH RECURSIVE descendants(id) AS (
-        SELECT ? UNION SELECT e.target_id FROM edges e JOIN descendants d ON e.source_id = d.id WHERE e.type = ?
-      ) SELECT 1 FROM descendants WHERE id = ? LIMIT 1
-    `, [edge.targetId, PARENT_CHILD, edge.sourceId]);
-    if (cycle.length > 0) throw new Error('This parent-child edge would create a cycle');
-  }
+  assertDenimEdgeAcyclic(db, edge.type, edge.sourceId, edge.targetId);
   const priority = edge.priority ?? (edge.type === PARENT_CHILD ? nextChildPriority(db, edge.sourceId) : null);
-  db.run('INSERT INTO edges (id, type, source_id, target_id, priority) VALUES (?, ?, ?, ?, ?)',
-    [edge.id, edge.type, edge.sourceId, edge.targetId, priority]);
+  db.run('INSERT INTO edges (id, type, source_id, target_id, priority, unique_key) VALUES (?, ?, ?, ?, ?, ?)',
+    [edge.id, edge.type, edge.sourceId, edge.targetId, priority, edge.uniqueKey ?? null]);
+}
+
+export function upsertDenimEdge(
+  db: Database,
+  edge: { id?: string; type: string; sourceId: string; targetId: string; uniqueKey: string; priority?: number | null },
+): { id: string; changed: boolean } {
+  const existingByKey = getDenimEdgeByUniqueKey(db, edge.uniqueKey);
+  const existingById = edge.id ? getDenimEdge(db, edge.id) : undefined;
+  const existingByRelationship = rows<{ id: string; unique_key: string | null }>(db,
+    'SELECT id, unique_key FROM edges WHERE type = ? AND source_id = ? AND target_id = ? LIMIT 1',
+    [edge.type, edge.sourceId, edge.targetId])[0];
+  const existing = existingByKey ?? existingById
+    ?? (existingByRelationship?.unique_key === null ? getDenimEdge(db, existingByRelationship.id) : undefined);
+  if (existingByRelationship && existing && existingByRelationship.id !== existing.id) {
+    throw new Error(`Another Edge already connects ${edge.sourceId} to ${edge.targetId}`);
+  }
+  if (!existing && existingByRelationship) {
+    throw new Error(`Another keyed Edge already connects ${edge.sourceId} to ${edge.targetId}`);
+  }
+  if (!existing) {
+    if (!edge.id) throw new Error('An Edge ID is required when creating a keyed Edge');
+    addDenimEdge(db, { ...edge, id: edge.id });
+    return { id: edge.id, changed: true };
+  }
+  if (existing.uniqueKey && existing.uniqueKey !== edge.uniqueKey) {
+    throw new Error(`Edge ID ${existing.id} already has a different unique key`);
+  }
+  assertDenimEdgeAcyclic(db, edge.type, edge.sourceId, edge.targetId, existing.id);
+  const priority = edge.priority === undefined ? existing.priority : edge.priority;
+  const changed = existing.type !== edge.type || existing.sourceId !== edge.sourceId
+    || existing.targetId !== edge.targetId || existing.uniqueKey !== edge.uniqueKey || existing.priority !== priority;
+  if (changed) {
+    db.run('UPDATE edges SET type = ?, source_id = ?, target_id = ?, priority = ?, unique_key = ? WHERE id = ?',
+      [edge.type, edge.sourceId, edge.targetId, priority, edge.uniqueKey, existing.id]);
+  }
+  return { id: existing.id, changed };
+}
+
+function assertDenimEdgeAcyclic(db: Database, type: string, sourceId: string, targetId: string, excludingEdgeId?: string): void {
+  if (type !== PARENT_CHILD) return;
+  if (sourceId === targetId) throw new Error('A node cannot be its own parent');
+  const cycle = db.exec(`
+    WITH RECURSIVE descendants(id) AS (
+      SELECT ? UNION SELECT e.target_id FROM edges e JOIN descendants d ON e.source_id = d.id
+      WHERE e.type = ? AND (? IS NULL OR e.id != ?)
+    ) SELECT 1 FROM descendants WHERE id = ? LIMIT 1
+  `, [targetId, PARENT_CHILD, excludingEdgeId ?? null, excludingEdgeId ?? null, sourceId]);
+  if (cycle.length > 0) throw new Error('This parent-child edge would create a cycle');
 }
 
 function nextChildPriority(db: Database, parentId: string): number | null {

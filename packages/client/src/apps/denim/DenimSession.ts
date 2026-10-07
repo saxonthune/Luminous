@@ -63,6 +63,7 @@ export interface DenimDispatchResult {
   ok: boolean;
   error?: string;
   nodeId?: string;
+  edgeId?: string;
   boardId?: string;
   board?: DenimBoard;
   graph?: DenimGraph;

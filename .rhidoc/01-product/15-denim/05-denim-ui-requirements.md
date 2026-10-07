@@ -98,6 +98,9 @@ extending one global counter.
 - **NODE9.** [p] When the user differentiates a Node, Denim shows the new Node at its final position below the parent without an intermediate layout position.
 - **NODE10.** [p] A wheel gesture over overflowing Node text scrolls the text; when it cannot scroll in that direction, the gesture zooms the canvas.
 - **NODE11.** [p] The Node type selector offers Module as a Node type.
+- **NODE12.** [p] Each Node has a dedicated Node Status Bar underneath its content area.
+- **NODE13.** [p] The Node Status Bar shows the Node type label at the bottom-left and Node indicators at the bottom-right.
+- **NODE14.** [p] The Node Status Bar sits close to the Node's bottom edge, with little empty space beneath it.
 
 ## Selection
 
@@ -113,12 +116,14 @@ extending one global counter.
 - **NT2.** [p] A Node Toolbar may provide different capabilities according to the Node's type, while all Nodes have the same minimal capabilities.
 - **NT3.** [p] Node Toolbar affordances are represented by icons.
 - **NT4.** [p] A Node Toolbar is hidden when the pointer is outside its Node and it has no keyboard focus. Hovering the Node reveals the Toolbar with an ellipsis in the hidden-options slot; hovering or focusing within the Toolbar expands its hidden options.
-- **NT5.** [p] A Node Toolbar appears in the bottom-left of the Node area.
+- **NT5.** [p] A Node Toolbar appears over the Node type label at the bottom-left of the Node Status Bar.
 - **NT6.** [p] Present Node Toolbar actions appear first on the left. While the Toolbar is collapsed, an ellipsis marks the first hidden option; when expanded, hidden actions replace the ellipsis and continue to the right.
 - **NT7.** [p] The hidden Node Toolbar options end with a trash icon for deleting the Node.
 - **NT8.** [p] A Node Toolbar menu aligns its left edge with the triggering button when space permits and shifts as needed to remain inside the viewport.
-- **NT9.** [p] A Node Toolbar has an opaque, rounded background matching its Node's type color; a Container Toolbar matches its Container Node's type color. Each Toolbar surface covers all its icons, including the trailing trash icon.
+- **NT9.** [p] A Node Toolbar has an opaque, rounded background using the white base token also used by sequence badges. A Container Toolbar matches its Container Node's type color. When a Node Toolbar expands, its background covers the full row of icons, including the trailing trash icon.
 - **NT10.** [p] Hover highlights for individual Node and Container Toolbar icons are circular.
+- **NT11.** [p] The hidden Node Toolbar options include a Change Node Type icon immediately before the Spawn Container icon.
+- **NT12.** [p] A Node Toolbar is drawn above the full Node Status Bar, including its indicators and label.
 
 ## Node deletion
 
@@ -173,7 +178,7 @@ extending one global counter.
 - **VIS3.** [p] A Container Population Indicator appears at the top-right of each Container header and shows `N/M` for Nodes linked by direct `contains` Edges that are loaded on the active Board / total; Nodes inside nested Containers are not included.
 - **VIS4.** [p] The Container label is right-justified immediately to the left of the Container Population Indicator.
 - **VIS5.** [p] Clicking the Container Population Indicator opens a placeholder Container Membership component containing only its label.
-- **VIS6.** [p] A Downstream Nodes Indicator appears at the bottom-right of each Node and shows `N/M` for direct downstream Nodes loaded on the active Board / total direct downstream Nodes.
+- **VIS6.** [p] A Downstream Nodes Indicator appears right-justified at the bottom-right of each Node Status Bar and shows `N/M` for direct downstream Nodes loaded on the active Board / total direct downstream Nodes. It uses the white base token also used by sequence badges.
 - **VIS7.** [p] Clicking the Downstream Nodes Indicator opens a placeholder component containing only its label.
 - **VIS8.** [p] The Node Visibility Menu lets the user load or unload Nodes individually on the active Board.
 - **VIS9.** [p] Clicking a Container Population Indicator opens the Node Visibility Menu populated with Nodes directly linked to its Container owner by `contains` Edges.
@@ -182,6 +187,7 @@ extending one global counter.
 - **VIS12.** [p] The Node Visibility Menu has a text input that filters Nodes by their text content; it does not provide a separate type filter.
 - **VIS13.** [p] Each Node Visibility Item is a wide row using the background color associated with the Node's type and shows the Node type and text.
 - **VIS14.** [p] Each Node Visibility Item shows whether the Node is loaded on the active Board and has a control that loads or unloads it.
+- **VIS15.** [p] Each Node has an Upstream Nodes Indicator immediately to the left of its Downstream Nodes Indicator. It shows `N/M` for direct upstream Nodes loaded on the active Board / total direct upstream Nodes in the database, uses the same white base token as the Downstream Nodes Indicator, and opens the Node Visibility Menu so the user can load or unload those Nodes.
 - **BCM1.** [p] Right-clicking the bare canvas background opens the Board Context Menu, whose only option is Add node.
 - **BCM2.** [p] Selecting Add node closes the Board Context Menu and opens the Node Visibility Menu with Nodes from the shared database.
 
