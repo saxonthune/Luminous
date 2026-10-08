@@ -65,7 +65,8 @@ Requirement identifiers use a short prefix and local numbering for each feature 
 ## CLI
 
 - **CLI1.** [p] The CLI provides feature parity with Denim's UI capabilities.
-- **CLI2.** [p] The CLI can create a new database seeded with the starter Journey and its User Action child.
+- **CLI2.** [p] The CLI can create a new database seeded with the default Node types, the starter Journey, and its User Action child.
+- **CLI3.** [p] The CLI can seed an existing Denim database with the default Node types from the shared default types file.
 
 ## Storage
 

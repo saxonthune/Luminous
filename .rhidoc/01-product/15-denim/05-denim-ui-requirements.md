@@ -24,6 +24,7 @@ extending one global counter.
 
 - **PRJ1.** [p] The Denim database picker provides an icon button to create a new project in a listed root.
 - **PRJ2.** [p] Creating a project creates a `.denim.sqlite` database, hydrates it with the starter Journey and User Action, and opens it.
+- **PRJ3.** [p] Creating a project registers all default Node types, including types not used by the starter graph.
 
 ## Startup status
 
@@ -201,7 +202,7 @@ extending one global counter.
 - **VIS10.** [p] Clicking a Downstream Nodes Indicator opens the Node Visibility Menu populated with direct downstream Nodes.
 - **VIS11.** [p] The Node Visibility Menu has a header showing its purpose and the number of listed Nodes loaded on the active Board.
 - **VIS12.** [p] The Node Visibility Menu has a text input that filters Nodes by their text content; it does not provide a separate type filter.
-- **VIS13.** [p] Each Node Visibility Item is a wide row using the background color associated with the Node's type and shows the Node type and text.
+- **VIS13.** [p] Each Node Visibility Item contains the Node's List Representation, using the background color associated with the Node's type and showing its type and text.
 - **VIS14.** [p] Each Node Visibility Item shows whether the Node is loaded on the active Board and has a control that loads or unloads it.
 - **VIS15.** [p] Each Node has an Upstream Nodes Indicator immediately to the left of its Downstream Nodes Indicator. It shows `N/M` for direct upstream Nodes loaded on the active Board / total direct upstream Nodes in the database, uses the same white base token as the Downstream Nodes Indicator, and opens the Node Visibility Menu so the user can load or unload those Nodes.
 - **VIS16.** [p] When the user loads a Node onto a Board, Denim also shows that Node's regular Container if one exists in the database.
@@ -220,6 +221,7 @@ extending one global counter.
 - **ND7.** [p] While either connection gesture is active, Denim draws a dashed Bezier curve from the circular plus affordance to the pointer.
 - **ND8.** [p] The user can press Escape to cancel an active connection gesture.
 - **ND9.** [p] The Find a node submenu closes when the user clicks outside it or completes a differentiated connection.
+- **ND10.** [p] Each Node result in Find a node uses the List Representation.
 
 ## Step priority display
 
@@ -245,19 +247,22 @@ extending one global counter.
 
 - **SC1.** [p] A Sequence Container is connected to its owner Node by a dashed line.
 - **SC2.** [p] The user can toggle a Sequence Container between Special Presentation and Graph Presentation.
-- **SC3.** [p] For now, Graph Presentation for a Sequence Container can look like a regular Container.
+- **SC3.** [p] Graph Presentation for a Sequence Container looks like a regular Container.
 - **SC4.** [p] Special Presentation shows a list of Nodes similar to the Node Visibility Menu.
-- **SC5.** [p] Each Node in the Special Presentation list appears as a rectangular shaded block containing Node information.
+- **SC5.** [p] Each Node in the Special Presentation list uses the List Representation.
 - **SC6.** [p] The sequence order supports arbitrary depth, including labels such as `1`, `2`, `2a`, `2b`, `2b-i`, and `2b-ii`, and list items are indented according to their depth.
 - **SC7.** [p] Sequence order labels belong to the Sequence Container and appear in its left border or margin, outside the Node representation.
 - **SC8.** [p] The Special Presentation has a Default State and a Drafting State.
 - **SC9.** [p] In Default State, the user can drag and drop Nodes to change their order.
 - **SC10.** [p] In Default State, the user can change a Node's type.
 - **SC11.** [p] In Drafting State, the user can type into Nodes.
-- **SC12.** [p] When the user presses Enter while drafting a Node, Denim creates a new Node underneath the Node being edited.
+- **SC12.** [p] When the user presses Enter while drafting a Node, Denim inserts a new Node immediately after the Node being edited in sequence order, at the same indentation depth and with the same type.
 - **SC13.** [p] When the user presses Tab while drafting a Node, Denim indents that Node in the sequence.
 - **SC14.** [p] When the user presses Shift+Tab while drafting a Node, Denim de-indents that Node in the sequence.
 - **SC15.** [p] The existing Sequence options remain available alongside the Sequence Container.
+- **SC16.** [p] A Sequence Container Toolbar appears in the Sequence Container header with a white background and an ellipsis that expands into its actions when hovered or focused.
+- **SC17.** [p] The Sequence Container Toolbar lets the user switch between Special Presentation and Graph Presentation; the header does not show a “Graph” label.
+- **SC18.** [p] The Sequence Container Toolbar has a Default/Drafting toggle immediately after the presentation toggle. If the user activates it in Graph Presentation, Denim switches to Special Presentation and then changes to the other editing state.
 
 ## Sequence options
 

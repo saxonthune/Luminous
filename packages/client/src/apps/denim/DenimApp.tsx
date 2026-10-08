@@ -3,6 +3,7 @@ import { Portal } from 'solid-js/web';
 import ChevronLeft from 'lucide-solid/icons/chevron-left';
 import ChevronRight from 'lucide-solid/icons/chevron-right';
 import CirclePlus from 'lucide-solid/icons/circle-plus';
+import Check from 'lucide-solid/icons/check';
 import Ellipsis from 'lucide-solid/icons/ellipsis';
 import ExternalLink from 'lucide-solid/icons/external-link';
 import GitBranchPlus from 'lucide-solid/icons/git-branch-plus';
@@ -11,6 +12,7 @@ import Link2 from 'lucide-solid/icons/link-2';
 import ListOrdered from 'lucide-solid/icons/list-ordered';
 import ListTree from 'lucide-solid/icons/list-tree';
 import Plus from 'lucide-solid/icons/plus';
+import Pencil from 'lucide-solid/icons/pencil';
 import SquareDashed from 'lucide-solid/icons/square-dashed';
 import Trash2 from 'lucide-solid/icons/trash';
 import Type from 'lucide-solid/icons/type';
@@ -43,18 +45,19 @@ import { DenimActionsProvider, useDenimActions } from './DenimActions';
 import { DenimStatusToast } from './DenimStatusToast';
 import { NewProjectDialog } from './NewProjectDialog';
 import { DenimNodeVisibilityMenu } from './DenimNodeVisibilityMenu';
+import { DenimNodeListRepresentation } from './DenimNodeListRepresentation';
 
-const NODE_W = DENIM_DEFAULT_NODE_SIZE.width;
-const NODE_H = DENIM_DEFAULT_NODE_SIZE.height;
-const CONTAINER_W = DENIM_DEFAULT_CONTAINER_SIZE.width;
-const CONTAINER_H = DENIM_DEFAULT_CONTAINER_SIZE.height;
+const NODE_W: number = DENIM_DEFAULT_NODE_SIZE.width;
+const NODE_H: number = DENIM_DEFAULT_NODE_SIZE.height;
+const CONTAINER_W: number = DENIM_DEFAULT_CONTAINER_SIZE.width;
+const CONTAINER_H: number = DENIM_DEFAULT_CONTAINER_SIZE.height;
 const ICON_SIZE = 15;
 const containerVisualId = (headNodeId: string) => `denim-container:${headNodeId}`;
 type PickerState = { mode: 'include' | 'connect'; parentId?: string; anchor: HTMLElement };
 type VisibilityQueryKind = 'board' | 'upstream' | 'downstream' | 'container';
 type OpenNodeVisibility = (kind: VisibilityQueryKind, nodeId: string | undefined, position: { x: number; y: number }) => void;
 type VisibilityMenuState = { kind: VisibilityQueryKind; nodeId?: string; boardId: string; boardTitle: string; title: string; x: number; y: number };
-type SequenceListEntry = { node: DenimNode; depth: number; orderLabel: string };
+type SequenceListEntry = { node: DenimNode; parentId: string; depth: number; orderLabel: string };
 
 function sequenceDescendantEntries(graph: DenimGraph, ownerNodeId: string): SequenceListEntry[] {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -100,7 +103,7 @@ function sequenceDescendantEntries(graph: DenimGraph, ownerNodeId: string): Sequ
       const label = nextPath.map((rank, depth) => depth === 0 ? String(rank)
         : depth === 1 ? alpha(rank) : depth === 2 ? roman(rank) : String(rank))
         .reduce((result, segment, depth) => depth === 0 ? segment : `${result}${depth === 1 ? '' : '-'}${segment}`, '');
-      output.push({ node, depth: nextPath.length - 1, orderLabel: label });
+      output.push({ node, parentId, depth: nextPath.length - 1, orderLabel: label });
       visit(node.id, nextPath);
     });
   };
@@ -544,9 +547,13 @@ function ContainerVisual(props: {
     const members = all.edges.filter((edge) => edge.type === 'contains' && edge.sourceId === props.head.id);
     return { loaded: members.filter((edge) => loaded.has(edge.targetId)).length, total: members.length };
   };
-  const sequenceEntries = () => sequenceDescendantEntries(props.databaseGraph(), props.head.id);
+  const sequenceEntries = createMemo(() => {
+    session.state.graph;
+    return sequenceDescendantEntries(props.databaseGraph(), props.head.id);
+  });
   const isSequenceContainer = () => Boolean(props.container().sequenceContainerId);
   const sequencePresentation = () => props.container().presentation ?? 'special';
+  const [sequenceEditingState, setSequenceEditingState] = createSignal<'default' | 'drafting'>('default');
   const [offset, setOffset] = createSignal<{ x: number; y: number } | null>(null);
   const [resize, setResize] = createSignal<{ width: number; height: number } | null>(null);
   let carried: Record<string, { x: number; y: number }> = {};
@@ -685,15 +692,47 @@ function ContainerVisual(props: {
           </ToolbarSurface>
         </Show>
         <Show when={isSequenceContainer()}>
-          <button type="button" class="denim-sequence-presentation-toggle" data-no-pan="true"
-            aria-label={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
-            title={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              void actions.setSequenceContainerPresentation(props.head.id,
-                sequencePresentation() === 'special' ? 'graph' : 'special', props.boardId());
-            }}>{sequencePresentation() === 'special' ? 'Graph' : 'Special'}</button>
+          <ToolbarSurface variant="node" class="absolute left-2 top-1 z-20" data-sequence-container-toolbar data-no-pan="true"
+            role="toolbar" aria-label="Sequence Container Toolbar"
+            style={{ '--lui-node-toolbar-bg': 'var(--surface)' }} onPointerDown={(event) => event.stopPropagation()}>
+            <div class="lui-node-toolbar__more">
+              <span aria-hidden="true" class="lui-node-toolbar__expander"><Ellipsis size={ICON_SIZE} strokeWidth={1.7} /></span>
+              <div class="lui-node-toolbar__actions">
+                <IconButton aria-label={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
+                  title={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
+                  class="lui-node-toolbar__action" onClick={(event) => {
+                    event.stopPropagation();
+                    const next = sequencePresentation() === 'special' ? 'graph' : 'special';
+                    void actions.setSequenceContainerPresentation(props.head.id, next, props.boardId());
+                  }}>
+                  {sequencePresentation() === 'special'
+                    ? <SquareDashed size={ICON_SIZE} strokeWidth={1.7} />
+                    : <ListOrdered size={ICON_SIZE} strokeWidth={1.7} />}
+                </IconButton>
+                <IconButton aria-label={`Switch to ${sequenceEditingState() === 'default' ? 'Drafting' : 'Default'} State`}
+                  title={`Switch to ${sequenceEditingState() === 'default' ? 'Drafting' : 'Default'} State`}
+                  class="lui-node-toolbar__action" onClick={async (event) => {
+                    event.stopPropagation();
+                    if (sequencePresentation() === 'graph') {
+                      const result = await actions.setSequenceContainerPresentation(props.head.id, 'special', props.boardId());
+                      if (!result.ok) return;
+                    }
+                    setSequenceEditingState((state) => state === 'default' ? 'drafting' : 'default');
+                  }}>
+                  {sequenceEditingState() === 'default'
+                    ? <Pencil size={ICON_SIZE} strokeWidth={1.7} />
+                    : <Check size={ICON_SIZE} strokeWidth={1.7} />}
+                </IconButton>
+                <Show when={sequencePresentation() === 'graph'}>
+                  <IconButton aria-label="Create Node" title="Create Node" class="lui-node-toolbar__action" onClick={() => {
+                    void actions.createContainerNode(props.head.id, props.boardId()).then((result) => {
+                      if (result.nodeId) props.onCreated(result.nodeId);
+                    });
+                  }}><Plus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+                </Show>
+              </div>
+            </div>
+          </ToolbarSurface>
         </Show>
         <span style={{ 'pointer-events': 'none', 'margin-left': 'auto', 'margin-right': '8px' }}>
           {isSequenceContainer() ? sequenceContainerHeaderLabel(props.head.text) : containerHeaderLabel(props.head.text)}
@@ -708,21 +747,9 @@ function ContainerVisual(props: {
         </Show>
       </div>
       <Show when={isSequenceContainer() && sequencePresentation() === 'special'}>
-        <div data-no-pan="true" aria-label="Sequence Container Special Presentation" style={{
-          position: 'absolute', top: '44px', right: '0', bottom: '0', left: '0', overflow: 'auto', padding: '10px 12px',
-          display: 'flex', 'flex-direction': 'column', gap: '6px',
-        }}>
-          <For each={sequenceEntries()}>{(entry) => {
-            const slot = session.state.nodeTypes.find((type) => type.name === entry.node.type)?.themeSlot ?? 1;
-            return <div class="denim-sequence-list-row" style={{ 'margin-left': `${entry.depth * 16}px` }}>
-              <span class="denim-sequence-order-label">{entry.orderLabel}</span>
-              <div class="denim-sequence-list-node" style={{ background: `var(--theme-bg-${slot})` }}>
-                <span class="denim-sequence-list-node__type">{entry.node.type}</span>
-                <span class="denim-sequence-list-node__text">{entry.node.text || '(untitled)'}</span>
-              </div>
-            </div>;
-          }}</For>
-        </div>
+        <SequenceSpecialPresentation ownerNodeId={props.head.id} boardId={props.boardId}
+          container={props.container} entries={sequenceEntries} nodeTypes={() => session.state.nodeTypes}
+          editingState={sequenceEditingState()} />
       </Show>
       <div data-no-pan="true" aria-label="Resize Container" title="Resize Container"
         onPointerDown={beginResize}
@@ -730,6 +757,134 @@ function ContainerVisual(props: {
           background: 'linear-gradient(135deg, transparent 50%, var(--theme-node-border) 50%)' }} />
     </div>
   </NodeContainer>;
+}
+
+function SequenceSpecialPresentation(props: {
+  ownerNodeId: string;
+  boardId: () => string;
+  container: () => DenimBoardContainer;
+  entries: () => SequenceListEntry[];
+  nodeTypes: () => DenimNodeType[];
+  editingState: 'default' | 'drafting';
+}) {
+  const actions = useDenimActions();
+  const [draggedId, setDraggedId] = createSignal<string | null>(null);
+  const [pendingFocusId, setPendingFocusId] = createSignal<string | null>(null);
+  const editors = new Map<string, HTMLTextAreaElement>();
+
+  createEffect(() => {
+    const requestedId = pendingFocusId();
+    if (!requestedId || !props.entries().some((entry) => entry.node.id === requestedId)) return;
+    const frame = requestAnimationFrame(() => {
+      const editor = editors.get(requestedId);
+      if (!editor) return;
+      editor.focus();
+      setPendingFocusId(null);
+    });
+    onCleanup(() => cancelAnimationFrame(frame));
+  });
+
+  async function saveText(entry: SequenceListEntry, text: string): Promise<boolean> {
+    if (text === entry.node.text) return true;
+    return (await actions.updateNode(entry.node.id, { text })).ok;
+  }
+
+  async function createDraftSiblingAfter(entry: SequenceListEntry): Promise<void> {
+    const container = props.container();
+    const index = props.entries().length;
+    const columns = Math.max(1, Math.floor((container.width - 24) / (NODE_W + 12)));
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const position = {
+      x: container.x + 12 + column * (NODE_W + 12),
+      y: container.y + 54 + row * (NODE_H + 12),
+    };
+    const height = Math.max(container.height, position.y - container.y + NODE_H + 12);
+    if (height > container.height) {
+      const resized = await actions.resizeContainer(props.ownerNodeId, { width: container.width, height }, props.boardId());
+      if (!resized.ok) return;
+    }
+    const result = await actions.insertSequenceNodeAfter(props.ownerNodeId, entry.parentId, entry.node.id, position, props.boardId());
+    if (result.ok && result.nodeId) setPendingFocusId(result.nodeId);
+  }
+
+  async function reparent(entry: SequenceListEntry, direction: 'indent' | 'outdent'): Promise<void> {
+    const entries = props.entries();
+    if (direction === 'indent') {
+      const siblings = entries.filter((candidate) => candidate.parentId === entry.parentId);
+      const index = siblings.findIndex((candidate) => candidate.node.id === entry.node.id);
+      const previousSibling = siblings[index - 1];
+      if (!previousSibling) return;
+      const children = entries.filter((candidate) => candidate.parentId === previousSibling.node.id);
+      const result = await actions.moveSequenceNode(entry.node.id, entry.parentId, previousSibling.node.id,
+        children.length ? { afterNodeId: children[children.length - 1]!.node.id } : {});
+      if (result.ok) setPendingFocusId(entry.node.id);
+      return;
+    }
+    if (entry.parentId === props.ownerNodeId) return;
+    const parentEntry = entries.find((candidate) => candidate.node.id === entry.parentId);
+    if (!parentEntry) return;
+    const result = await actions.moveSequenceNode(entry.node.id, entry.parentId, parentEntry.parentId, { afterNodeId: parentEntry.node.id });
+    if (result.ok) setPendingFocusId(entry.node.id);
+  }
+
+  async function reorderBeforeOrAfter(event: DragEvent, target: SequenceListEntry): Promise<void> {
+    event.preventDefault();
+    const movingId = draggedId();
+    const moving = props.entries().find((entry) => entry.node.id === movingId);
+    if (!moving || moving.parentId !== target.parentId || moving.node.id === target.node.id) return;
+    const bounds = event.currentTarget instanceof HTMLElement ? event.currentTarget.getBoundingClientRect() : null;
+    const placeBefore = bounds ? event.clientY < bounds.top + bounds.height / 2 : true;
+    const result = await actions.moveSequenceNode(moving.node.id, moving.parentId, target.parentId,
+      placeBefore ? { beforeNodeId: target.node.id } : { afterNodeId: target.node.id });
+    if (result.ok) setPendingFocusId(moving.node.id);
+    setDraggedId(null);
+  }
+
+  return <div data-no-pan="true" aria-label="Sequence Container Special Presentation" class="denim-sequence-special-presentation">
+    <For each={props.entries()}>{(entry) => <div class="denim-sequence-list-row"
+      style={{ 'margin-left': `${entry.depth * 16}px` }}
+      draggable={props.editingState === 'default'}
+      onDragStart={(event) => {
+        if (props.editingState !== 'default') { event.preventDefault(); return; }
+        setDraggedId(entry.node.id);
+        event.dataTransfer?.setData('text/plain', entry.node.id);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragOver={(event) => {
+        const moving = props.entries().find((candidate) => candidate.node.id === draggedId());
+        if (moving && moving.parentId === entry.parentId && moving.node.id !== entry.node.id) event.preventDefault();
+      }}
+      onDrop={(event) => void reorderBeforeOrAfter(event, entry)}
+      onDragEnd={() => setDraggedId(null)}>
+      <span class="denim-sequence-order-label">{entry.orderLabel}</span>
+      <DenimNodeListRepresentation node={entry.node} nodeTypes={props.nodeTypes}
+        textContent={props.editingState === 'drafting' ? <textarea ref={(element) => editors.set(entry.node.id, element)}
+          data-sequence-node-editor={entry.node.id} aria-label={`Draft ${entry.node.type}: ${entry.node.text || 'untitled'}`}
+          class="denim-sequence-list-editor" value={entry.node.text}
+          onPointerDown={(event) => event.stopPropagation()}
+          onBlur={(event) => void saveText(entry, event.currentTarget.value)}
+          onKeyDown={async (event) => {
+            const value = event.currentTarget.value;
+            if (event.key === 'Escape') { event.preventDefault(); event.currentTarget.blur(); return; }
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              if (await saveText(entry, value)) await createDraftSiblingAfter(entry);
+              return;
+            }
+            if (event.key === 'Tab') {
+              event.preventDefault();
+              if (await saveText(entry, value)) await reparent(entry, event.shiftKey ? 'outdent' : 'indent');
+            }
+          }} /> : undefined}
+        trailing={props.editingState === 'default' ? <select aria-label={`Change type for ${entry.node.text || 'untitled'}`}
+          class="denim-sequence-type-select" value={entry.node.type}
+          onPointerDown={(event) => event.stopPropagation()}
+          onChange={(event) => { const type = event.currentTarget.value; if (type !== entry.node.type) void actions.updateNode(entry.node.id, { type }); }}>
+          <For each={props.nodeTypes()}>{(type) => <option value={type.name}>{type.name}</option>}</For>
+        </select> : undefined} />
+    </div>}</For>
+  </div>;
 }
 
 function containerHeaderLabel(ownerText: string): string {
@@ -1258,7 +1413,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
     </Show>
     <Show when={picker()}>
       {(current) => <FindNodePicker mode={current().mode} parentId={current().parentId} anchor={current().anchor}
-        query={query} setQuery={setQuery} results={results}
+        query={query} setQuery={setQuery} results={results} nodeTypes={() => session.state.nodeTypes}
         targetForId={(id) => session.state.graph.nodes.find((node) => node.id === id)}
         isValidTarget={(id) => Boolean(current().parentId && session.canConnectExisting(current().parentId!, id))}
         onChoose={chooseNode} onConnect={connectToNode} onClose={() => { setPicker(null); setStatusToast(null); }}
@@ -1349,6 +1504,7 @@ function FindNodePicker(props: {
   query: () => string;
   setQuery: (value: string) => void;
   results: () => DenimNode[];
+  nodeTypes: () => DenimNodeType[];
   targetForId: (id: string) => DenimNode | undefined;
   isValidTarget: (id: string) => boolean;
   onChoose: (node: DenimNode) => void;
@@ -1528,11 +1684,9 @@ function FindNodePicker(props: {
       </div>
       <div class="min-h-0 max-h-64 flex-1 overflow-y-auto">
         <Show when={props.results().length > 0} fallback={<p class="px-2 py-3 text-xs text-fg-muted">No matching nodes</p>}>
-          <For each={props.results()}>{(node) => <button type="button"
-            class="flex w-full flex-col rounded px-2 py-2 text-left hover:bg-surface-alt focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent"
+          <For each={props.results()}>{(node) => <button type="button" class="denim-find-node-picker__option"
             onClick={() => props.onChoose(node)}>
-            <span class="text-sm text-fg">{node.text || 'Untitled'}</span>
-            <span class="text-xs text-fg-muted">{node.type}</span>
+            <DenimNodeListRepresentation node={node} nodeTypes={props.nodeTypes} />
           </button>}</For>
         </Show>
       </div>

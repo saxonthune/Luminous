@@ -89,13 +89,17 @@ relationships and contents were not specified in the source request.
 
 - **DTERM32.** [p] **Node Visibility Menu** — a shared component that lists Nodes returned by a caller-provided query and lets the user load or unload each Node on a Board. Visibility means Board membership: loaded Nodes appear in the projection; Nodes not loaded onto the Board do not.
 
-- **DTERM33.** [p] **Node Visibility Item** — a wide, type-colored row in the Node Visibility Menu showing one Node's type and text with a control to load it onto or unload it from the current Board.
+- **DTERM33.** [p] **Node Visibility Item** — a row in the Node Visibility Menu containing a Node's List Representation, its loaded state, and a control to load it onto or unload it from the current Board.
 
 ## Graph Primitives
 
 - **DTERM36.** [p] **Graph Primitive** — a visual UI control that lets users input design information beyond manipulating a graph, while creating graph Nodes and Edges under the hood.
 
 - **DTERM37.** [p] **Sequence Container** — a Graph Primitive that presents Nodes as an ordered sequence in Special Presentation or Graph Presentation.
+
+- **DTERM38.** [p] **List Representation** — a type-colored rectangular component that presents a Node's type and text in list form. Find a node results and the Sequence Container's Special Presentation use the same component.
+
+- **DTERM39.** [p] **Sequence Container Toolbar** — a toolbar in the Sequence Container header that uses the present and hidden action pattern and lets the user change presentation.
 
 ## Relationship priority
 

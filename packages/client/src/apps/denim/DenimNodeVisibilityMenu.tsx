@@ -5,6 +5,7 @@ import EyeOff from 'lucide-solid/icons/eye-off';
 import X from 'lucide-solid/icons/x';
 import type { DenimNodeVisibilityEntry } from '@luminous/core/denim/queries';
 import type { DenimNodeType } from '@luminous/core/denim';
+import { DenimNodeListRepresentation } from './DenimNodeListRepresentation';
 
 export interface DenimNodeVisibilityMenuProps {
   title: string;
@@ -117,18 +118,15 @@ export function DenimNodeVisibilityMenu(props: DenimNodeVisibilityMenuProps) {
 }
 
 function DenimNodeVisibilityItem(props: { entry: DenimNodeVisibilityEntry; onToggle: () => void; nodeTypes: () => DenimNodeType[] }) {
-  const slot = () => props.nodeTypes().find((type) => type.name === props.entry.node.type)?.themeSlot ?? 1;
-  return <div class="denim-node-visibility-item" role="listitem"
-    style={{ background: `var(--theme-bg-${slot()})` }}>
-    <div class="denim-node-visibility-item__content">
-      <span class="denim-node-visibility-item__type">{props.entry.node.type}</span>
-      <span class="denim-node-visibility-item__text">{props.entry.node.text || '(untitled)'}</span>
-      <span class="denim-node-visibility-item__state">{props.entry.loaded ? 'Loaded on Board' : 'Not on Board'}</span>
-    </div>
-    <button type="button" class="denim-node-visibility-item__toggle" aria-pressed={props.entry.loaded}
-      aria-label={`${props.entry.loaded ? 'Unload' : 'Load'} ${props.entry.node.type} ${props.entry.node.text} ${props.entry.loaded ? 'from' : 'onto'} this Board`}
-      title={props.entry.loaded ? 'Unload from this Board' : 'Load onto this Board'} onClick={props.onToggle}>
-      {props.entry.loaded ? <Eye size={16} /> : <EyeOff size={16} />}
-    </button>
+  return <div class="denim-node-visibility-item" role="listitem">
+    <DenimNodeListRepresentation node={props.entry.node} nodeTypes={props.nodeTypes} class="denim-node-visibility-item__representation"
+      meta={<span class="denim-node-visibility-item__state">{props.entry.loaded ? 'Loaded on Board' : 'Not on Board'}</span>}
+      trailing={
+      <button type="button" class="denim-node-visibility-item__toggle" aria-pressed={props.entry.loaded}
+        aria-label={`${props.entry.loaded ? 'Unload' : 'Load'} ${props.entry.node.type} ${props.entry.node.text} ${props.entry.loaded ? 'from' : 'onto'} this Board`}
+        title={props.entry.loaded ? 'Unload from this Board' : 'Load onto this Board'} onClick={props.onToggle}>
+        {props.entry.loaded ? <Eye size={16} /> : <EyeOff size={16} />}
+      </button>
+      } />
   </div>;
 }

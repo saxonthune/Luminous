@@ -3,8 +3,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import {
   addDenimNode, connectDenimChild, createDenimChild, exportDenimDatabase, getDenimGraph,
-  getJourneyGraph, listCapabilities, listJourneys, listTopLevelInstances,
-  openDenimDatabase, seedDenimDatabase, updateDenimNode,
+  getJourneyGraph, listCapabilities, listDenimNodeTypes, listJourneys, listTopLevelInstances,
+  openDenimDatabase, seedDefaultDenimNodeTypes, seedDenimDatabase, updateDenimNode,
 } from '../packages/core/src/denim/database.ts';
 import type { DenimAction } from '../packages/core/src/denim/actions.ts';
 import type { DenimQuery } from '../packages/core/src/denim/queries.ts';
@@ -50,6 +50,7 @@ function usage(): never {
   just denim journey <database> <journey-id>
   just denim capabilities|resources <database>
   just denim init|seed <database>
+  just denim types seed <database>
   just denim node add <database> --id ID --type TYPE --text TEXT [--parent ID]
   just denim node set <database> <node-id> [--type TYPE] [--text TEXT]
   just denim connect <database> <parent-id> <existing-node-id>
@@ -115,6 +116,7 @@ function denimUsage(): never {
 Read a local Denim database:
   just denim boards <database>
   just denim journeys <database>
+  just denim types seed <database>
 
 Use the running storage server (default http://localhost:4080):
   just denim list
@@ -219,6 +221,20 @@ async function denimCli(): Promise<void> {
     seedDenimDatabase(db);
     await writeFile(path, exportDenimDatabase(db), { flag: 'wx' });
     console.log(JSON.stringify({ ok: true, path, graph: getDenimGraph(db) }, null, 2)); return;
+  }
+  if (command === 'types') {
+    const action = argv.shift();
+    const path = argv.shift();
+    if (action !== 'seed' || !path || argv.length) denimUsage();
+    const db = await openDenimDatabase(new Uint8Array(await readFile(path)));
+    seedDefaultDenimNodeTypes(db);
+    await writeFile(path, exportDenimDatabase(db));
+    console.log(JSON.stringify({
+      ok: true,
+      path,
+      types: listDenimNodeTypes(db),
+    }, null, 2));
+    return;
   }
   if (command === 'node') {
     const action = argv.shift();

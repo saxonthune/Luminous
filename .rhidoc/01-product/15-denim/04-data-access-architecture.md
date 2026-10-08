@@ -12,6 +12,11 @@ deps: [doc01.15.01, doc01.15.02]
 - The `@luminous/core/denim` database module owns sql.js initialization, schema,
   queries, and database mutations. It has no Solid components or canvas state.
 - `denim_node_types` stores each type's stable ID, name, and visual theme slot.
+  `@luminous/core/denim/node-types` is the shared source for default type names
+  and theme slots. Hydrating a new project registers this full set before
+  adding its starter graph, so the CLI and UI project creation paths share the
+  same defaults. The CLI can also seed the shared defaults into an existing
+  database without changing its graph.
   Existing Node rows continue to store the type name; opening an older database
   seeds the registry from the names already in use. Node creation ensures its
   type is registered, and renaming a type updates its Nodes in one transaction.
@@ -74,8 +79,9 @@ coordinate a database edit with the visible canvas state.
 - Graph actions include `journey.create`, `node.create`, `node.upsert`,
   `node.differentiate`, `node.update`, `node.delete`, `edge.connect`,
   `edge.upsert`, `edge.delete`, `edge.priority.set`, `sequence.initialize`, and
-  `sequence.clear`, plus `container.create`, `container.attach`, and
-  `container.detach`. The upsert actions match on `unique_key`, preserve an
+  `sequence.clear`, `sequence.node.move`, `sequence.node.insertAfter`, plus
+  `container.create`, `container.attach`, and `container.detach`. The upsert
+  actions match on `unique_key`, preserve an
   existing UUID, and create a record when the key is new. `node.delete` names either `node` scope, which keeps
   descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.

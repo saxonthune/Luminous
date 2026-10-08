@@ -1,4 +1,12 @@
 import type { Database, SqlJsStatic } from 'sql.js';
+import {
+  DEFAULT_DENIM_NODE_TYPES,
+  CAPABILITY_TYPE,
+  INSTANCE_TYPE,
+  JOURNEY_TYPE,
+  USER_ACTION_TYPE,
+} from './node-types.ts';
+export { CAPABILITY_TYPE, DEFAULT_DENIM_NODE_TYPES, INSTANCE_TYPE, JOURNEY_TYPE, USER_ACTION_TYPE } from './node-types.ts';
 
 export type DenimDatabase = Database;
 
@@ -44,11 +52,6 @@ export interface DenimGraph {
 }
 
 export const PARENT_CHILD = 'parent-child';
-export const JOURNEY_TYPE = 'Journey';
-export const USER_ACTION_TYPE = 'User Action';
-export const INSTANCE_TYPE = 'Instance';
-export const CAPABILITY_TYPE = 'Capability';
-
 let sqlPromise: Promise<SqlJsStatic> | undefined;
 
 async function sql(wasm?: string | Uint8Array): Promise<SqlJsStatic> {
@@ -314,24 +317,18 @@ export function listDenimNodeIds(db: Database): string[] {
   return rows<{ id: string }>(db, 'SELECT id FROM nodes ORDER BY rowid').map(({ id }) => id);
 }
 
-const BUILTIN_TYPE_THEME_SLOTS: Record<string, number> = {
-  Journey: 1,
-  'User Action': 2,
-  Capability: 5,
-  Instance: 4,
-  Organization: 6,
-  Module: 7,
-  Contract: 8,
-};
-
 function ensureDenimNodeType(db: Database, name: string): DenimNodeType {
   const existing = rows<DenimNodeType>(db,
     'SELECT id, name, theme_slot AS themeSlot FROM denim_node_types WHERE name = ?', [name])[0];
   if (existing) return existing;
   const id = `node-type-${crypto.randomUUID()}`;
-  const themeSlot = BUILTIN_TYPE_THEME_SLOTS[name] ?? 1;
+  const themeSlot = DEFAULT_DENIM_NODE_TYPES.find((type) => type.name === name)?.themeSlot ?? 1;
   db.run('INSERT INTO denim_node_types (id, name, theme_slot) VALUES (?, ?, ?)', [id, name, themeSlot]);
   return { id, name, themeSlot };
+}
+
+export function seedDefaultDenimNodeTypes(db: Database): void {
+  for (const type of DEFAULT_DENIM_NODE_TYPES) ensureDenimNodeType(db, type.name);
 }
 
 export function listDenimNodeTypes(db: Database): DenimNodeType[] {
@@ -455,6 +452,7 @@ export const STARTER_DENIM_GRAPH: DenimGraph = {
 /** Hydrate an initialized database with the starter project graph. */
 export function hydrateDenimDatabase(db: Database, graph: DenimGraph = STARTER_DENIM_GRAPH): void {
   transaction(db, () => {
+    seedDefaultDenimNodeTypes(db);
     for (const node of graph.nodes) addDenimNode(db, node);
     for (const edge of graph.edges) addDenimEdge(db, edge);
   });
@@ -581,6 +579,99 @@ function assertDenimEdgeAcyclic(db: Database, type: string, sourceId: string, ta
     ) SELECT 1 FROM descendants WHERE id = ? LIMIT 1
   `, [targetId, PARENT_CHILD, excludingEdgeId ?? null, excludingEdgeId ?? null, sourceId]);
   if (cycle.length > 0) throw new Error('This parent-child edge would create a cycle');
+}
+
+/** Move one Node's parent-child Edge and persist its position among the new parent's children. */
+export function moveDenimChild(
+  db: Database,
+  nodeId: string,
+  fromParentId: string,
+  parentId: string,
+  placement: { beforeNodeId?: string; afterNodeId?: string } = {},
+): boolean {
+  if (placement.beforeNodeId && placement.afterNodeId) throw new Error('Choose either beforeNodeId or afterNodeId');
+  if (!getDenimNode(db, nodeId)) throw new Error(`Node not found: ${nodeId}`);
+  if (!getDenimNode(db, parentId)) throw new Error(`Parent Node not found: ${parentId}`);
+  let changed = false;
+  transaction(db, () => {
+    const parentEdge = rows<{ id: string }>(db,
+      'SELECT id FROM edges WHERE type = ? AND source_id = ? AND target_id = ? ORDER BY rowid LIMIT 1',
+      [PARENT_CHILD, fromParentId, nodeId])[0];
+    if (!parentEdge) throw new Error(`Sequence Node is not a child of ${fromParentId}: ${nodeId}`);
+    const oldParentId = fromParentId;
+    if (oldParentId !== parentId && hasDenimEdge(db, PARENT_CHILD, parentId, nodeId)) {
+      throw new Error(`Node is already a child of ${parentId}: ${nodeId}`);
+    }
+    const oldOrder = rows<{ target_id: string }>(db,
+      'SELECT target_id FROM edges WHERE type = ? AND source_id = ? ORDER BY CASE WHEN priority IS NULL THEN 1 ELSE 0 END, priority, rowid',
+      [PARENT_CHILD, oldParentId]).map(({ target_id }) => target_id);
+    const newOrder = parentId === oldParentId ? oldOrder.filter((id) => id !== nodeId)
+      : rows<{ target_id: string }>(db,
+        'SELECT target_id FROM edges WHERE type = ? AND source_id = ? ORDER BY CASE WHEN priority IS NULL THEN 1 ELSE 0 END, priority, rowid',
+        [PARENT_CHILD, parentId]).map(({ target_id }) => target_id).filter((id) => id !== nodeId);
+
+    const beforeNodeId = placement.beforeNodeId;
+    const afterNodeId = placement.afterNodeId;
+    if (beforeNodeId && !newOrder.includes(beforeNodeId)) throw new Error(`Before Node is not a child of ${parentId}: ${beforeNodeId}`);
+    if (afterNodeId && !newOrder.includes(afterNodeId)) throw new Error(`After Node is not a child of ${parentId}: ${afterNodeId}`);
+    const insertAt = beforeNodeId ? newOrder.indexOf(beforeNodeId)
+      : afterNodeId ? newOrder.indexOf(afterNodeId) + 1 : newOrder.length;
+    newOrder.splice(insertAt, 0, nodeId);
+    const nextOldOrder = oldParentId === parentId ? newOrder : oldOrder.filter((id) => id !== nodeId);
+    changed = oldParentId !== parentId || oldOrder.some((id, index) => id !== newOrder[index]);
+    if (!changed) return;
+
+    assertDenimEdgeAcyclic(db, PARENT_CHILD, parentId, nodeId, parentEdge.id);
+    db.run('UPDATE edges SET source_id = ? WHERE id = ?', [parentId, parentEdge.id]);
+    const assignOrder = (ownerId: string, orderedIds: string[]) => {
+      const children = rows<{ id: string; target_id: string }>(db,
+        'SELECT id, target_id FROM edges WHERE type = ? AND source_id = ?', [PARENT_CHILD, ownerId]);
+      const edgeByChild = new Map(children.map((edge) => [edge.target_id, edge.id]));
+      orderedIds.forEach((childId, index) => {
+        const edgeId = edgeByChild.get(childId);
+        if (edgeId) db.run('UPDATE edges SET priority = ? WHERE id = ?', [index + 1, edgeId]);
+      });
+    };
+    assignOrder(parentId, newOrder);
+    if (oldParentId !== parentId) assignOrder(oldParentId, nextOldOrder);
+  });
+  return changed;
+}
+
+/** Create a sibling after an existing child, copying that Node's type and preserving its indentation. */
+export function createDenimChildAfter(
+  db: Database,
+  parentId: string,
+  afterNodeId: string,
+  id: string,
+  edgeId: string,
+  text = '',
+): DenimNode {
+  const afterNode = getDenimNode(db, afterNodeId);
+  if (!afterNode) throw new Error(`Node not found: ${afterNodeId}`);
+  if (!hasDenimEdge(db, PARENT_CHILD, parentId, afterNodeId)) {
+    throw new Error(`Node is not a child of ${parentId}: ${afterNodeId}`);
+  }
+  if (getDenimNode(db, id)) throw new Error(`Node already exists: ${id}`);
+  transaction(db, () => {
+    const orderedIds = rows<{ target_id: string }>(db,
+      'SELECT target_id FROM edges WHERE type = ? AND source_id = ? ORDER BY CASE WHEN priority IS NULL THEN 1 ELSE 0 END, priority, rowid',
+      [PARENT_CHILD, parentId]).map(({ target_id }) => target_id);
+    const insertAt = orderedIds.indexOf(afterNodeId) + 1;
+    if (insertAt === 0) throw new Error(`Node is not a child of ${parentId}: ${afterNodeId}`);
+    addDenimNode(db, { id, type: afterNode.type, text });
+    db.run('INSERT INTO edges (id, type, source_id, target_id, priority, unique_key) VALUES (?, ?, ?, ?, NULL, NULL)',
+      [edgeId, PARENT_CHILD, parentId, id]);
+    orderedIds.splice(insertAt, 0, id);
+    const children = rows<{ id: string; target_id: string }>(db,
+      'SELECT id, target_id FROM edges WHERE type = ? AND source_id = ?', [PARENT_CHILD, parentId]);
+    const edgeByChild = new Map(children.map((edge) => [edge.target_id, edge.id]));
+    orderedIds.forEach((childId, index) => {
+      const childEdgeId = edgeByChild.get(childId);
+      if (childEdgeId) db.run('UPDATE edges SET priority = ? WHERE id = ?', [index + 1, childEdgeId]);
+    });
+  });
+  return getDenimNode(db, id)!;
 }
 
 function nextChildPriority(db: Database, parentId: string): number | null {

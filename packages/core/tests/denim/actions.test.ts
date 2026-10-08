@@ -131,7 +131,7 @@ describe('Denim actions', () => {
     expect(DENIM_ACTION_CATALOG.map(({ op }) => op)).toEqual([
       'journey.create', 'node.type.create', 'node.type.rename', 'node.create', 'node.upsert', 'edge.upsert',
       'node.differentiate', 'edge.connect', 'edge.delete', 'container.attach', 'container.detach', 'container.create',
-      'node.update', 'node.delete', 'edge.priority.set', 'sequence.initialize', 'sequence.clear',
+      'node.update', 'node.delete', 'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'sequence.node.move', 'sequence.node.insertAfter',
       'sequenceContainer.create', 'sequenceContainer.presentation.set', 'board.read', 'board.create',
       'board.container.move', 'board.container.resize', 'container.node.create', 'container.nodes.create',
       'board.sequenceMode.set', 'board.node.load.set', 'board.node.move', 'board.nodes.move',

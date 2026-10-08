@@ -23,6 +23,8 @@ export interface DenimActionApi {
   setEdgePriority(edgeId: string, priority: number): Promise<{ ok: boolean; error?: string }>;
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<{ ok: boolean; error?: string }>;
   clearSequence(parentId: string): Promise<{ ok: boolean; error?: string }>;
+  moveSequenceNode(nodeId: string, fromParentId: string, parentId: string, placement?: { beforeNodeId?: string; afterNodeId?: string }): Promise<{ ok: boolean; error?: string }>;
+  insertSequenceNodeAfter(sequenceOwnerId: string, parentId: string, afterNodeId: string, position: { x: number; y: number }, boardId?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   createOrLoadSequenceContainer(ownerNodeId: string, container: DenimBoardContainer, boardId?: string): Promise<{ ok: boolean; error?: string; sequenceContainerId?: string }>;
   setSequenceContainerPresentation(ownerNodeId: string, presentation: 'special' | 'graph', boardId?: string): Promise<{ ok: boolean; error?: string }>;
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', boardId?: string): Promise<{ ok: boolean; error?: string }>;
@@ -60,6 +62,9 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     setEdgePriority: (edgeId, priority) => dispatch({ op: 'edge.priority.set', edgeId, priority }),
     initializeSequence: (parentId, orderedChildIds) => dispatch({ op: 'sequence.initialize', parentId, orderedChildIds }),
     clearSequence: (parentId) => dispatch({ op: 'sequence.clear', parentId }),
+    moveSequenceNode: (nodeId, fromParentId, parentId, placement = {}) => dispatch({ op: 'sequence.node.move', nodeId, fromParentId, parentId, ...placement }),
+    insertSequenceNodeAfter: (sequenceOwnerId, parentId, afterNodeId, position, boardId = session.state.activeBoardId) =>
+      dispatch({ op: 'sequence.node.insertAfter', boardId, sequenceOwnerId, parentId, afterNodeId, position }),
     createOrLoadSequenceContainer: (ownerNodeId, container, boardId = session.state.activeBoardId) =>
       dispatch({ op: 'sequenceContainer.create', boardId, ownerNodeId, container }),
     setSequenceContainerPresentation: (ownerNodeId, presentation, boardId = session.state.activeBoardId) =>
