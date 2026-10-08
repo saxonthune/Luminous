@@ -10,7 +10,7 @@ deps: [doc01.04]
 Denim is a graph-based design system for describing how a product is expected to
 work and how that design relates to the resources and implementation that
 support it. Its starting point is a collection of Journeys: business flows or
-similar, elaborated through observable Actions, Capabilities, Instances,
+similar, elaborated through observable User Actions, Capabilities, Instances,
 Organizations, and Contracts. The graph model is intended to remain open to
 revision as the product is explored.
 

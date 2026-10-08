@@ -165,11 +165,12 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 |-----|------|---------|------|------|------|-------------|
 
 | doc01.15.00 | `15-denim/00-index.md` |  |  | — | — | — |
-| doc01.15.01 | `15-denim/01-about.md` | Denim is a graph-based design system for describing user journeys, capabilities, software instances, implementation structure, and contracts. | denim, graph, design, requirements, journeys | doc01.04 | doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05 | — |
-| doc01.15.02 | `15-denim/02-requirements.md` | Pending user-supported requirements for Denim's journey graph, node editing, persistent Boards, and instance selection. | denim, requirements, ui, graph, boards | doc01.15.01, doc01.15.03 | doc01.15.03, doc01.15.04 | — |
+| doc01.15.01 | `15-denim/01-about.md` | Denim is a graph-based design system for describing user journeys, capabilities, software instances, implementation structure, and contracts. | denim, graph, design, requirements, journeys | doc01.04 | doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05, doc01.15.06 | — |
+| doc01.15.02 | `15-denim/02-requirements.md` | Pending user-supported requirements for Denim's journey graph, node editing, persistent Boards, and instance selection. | denim, requirements, ui, graph, boards | doc01.15.01, doc01.15.03 | doc01.15.03, doc01.15.04, doc01.15.06 | — |
 | doc01.15.03 | `15-denim/03-glossary.md` | Denim terms for graph structure, persistent Boards, projections, visibility, and toolbar controls. | denim, glossary, vocabulary, graph, boards, visibility | doc01.15.01, doc01.15.02 | doc01.15.02, doc01.15.05 | — |
-| doc01.15.04 | `15-denim/04-data-access-architecture.md` | Denim separates SQLite access from canvas components through a per-database session that owns Board state, edits, and saving. | denim, architecture, sqlite, components, testing, state, boards | doc01.15.01, doc01.15.02 | — | — |
+| doc01.15.04 | `15-denim/04-data-access-architecture.md` | Denim stores shared graph and regular Container identity in SQLite while each Board keeps its loaded Nodes and spatial arrangement. | denim, architecture, sqlite, components, testing, state, boards | doc01.15.01, doc01.15.02 | doc01.15.06 | — |
 | doc01.15.05 | `15-denim/05-denim-ui-requirements.md` | Denim's persistent Boards, tab navigation, toolbars, and node component behavior. | denim, ui, requirements, boards, toolbar, tabs, nodes, icons, dragging | doc01.15.01, doc01.15.03 | — | — |
+| doc01.15.06 | `15-denim/06-shared-graph-use-case.md` | A motivating use case for reusing shared design Nodes across Journey Boards so queries can reveal requirements across the whole product. | denim, use-case, graph, boards, journeys, reuse, queries | doc01.15.01, doc01.15.02, doc01.15.04 | — | — |
 
 ## 02-design — Design
 
@@ -285,7 +286,7 @@ Quick lookup for file-path→doc mapping:
 | `bipartite` | doc01.12.05 |
 | `blender` | doc01.06.01.10 |
 | `blueprints` | doc01.06.01.09 |
-| `boards` | doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05 |
+| `boards` | doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05, doc01.15.06 |
 | `boundaries` | doc02.19 |
 | `boundary` | doc02.20 |
 | `braincrawl` | doc01.07.02 |
@@ -321,7 +322,7 @@ Quick lookup for file-path→doc mapping:
 | `dataflow` | doc01.05.01, doc01.05.02, doc01.05.03, doc01.05.04, doc01.06.01.07, doc01.07.01, doc01.07.02, doc02.21.01, doc02.21.02, doc02.21.03 |
 | `debugger` | doc01.11.01 |
 | `decoration` | doc02.17 |
-| `denim` | doc01.15.01, doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05 |
+| `denim` | doc01.15.01, doc01.15.02, doc01.15.03, doc01.15.04, doc01.15.05, doc01.15.06 |
 | `dependencies` | doc01.13.03 |
 | `deployments` | doc01.10.01 |
 | `derivation` | doc02.13 |
@@ -349,7 +350,7 @@ Quick lookup for file-path→doc mapping:
 | `gestalt` | doc03.04 |
 | `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.13.05, doc01.15.03 |
 | `gojs` | doc01.06.01.06 |
-| `graph` | doc01.15.01, doc01.15.02, doc01.15.03, doc02.15 |
+| `graph` | doc01.15.01, doc01.15.02, doc01.15.03, doc01.15.06, doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
 | `groups` | doc02.05.06 |
 | `guidelines` | doc01.12.06 |
@@ -364,7 +365,7 @@ Quick lookup for file-path→doc mapping:
 | `interfaces` | doc01.07.01 |
 | `iteration` | doc02.15 |
 | `jackson` | doc02.02 |
-| `journeys` | doc01.15.01 |
+| `journeys` | doc01.15.01, doc01.15.06 |
 | `json-schema` | doc02.10.02 |
 | `konva` | doc01.06.01.04 |
 | `labor` | doc03.08 |
@@ -413,6 +414,7 @@ Quick lookup for file-path→doc mapping:
 | `projection` | doc02.17 |
 | `property-graph` | doc01.08.01, doc02.10.03, doc02.11 |
 | `qt` | doc01.06.01.08 |
+| `queries` | doc01.15.06 |
 | `qwik` | doc03.05 |
 | `rayon` | doc01.11.01 |
 | `react` | doc02.06.01 |
@@ -427,6 +429,7 @@ Quick lookup for file-path→doc mapping:
 | `rendering` | doc02.16, doc02.21.03, doc03.05 |
 | `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04, doc01.13.04, doc01.15.01, doc01.15.02, doc01.15.05 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
+| `reuse` | doc01.15.06 |
 | `rhidoc` | doc01.02 |
 | `roadmap` | doc01.03.01 |
 | `routing` | doc01.07.06 |
@@ -475,6 +478,7 @@ Quick lookup for file-path→doc mapping:
 | `underlay` | doc02.05.06 |
 | `unfolding` | doc01.05.01, doc02.01, doc02.02 |
 | `unreal` | doc01.06.01.09 |
+| `use-case` | doc01.15.06 |
 | `verification` | doc03.02 |
 | `view` | doc02.17 |
 | `views` | doc01.12.01, doc01.12.03, doc01.12.04, doc02.11 |

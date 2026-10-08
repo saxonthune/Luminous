@@ -2,6 +2,7 @@ import {
   getDenimGraph,
   getJourneyGraph,
   listCapabilities,
+  listDenimContainers,
   listDenimBoards,
   listJourneys,
   listTopLevelInstances,
@@ -22,7 +23,15 @@ export interface DenimBoardContainer {
   y: number;
   width: number;
   height: number;
+  /** Present when this Board container is the visual projection of a shared Sequence Container. */
+  sequenceContainerId?: string;
+  /** Presentation is a per-Board choice, not shared Sequence Container data. */
+  presentation?: 'special' | 'graph';
 }
+
+export const DENIM_DEFAULT_NODE_SIZE = { width: 232, height: 142 } as const;
+export const DENIM_DEFAULT_CONTAINER_SIZE = { width: 360, height: 280 } as const;
+export const DENIM_DEFAULT_CONTAINER_GAP = 100;
 
 export interface DenimBoard {
   version: 1;
@@ -34,6 +43,7 @@ export interface DenimBoard {
   loadedNodeIds: string[];
   positions: Record<string, { x: number; y: number }>;
   sequenceModes: Record<string, 'rank' | 'priority'>;
+  /** Board-local bounds and presentation for shared regular and Sequence Containers. */
   containers: Record<string, DenimBoardContainer>;
 }
 
@@ -46,10 +56,46 @@ export const DENIM_PINNED_BOARDS: DenimBoard[] = [
 export function readDenimBoards(db: DenimDatabase): DenimBoard[] {
   const persisted = listDenimBoards(db).map(({ payload }) => decodeBoard(db, payload)).filter((v): v is DenimBoard => Boolean(v));
   const overrides = new Map(persisted.filter((v) => v.kind === 'pinned').map((v) => [v.id, v]));
-  return [
+  const boards = [
     ...DENIM_PINNED_BOARDS.map((board) => overrides.get(board.id) ?? { ...board, loadedNodeIds: sourceGraph(db, board).nodes.map((node) => node.id) }),
     ...persisted.filter((v) => v.kind === 'board'),
   ];
+  return boards.map((board) => ensureLoadedContainerPlacements(db, board, boards));
+}
+
+/** Give loaded owners their regular Containers, deriving a Board-local placement when needed. */
+export function ensureLoadedContainerPlacements(
+  db: DenimDatabase,
+  board: DenimBoard,
+  candidateBoards: DenimBoard[],
+): DenimBoard {
+  const loaded = new Set(board.loadedNodeIds);
+  let containers = board.containers;
+  for (const record of listDenimContainers(db)) {
+    const ownerNodeId = record.ownerNodeId;
+    if (!loaded.has(ownerNodeId) || containers[ownerNodeId]) continue;
+    const sourceBoard = candidateBoards.find((candidate) => candidate.id !== board.id
+      && candidate.containers[ownerNodeId] && !candidate.containers[ownerNodeId].sequenceContainerId);
+    const source = sourceBoard?.containers[ownerNodeId];
+    if (sourceBoard && source) {
+      const sourceOwnerPosition = sourceBoard.positions[ownerNodeId];
+      const targetOwnerPosition = board.positions[ownerNodeId];
+      const dx = sourceOwnerPosition && targetOwnerPosition ? targetOwnerPosition.x - sourceOwnerPosition.x : 0;
+      const dy = sourceOwnerPosition && targetOwnerPosition ? targetOwnerPosition.y - sourceOwnerPosition.y : 0;
+      containers = { ...containers, [ownerNodeId]: {
+        x: source.x + dx, y: source.y + dy, width: source.width, height: source.height,
+      } };
+    } else {
+      const ownerPosition = board.positions[ownerNodeId] ?? { x: 0, y: 0 };
+      containers = { ...containers, [ownerNodeId]: {
+        x: ownerPosition.x + DENIM_DEFAULT_NODE_SIZE.width + DENIM_DEFAULT_CONTAINER_GAP,
+        y: ownerPosition.y,
+        width: DENIM_DEFAULT_CONTAINER_SIZE.width,
+        height: DENIM_DEFAULT_CONTAINER_SIZE.height,
+      } };
+    }
+  }
+  return containers === board.containers ? board : { ...board, containers };
 }
 
 function isQuerySource(value: unknown): value is DenimQuerySource {
@@ -112,7 +158,15 @@ function decodeBoard(db: DenimDatabase, value: unknown): DenimBoard | undefined 
     for (const [headNodeId, container] of Object.entries(board.containers)) {
       if (!container || ![container.x, container.y, container.width, container.height].every(Number.isFinite)
         || container.width <= 0 || container.height <= 0) return;
-      containers[headNodeId] = { x: container.x, y: container.y, width: container.width, height: container.height };
+      const sequenceContainerId = typeof container.sequenceContainerId === 'string' ? container.sequenceContainerId : undefined;
+      const presentation = container.presentation === 'graph' ? 'graph' : 'special';
+      containers[headNodeId] = {
+        x: container.x,
+        y: container.y,
+        width: container.width,
+        height: container.height,
+        ...(sequenceContainerId ? { sequenceContainerId, presentation } : {}),
+      };
     }
   }
   if (board.kind === 'pinned') {

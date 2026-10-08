@@ -4,22 +4,14 @@ import Eye from 'lucide-solid/icons/eye';
 import EyeOff from 'lucide-solid/icons/eye-off';
 import X from 'lucide-solid/icons/x';
 import type { DenimNodeVisibilityEntry } from '@luminous/core/denim/queries';
-
-const NODE_THEME_SLOT: Record<string, number> = {
-  Journey: 1,
-  Action: 2,
-  Capability: 5,
-  Instance: 4,
-  Organization: 6,
-  Module: 7,
-  Contract: 8,
-};
+import type { DenimNodeType } from '@luminous/core/denim';
 
 export interface DenimNodeVisibilityMenuProps {
   title: string;
   boardTitle: string;
   boardId: string;
   position: { x: number; y: number };
+  nodeTypes: () => DenimNodeType[];
   /** The caller supplies the relationship-specific or whole-Board query. */
   queryNodes: () => Promise<DenimNodeVisibilityEntry[]>;
   setNodeLoaded: (nodeId: string, loaded: boolean, boardId: string) => Promise<{ ok: boolean; error?: string }>;
@@ -116,7 +108,7 @@ export function DenimNodeVisibilityMenu(props: DenimNodeVisibilityMenuProps) {
       <div class="denim-node-visibility-menu__list" role="list" aria-label="Nodes">
         <Show when={!loading()} fallback={<div class="denim-node-visibility-menu__empty">Loading Nodes…</div>}>
           <Show when={filteredEntries().length > 0} fallback={<div class="denim-node-visibility-menu__empty">No Nodes match this filter.</div>}>
-            <For each={filteredEntries()}>{(entry) => <DenimNodeVisibilityItem entry={entry} onToggle={() => void toggle(entry)} />}</For>
+            <For each={filteredEntries()}>{(entry) => <DenimNodeVisibilityItem entry={entry} nodeTypes={props.nodeTypes} onToggle={() => void toggle(entry)} />}</For>
           </Show>
         </Show>
       </div>
@@ -124,8 +116,8 @@ export function DenimNodeVisibilityMenu(props: DenimNodeVisibilityMenuProps) {
   </Portal>;
 }
 
-function DenimNodeVisibilityItem(props: { entry: DenimNodeVisibilityEntry; onToggle: () => void }) {
-  const slot = () => NODE_THEME_SLOT[props.entry.node.type] ?? 1;
+function DenimNodeVisibilityItem(props: { entry: DenimNodeVisibilityEntry; onToggle: () => void; nodeTypes: () => DenimNodeType[] }) {
+  const slot = () => props.nodeTypes().find((type) => type.name === props.entry.node.type)?.themeSlot ?? 1;
   return <div class="denim-node-visibility-item" role="listitem"
     style={{ background: `var(--theme-bg-${slot()})` }}>
     <div class="denim-node-visibility-item__content">

@@ -13,14 +13,14 @@ relationships and contents were not specified in the source request.
 
 ## Journey structure
 
-- **DTERM1.** [p] **Journey** — a business flow or similar, represented through Actions.
-  - A Journey has Actions as child nodes. `parent-of(action, journey)`
+- **DTERM1.** [p] **Journey** — a business flow or similar, represented through User Actions.
+  - A Journey has User Actions as child nodes. `parent-of(user-action, journey)`
 
-- **DTERM2.** [p] **Action** — an abstract description of behavior a user observes.
-  - An Action can have Actions as child nodes.
-  - An Action can have Capabilities as child nodes.
+- **DTERM2.** [p] **User Action** — an abstract description of behavior a user observes.
+  - A User Action can have User Actions as child nodes.
+  - A User Action can have Capabilities as child nodes.
 
-- **DTERM3.** [p] **Capability** — a node type that an Action can have and an Instance can fulfill.
+- **DTERM3.** [p] **Capability** — a node type that a User Action can have and an Instance can fulfill.
   - A Capability can have Capabilities as child nodes.
   - An Instance fulfills a Capability. `fulfills(instance, capability)`
 
@@ -48,7 +48,7 @@ relationships and contents were not specified in the source request.
 
 - **DTERM11.** [p] **Denim App Toolbar** — an always-visible toolbar below the Luminous header bar, organized into sections.
 
-- **DTERM12.** [p] **Quick Select** — a speedy icon in the Denim App Toolbar that opens a dropdown of built-in Boards.
+- **DTERM12.** [p] **Quick Select** — the lightning-bolt button in the Denim App Toolbar that opens a general menu of app-level actions.
 
 - **DTERM13.** [p] **Board Strip** — the second section of the Denim App Toolbar, which shows open Boards using tab navigation.
 
@@ -67,7 +67,7 @@ relationships and contents were not specified in the source request.
 
 - **DTERM19.** [p] **Contains edge** — an Edge of type `contains` directed from a Container's head Node to a Node inside it.
 
-- **DTERM20.** [p] **Container** — a canvas component represented by a head Node, with Nodes linked to that head by `contains` Edges inside it.
+- **DTERM20.** [p] **Container** — a persistent component represented by a head Node, with member Nodes linked to that head by `contains` Edges. Its identity and membership are shared across Boards; its bounds are saved per Board.
 
 - **DTERM21.** [p] **Container Toolbar** — a toolbar inside the top-left of a Container's area, below its header, using the Node Toolbar's always-visible and hover-revealed icon pattern.
 
@@ -85,11 +85,17 @@ relationships and contents were not specified in the source request.
 
 - **DTERM29.** [p] **Upstream / Downstream** — for a directed Edge `A → B`, A is upstream of B and B is downstream of A. On a differentiated Node relationship, the parent is upstream and its child is downstream; downstream follows the Edge arrow direction.
 
-- **DTERM31.** [p] **Board Context Menu** — a context menu opened by right-clicking the bare canvas background. It currently offers Add node.
+- **DTERM31.** [p] **Board Context Menu** — a context menu opened by right-clicking the bare canvas background, offering Add node and Create new node.
 
 - **DTERM32.** [p] **Node Visibility Menu** — a shared component that lists Nodes returned by a caller-provided query and lets the user load or unload each Node on a Board. Visibility means Board membership: loaded Nodes appear in the projection; Nodes not loaded onto the Board do not.
 
 - **DTERM33.** [p] **Node Visibility Item** — a wide, type-colored row in the Node Visibility Menu showing one Node's type and text with a control to load it onto or unload it from the current Board.
+
+## Graph Primitives
+
+- **DTERM36.** [p] **Graph Primitive** — a visual UI control that lets users input design information beyond manipulating a graph, while creating graph Nodes and Edges under the hood.
+
+- **DTERM37.** [p] **Sequence Container** — a Graph Primitive that presents Nodes as an ordered sequence in Special Presentation or Graph Presentation.
 
 ## Relationship priority
 

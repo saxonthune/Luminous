@@ -81,14 +81,14 @@ describe('Denim actions', () => {
   it('deletes a single edge and preserves both endpoint Nodes', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'parent', type: 'Journey', text: 'Parent' });
-    addDenimNode(db, { id: 'child', type: 'Action', text: 'Child' });
+    addDenimNode(db, { id: 'child', type: 'User Action', text: 'Child' });
     applyDenimAction(db, { op: 'edge.connect', parentId: 'parent', childId: 'child', edgeId: 'parent-child' });
 
     expect(applyDenimAction(db, { op: 'edge.delete', edgeId: 'parent-child' })).toMatchObject({ changed: true });
     expect(getDenimGraph(db)).toEqual({
       nodes: [
         { id: 'parent', type: 'Journey', text: 'Parent' },
-        { id: 'child', type: 'Action', text: 'Child' },
+        { id: 'child', type: 'User Action', text: 'Child' },
       ],
       edges: [],
     });
@@ -99,8 +99,8 @@ describe('Denim actions', () => {
   it('applies board and sequence actions and reports the graph with available boards', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
-    addDenimNode(db, { id: 'a', type: 'Action', text: 'A' });
-    addDenimNode(db, { id: 'b', type: 'Action', text: 'B' });
+    addDenimNode(db, { id: 'a', type: 'User Action', text: 'A' });
+    addDenimNode(db, { id: 'b', type: 'User Action', text: 'B' });
     addDenimNode(db, { id: 'resource', type: 'Instance', text: 'Instance' });
     applyDenimAction(db, { op: 'edge.connect', parentId: 'journey', childId: 'a', edgeId: 'j-a' });
     applyDenimAction(db, { op: 'edge.connect', parentId: 'journey', childId: 'b', edgeId: 'j-b' });
@@ -129,9 +129,11 @@ describe('Denim actions', () => {
 
   it('publishes a discoverable catalog for the full action vocabulary', () => {
     expect(DENIM_ACTION_CATALOG.map(({ op }) => op)).toEqual([
-      'journey.create', 'node.create', 'node.differentiate', 'edge.connect', 'edge.delete', 'container.attach', 'container.detach',
-      'node.update', 'node.delete', 'edge.priority.set', 'sequence.initialize', 'sequence.clear', 'board.read',
-      'board.container.spawn', 'board.container.move', 'board.container.resize', 'container.node.create', 'container.nodes.create',
+      'journey.create', 'node.type.create', 'node.type.rename', 'node.create', 'node.upsert', 'edge.upsert',
+      'node.differentiate', 'edge.connect', 'edge.delete', 'container.attach', 'container.detach', 'container.create',
+      'node.update', 'node.delete', 'edge.priority.set', 'sequence.initialize', 'sequence.clear',
+      'sequenceContainer.create', 'sequenceContainer.presentation.set', 'board.read', 'board.create',
+      'board.container.move', 'board.container.resize', 'container.node.create', 'container.nodes.create',
       'board.sequenceMode.set', 'board.node.load.set', 'board.node.move', 'board.nodes.move',
       'board.openJourney', 'board.close',
     ]);

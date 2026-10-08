@@ -5,6 +5,7 @@ import { AppShell } from './AppShell';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('No root element');
+document.getElementById('boot-status')?.remove();
 performance.mark('luminous:main-evaluated');
 performance.measure('luminous:html-to-main', 'luminous:html-entry', 'luminous:main-evaluated');
 if (import.meta.env.DEV) {

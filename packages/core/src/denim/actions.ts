@@ -3,8 +3,11 @@ import {
   addDenimEdge,
   clearDenimSequence,
   connectDenimChild,
+  createDenimSequenceContainer,
+  createDenimNodeType,
   createDenimChild,
   createDenimContainedNode,
+  createDenimContainerIfMissing,
   deleteDenimNode,
   deleteDenimNodeAndChildren,
   deleteDenimEdge,
@@ -12,11 +15,14 @@ import {
   getDenimContainment,
   getDenimGraph,
   getDenimNode,
+  getDenimSequenceContainerByOwner,
   hasDenimEdge,
   initializeDenimSequence,
   listDenimDescendantIds,
+  listDenimContainers,
   listDenimNodeIds,
   removeDenimBoard,
+  renameDenimNodeType,
   replaceDenimContainment,
   runDenimTransaction,
   updateDenimEdgePriority,
@@ -28,6 +34,7 @@ import {
 } from './database.ts';
 import {
   getDenimBoardGraph,
+  ensureLoadedContainerPlacements,
   loadNodeOnSourceBoards,
   putBoard,
   readDenimBoards,
@@ -42,6 +49,8 @@ export type { DenimBoard, DenimBoardContainer, DenimQuerySource } from './board.
 
 export type DenimAction =
   | { op: 'journey.create'; id?: string; text?: string }
+  | { op: 'node.type.create'; name: string }
+  | { op: 'node.type.rename'; typeId: string; name: string }
   | { op: 'node.create'; id?: string; type: string; text: string; placement?: { boardId: string; x: number; y: number } }
   | { op: 'node.upsert'; id?: string; uniqueKey: string; type: string; text: string }
   | { op: 'edge.upsert'; id?: string; uniqueKey: string; type: string; sourceId: string; targetId: string; priority?: number | null }
@@ -50,13 +59,16 @@ export type DenimAction =
   | { op: 'edge.delete'; edgeId: string }
   | { op: 'container.attach'; boardId: string; containerNodeId: string; nodeId: string; position: { x: number; y: number } }
   | { op: 'container.detach'; containerNodeId: string; nodeId: string }
+  | { op: 'container.create'; boardId: string; ownerNodeId: string; container: DenimBoardContainer; id?: string }
   | { op: 'node.update'; id: string; patch: Partial<Pick<DenimNode, 'type' | 'text' | 'uniqueKey'>> }
   | { op: 'node.delete'; id: string; scope: 'node' | 'subtree' }
   | { op: 'edge.priority.set'; edgeId: string; priority: number }
   | { op: 'sequence.initialize'; parentId: string; orderedChildIds: string[] }
   | { op: 'sequence.clear'; parentId: string }
+  | { op: 'sequenceContainer.create'; boardId: string; ownerNodeId: string; container: DenimBoardContainer; id?: string }
+  | { op: 'sequenceContainer.presentation.set'; boardId: string; ownerNodeId: string; presentation: 'special' | 'graph' }
   | { op: 'board.read'; boardId: string }
-  | { op: 'board.container.spawn'; boardId: string; headNodeId: string; container: DenimBoardContainer }
+  | { op: 'board.create'; id?: string; title?: string }
   | { op: 'board.container.move'; boardId: string; headNodeId: string; position: { x: number; y: number }; carriedPositions?: Record<string, { x: number; y: number }>; carriedContainers?: Record<string, { x: number; y: number }> }
   | { op: 'board.container.resize'; boardId: string; headNodeId: string; size: { width: number; height: number } }
   | { op: 'container.node.create'; boardId: string; headNodeId: string; id?: string; edgeId?: string }
@@ -70,6 +82,8 @@ export type DenimAction =
 
 export const DENIM_ACTION_CATALOG = [
   { op: 'journey.create', required: [], optional: ['id', 'text'], purpose: 'Create a Journey Node.' },
+  { op: 'node.type.create', required: ['name'], optional: [], purpose: 'Create a Node type.' },
+  { op: 'node.type.rename', required: ['typeId', 'name'], optional: [], purpose: 'Rename a Node type and its Nodes.' },
   { op: 'node.create', required: ['type', 'text'], optional: ['id', 'placement'], purpose: 'Create an unconnected Node, optionally placing and including it on a Board.' },
   { op: 'node.upsert', required: ['uniqueKey', 'type', 'text'], optional: ['id'], purpose: 'Create or update a Node by its stable unique key, preserving its database ID.' },
   { op: 'edge.upsert', required: ['uniqueKey', 'type', 'sourceId', 'targetId'], optional: ['id', 'priority'], purpose: 'Create or update an Edge by its stable unique key, preserving its database ID.' },
@@ -78,19 +92,22 @@ export const DENIM_ACTION_CATALOG = [
   { op: 'edge.delete', required: ['edgeId'], optional: [], purpose: 'Delete one edge while keeping its endpoint Nodes.' },
   { op: 'container.attach', required: ['boardId', 'containerNodeId', 'nodeId', 'position'], optional: [], purpose: 'Attach and position an existing Node in a Container, replacing its previous containment Edge.' },
   { op: 'container.detach', required: ['containerNodeId', 'nodeId'], optional: [], purpose: 'Remove a contains Edge while keeping the Node and its current Board presence.' },
+  { op: 'container.create', required: ['boardId', 'ownerNodeId', 'container'], optional: ['id'], purpose: 'Create a shared regular Container for an owner Node and place it on this Board.' },
   { op: 'node.update', required: ['id', 'patch'], optional: [], purpose: 'Change a Node type or text.' },
   { op: 'node.delete', required: ['id', 'scope'], optional: [], purpose: 'Delete one Node or its full descendant subtree; scope is node or subtree.' },
   { op: 'edge.priority.set', required: ['edgeId', 'priority'], optional: [], purpose: 'Set an edge sequence priority.' },
   { op: 'sequence.initialize', required: ['parentId', 'orderedChildIds'], optional: [], purpose: 'Assign priorities in the supplied child order.' },
   { op: 'sequence.clear', required: ['parentId'], optional: [], purpose: 'Clear priorities on all child edges.' },
+  { op: 'sequenceContainer.create', required: ['boardId', 'ownerNodeId', 'container'], optional: ['id'], purpose: 'Create a shared Sequence Container if needed and load it onto a Board.' },
+  { op: 'sequenceContainer.presentation.set', required: ['boardId', 'ownerNodeId', 'presentation'], optional: [], purpose: 'Set the Sequence Container presentation on one Board.' },
   { op: 'board.read', required: ['boardId'], optional: [], purpose: 'Read a Board and its query projection.' },
-  { op: 'board.container.spawn', required: ['boardId', 'headNodeId', 'container'], optional: [], purpose: 'Spawn a Board container represented by a Node.' },
+  { op: 'board.create', required: [], optional: ['id', 'title'], purpose: 'Create a new persistent Board with no query sources.' },
   { op: 'board.container.move', required: ['boardId', 'headNodeId', 'position'], optional: ['carriedPositions', 'carriedContainers'], purpose: 'Move a Board container, its visually contained Nodes, and their nested Containers.' },
   { op: 'board.container.resize', required: ['boardId', 'headNodeId', 'size'], optional: [], purpose: 'Resize a Board container.' },
   { op: 'container.node.create', required: ['boardId', 'headNodeId'], optional: ['id', 'edgeId'], purpose: 'Create a Node inside a Container, using the container owner Node type.' },
   { op: 'container.nodes.create', required: ['boardId', 'headNodeId', 'nodes'], optional: [], purpose: 'Create a set of typed Nodes with labels and positions inside one Container.' },
   { op: 'board.sequenceMode.set', required: ['boardId', 'parentId', 'mode'], optional: [], purpose: 'Set a parent label mode on a Board to rank or priority.' },
-  { op: 'board.node.load.set', required: ['boardId', 'nodeId', 'loaded'], optional: [], purpose: 'Load a Node onto a Board or unload it from that Board without changing shared graph data.' },
+  { op: 'board.node.load.set', required: ['boardId', 'nodeId', 'loaded'], optional: [], purpose: 'Load or unload a Node on a Board; loading an owner also places its regular Container on that Board when one exists.' },
   { op: 'board.node.move', required: ['boardId', 'nodeId', 'position'], optional: [], purpose: 'Save a Node position on a Board.' },
   { op: 'board.nodes.move', required: ['boardId', 'positions'], optional: [], purpose: 'Save multiple Node positions on a Board as one action.' },
   { op: 'board.openJourney', required: ['journeyId'], optional: ['boardId'], purpose: 'Create a persistent Board sourced from a Journey.' },
@@ -106,6 +123,7 @@ export interface DenimActionResult {
   boardId?: string;
   board?: DenimBoard;
   graph?: ReturnType<typeof getDenimBoardGraph>;
+  sequenceContainerId?: string;
 }
 
 const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -129,6 +147,19 @@ function handleJourneyCreate(db: DenimDatabase, action: ActionFor<'journey.creat
   addDenimNode(db, { id: nodeId, type: 'Journey', text: action.text ?? 'New journey' });
   loadNodeOnSourceBoards(db, nodeId);
   return { ok: true, changed: true, nodeId };
+}
+
+function handleNodeTypeCreate(db: DenimDatabase, action: ActionFor<'node.type.create'>): DenimActionResult {
+  if (typeof action.name !== 'string') throw new Error('Node type name must be text');
+  const result = createDenimNodeType(db, action.name);
+  return { ok: true, changed: result.changed };
+}
+
+function handleNodeTypeRename(db: DenimDatabase, action: ActionFor<'node.type.rename'>): DenimActionResult {
+  if (typeof action.typeId !== 'string' || !action.typeId) throw new Error('Node type ID must be nonempty text');
+  if (typeof action.name !== 'string') throw new Error('Node type name must be text');
+  const result = renameDenimNodeType(db, action.typeId, action.name);
+  return { ok: true, changed: result.changed };
 }
 
 function handleNodeCreate(db: DenimDatabase, action: ActionFor<'node.create'>): DenimActionResult {
@@ -292,24 +323,87 @@ function handleSequenceClear(db: DenimDatabase, action: ActionFor<'sequence.clea
   return { ok: true, changed: true };
 }
 
+function handleSequenceContainerCreate(db: DenimDatabase, action: ActionFor<'sequenceContainer.create'>): DenimActionResult {
+  const board = requireBoard(db, action.boardId);
+  const owner = requireNode(db, action.ownerNodeId);
+  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === owner.id)) {
+    throw new Error(`Sequence Container owner Node is not on Board: ${owner.id}`);
+  }
+  const existingPrimitive = getDenimSequenceContainerByOwner(db, owner.id);
+  const currentPlacement = board.containers[owner.id];
+  if (existingPrimitive && currentPlacement?.sequenceContainerId === existingPrimitive.id) {
+    return { ok: true, changed: false, nodeId: owner.id, boardId: board.id, sequenceContainerId: existingPrimitive.id };
+  }
+  if (!currentPlacement && ![action.container?.x, action.container?.y, action.container?.width, action.container?.height].every(Number.isFinite)) {
+    throw new Error('Sequence Container bounds must be finite');
+  }
+  const bounds = currentPlacement ?? action.container;
+  if (![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite) || bounds.width <= 0 || bounds.height <= 0) {
+    throw new Error('Sequence Container bounds must have finite position and positive size');
+  }
+  const primitive = existingPrimitive ?? createDenimSequenceContainer(db, {
+    id: action.id ?? newId('sequence-container'), ownerNodeId: owner.id,
+  });
+  putBoard(db, { ...board, containers: { ...board.containers, [owner.id]: {
+    ...bounds, sequenceContainerId: primitive.id,
+    presentation: currentPlacement?.sequenceContainerId ? currentPlacement.presentation ?? 'special' : 'special',
+  } } });
+  return { ok: true, changed: true, nodeId: owner.id, boardId: board.id, sequenceContainerId: primitive.id };
+}
+
+function handleSequenceContainerPresentationSet(db: DenimDatabase, action: ActionFor<'sequenceContainer.presentation.set'>): DenimActionResult {
+  if (action.presentation !== 'special' && action.presentation !== 'graph') throw new Error('Unknown Sequence Container presentation');
+  const board = requireBoard(db, action.boardId);
+  const placement = board.containers[action.ownerNodeId];
+  const primitive = getDenimSequenceContainerByOwner(db, action.ownerNodeId);
+  if (!placement || !primitive || placement.sequenceContainerId !== primitive.id) {
+    throw new Error(`Sequence Container is not loaded on Board: ${action.ownerNodeId}`);
+  }
+  if ((placement.presentation ?? 'special') === action.presentation) {
+    return { ok: true, changed: false, nodeId: action.ownerNodeId, boardId: board.id, sequenceContainerId: primitive.id };
+  }
+  putBoard(db, { ...board, containers: { ...board.containers, [action.ownerNodeId]: { ...placement, presentation: action.presentation } } });
+  return { ok: true, changed: true, nodeId: action.ownerNodeId, boardId: board.id, sequenceContainerId: primitive.id };
+}
+
 function handleBoardRead(db: DenimDatabase, action: ActionFor<'board.read'>): DenimActionResult {
   const board = requireBoard(db, action.boardId);
   return { ok: true, changed: false, boardId: board.id, board, graph: getDenimBoardGraph(db, board) };
 }
 
-function handleBoardContainerSpawn(db: DenimDatabase, action: ActionFor<'board.container.spawn'>): DenimActionResult {
+function handleBoardCreate(db: DenimDatabase, action: ActionFor<'board.create'>): DenimActionResult {
+  if (action.id !== undefined && (typeof action.id !== 'string' || !action.id.trim())) throw new Error('Board ID must be nonempty text');
+  if (action.title !== undefined && typeof action.title !== 'string') throw new Error('Board title must be text');
+  const id = action.id ?? newId('board');
+  if (readDenimBoards(db).some((board) => board.id === id)) throw new Error(`Board already exists: ${id}`);
+  const requestedTitle = action.title?.trim();
+  let title = requestedTitle || 'New Board';
+  if (!requestedTitle) {
+    const existingTitles = new Set(readDenimBoards(db).map((board) => board.title));
+    let suffix = 2;
+    while (existingTitles.has(title)) title = `New Board ${suffix++}`;
+  }
+  putBoard(db, { version: 1, id, kind: 'board', title, sources: [], loadedNodeIds: [], positions: {}, sequenceModes: {}, containers: {} });
+  return { ok: true, changed: true, boardId: id };
+}
+
+function handleContainerCreate(db: DenimDatabase, action: ActionFor<'container.create'>): DenimActionResult {
   const board = requireBoard(db, action.boardId);
-  requireNode(db, action.headNodeId);
-  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.headNodeId)) {
-    throw new Error(`Container head Node is not on Board: ${action.headNodeId}`);
+  requireNode(db, action.ownerNodeId);
+  if (!getDenimBoardGraph(db, board).nodes.some((node) => node.id === action.ownerNodeId)) {
+    throw new Error(`Container owner Node is not on Board: ${action.ownerNodeId}`);
   }
   if (![action.container?.x, action.container?.y, action.container?.width, action.container?.height].every(Number.isFinite)
     || action.container.width <= 0 || action.container.height <= 0) {
     throw new Error('Container bounds must have finite position and positive size');
   }
-  if (board.containers[action.headNodeId]) return { ok: true, changed: false, nodeId: action.headNodeId, boardId: board.id };
-  putBoard(db, { ...board, containers: { ...board.containers, [action.headNodeId]: action.container } });
-  return { ok: true, changed: true, nodeId: action.headNodeId, boardId: board.id };
+  let created = false;
+  const needsPlacement = !board.containers[action.ownerNodeId];
+  runDenimTransaction(db, () => {
+    created = createDenimContainerIfMissing(db, { id: action.id ?? newId('container'), ownerNodeId: action.ownerNodeId }).changed;
+    if (needsPlacement) putBoard(db, { ...board, containers: { ...board.containers, [action.ownerNodeId]: action.container } });
+  });
+  return { ok: true, changed: created || needsPlacement, nodeId: action.ownerNodeId, boardId: board.id };
 }
 
 function handleBoardContainerMove(db: DenimDatabase, action: ActionFor<'board.container.move'>): DenimActionResult {
@@ -414,7 +508,8 @@ function handleBoardNodeLoadSet(db: DenimDatabase, action: ActionFor<'board.node
   if (wasLoaded === action.loaded) return { ok: true, changed: false, boardId: board.id };
   const loaded = new Set(board.loadedNodeIds);
   if (action.loaded) loaded.add(action.nodeId); else loaded.delete(action.nodeId);
-  putBoard(db, { ...board, loadedNodeIds: [...loaded] });
+  const updated = ensureLoadedContainerPlacements(db, { ...board, loadedNodeIds: [...loaded] }, readDenimBoards(db));
+  putBoard(db, updated);
   return { ok: true, changed: true, boardId: board.id };
 }
 
@@ -460,6 +555,8 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
   if (!action || typeof action !== 'object' || typeof action.op !== 'string') throw new Error('Invalid Denim action');
   switch (action.op) {
     case 'journey.create': return handleJourneyCreate(db, action);
+    case 'node.type.create': return handleNodeTypeCreate(db, action);
+    case 'node.type.rename': return handleNodeTypeRename(db, action);
     case 'node.create': return handleNodeCreate(db, action);
     case 'node.upsert': return handleNodeUpsert(db, action);
     case 'edge.upsert': return handleEdgeUpsert(db, action);
@@ -468,13 +565,16 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
     case 'edge.delete': return handleEdgeDelete(db, action);
     case 'container.attach': return handleContainerAttach(db, action);
     case 'container.detach': return handleContainerDetach(db, action);
+    case 'container.create': return handleContainerCreate(db, action);
     case 'node.update': return handleNodeUpdate(db, action);
     case 'node.delete': return handleNodeDelete(db, action);
     case 'edge.priority.set': return handleEdgePrioritySet(db, action);
     case 'sequence.initialize': return handleSequenceInitialize(db, action);
     case 'sequence.clear': return handleSequenceClear(db, action);
+    case 'sequenceContainer.create': return handleSequenceContainerCreate(db, action);
+    case 'sequenceContainer.presentation.set': return handleSequenceContainerPresentationSet(db, action);
     case 'board.read': return handleBoardRead(db, action);
-    case 'board.container.spawn': return handleBoardContainerSpawn(db, action);
+    case 'board.create': return handleBoardCreate(db, action);
     case 'board.container.move': return handleBoardContainerMove(db, action);
     case 'board.container.resize': return handleBoardContainerResize(db, action);
     case 'container.node.create': return handleContainerNodeCreate(db, action);
@@ -491,5 +591,5 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
 
 /** Read the graph and its persistent Boards so agents can understand a database. */
 export function readDenimSnapshot(db: DenimDatabase) {
-  return { graph: getDenimGraph(db), boards: readDenimBoards(db) };
+  return { graph: getDenimGraph(db), boards: readDenimBoards(db), containers: listDenimContainers(db) };
 }

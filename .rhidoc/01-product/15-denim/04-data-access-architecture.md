@@ -1,6 +1,6 @@
 ---
 title: Data Access Architecture
-summary: Denim separates SQLite access from canvas components through a per-database session that owns Board state, edits, and saving.
+summary: Denim stores shared graph and regular Container identity in SQLite while each Board keeps its loaded Nodes and spatial arrangement.
 tags: [denim, architecture, sqlite, components, testing, state, boards]
 deps: [doc01.15.01, doc01.15.02]
 ---
@@ -11,16 +11,27 @@ deps: [doc01.15.01, doc01.15.02]
 
 - The `@luminous/core/denim` database module owns sql.js initialization, schema,
   queries, and database mutations. It has no Solid components or canvas state.
+- `denim_node_types` stores each type's stable ID, name, and visual theme slot.
+  Existing Node rows continue to store the type name; opening an older database
+  seeds the registry from the names already in use. Node creation ensures its
+  type is registered, and renaming a type updates its Nodes in one transaction.
+  The session reads the registry at startup and refreshes it after actions, so
+  the type selector and Types page use database-backed values.
 - Nodes and Edges keep UUID primary IDs and may also carry one nullable,
   unique `unique_key` string. The key lets generated or imported records keep
   their identity across refreshes without replacing their database IDs.
+- `denim_containers` stores the durable identity of each regular Container and
+  its owner Node. A regular Container has one owner; its member relationships
+  remain `contains` Edges in the shared `edges` table. Deleting the owner also
+  deletes its Container record and connected Edges.
 - Each open database has one client-side session. The session owns the database
   handle, collection of Boards, active Board, reactive projection, and
   file-save state.
 - A Board is a persistent document, not a query result. Its persisted JSON
   payload can contain multiple source descriptors, the exact loaded Node ID set,
-  per-Board node positions, and sequence display settings. Nodes and Edges
-  remain shared database data; Boards store references to the Nodes they load.
+  per-Board node positions, regular Container bounds, and sequence display
+  settings. Container identity and membership remain shared database data;
+  Boards store references to the Nodes they load and local Container bounds.
   The SQLite table stores the payload as opaque JSON so a Board can evolve
   without changing the table schema.
 - The current source descriptors seed Boards from Journeys, Capabilities,
@@ -63,7 +74,8 @@ coordinate a database edit with the visible canvas state.
 - Graph actions include `journey.create`, `node.create`, `node.upsert`,
   `node.differentiate`, `node.update`, `node.delete`, `edge.connect`,
   `edge.upsert`, `edge.delete`, `edge.priority.set`, `sequence.initialize`, and
-  `sequence.clear`. The upsert actions match on `unique_key`, preserve an
+  `sequence.clear`, plus `container.create`, `container.attach`, and
+  `container.detach`. The upsert actions match on `unique_key`, preserve an
   existing UUID, and create a record when the key is new. `node.delete` names either `node` scope, which keeps
   descendants as independent Nodes on Boards where the deleted Node appeared,
   or `subtree` scope, which removes all descendants.
@@ -72,12 +84,15 @@ coordinate a database edit with the visible canvas state.
   `board.sequenceMode.set`. `board.read` returns the Board definition and the
   graph produced from its loaded Nodes without changing the
   database.
-- A database snapshot exposes its graph and Boards so an agent can
-  inspect the current design before submitting an action.
+- A database snapshot exposes its graph, shared Container records, and Boards
+  so an agent can inspect the current design before submitting an action.
 - The action catalog lists each operation and its required and optional
   fields. The CLI exposes the catalog, snapshot, and action request commands.
 - `board.node.load.set` adds a Node to or removes it from a Board's exact loaded
-  Node set. Loading or unloading never deletes shared graph data or Edges.
+  Node set. Loading a Node that owns a regular Container also ensures that
+  Container has a Board-local placement. It reuses another Board's placement
+  when available and derives a default placement otherwise. Loading or
+  unloading never deletes shared graph data or Edges.
 - Read queries are separate from mutation actions. `board.nodes.list` returns
   all Nodes with per-Board loaded state; `node.downstream.list`
   and `container.members.list` return direct relationship members with those
@@ -138,6 +153,10 @@ not submit the plan. Review the output before applying it with `just denim batch
 
 - Creating a child inserts its node and parent-child edge in one SQLite
   transaction. Connecting an existing node inserts only the edge.
+- `container.create` creates the shared regular Container record and saves
+  its initial bounds on the active Board. Later Boards can show that same
+  Container with independent bounds. The existing Container population controls
+  continue to load member Nodes individually.
 - Including a Node on a Board updates that Board's membership without changing
   graph edges. Dragging a Node saves its position on the active Board, so
   another Board can arrange the same Node independently.

@@ -10,6 +10,24 @@ export interface DenimNode {
   uniqueKey?: string | null;
 }
 
+export interface DenimNodeType {
+  id: string;
+  name: string;
+  themeSlot: number;
+}
+
+export interface DenimSequenceContainer {
+  id: string;
+  ownerNodeId: string;
+  data: Record<string, unknown>;
+}
+
+export interface DenimContainer {
+  id: string;
+  ownerNodeId: string;
+  data: Record<string, unknown>;
+}
+
 export interface DenimEdge {
   id: string;
   type: string;
@@ -27,6 +45,7 @@ export interface DenimGraph {
 
 export const PARENT_CHILD = 'parent-child';
 export const JOURNEY_TYPE = 'Journey';
+export const USER_ACTION_TYPE = 'User Action';
 export const INSTANCE_TYPE = 'Instance';
 export const CAPABILITY_TYPE = 'Capability';
 
@@ -45,6 +64,11 @@ async function sql(wasm?: string | Uint8Array): Promise<SqlJsStatic> {
 
 const SCHEMA = `
   PRAGMA foreign_keys = ON;
+  CREATE TABLE IF NOT EXISTS denim_node_types (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    theme_slot INTEGER NOT NULL DEFAULT 1
+  );
   CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
@@ -67,15 +91,29 @@ const SCHEMA = `
     id TEXT PRIMARY KEY,
     payload_json TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS denim_sequence_containers (
+    id TEXT PRIMARY KEY,
+    owner_node_id TEXT NOT NULL UNIQUE REFERENCES nodes(id) ON DELETE CASCADE,
+    data_json TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE TABLE IF NOT EXISTS denim_containers (
+    id TEXT PRIMARY KEY,
+    owner_node_id TEXT NOT NULL UNIQUE REFERENCES nodes(id) ON DELETE CASCADE,
+    data_json TEXT NOT NULL DEFAULT '{}'
+  );
 `;
 
 export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint8Array): Promise<Database> {
   const SQL = await sql(wasm);
   const db = bytes ? new SQL.Database(bytes) : new SQL.Database();
   db.exec(SCHEMA);
+  const schemaVersion = Number(db.exec('PRAGMA user_version')[0]?.values[0]?.[0] ?? 0);
   // Node kinds are stored as text values, so rename existing Resource nodes
   // when opening databases created by earlier Denim versions.
   db.run('UPDATE nodes SET type = ? WHERE type = ?', [INSTANCE_TYPE, 'Resource']);
+  // Preserve existing graphs while adopting the more specific node type name.
+  // Run once so future user-created types named "Action" remain user data.
+  if (schemaVersion < 6) db.run('UPDATE nodes SET type = ? WHERE type = ?', [USER_ACTION_TYPE, 'Action']);
   const tables = rows<{ name: string }>(db, "SELECT name FROM sqlite_master WHERE type = 'table'");
   if (tables.some((table) => table.name === 'denim_workspaces')) {
     const legacy = rows<{ id: string; payload_json: string }>(db,
@@ -119,12 +157,34 @@ export async function openDenimDatabase(bytes?: Uint8Array, wasm?: string | Uint
   if (!edgeColumns.some((column) => column.name === 'unique_key')) {
     db.run('ALTER TABLE edges ADD COLUMN unique_key TEXT NULL');
   }
+  if (schemaVersion < 7) {
+    for (const { type } of rows<{ type: string }>(db, 'SELECT DISTINCT type FROM nodes ORDER BY type')) {
+      ensureDenimNodeType(db, type);
+    }
+  }
   // SQLite permits multiple NULLs in a unique index, so manual/unmanaged
   // records can remain unkeyed while importer-managed identities stay unique.
   db.run('CREATE UNIQUE INDEX IF NOT EXISTS nodes_by_unique_key ON nodes(unique_key)');
   db.run('CREATE UNIQUE INDEX IF NOT EXISTS edges_by_unique_key ON edges(unique_key)');
-  db.run('PRAGMA user_version = 5');
+  if (schemaVersion < 9) migrateBoardContainers(db);
+  db.run('PRAGMA user_version = 9');
   return db;
+}
+
+function migrateBoardContainers(db: Database): void {
+  for (const { payload_json } of rows<{ payload_json: string }>(db, 'SELECT payload_json FROM denim_boards ORDER BY rowid')) {
+    let payload: unknown;
+    try { payload = JSON.parse(payload_json) as unknown; } catch { continue; }
+    if (!payload || typeof payload !== 'object') continue;
+    const containers = (payload as { containers?: unknown }).containers;
+    if (!containers || typeof containers !== 'object' || Array.isArray(containers)) continue;
+    for (const [ownerNodeId, bounds] of Object.entries(containers)) {
+      if (!bounds || typeof bounds !== 'object' || typeof (bounds as { sequenceContainerId?: unknown }).sequenceContainerId === 'string') continue;
+      if (!rows<{ id: string }>(db, 'SELECT id FROM nodes WHERE id = ?', [ownerNodeId]).length) continue;
+      db.run('INSERT OR IGNORE INTO denim_containers (id, owner_node_id, data_json) VALUES (?, ?, ?)',
+        [`container-${crypto.randomUUID()}`, ownerNodeId, '{}']);
+    }
+  }
 }
 
 export function exportDenimDatabase(db: Database): Uint8Array {
@@ -154,6 +214,38 @@ export function putDenimBoard(db: Database, record: DenimBoardRecord): void {
 
 export function removeDenimBoard(db: Database, id: string): void {
   db.run('DELETE FROM denim_boards WHERE id = ?', [id]);
+}
+
+function decodeDenimContainer(row: { id: string; owner_node_id: string; data_json: string }): DenimContainer {
+  let data: unknown;
+  try { data = JSON.parse(row.data_json) as unknown; } catch { data = undefined; }
+  return {
+    id: row.id,
+    ownerNodeId: row.owner_node_id,
+    data: data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, unknown> : {},
+  };
+}
+
+export function getDenimContainerByOwner(db: Database, ownerNodeId: string): DenimContainer | undefined {
+  const row = rows<{ id: string; owner_node_id: string; data_json: string }>(db,
+    'SELECT id, owner_node_id, data_json FROM denim_containers WHERE owner_node_id = ?', [ownerNodeId])[0];
+  return row ? decodeDenimContainer(row) : undefined;
+}
+
+export function listDenimContainers(db: Database): DenimContainer[] {
+  return rows<{ id: string; owner_node_id: string; data_json: string }>(db,
+    'SELECT id, owner_node_id, data_json FROM denim_containers ORDER BY rowid').map(decodeDenimContainer);
+}
+
+export function createDenimContainerIfMissing(
+  db: Database,
+  input: { id: string; ownerNodeId: string; data?: Record<string, unknown> },
+): { container: DenimContainer; changed: boolean } {
+  const existing = getDenimContainerByOwner(db, input.ownerNodeId);
+  if (existing) return { container: existing, changed: false };
+  db.run('INSERT INTO denim_containers (id, owner_node_id, data_json) VALUES (?, ?, ?)',
+    [input.id, input.ownerNodeId, JSON.stringify(input.data ?? {})]);
+  return { container: getDenimContainerByOwner(db, input.ownerNodeId)!, changed: true };
 }
 
 function rows<T>(db: Database, statement: string, values: unknown[] = []): T[] {
@@ -187,6 +279,31 @@ export function getDenimNodeByUniqueKey(db: Database, uniqueKey: string): DenimN
   return node ? { id: node.id, type: node.type, text: node.text, uniqueKey: node.unique_key } : undefined;
 }
 
+function decodeSequenceContainer(row: { id: string; owner_node_id: string; data_json: string }): DenimSequenceContainer {
+  let data: unknown;
+  try { data = JSON.parse(row.data_json) as unknown; } catch { data = undefined; }
+  return {
+    id: row.id,
+    ownerNodeId: row.owner_node_id,
+    data: data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, unknown> : {},
+  };
+}
+
+export function getDenimSequenceContainerByOwner(db: Database, ownerNodeId: string): DenimSequenceContainer | undefined {
+  const row = rows<{ id: string; owner_node_id: string; data_json: string }>(db,
+    'SELECT id, owner_node_id, data_json FROM denim_sequence_containers WHERE owner_node_id = ?', [ownerNodeId])[0];
+  return row ? decodeSequenceContainer(row) : undefined;
+}
+
+export function createDenimSequenceContainer(
+  db: Database,
+  input: { id: string; ownerNodeId: string; data?: Record<string, unknown> },
+): DenimSequenceContainer {
+  db.run('INSERT INTO denim_sequence_containers (id, owner_node_id, data_json) VALUES (?, ?, ?)',
+    [input.id, input.ownerNodeId, JSON.stringify(input.data ?? {})]);
+  return getDenimSequenceContainerByOwner(db, input.ownerNodeId)!;
+}
+
 export function hasDenimEdge(db: Database, type: string, sourceId: string, targetId: string): boolean {
   return rows<{ present: number }>(db,
     'SELECT 1 AS present FROM edges WHERE type = ? AND source_id = ? AND target_id = ? LIMIT 1',
@@ -195,6 +312,55 @@ export function hasDenimEdge(db: Database, type: string, sourceId: string, targe
 
 export function listDenimNodeIds(db: Database): string[] {
   return rows<{ id: string }>(db, 'SELECT id FROM nodes ORDER BY rowid').map(({ id }) => id);
+}
+
+const BUILTIN_TYPE_THEME_SLOTS: Record<string, number> = {
+  Journey: 1,
+  'User Action': 2,
+  Capability: 5,
+  Instance: 4,
+  Organization: 6,
+  Module: 7,
+  Contract: 8,
+};
+
+function ensureDenimNodeType(db: Database, name: string): DenimNodeType {
+  const existing = rows<DenimNodeType>(db,
+    'SELECT id, name, theme_slot AS themeSlot FROM denim_node_types WHERE name = ?', [name])[0];
+  if (existing) return existing;
+  const id = `node-type-${crypto.randomUUID()}`;
+  const themeSlot = BUILTIN_TYPE_THEME_SLOTS[name] ?? 1;
+  db.run('INSERT INTO denim_node_types (id, name, theme_slot) VALUES (?, ?, ?)', [id, name, themeSlot]);
+  return { id, name, themeSlot };
+}
+
+export function listDenimNodeTypes(db: Database): DenimNodeType[] {
+  return rows(db, 'SELECT id, name, theme_slot AS themeSlot FROM denim_node_types ORDER BY rowid');
+}
+
+export function createDenimNodeType(db: Database, name: string): { type: DenimNodeType; changed: boolean } {
+  const normalized = name.trim();
+  if (!normalized) throw new Error('Node type name must be nonempty text');
+  const existing = rows<DenimNodeType>(db,
+    'SELECT id, name, theme_slot AS themeSlot FROM denim_node_types WHERE name = ?', [normalized])[0];
+  if (existing) return { type: existing, changed: false };
+  return { type: ensureDenimNodeType(db, normalized), changed: true };
+}
+
+export function renameDenimNodeType(db: Database, id: string, name: string): { type: DenimNodeType; changed: boolean } {
+  const normalized = name.trim();
+  if (!normalized) throw new Error('Node type name must be nonempty text');
+  const previous = rows<DenimNodeType>(db,
+    'SELECT id, name, theme_slot AS themeSlot FROM denim_node_types WHERE id = ?', [id])[0];
+  if (!previous) throw new Error(`Node type not found: ${id}`);
+  if (previous.name === normalized) return { type: previous, changed: false };
+  const conflict = rows<{ id: string }>(db, 'SELECT id FROM denim_node_types WHERE name = ?', [normalized])[0];
+  if (conflict) throw new Error(`Node type already exists: ${normalized}`);
+  runDenimTransaction(db, () => {
+    db.run('UPDATE denim_node_types SET name = ? WHERE id = ?', [normalized, id]);
+    db.run('UPDATE nodes SET type = ? WHERE type = ?', [normalized, previous.name]);
+  });
+  return { type: { ...previous, name: normalized }, changed: true };
 }
 
 export function listDenimDescendantIds(db: Database, nodeId: string): string[] {
@@ -278,7 +444,7 @@ export function listTopLevelInstances(db: Database): DenimNode[] {
 export const STARTER_DENIM_GRAPH: DenimGraph = {
   nodes: [
     { id: 'a-user-builds-a-journey', type: JOURNEY_TYPE, text: 'A user builds a journey' },
-    { id: 'user-creates-a-new-journey', type: 'Action', text: 'User creates a new journey' },
+    { id: 'user-creates-a-new-journey', type: USER_ACTION_TYPE, text: 'User creates a new journey' },
   ],
   edges: [{
     id: 'journey-has-action-user-creates-a-new-journey', type: PARENT_CHILD,
@@ -298,11 +464,15 @@ export function hydrateDenimDatabase(db: Database, graph: DenimGraph = STARTER_D
 export const seedDenimDatabase = hydrateDenimDatabase;
 
 export function addDenimNode(db: Database, node: DenimNode): void {
+  ensureDenimNodeType(db, node.type);
   db.run('INSERT INTO nodes (id, type, text, unique_key) VALUES (?, ?, ?, ?)', [node.id, node.type, node.text, node.uniqueKey ?? null]);
 }
 
 export function updateDenimNode(db: Database, id: string, patch: Partial<Pick<DenimNode, 'type' | 'text' | 'uniqueKey'>>): void {
-  if (patch.type !== undefined) db.run('UPDATE nodes SET type = ? WHERE id = ?', [patch.type, id]);
+  if (patch.type !== undefined) {
+    ensureDenimNodeType(db, patch.type);
+    db.run('UPDATE nodes SET type = ? WHERE id = ?', [patch.type, id]);
+  }
   if (patch.text !== undefined) db.run('UPDATE nodes SET text = ? WHERE id = ?', [patch.text, id]);
   if (patch.uniqueKey !== undefined) db.run('UPDATE nodes SET unique_key = ? WHERE id = ?', [patch.uniqueKey, id]);
 }

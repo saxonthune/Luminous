@@ -6,9 +6,11 @@ import type { DenimGraph } from '@luminous/core/denim';
 import type { DenimQuery, DenimNodeVisibilityEntry } from '@luminous/core/denim/queries';
 
 export interface DenimActionApi {
-  dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; nodeIds?: string[]; edgeId?: string; boardId?: string; board?: DenimBoard; graph?: DenimGraph; changed?: boolean }>;
+  dispatch(action: DenimAction): Promise<{ ok: boolean; error?: string; nodeId?: string; nodeIds?: string[]; edgeId?: string; boardId?: string; board?: DenimBoard; graph?: DenimGraph; changed?: boolean; sequenceContainerId?: string }>;
   readBoard(boardId: string): Promise<{ ok: boolean; error?: string; board?: DenimBoard; graph?: DenimGraph }>;
   queryNodes(query: DenimQuery): Promise<DenimNodeVisibilityEntry[]>;
+  createNodeType(name: string): Promise<{ ok: boolean; error?: string }>;
+  renameNodeType(typeId: string, name: string): Promise<{ ok: boolean; error?: string }>;
   createJourney(text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   createNode(type: string, text: string, placement?: { boardId: string; x: number; y: number }, id?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   differentiate(parentId: string, text?: string, placement?: { boardId: string; x: number; y: number }): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
@@ -21,6 +23,8 @@ export interface DenimActionApi {
   setEdgePriority(edgeId: string, priority: number): Promise<{ ok: boolean; error?: string }>;
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<{ ok: boolean; error?: string }>;
   clearSequence(parentId: string): Promise<{ ok: boolean; error?: string }>;
+  createOrLoadSequenceContainer(ownerNodeId: string, container: DenimBoardContainer, boardId?: string): Promise<{ ok: boolean; error?: string; sequenceContainerId?: string }>;
+  setSequenceContainerPresentation(ownerNodeId: string, presentation: 'special' | 'graph', boardId?: string): Promise<{ ok: boolean; error?: string }>;
   setSequenceMode(parentId: string, mode: 'rank' | 'priority', boardId?: string): Promise<{ ok: boolean; error?: string }>;
   setNodeLoaded(nodeId: string, loaded: boolean, boardId?: string): Promise<{ ok: boolean; error?: string }>;
   moveNode(nodeId: string, position: { x: number; y: number }, boardId?: string): Promise<{ ok: boolean; error?: string }>;
@@ -31,6 +35,7 @@ export interface DenimActionApi {
   createContainerNode(headNodeId: string, boardId?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   createContainerNodes(headNodeId: string, nodes: Array<{ id: string; type: string; text: string; position: { x: number; y: number }; edgeId?: string }>, boardId?: string): Promise<{ ok: boolean; error?: string; nodeIds?: string[] }>;
   openJourney(journeyId: string): Promise<{ ok: boolean; error?: string; boardId?: string }>;
+  createBoard(title?: string): Promise<{ ok: boolean; error?: string; boardId?: string }>;
   closeBoard(boardId: string): Promise<{ ok: boolean; error?: string }>;
 }
 
@@ -40,6 +45,8 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     dispatch,
     readBoard: (boardId) => dispatch({ op: 'board.read', boardId }),
     queryNodes: (query) => session.queryNodes(query),
+    createNodeType: (name) => dispatch({ op: 'node.type.create', name }),
+    renameNodeType: (typeId, name) => dispatch({ op: 'node.type.rename', typeId, name }),
     createJourney: (text) => dispatch({ op: 'journey.create', text }),
     createNode: (type, text, placement, id) => dispatch({ op: 'node.create', type, text, placement, id }),
     differentiate: (parentId, text, placement) => dispatch({ op: 'node.differentiate', parentId, text, placement }),
@@ -53,12 +60,16 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     setEdgePriority: (edgeId, priority) => dispatch({ op: 'edge.priority.set', edgeId, priority }),
     initializeSequence: (parentId, orderedChildIds) => dispatch({ op: 'sequence.initialize', parentId, orderedChildIds }),
     clearSequence: (parentId) => dispatch({ op: 'sequence.clear', parentId }),
+    createOrLoadSequenceContainer: (ownerNodeId, container, boardId = session.state.activeBoardId) =>
+      dispatch({ op: 'sequenceContainer.create', boardId, ownerNodeId, container }),
+    setSequenceContainerPresentation: (ownerNodeId, presentation, boardId = session.state.activeBoardId) =>
+      dispatch({ op: 'sequenceContainer.presentation.set', boardId, ownerNodeId, presentation }),
     setSequenceMode: (parentId, mode, boardId = session.state.activeBoardId) => dispatch({ op: 'board.sequenceMode.set', boardId, parentId, mode }),
     setNodeLoaded: (nodeId, loaded, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.load.set', boardId, nodeId, loaded }),
     moveNode: (nodeId, position, boardId = session.state.activeBoardId) => dispatch({ op: 'board.node.move', boardId, nodeId, position }),
     moveNodes: (positions, boardId = session.state.activeBoardId) => dispatch({ op: 'board.nodes.move', boardId, positions }),
-    spawnContainer: (headNodeId, container, boardId = session.state.activeBoardId) =>
-      dispatch({ op: 'board.container.spawn', boardId, headNodeId, container }),
+  spawnContainer: (headNodeId, container, boardId = session.state.activeBoardId) =>
+      dispatch({ op: 'container.create', boardId, ownerNodeId: headNodeId, container }),
     moveContainer: (headNodeId, position, boardId = session.state.activeBoardId, carriedPositions, carriedContainers) =>
       dispatch({ op: 'board.container.move', boardId, headNodeId, position, carriedPositions, carriedContainers }),
     resizeContainer: (headNodeId, size, boardId = session.state.activeBoardId) =>
@@ -68,6 +79,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     createContainerNodes: (headNodeId, nodes, boardId = session.state.activeBoardId) =>
       dispatch({ op: 'container.nodes.create', boardId, headNodeId, nodes }),
     openJourney: (journeyId) => dispatch({ op: 'board.openJourney', journeyId }),
+    createBoard: (title) => dispatch({ op: 'board.create', title }),
     closeBoard: (boardId) => dispatch({ op: 'board.close', boardId }),
   };
 }

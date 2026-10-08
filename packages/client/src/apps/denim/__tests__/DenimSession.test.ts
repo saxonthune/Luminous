@@ -115,7 +115,7 @@ describe('DenimSession', () => {
   it('deletes a node and removes it from board Board state', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    createDenimChild(database, 'journey', { id: 'action', type: 'User Action', text: 'Create it' }, 'journey-action');
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
     await session.openJourney('journey');
     await session.moveNode('action', { x: 120, y: 180 });
@@ -131,7 +131,7 @@ describe('DenimSession', () => {
   it('deletes one node while keeping its descendants floating in the active board', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    createDenimChild(database, 'journey', { id: 'action', type: 'User Action', text: 'Create it' }, 'journey-action');
     createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Persist it' }, 'action-capability');
     createDenimChild(database, 'capability', { id: 'resource', type: 'Instance', text: 'Database' }, 'capability-resource');
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
@@ -150,7 +150,7 @@ describe('DenimSession', () => {
   it('deletes a node and all descendants through the recursive delete action', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    createDenimChild(database, 'journey', { id: 'action', type: 'User Action', text: 'Create it' }, 'journey-action');
     createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Persist it' }, 'action-capability');
     const session = createDenimSession(database, async (_bytes, revision) => `${revision}-next`, 'r1');
     await session.openJourney('journey');
@@ -165,7 +165,7 @@ describe('DenimSession', () => {
   it('updates a sequence priority and persists the edge edit', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Create it' }, 'journey-action');
+    createDenimChild(database, 'journey', { id: 'action', type: 'User Action', text: 'Create it' }, 'journey-action');
     const saved: Uint8Array[] = [];
     const session = createDenimSession(database, async (bytes, revision) => {
       saved.push(bytes.slice());
@@ -210,7 +210,7 @@ describe('DenimSession', () => {
   it('recognizes valid existing-node connection targets', async () => {
     const database = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(database, { id: 'journey', type: 'Journey', text: 'Journey' });
-    createDenimChild(database, 'journey', { id: 'action', type: 'Action', text: 'Action' }, 'journey-action');
+    createDenimChild(database, 'journey', { id: 'action', type: 'User Action', text: 'Action' }, 'journey-action');
     createDenimChild(database, 'action', { id: 'capability', type: 'Capability', text: 'Capability' }, 'action-capability');
     addDenimNode(database, { id: 'resource', type: 'Instance', text: 'Instance' });
     const session = createDenimSession(database, async (_bytes, revision) => revision, 'r1');

@@ -1,4 +1,4 @@
-import type { DenimEdge, DenimGraph, DenimNode } from './database.ts';
+import type { DenimEdge, DenimGraph, DenimNode, DenimNodeType } from './database.ts';
 
 export interface DenimExportPoint {
   x: number;
@@ -17,13 +17,13 @@ export interface DenimExcalidrawDocument {
 const NODE_WIDTH = 232;
 const NODE_HEIGHT = 142;
 const FONT_FAMILY = 2;
-const NODE_COLORS: Record<string, string> = {
-  Journey: '#e2e8f0',
-  Action: '#e3ebe3',
-  Capability: '#ede9fe',
-  Instance: '#fef3c7',
-  Organization: '#e0e7ff',
-  Contract: '#ffe4e6',
+const NODE_COLORS_BY_THEME_SLOT: Record<number, string> = {
+  1: '#e2e8f0',
+  2: '#e3ebe3',
+  4: '#fef3c7',
+  5: '#ede9fe',
+  6: '#e0e7ff',
+  8: '#ffe4e6',
 };
 const FALLBACK_NODE_COLOR = '#f3f4f6';
 const EDGE_COLOR = '#64748b';
@@ -73,11 +73,12 @@ function nodeElements(
   node: DenimNode,
   position: DenimExportPoint,
   connectedEdges: { id: string; type: 'arrow' }[],
+  themeSlot: number,
 ): Record<string, unknown>[] {
   const shapeId = elementId('node', node.id);
   const textId = elementId('label', node.id);
   const shape = baseElement(shapeId, 'rectangle', position.x, position.y, NODE_WIDTH, NODE_HEIGHT);
-  shape.backgroundColor = NODE_COLORS[node.type] ?? FALLBACK_NODE_COLOR;
+  shape.backgroundColor = NODE_COLORS_BY_THEME_SLOT[themeSlot] ?? FALLBACK_NODE_COLOR;
   shape.boundElements = [{ id: textId, type: 'text' }, ...connectedEdges];
   const text = {
     ...baseElement(textId, 'text', position.x + 12, position.y + 12, NODE_WIDTH - 24, NODE_HEIGHT - 24),
@@ -120,7 +121,9 @@ function edgeElement(edge: DenimEdge, nodes: Map<string, DenimNode>, positions: 
 export function denimBoardToExcalidraw(
   graph: DenimGraph,
   positions: ReadonlyMap<string, DenimExportPoint>,
+  nodeTypes: readonly DenimNodeType[] = [],
 ): DenimExcalidrawDocument {
+  const themeSlots = new Map(nodeTypes.map((type) => [type.name, type.themeSlot]));
   const nodes = new Map(graph.nodes.map((node) => [node.id, node]));
   const edges = graph.edges.flatMap((edge) => {
     const converted = edgeElement(edge, nodes, positions);
@@ -139,7 +142,7 @@ export function denimBoardToExcalidraw(
   }
   const shapes = graph.nodes.flatMap((node) => {
     const position = positions.get(node.id);
-    return position ? nodeElements(node, position, connectedEdges.get(node.id) ?? []) : [];
+    return position ? nodeElements(node, position, connectedEdges.get(node.id) ?? [], themeSlots.get(node.type) ?? 1) : [];
   });
   return {
     type: 'excalidraw',

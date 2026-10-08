@@ -23,7 +23,7 @@ extending one global counter.
 ## Project picker
 
 - **PRJ1.** [p] The Denim database picker provides an icon button to create a new project in a listed root.
-- **PRJ2.** [p] Creating a project creates a `.denim.sqlite` database, hydrates it with the starter Journey and Action, and opens it.
+- **PRJ2.** [p] Creating a project creates a `.denim.sqlite` database, hydrates it with the starter Journey and User Action, and opens it.
 
 ## Startup status
 
@@ -48,9 +48,17 @@ extending one global counter.
 
 ## Quick Select
 
-- **QS1.** [p] Quick Select is a speedy icon that opens a dropdown containing built-in Boards.
+- **QS1.** [p] Quick Select opens a menu of app-level actions, including built-in Boards and Types.
 - **QS2.** [p] The built-in Boards in Quick Select are Journeys, Capabilities, and Instances.
 - **QS3.** [p] For now, the user cannot add their own Boards to Quick Select.
+- **QS4.** [p] Selecting Types in Quick Select opens the Types page.
+- **QS5.** [p] Selecting New Board in Quick Select creates a Board.
+
+## Types page
+
+- **TYP1.** [p] The Types page lists all Node types.
+- **TYP2.** [p] The user can create and rename Node types from the Types page.
+- **TYP3.** [p] The Journey Node type cannot be renamed from the UI.
 
 ## Board Strip
 
@@ -97,10 +105,11 @@ extending one global counter.
 - **NODE8.** [p] The drag bar indicator does not change appearance when the pointer hovers over it.
 - **NODE9.** [p] When the user differentiates a Node, Denim shows the new Node at its final position below the parent without an intermediate layout position.
 - **NODE10.** [p] A wheel gesture over overflowing Node text scrolls the text; when it cannot scroll in that direction, the gesture zooms the canvas.
-- **NODE11.** [p] The Node type selector offers Module as a Node type.
+- **NODE11.** [p] The Node type selector lists types from the database, including Module.
 - **NODE12.** [p] Each Node has a dedicated Node Status Bar underneath its content area.
 - **NODE13.** [p] The Node Status Bar shows the Node type label at the bottom-left and Node indicators at the bottom-right.
 - **NODE14.** [p] The Node Status Bar sits close to the Node's bottom edge, with little empty space beneath it.
+- **NODE15.** [p] When editing a Node's text, clicking outside the input or pressing Escape ends editing and saves the text.
 
 ## Selection
 
@@ -109,6 +118,12 @@ extending one global counter.
 - **SEL3.** [p] Dragging across the canvas selects Nodes and Containers intersected by the selection box, including when the drag starts in a Container's content area.
 - **SEL4.** [p] Dragging a selected Node moves all selected Nodes together.
 - **SEL5.** [p] Dragging a selected Container moves all selected Containers together, along with each Container's visually contained Nodes and nested Containers.
+
+## Graph Primitives
+
+- **GP1.** [p] Every Graph Primitive can be toggled between Special Presentation and Graph Presentation.
+- **GP2.** [p] The user can load the same Graph Primitive onto multiple Boards.
+- **GP3.** [p] Each Board stores its own presentation mode for each Graph Primitive loaded onto it.
 
 ## Node Toolbar
 
@@ -124,6 +139,7 @@ extending one global counter.
 - **NT10.** [p] Hover highlights for individual Node and Container Toolbar icons are circular.
 - **NT11.** [p] The hidden Node Toolbar options include a Change Node Type icon immediately before the Spawn Container icon.
 - **NT12.** [p] A Node Toolbar is drawn above the full Node Status Bar, including its indicators and label.
+- **NT13.** [p] The hidden Node Toolbar options include an action to create a Sequence Container.
 
 ## Node deletion
 
@@ -188,8 +204,10 @@ extending one global counter.
 - **VIS13.** [p] Each Node Visibility Item is a wide row using the background color associated with the Node's type and shows the Node type and text.
 - **VIS14.** [p] Each Node Visibility Item shows whether the Node is loaded on the active Board and has a control that loads or unloads it.
 - **VIS15.** [p] Each Node has an Upstream Nodes Indicator immediately to the left of its Downstream Nodes Indicator. It shows `N/M` for direct upstream Nodes loaded on the active Board / total direct upstream Nodes in the database, uses the same white base token as the Downstream Nodes Indicator, and opens the Node Visibility Menu so the user can load or unload those Nodes.
-- **BCM1.** [p] Right-clicking the bare canvas background opens the Board Context Menu, whose only option is Add node.
+- **VIS16.** [p] When the user loads a Node onto a Board, Denim also shows that Node's regular Container if one exists in the database.
+- **BCM1.** [p] Right-clicking the bare canvas background opens the Board Context Menu, which offers Add node and Create new node.
 - **BCM2.** [p] Selecting Add node closes the Board Context Menu and opens the Node Visibility Menu with Nodes from the shared database.
+- **BCM3.** [p] Selecting Create new node in the Board Context Menu creates a new Node and loads it onto the active Board.
 
 ## Node differentiation controls
 
@@ -205,10 +223,10 @@ extending one global counter.
 
 ## Step priority display
 
-- **SP1.** [p] The user can set an Action relationship's numeric priority to reorder the Action among its siblings.
+- **SP1.** [p] The user can set a User Action relationship's numeric priority to reorder the User Action among its siblings.
 - **SP2.** [p] The Sequence options dropdown has a control that toggles child Edge labels between raw priority values and derived rank numbers.
-- **SP3.** [p] In ranked display, Denim orders child Actions by ascending priority value and displays ranks starting at 1.
-- **SP4.** [p] Denim displays each Action relationship's raw priority value or derived rank as text at the midpoint of its Edge.
+- **SP3.** [p] In ranked display, Denim orders child User Actions by ascending priority value and displays ranks starting at 1.
+- **SP4.** [p] Denim displays each User Action relationship's raw priority value or derived rank as text at the midpoint of its Edge.
 - **SP5.** [p] Before a Node's child sequence is initialized, its child Edges have no priority values.
 - **SP6.** [p] Initializing a sequence assigns a priority value to every child Edge of the Node.
 - **SP7.** [p] Clearing a sequence removes the priority value from every child Edge of the Node.
@@ -222,6 +240,24 @@ extending one global counter.
 ## Journey navigation
 
 - **JN1.** [p] Journey Nodes have an always-visible icon that opens the Journey on a new Board.
+
+## Sequence Container
+
+- **SC1.** [p] A Sequence Container is connected to its owner Node by a dashed line.
+- **SC2.** [p] The user can toggle a Sequence Container between Special Presentation and Graph Presentation.
+- **SC3.** [p] For now, Graph Presentation for a Sequence Container can look like a regular Container.
+- **SC4.** [p] Special Presentation shows a list of Nodes similar to the Node Visibility Menu.
+- **SC5.** [p] Each Node in the Special Presentation list appears as a rectangular shaded block containing Node information.
+- **SC6.** [p] The sequence order supports arbitrary depth, including labels such as `1`, `2`, `2a`, `2b`, `2b-i`, and `2b-ii`, and list items are indented according to their depth.
+- **SC7.** [p] Sequence order labels belong to the Sequence Container and appear in its left border or margin, outside the Node representation.
+- **SC8.** [p] The Special Presentation has a Default State and a Drafting State.
+- **SC9.** [p] In Default State, the user can drag and drop Nodes to change their order.
+- **SC10.** [p] In Default State, the user can change a Node's type.
+- **SC11.** [p] In Drafting State, the user can type into Nodes.
+- **SC12.** [p] When the user presses Enter while drafting a Node, Denim creates a new Node underneath the Node being edited.
+- **SC13.** [p] When the user presses Tab while drafting a Node, Denim indents that Node in the sequence.
+- **SC14.** [p] When the user presses Shift+Tab while drafting a Node, Denim de-indents that Node in the sequence.
+- **SC15.** [p] The existing Sequence options remain available alongside the Sequence Container.
 
 ## Sequence options
 

@@ -9,6 +9,7 @@ import GitBranchPlus from 'lucide-solid/icons/git-branch-plus';
 import GripHorizontal from 'lucide-solid/icons/grip-horizontal';
 import Link2 from 'lucide-solid/icons/link-2';
 import ListOrdered from 'lucide-solid/icons/list-ordered';
+import ListTree from 'lucide-solid/icons/list-tree';
 import Plus from 'lucide-solid/icons/plus';
 import SquareDashed from 'lucide-solid/icons/square-dashed';
 import Trash2 from 'lucide-solid/icons/trash';
@@ -18,8 +19,9 @@ import Zap from 'lucide-solid/icons/zap';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useGesture } from '@luminous/cactus';
 import { directRectRoute } from '@luminous/cactus/layout';
 import type { CanvasRef, EdgeDeclaration, TidyNode, Transform } from '@luminous/cactus';
-import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimGraph, type DenimNode } from '@luminous/core/denim';
+import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type DenimDatabase, type DenimGraph, type DenimNode, type DenimNodeType } from '@luminous/core/denim';
 import { denimBoardToExcalidraw } from '@luminous/core/denim/excalidraw';
+import { DENIM_DEFAULT_CONTAINER_GAP, DENIM_DEFAULT_CONTAINER_SIZE, DENIM_DEFAULT_NODE_SIZE } from '@luminous/core/denim/board';
 import { DocumentPicker } from '../../DocumentPicker';
 import { AnchoredMenu, Button, computeAnchoredPosition, IconButton, MenuItem, MenuSeparator, MenuSubmenu, ToolbarSurface } from '../../ui';
 import { createStaticDatabase, fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
@@ -42,26 +44,69 @@ import { DenimStatusToast } from './DenimStatusToast';
 import { NewProjectDialog } from './NewProjectDialog';
 import { DenimNodeVisibilityMenu } from './DenimNodeVisibilityMenu';
 
-const NODE_W = 232;
-const NODE_H = 142;
-const CONTAINER_W = 360;
-const CONTAINER_H = 280;
+const NODE_W = DENIM_DEFAULT_NODE_SIZE.width;
+const NODE_H = DENIM_DEFAULT_NODE_SIZE.height;
+const CONTAINER_W = DENIM_DEFAULT_CONTAINER_SIZE.width;
+const CONTAINER_H = DENIM_DEFAULT_CONTAINER_SIZE.height;
 const ICON_SIZE = 15;
 const containerVisualId = (headNodeId: string) => `denim-container:${headNodeId}`;
-const NODE_THEME_SLOT: Record<string, number> = {
-  Journey: 1,
-  Action: 2,
-  Capability: 5,
-  Instance: 4,
-  Organization: 6,
-  Module: 7,
-  Contract: 8,
-};
-
 type PickerState = { mode: 'include' | 'connect'; parentId?: string; anchor: HTMLElement };
 type VisibilityQueryKind = 'board' | 'upstream' | 'downstream' | 'container';
 type OpenNodeVisibility = (kind: VisibilityQueryKind, nodeId: string | undefined, position: { x: number; y: number }) => void;
 type VisibilityMenuState = { kind: VisibilityQueryKind; nodeId?: string; boardId: string; boardTitle: string; title: string; x: number; y: number };
+type SequenceListEntry = { node: DenimNode; depth: number; orderLabel: string };
+
+function sequenceDescendantEntries(graph: DenimGraph, ownerNodeId: string): SequenceListEntry[] {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const childrenByParent = new Map<string, typeof graph.edges>();
+  const edgeOrder = new Map(graph.edges.map((edge, index) => [edge.id, index]));
+  for (const edge of graph.edges) {
+    if (edge.type !== 'parent-child') continue;
+    const children = childrenByParent.get(edge.sourceId) ?? [];
+    children.push(edge);
+    childrenByParent.set(edge.sourceId, children);
+  }
+  const alpha = (value: number) => {
+    let current = value;
+    let label = '';
+    while (current > 0) {
+      current--;
+      label = String.fromCharCode(97 + current % 26) + label;
+      current = Math.floor(current / 26);
+    }
+    return label;
+  };
+  const roman = (value: number) => {
+    const numerals: Array<[number, string]> = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
+    let current = value;
+    let label = '';
+    for (const [amount, symbol] of numerals) while (current >= amount) { label += symbol; current -= amount; }
+    return label || String(value);
+  };
+  const output: SequenceListEntry[] = [];
+  const visited = new Set<string>([ownerNodeId]);
+  const visit = (parentId: string, path: number[]) => {
+    const edges = [...(childrenByParent.get(parentId) ?? [])].sort((a, b) => {
+      if (a.priority != null && b.priority != null) return a.priority - b.priority || a.targetId.localeCompare(b.targetId);
+      if (a.priority != null) return -1;
+      if (b.priority != null) return 1;
+      return (edgeOrder.get(a.id) ?? 0) - (edgeOrder.get(b.id) ?? 0);
+    });
+    edges.forEach((edge, index) => {
+      const node = nodeById.get(edge.targetId);
+      if (!node || visited.has(node.id)) return;
+      visited.add(node.id);
+      const nextPath = [...path, index + 1];
+      const label = nextPath.map((rank, depth) => depth === 0 ? String(rank)
+        : depth === 1 ? alpha(rank) : depth === 2 ? roman(rank) : String(rank))
+        .reduce((result, segment, depth) => depth === 0 ? segment : `${result}${depth === 1 ? '' : '-'}${segment}`, '');
+      output.push({ node, depth: nextPath.length - 1, orderLabel: label });
+      visit(node.id, nextPath);
+    });
+  };
+  visit(ownerNodeId, []);
+  return output;
+}
 
 function GraphCanvas(props: {
   selectedId: () => string | null;
@@ -95,6 +140,15 @@ function GraphCanvas(props: {
     containerHeaderHeight: 44,
   }));
   const sequenceLabels = createMemo(() => deriveDenimSequenceLabels(graph(), activeBoard(), editingSequenceParent()));
+  const hiddenSequenceNodeIds = createMemo(() => {
+    const hidden = new Set<string>();
+    const fullGraph = databaseGraph();
+    for (const [ownerId, container] of Object.entries(activeBoard().containers)) {
+      if (!container.sequenceContainerId || container.presentation === 'graph') continue;
+      for (const entry of sequenceDescendantEntries(fullGraph, ownerId)) hidden.add(entry.node.id);
+    }
+    return hidden;
+  });
   const previewModel = createMemo(() => previewDenimContainerDrag({
     model: baseCanvasModel(),
     preview: containerDragPreview(),
@@ -103,7 +157,9 @@ function GraphCanvas(props: {
   const nodeDepths = createMemo(() => previewModel().nodeDepths);
   const containerDepths = createMemo(() => previewModel().containerDepths);
   const edgeModel = createMemo(() => previewModel().edges);
-  const canvasEdges = createMemo<EdgeDeclaration[]>(() => edgeModel().map((edge) => {
+  const canvasEdges = createMemo<EdgeDeclaration[]>(() => edgeModel()
+    .filter((edge) => !hiddenSequenceNodeIds().has(edge.sourceId) && !hiddenSequenceNodeIds().has(edge.targetId))
+    .map((edge) => {
     if (edge.kind === 'sequence') return {
       id: edge.id,
       sourceId: edge.sourceId,
@@ -154,7 +210,7 @@ function GraphCanvas(props: {
     void actions.setSequenceMode(parentId, sequenceMode(parentId) === 'rank' ? 'priority' : 'rank');
   }
   let canvasRef: CanvasRef | undefined;
-  let boardContextPosition = { x: 0, y: 0 };
+  let boardContextPosition = { clientX: 0, clientY: 0, canvasX: 0, canvasY: 0 };
   let previousBoardId = activeBoard().id;
   let statusTimer: ReturnType<typeof setTimeout> | undefined;
   async function spawnContainer(headNodeId: string): Promise<void> {
@@ -163,7 +219,7 @@ function GraphCanvas(props: {
     if (!head || !position) return;
     const boardId = activeBoard().id;
     const container: DenimBoardContainer = {
-      x: position.x + NODE_W + 100,
+      x: position.x + NODE_W + DENIM_DEFAULT_CONTAINER_GAP,
       y: position.y,
       width: CONTAINER_W,
       height: CONTAINER_H,
@@ -182,6 +238,36 @@ function GraphCanvas(props: {
       { x: position.x, y: position.y, width: NODE_W, height: NODE_H },
       { x: container.x, y: container.y, width: container.width, height: container.height },
     ], 72, false);
+  }
+
+  async function createOrLoadSequenceContainer(ownerNodeId: string): Promise<void> {
+    const ownerPosition = positions().get(ownerNodeId);
+    const owner = graph().nodes.find((node) => node.id === ownerNodeId);
+    if (!owner || !ownerPosition) return;
+    const entries = sequenceDescendantEntries(databaseGraph(), ownerNodeId);
+    const descendantRects = entries.flatMap((entry) => {
+      const position = positions().get(entry.node.id);
+      return position ? [{ x: position.x, y: position.y, width: NODE_W, height: NODE_H }] : [];
+    });
+    const left = Math.min(...descendantRects.map((rect) => rect.x), ownerPosition.x + NODE_W + 72);
+    const top = Math.min(...descendantRects.map((rect) => rect.y), ownerPosition.y);
+    const right = Math.max(...descendantRects.map((rect) => rect.x + rect.width), left + 320);
+    const bottom = Math.max(...descendantRects.map((rect) => rect.y + rect.height), top + 180);
+    const container: DenimBoardContainer = {
+      x: left - 24, y: top - 24,
+      width: Math.max(320, right - left + 48),
+      height: Math.max(200, bottom - top + 48),
+    };
+    clearTimeout(statusTimer);
+    props.onStatus(`Loading Sequence Container for ${owner.text}…`);
+    const result = await actions.createOrLoadSequenceContainer(ownerNodeId, container, activeBoard().id);
+    if (!result.ok) {
+      props.onStatus(`Could not load Sequence Container: ${result.error ?? 'unknown error'}`);
+      statusTimer = setTimeout(() => props.onStatus(null), 5000);
+      return;
+    }
+    props.onStatus(`Sequence Container loaded for ${owner.text}`);
+    statusTimer = setTimeout(() => props.onStatus(null), 2400);
   }
 
   createEffect(() => {
@@ -217,8 +303,18 @@ function GraphCanvas(props: {
       canvasRef?.clearSelection();
       session.selectNode(null);
     };
+    const blurNodeLabelOnOutsidePointer = (event: PointerEvent) => {
+      const active = document.activeElement;
+      if (!(active instanceof HTMLTextAreaElement) || !active.matches('[data-denim-node-label-editor]')) return;
+      if (event.target instanceof Node && active.contains(event.target)) return;
+      active.blur();
+    };
     window.addEventListener('keydown', onKeyDown);
-    onCleanup(() => window.removeEventListener('keydown', onKeyDown));
+    document.addEventListener('pointerdown', blurNodeLabelOnOutsidePointer, true);
+    onCleanup(() => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', blurNodeLabelOnOutsidePointer, true);
+    });
   });
   onCleanup(() => {
     cancelAnimationFrame(pendingFit);
@@ -237,11 +333,34 @@ function GraphCanvas(props: {
         if (detachedId && graph().edges.some((edge) => edge.id === detachedId && edge.type === 'contains')) props.onEdgeHover(detachedId, x, y, canvasX, canvasY);
       }}
       backgroundContextMenu={(position) => {
-        boardContextPosition = { x: position.clientX, y: position.clientY };
-        return { id: 'denim-board-context-menu', items: [{ type: 'action', action: { id: 'denim.board.add-node', label: 'Add node' } }] };
+        boardContextPosition = {
+          clientX: position.clientX, clientY: position.clientY,
+          canvasX: position.canvasX, canvasY: position.canvasY,
+        };
+        return { id: 'denim-board-context-menu', items: [
+          { type: 'action', action: { id: 'denim.board.add-node', label: 'Add node' } },
+          { type: 'submenu', label: 'Create new node', items: session.state.nodeTypes.map((nodeType) => ({
+            type: 'action' as const,
+            action: { id: 'denim.board.create-node', label: nodeType.name, payload: { nodeType: nodeType.name } },
+          })) },
+        ] };
       }}
-      onAction={(id) => {
-        if (id === 'denim.board.add-node') props.onOpenNodeVisibility('board', undefined, boardContextPosition);
+      onAction={(id, payload) => {
+        if (id === 'denim.board.add-node') {
+          props.onOpenNodeVisibility('board', undefined, { x: boardContextPosition.clientX, y: boardContextPosition.clientY });
+          return;
+        }
+        if (id === 'denim.board.create-node') {
+          const nodeType = payload && typeof payload === 'object' ? (payload as { nodeType?: unknown }).nodeType : undefined;
+          if (typeof nodeType !== 'string') return;
+          void actions.createNode(nodeType, 'New node', {
+            boardId: activeBoard().id,
+            x: boardContextPosition.canvasX,
+            y: boardContextPosition.canvasY,
+          }).then((result) => {
+            if (result.nodeId) canvasRef?.setSelectedIds([result.nodeId]);
+          });
+        }
       }}
       boxSelect={{ trigger: 'drag' }}
       onSelectionChange={(ids) => session.selectNode(ids.at(-1) ?? null)}
@@ -258,6 +377,7 @@ function GraphCanvas(props: {
         graph={graph()}
         databaseGraph={databaseGraph}
         onOpenNodeVisibility={props.onOpenNodeVisibility}
+        hiddenNodeIds={hiddenSequenceNodeIds}
         positions={positions}
         nodeDepths={nodeDepths}
         containerDepths={containerDepths}
@@ -270,6 +390,7 @@ function GraphCanvas(props: {
         onSelectInCanvas={(id) => canvasRef?.setSelectedIds([id])}
         openPicker={props.openPicker}
         onSpawnContainer={spawnContainer}
+        onCreateSequenceContainer={createOrLoadSequenceContainer}
         sequenceModeFor={sequenceMode}
         initializeSequence={initializeSequence}
         toggleSequenceMode={toggleSequenceMode}
@@ -282,6 +403,7 @@ function CanvasNodes(props: {
   graph: DenimGraph;
   databaseGraph: () => DenimGraph;
   onOpenNodeVisibility: OpenNodeVisibility;
+  hiddenNodeIds: () => ReadonlySet<string>;
   positions: () => ReadonlyMap<string, { x: number; y: number }>;
   nodeDepths: () => ReadonlyMap<string, number>;
   containerDepths: () => ReadonlyMap<string, number>;
@@ -294,6 +416,7 @@ function CanvasNodes(props: {
   onSelectInCanvas: (id: string) => void;
   openPicker: (mode: PickerState['mode'], parentId: string | undefined, event: MouseEvent) => void;
   onSpawnContainer: (headNodeId: string) => Promise<void>;
+  onCreateSequenceContainer: (ownerNodeId: string) => Promise<void>;
   sequenceModeFor: (parentId: string) => 'rank' | 'priority';
   initializeSequence: (parentId: string) => void;
   toggleSequenceMode: (parentId: string) => void;
@@ -364,7 +487,7 @@ function CanvasNodes(props: {
         onOpenNodeVisibility={props.onOpenNodeVisibility}
       />}</Show>;
     }}</For>
-    <For each={props.graph.nodes}>{(node) => {
+    <For each={props.graph.nodes.filter((node) => !props.hiddenNodeIds().has(node.id))}>{(node) => {
     const basePosition = () => props.positions().get(node.id) ?? { x: 0, y: 0 };
     const pos = createMemo(() => {
       const offset = dragOffsets()[node.id];
@@ -384,6 +507,7 @@ function CanvasNodes(props: {
         onDifferentiate={() => void differentiateNode(node.id)}
         hasContainer={Boolean(props.containers()[node.id])}
         onSpawnContainer={() => void props.onSpawnContainer(node.id)}
+        onCreateSequenceContainer={() => void props.onCreateSequenceContainer(node.id)}
         onConnect={(event) => props.openPicker('connect', node.id, event)}
         hasSequence={props.graph.edges.some((edge) => edge.sourceId === node.id && edge.priority != null)}
         graphChildCount={props.graph.edges.filter((edge) => edge.type === 'parent-child' && edge.sourceId === node.id).length}
@@ -420,6 +544,9 @@ function ContainerVisual(props: {
     const members = all.edges.filter((edge) => edge.type === 'contains' && edge.sourceId === props.head.id);
     return { loaded: members.filter((edge) => loaded.has(edge.targetId)).length, total: members.length };
   };
+  const sequenceEntries = () => sequenceDescendantEntries(props.databaseGraph(), props.head.id);
+  const isSequenceContainer = () => Boolean(props.container().sequenceContainerId);
+  const sequencePresentation = () => props.container().presentation ?? 'special';
   const [offset, setOffset] = createSignal<{ x: number; y: number } | null>(null);
   const [resize, setResize] = createSignal<{ width: number; height: number } | null>(null);
   let carried: Record<string, { x: number; y: number }> = {};
@@ -531,7 +658,7 @@ function ContainerVisual(props: {
       <div style={{
         position: 'relative', display: 'flex', height: '44px', 'align-items': 'center', padding: '0 12px',
         'justify-content': 'flex-end',
-        background: `var(--theme-bg-${NODE_THEME_SLOT[props.head.type] ?? 1})`,
+        background: `var(--theme-bg-${session.state.nodeTypes.find((type) => type.name === props.head.type)?.themeSlot ?? 1})`,
         'border-bottom': '1px solid var(--theme-node-border)',
         'user-select': 'none',
         'font-size': '12px', 'font-weight': '600', color: 'var(--fg-muted)',
@@ -541,30 +668,62 @@ function ContainerVisual(props: {
           ctx.onNodePointerDown(id, event);
           drag.beginPress(id, event);
         }} style={{ position: 'absolute', inset: '0', cursor: 'grab' }} />
-        <ToolbarSurface variant="node" class="absolute left-2 top-1 z-10" data-container-toolbar
-          style={{ '--lui-node-toolbar-bg': `var(--theme-bg-${NODE_THEME_SLOT[props.head.type] ?? 1})` }}
-          onPointerDown={(event) => event.stopPropagation()}>
-          <div class="lui-node-toolbar__more">
-            <span aria-hidden="true" class="lui-node-toolbar__expander"><Ellipsis size={ICON_SIZE} strokeWidth={1.7} /></span>
-            <div class="lui-node-toolbar__actions">
-              <IconButton aria-label="Create Node" title="Create Node" class="lui-node-toolbar__action" onClick={() => {
-                void actions.createContainerNode(props.head.id, props.boardId()).then((result) => {
-                  if (result.nodeId) props.onCreated(result.nodeId);
-                });
-              }}><Plus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+        <Show when={!isSequenceContainer()}>
+          <ToolbarSurface variant="node" class="absolute left-2 top-1 z-10" data-container-toolbar
+            style={{ '--lui-node-toolbar-bg': `var(--theme-bg-${session.state.nodeTypes.find((type) => type.name === props.head.type)?.themeSlot ?? 1})` }}
+            onPointerDown={(event) => event.stopPropagation()}>
+            <div class="lui-node-toolbar__more">
+              <span aria-hidden="true" class="lui-node-toolbar__expander"><Ellipsis size={ICON_SIZE} strokeWidth={1.7} /></span>
+              <div class="lui-node-toolbar__actions">
+                <IconButton aria-label="Create Node" title="Create Node" class="lui-node-toolbar__action" onClick={() => {
+                  void actions.createContainerNode(props.head.id, props.boardId()).then((result) => {
+                    if (result.nodeId) props.onCreated(result.nodeId);
+                  });
+                }}><Plus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+              </div>
             </div>
-          </div>
-        </ToolbarSurface>
+          </ToolbarSurface>
+        </Show>
+        <Show when={isSequenceContainer()}>
+          <button type="button" class="denim-sequence-presentation-toggle" data-no-pan="true"
+            aria-label={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
+            title={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              void actions.setSequenceContainerPresentation(props.head.id,
+                sequencePresentation() === 'special' ? 'graph' : 'special', props.boardId());
+            }}>{sequencePresentation() === 'special' ? 'Graph' : 'Special'}</button>
+        </Show>
         <span style={{ 'pointer-events': 'none', 'margin-left': 'auto', 'margin-right': '8px' }}>
-          {containerHeaderLabel(props.head.text)}
+          {isSequenceContainer() ? sequenceContainerHeaderLabel(props.head.text) : containerHeaderLabel(props.head.text)}
         </span>
-        <button type="button" aria-label="Container Membership" title="Container Membership"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            props.onOpenNodeVisibility('container', props.head.id, { x: event.clientX, y: event.clientY });
-          }} class="denim-population-indicator" data-no-pan="true">{memberCounts().loaded}/{memberCounts().total}</button>
+        <Show when={!isSequenceContainer()}>
+          <button type="button" aria-label="Container Membership" title="Container Membership"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onOpenNodeVisibility('container', props.head.id, { x: event.clientX, y: event.clientY });
+            }} class="denim-population-indicator" data-no-pan="true">{memberCounts().loaded}/{memberCounts().total}</button>
+        </Show>
       </div>
+      <Show when={isSequenceContainer() && sequencePresentation() === 'special'}>
+        <div data-no-pan="true" aria-label="Sequence Container Special Presentation" style={{
+          position: 'absolute', top: '44px', right: '0', bottom: '0', left: '0', overflow: 'auto', padding: '10px 12px',
+          display: 'flex', 'flex-direction': 'column', gap: '6px',
+        }}>
+          <For each={sequenceEntries()}>{(entry) => {
+            const slot = session.state.nodeTypes.find((type) => type.name === entry.node.type)?.themeSlot ?? 1;
+            return <div class="denim-sequence-list-row" style={{ 'margin-left': `${entry.depth * 16}px` }}>
+              <span class="denim-sequence-order-label">{entry.orderLabel}</span>
+              <div class="denim-sequence-list-node" style={{ background: `var(--theme-bg-${slot})` }}>
+                <span class="denim-sequence-list-node__type">{entry.node.type}</span>
+                <span class="denim-sequence-list-node__text">{entry.node.text || '(untitled)'}</span>
+              </div>
+            </div>;
+          }}</For>
+        </div>
+      </Show>
       <div data-no-pan="true" aria-label="Resize Container" title="Resize Container"
         onPointerDown={beginResize}
         style={{ position: 'absolute', right: '1px', bottom: '1px', width: '16px', height: '16px', cursor: 'nwse-resize',
@@ -578,6 +737,11 @@ function containerHeaderLabel(ownerText: string): string {
   return owner ? `${owner} Container` : 'Container';
 }
 
+function sequenceContainerHeaderLabel(ownerText: string): string {
+  const owner = ownerText.slice(0, 16).trim();
+  return owner ? `${owner} Sequence Container` : 'Sequence Container';
+}
+
 function NodeCard(props: {
   node: DenimNode;
   databaseGraph: () => DenimGraph;
@@ -586,6 +750,7 @@ function NodeCard(props: {
   onDifferentiate: () => void;
   hasContainer: boolean;
   onSpawnContainer: () => void;
+  onCreateSequenceContainer: () => void;
   onConnect: (event: MouseEvent) => void;
   hasSequence: boolean;
   graphChildCount: number;
@@ -598,13 +763,37 @@ function NodeCard(props: {
   const actions = useDenimActions();
   const [openNodeMenu, setOpenNodeMenu] = createSignal<'type' | 'sequence' | 'delete' | null>(null);
   const [deleteSubmenu, setDeleteSubmenu] = createSignal<'single' | 'children' | null>(null);
+  const [editingText, setEditingText] = createSignal(false);
+  const [draftText, setDraftText] = createSignal(props.node.text);
   const deleteMenuRoots = new Set<HTMLElement>();
+  let textInput: HTMLTextAreaElement | undefined;
   let sequenceOptionsButton: HTMLButtonElement | undefined;
   let deleteButton: HTMLButtonElement | undefined;
   let typeChangeButton: HTMLButtonElement | undefined;
-  const types = createMemo(() => [...new Set([
-    'Journey', 'Action', 'Capability', 'Instance', 'Organization', 'Module', 'Contract', props.node.type,
-  ])]);
+  const types = createMemo(() => [...new Set([...session.state.nodeTypes.map((type) => type.name), props.node.type])]);
+  function beginTextEdit(): void {
+    setDraftText(props.node.text);
+    setEditingText(true);
+    queueMicrotask(() => {
+      textInput?.focus();
+      textInput?.setSelectionRange(textInput.value.length, textInput.value.length);
+    });
+  }
+  function commitTextEdit(event: FocusEvent & { currentTarget: HTMLTextAreaElement }): void {
+    const text = event.currentTarget.value;
+    setEditingText(false);
+    if (text !== props.node.text) void actions.updateNode(props.node.id, { text });
+  }
+  function handleTextWheel(event: WheelEvent & { currentTarget: HTMLElement }): void {
+    const content = event.currentTarget;
+    const canScrollVertically = content.scrollHeight > content.clientHeight + 1;
+    const canScrollHorizontally = content.scrollWidth > content.clientWidth + 1;
+    const canScrollY = event.deltaY < 0 ? content.scrollTop > 0
+      : event.deltaY > 0 ? content.scrollTop + content.clientHeight < content.scrollHeight - 1 : false;
+    const canScrollX = event.deltaX < 0 ? content.scrollLeft > 0
+      : event.deltaX > 0 ? content.scrollLeft + content.clientWidth < content.scrollWidth - 1 : false;
+    if ((canScrollVertically && canScrollY) || (canScrollHorizontally && canScrollX)) event.stopPropagation();
+  }
   const downstreamCounts = () => {
     const all = props.databaseGraph();
     const loaded = new Set(session.state.graph.nodes.map((node) => node.id));
@@ -619,7 +808,7 @@ function NodeCard(props: {
   };
   return <article class="lui-node-card relative flex h-full flex-col gap-2 rounded-lg px-3 pt-3 pb-1 transition-shadow"
     style={{
-      background: `var(--theme-bg-${NODE_THEME_SLOT[props.node.type] ?? 1})`,
+      background: `var(--theme-bg-${session.state.nodeTypes.find((type) => type.name === props.node.type)?.themeSlot ?? 1})`,
       border: '1px solid var(--theme-node-border)',
     }}>
     <div data-denim-drag-handle data-no-pan="true" aria-hidden="true"
@@ -630,20 +819,26 @@ function NodeCard(props: {
         <GripHorizontal size={ICON_SIZE} strokeWidth={1.8} />
       </div>
     </div>
-    <textarea aria-label="Node text" value={props.node.text}
-      onPointerDown={(event) => event.stopPropagation()}
-      onWheel={(event) => {
-        const content = event.currentTarget;
-        const canScrollVertically = content.scrollHeight > content.clientHeight + 1;
-        const canScrollHorizontally = content.scrollWidth > content.clientWidth + 1;
-        const canScrollY = event.deltaY < 0 ? content.scrollTop > 0
-          : event.deltaY > 0 ? content.scrollTop + content.clientHeight < content.scrollHeight - 1 : false;
-        const canScrollX = event.deltaX < 0 ? content.scrollLeft > 0
-          : event.deltaX > 0 ? content.scrollLeft + content.clientWidth < content.scrollWidth - 1 : false;
-        if ((canScrollVertically && canScrollY) || (canScrollHorizontally && canScrollX)) event.stopPropagation();
-      }}
-      onBlur={(event) => void actions.updateNode(props.node.id, { text: event.currentTarget.value })}
-      class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
+    <Show when={editingText()} fallback={
+      <div role="button" tabIndex={0} aria-label="Edit node text"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => { event.stopPropagation(); beginTextEdit(); }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); beginTextEdit(); }
+        }}
+        onWheel={handleTextWheel}
+        class="denim-node-text-display min-h-0 flex-1 overflow-auto text-sm leading-5 text-fg">{props.node.text}</div>
+    }>
+      <textarea ref={textInput} data-denim-node-label-editor aria-label="Node text" value={draftText()}
+        onPointerDown={(event) => event.stopPropagation()}
+        onInput={(event) => setDraftText(event.currentTarget.value)}
+        onWheel={handleTextWheel}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); event.currentTarget.blur(); }
+        }}
+        onBlur={commitTextEdit}
+        class="min-h-0 flex-1 resize-none bg-transparent text-sm leading-5 text-fg outline-none focus-visible:ring-1 focus-visible:ring-accent/50" />
+    </Show>
     <div class="denim-node-status-bar">
       <span class="denim-node-type-label">{props.node.type}</span>
       <div class="denim-node-status-indicators">
@@ -707,6 +902,10 @@ function NodeCard(props: {
             onClick={(event) => { event.stopPropagation(); props.onSpawnContainer(); }}>
             <SquareDashed size={ICON_SIZE} strokeWidth={1.7} />
           </IconButton>
+          <IconButton aria-label="Create or load Sequence Container" title="Create or load Sequence Container on this Board"
+            class="lui-node-toolbar__action" onClick={(event) => { event.stopPropagation(); props.onCreateSequenceContainer(); }}>
+            <ListTree size={ICON_SIZE} strokeWidth={1.7} />
+          </IconButton>
           <div class="lui-node-toolbar__menu-anchor">
             <IconButton ref={sequenceOptionsButton} aria-label="Sequence options" title="Sequence options" class="lui-node-toolbar__action"
               aria-expanded={openNodeMenu() === 'sequence'} onClick={(event) => {
@@ -761,7 +960,11 @@ function NodeCard(props: {
   </article>;
 }
 
-function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) {
+function DenimAppToolbar(props: {
+  onStatus: (message: string | null) => void;
+  onOpenTypes: () => void;
+  onOpenBoards: () => void;
+}) {
   const session = useDenimSession();
   const actions = useDenimActions();
   const [quickSelectOpen, setQuickSelectOpen] = createSignal(false);
@@ -779,6 +982,7 @@ function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) 
     setBoardMenu(null);
     setExportSubmenuOpen(false);
     session.activateBoard(id);
+    props.onOpenBoards();
     setQuickSelectOpen(false);
   };
 
@@ -805,7 +1009,7 @@ function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) 
       })), graph.edges.map((edge) => ({ source: edge.sourceId, target: edge.targetId })));
       for (const [id, position] of Object.entries(result.board.positions)) positions.set(id, position);
 
-      const document = denimBoardToExcalidraw(graph, positions);
+      const document = denimBoardToExcalidraw(graph, positions, session.state.nodeTypes);
       const filename = `${boardFilename(result.board.title)}.excalidraw`;
       const url = URL.createObjectURL(new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' }));
       const link = window.document.createElement('a');
@@ -824,6 +1028,19 @@ function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) 
       clearTimeout(statusTimer);
       statusTimer = setTimeout(() => props.onStatus(null), 5000);
     }
+  }
+
+  async function createNewBoard(): Promise<void> {
+    setQuickSelectOpen(false);
+    const result = await actions.createBoard();
+    clearTimeout(statusTimer);
+    if (!result.ok) {
+      props.onStatus(`Could not create Board: ${result.error ?? 'unknown error'}`);
+      statusTimer = setTimeout(() => props.onStatus(null), 5000);
+      return;
+    }
+    props.onStatus('Created New Board');
+    statusTimer = setTimeout(() => props.onStatus(null), 2400);
   }
 
   onMount(() => {
@@ -858,10 +1075,14 @@ function DenimAppToolbar(props: { onStatus: (message: string | null) => void }) 
       <IconButton ref={quickSelectButton} aria-label="Quick Select" title="Quick Select" aria-expanded={quickSelectOpen()}
         onClick={() => setQuickSelectOpen((open) => !open)}><Zap size={17} strokeWidth={1.8} /></IconButton>
       <Show when={quickSelectOpen()}>
-        <AnchoredMenu anchor={quickSelectButton} label="Boards" class="lui-menu-panel--wide" onClose={() => setQuickSelectOpen(false)}>
+        <AnchoredMenu anchor={quickSelectButton} label="Quick Select" class="lui-menu-panel--wide" onClose={() => setQuickSelectOpen(false)}>
           <For each={tabs().filter((board) => board.kind === 'pinned')}>
             {(board) => <MenuItem onClick={() => activate(board.id)}>{board.title}</MenuItem>}
           </For>
+          <MenuSeparator />
+          <MenuItem onClick={() => void createNewBoard()}>New Board</MenuItem>
+          <MenuSeparator />
+          <MenuItem onClick={() => { props.onOpenTypes(); setQuickSelectOpen(false); }}>Types</MenuItem>
         </AnchoredMenu>
       </Show>
     </div>
@@ -921,6 +1142,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
   const [visibilityMenu, setVisibilityMenu] = createSignal<VisibilityMenuState | null>(null);
   const [query, setQuery] = createSignal('');
   const [statusToast, setStatusToast] = createSignal<string | null>(null);
+  const [page, setPage] = createSignal<'board' | 'types'>('board');
   const [edgeMenu, setEdgeMenu] = createSignal<{
     edgeId: string; x: number; y: number; canvasX: number; canvasY: number;
     kind: 'delete' | 'detach'; confirming?: boolean;
@@ -981,7 +1203,8 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
         </Show>
       </div>}
     </Show>
-    <DenimAppToolbar onStatus={setStatusToast} />
+    <DenimAppToolbar onStatus={setStatusToast} onOpenTypes={() => setPage('types')} onOpenBoards={() => setPage('board')} />
+    <Show when={page() === 'types'} fallback={<>
     <div class="relative min-h-0 flex-1" onPointerDown={() => setEdgeMenu(null)}>
       <ToolbarSurface variant="floating" class="absolute left-1/2 top-3 z-10 -translate-x-1/2">
         <Show when={isJourneysBoard()}>
@@ -1044,6 +1267,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
     <Show when={visibilityMenu()}>{(menu) => <DenimNodeVisibilityMenu
       title={menu().title} boardTitle={menu().boardTitle} boardId={menu().boardId}
       position={{ x: menu().x, y: menu().y }}
+      nodeTypes={() => session.state.nodeTypes}
       queryNodes={() => actions.queryNodes(menu().kind === 'board'
         ? { op: 'board.nodes.list', boardId: menu().boardId }
       : menu().kind === 'upstream'
@@ -1053,7 +1277,61 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
           : { op: 'container.members.list', boardId: menu().boardId, containerNodeId: menu().nodeId! })}
       setNodeLoaded={(nodeId, loaded, boardId) => actions.setNodeLoaded(nodeId, loaded, boardId)}
       onClose={() => setVisibilityMenu(null)} />}</Show>
+    </>}>
+      <DenimTypesPage />
+    </Show>
   </div>;
+}
+
+function DenimTypesPage() {
+  const session = useDenimSession();
+  const actions = useDenimActions();
+  const [creating, setCreating] = createSignal(false);
+  const [newName, setNewName] = createSignal('');
+  let newTypeInput: HTMLInputElement | undefined;
+
+  async function createType(): Promise<void> {
+    const name = newName().trim();
+    if (!name) { setCreating(false); return; }
+    const result = await actions.createNodeType(name);
+    if (result.ok) { setCreating(false); setNewName(''); }
+  }
+
+  return <main class="denim-types-page" aria-label="Types">
+    <div class="denim-types-page__list" role="list" aria-label="Node types">
+      <For each={session.state.nodeTypes}>{(type) => <DenimTypeItem type={type}
+        onRename={(name) => actions.renameNodeType(type.id, name)} />}</For>
+      <Show when={creating()}>
+        <input ref={newTypeInput} class="denim-types-page__item" aria-label="New node type name"
+          value={newName()} onInput={(event) => setNewName(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') { event.preventDefault(); void createType(); }
+            if (event.key === 'Escape') { setCreating(false); setNewName(''); }
+          }} onBlur={() => void createType()} />
+      </Show>
+      <IconButton aria-label="Create type" title="Create type" onClick={() => {
+        setNewName(''); setCreating(true); queueMicrotask(() => newTypeInput?.focus());
+      }}><Plus size={16} strokeWidth={1.8} /></IconButton>
+    </div>
+  </main>;
+}
+
+function DenimTypeItem(props: { type: DenimNodeType; onRename: (name: string) => Promise<{ ok: boolean; error?: string }> }) {
+  const [name, setName] = createSignal(props.type.name);
+  createEffect(() => setName(props.type.name));
+  async function save(): Promise<void> {
+    const next = name().trim();
+    if (!next || next === props.type.name || next === 'Journey') { setName(props.type.name); return; }
+    const result = await props.onRename(next);
+    if (!result.ok) setName(props.type.name);
+  }
+  return <input class="denim-types-page__item" role="listitem" aria-label={`Node type: ${props.type.name}`}
+    value={name()} readOnly={props.type.name === 'Journey'}
+    onInput={(event) => setName(event.currentTarget.value)}
+    onKeyDown={(event) => {
+      if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); }
+      if (event.key === 'Escape') { setName(props.type.name); event.currentTarget.blur(); }
+    }} onBlur={() => void save()} />;
 }
 
 type ConnectionGesture = {

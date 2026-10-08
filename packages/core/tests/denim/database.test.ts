@@ -16,7 +16,7 @@ describe('Denim SQLite database', () => {
   it('stores an open node and edge graph and permits type labels to change', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    addDenimNode(db, { id: 'action', type: 'Action', text: 'Create a journey' });
+    addDenimNode(db, { id: 'action', type: 'User Action', text: 'Create a journey' });
     addDenimEdge(db, { id: 'contains-action', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action' });
     updateDenimNode(db, 'action', { type: 'Step' });
 
@@ -53,7 +53,8 @@ describe('Denim SQLite database', () => {
     expect(getDenimGraph(migrated).edges).toEqual([{
       id: 'edge', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action', priority: null,
     }]);
-    expect(migrated.exec('PRAGMA user_version')[0].values[0][0]).toBe(4);
+    expect(getDenimGraph(migrated).nodes.find((node) => node.id === 'action')?.type).toBe('User Action');
+    expect(migrated.exec('PRAGMA user_version')[0].values[0][0]).toBe(9);
   });
 
   it('finds instances without an Instance parent and rejects parent cycles', async () => {
@@ -69,7 +70,7 @@ describe('Denim SQLite database', () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Build a journey' });
 
-    expect(() => createDenimChild(db, 'missing-parent', { id: 'child', type: 'Action', text: 'Child' }, 'edge'))
+    expect(() => createDenimChild(db, 'missing-parent', { id: 'child', type: 'User Action', text: 'Child' }, 'edge'))
       .toThrow();
     expect(getDenimGraph(db)).toEqual({
       nodes: [{ id: 'journey', type: 'Journey', text: 'Build a journey' }],
@@ -80,7 +81,7 @@ describe('Denim SQLite database', () => {
   it('deletes a node and cascades all incident edges', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'parent', type: 'Journey', text: 'Journey' });
-    addDenimNode(db, { id: 'target', type: 'Action', text: 'Action' });
+    addDenimNode(db, { id: 'target', type: 'User Action', text: 'Action' });
     addDenimNode(db, { id: 'other', type: 'Instance', text: 'Instance' });
     addDenimEdge(db, { id: 'incoming', type: PARENT_CHILD, sourceId: 'parent', targetId: 'target' });
     addDenimEdge(db, { id: 'outgoing', type: 'uses', sourceId: 'target', targetId: 'other' });
@@ -99,7 +100,7 @@ describe('Denim SQLite database', () => {
   it('deletes all parent-child descendants when requested', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
-    addDenimNode(db, { id: 'action', type: 'Action', text: 'Action' });
+    addDenimNode(db, { id: 'action', type: 'User Action', text: 'Action' });
     addDenimNode(db, { id: 'capability', type: 'Capability', text: 'Capability' });
     addDenimNode(db, { id: 'resource', type: 'Instance', text: 'Instance' });
     addDenimEdge(db, { id: 'journey-action', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action' });
@@ -117,7 +118,7 @@ describe('Denim SQLite database', () => {
   it('updates an edge priority as a safe integer', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Journey' });
-    addDenimNode(db, { id: 'action', type: 'Action', text: 'Action' });
+    addDenimNode(db, { id: 'action', type: 'User Action', text: 'Action' });
     addDenimEdge(db, { id: 'edge', type: PARENT_CHILD, sourceId: 'journey', targetId: 'action' });
 
     updateDenimEdgePriority(db, 'edge', 12.75);
@@ -129,13 +130,13 @@ describe('Denim SQLite database', () => {
   it('stores sequence priority on child edges and appends new children to an initialized sequence', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     addDenimNode(db, { id: 'journey', type: 'Journey', text: 'Build a journey' });
-    createDenimChild(db, 'journey', { id: 'first-child', type: 'Action', text: 'First child' }, 'edge-first');
-    createDenimChild(db, 'journey', { id: 'second-child', type: 'Action', text: 'Second child' }, 'edge-second');
+    createDenimChild(db, 'journey', { id: 'first-child', type: 'User Action', text: 'First child' }, 'edge-first');
+    createDenimChild(db, 'journey', { id: 'second-child', type: 'User Action', text: 'Second child' }, 'edge-second');
 
     expect(getDenimGraph(db).edges.map((edge) => edge.priority)).toEqual([null, null]);
     initializeDenimSequence(db, 'journey', ['second-child', 'first-child']);
-    createDenimChild(db, 'journey', { id: 'third-child', type: 'Action', text: 'Third child' }, 'edge-third');
-    addDenimNode(db, { id: 'existing', type: 'Action', text: 'Existing action' });
+    createDenimChild(db, 'journey', { id: 'third-child', type: 'User Action', text: 'Third child' }, 'edge-third');
+    addDenimNode(db, { id: 'existing', type: 'User Action', text: 'Existing action' });
     connectDenimChild(db, 'journey', 'existing', 'edge-existing');
 
     expect(getDenimGraph(db).edges.map((edge) => [edge.targetId, edge.priority])).toEqual([
@@ -143,7 +144,7 @@ describe('Denim SQLite database', () => {
     ]);
 
     db.run('UPDATE edges SET priority = NULL WHERE id = ?', ['edge-second']);
-    expect(() => createDenimChild(db, 'journey', { id: 'rejected-child', type: 'Action', text: 'Rejected' }, 'edge-rejected'))
+    expect(() => createDenimChild(db, 'journey', { id: 'rejected-child', type: 'User Action', text: 'Rejected' }, 'edge-rejected'))
       .toThrow(/incomplete/);
     expect(getDenimGraph(db).nodes.some((node) => node.id === 'rejected-child')).toBe(false);
 
@@ -151,7 +152,7 @@ describe('Denim SQLite database', () => {
     expect(getDenimGraph(db).edges.every((edge) => edge.priority === null)).toBe(true);
   });
 
-  it('hydrates a new database with the starter Journey and Action', async () => {
+  it('hydrates a new database with the starter Journey and User Action', async () => {
     const db = await openDenimDatabase(undefined, wasmBinary);
     hydrateDenimDatabase(db);
 
@@ -161,7 +162,7 @@ describe('Denim SQLite database', () => {
     expect(getJourneyGraph(db, 'a-user-builds-a-journey')).toEqual({
       nodes: [
         { id: 'a-user-builds-a-journey', type: 'Journey', text: 'A user builds a journey' },
-        { id: 'user-creates-a-new-journey', type: 'Action', text: 'User creates a new journey' },
+        { id: 'user-creates-a-new-journey', type: 'User Action', text: 'User creates a new journey' },
       ],
       edges: [{
         id: 'journey-has-action-user-creates-a-new-journey',

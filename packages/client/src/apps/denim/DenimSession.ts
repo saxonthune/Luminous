@@ -3,9 +3,11 @@ import { createStore, type Store } from 'solid-js/store';
 import {
   exportDenimDatabase,
   getDenimGraph,
+  listDenimNodeTypes,
   type DenimDatabase,
   type DenimGraph,
   type DenimNode,
+  type DenimNodeType,
 } from '@luminous/core/denim';
 import { applyDenimAction, DENIM_PINNED_BOARDS, getDenimBoardGraph, readDenimSnapshot, readDenimBoards,
   type DenimAction, type DenimBoard } from '@luminous/core/denim/actions';
@@ -15,6 +17,7 @@ export type { DenimQuerySource, DenimBoard, DenimBoardContainer } from '@luminou
 
 export interface DenimSessionState {
   boards: DenimBoard[];
+  nodeTypes: DenimNodeType[];
   activeBoardId: string;
   cameras: Record<string, { x: number; y: number; k: number }>;
   selectedId: string | null;
@@ -68,6 +71,7 @@ export interface DenimDispatchResult {
   board?: DenimBoard;
   graph?: DenimGraph;
   changed?: boolean;
+  sequenceContainerId?: string;
 }
 
 export type DenimFileSaver = (bytes: Uint8Array, revision: string) => Promise<string>;
@@ -129,6 +133,7 @@ export function createDenimSession(
   const initialBoardId = boards.some((board) => board.id === transient.activeBoardId) ? transient.activeBoardId! : PINNED_BOARDS[0].id;
   const [state, setState] = createStore<DenimSessionState>({
     boards,
+    nodeTypes: listDenimNodeTypes(database),
     activeBoardId: initialBoardId,
     cameras: transient.cameras,
     selectedId: null,
@@ -190,11 +195,11 @@ export function createDenimSession(
     try {
       const result = applyDenimAction(database, action);
       const snapshot = readDenimSnapshot(database);
-      setState('boards', snapshot.boards);
+      setState({ boards: snapshot.boards, nodeTypes: listDenimNodeTypes(database) });
       setState('cameras', (cameras) => Object.fromEntries(Object.entries(cameras)
         .filter(([boardId]) => snapshot.boards.some((board) => board.id === boardId))));
-      if (action.op === 'board.openJourney' && result.boardId) {
-        setState({ activeBoardId: result.boardId, selectedId: action.journeyId });
+      if ((action.op === 'board.openJourney' || action.op === 'board.create') && result.boardId) {
+        setState({ activeBoardId: result.boardId, selectedId: action.op === 'board.openJourney' ? action.journeyId : null });
         saveTransient();
       } else if (action.op === 'board.close' && state.activeBoardId === action.boardId) {
         setState({ activeBoardId: PINNED_BOARDS[0].id, selectedId: null });
