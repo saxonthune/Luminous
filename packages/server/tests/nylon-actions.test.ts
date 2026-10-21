@@ -52,7 +52,7 @@ async function post(body: unknown, endpoint = '/api/nylon/action') {
   return { status: response.status, body: await response.json() };
 }
 async function cli(...args: string[]) {
-  const { stdout } = await exec(process.execPath, ['--experimental-strip-types', resolve('../../scripts/luminous-cli.ts'), 'nylon', ...args, '--server', base]);
+  const { stdout } = await exec(process.execPath, ['--import', 'tsx', resolve('../../scripts/luminous-cli.ts'), 'nylon', ...args, '--server', base]);
   return JSON.parse(stdout);
 }
 

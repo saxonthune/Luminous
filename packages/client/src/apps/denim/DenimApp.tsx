@@ -391,7 +391,6 @@ function CanvasNodes(props: {
   initializeSequence: (parentId: string) => void;
   toggleSequenceMode: (parentId: string) => void;
 }) {
-  const session = useDenimSession();
   const actions = useDenimActions();
   const ctx = useCanvasContext();
   const [dragOffsets, setDragOffsets] = createSignal<Record<string, { dx: number; dy: number }>>({});

@@ -391,7 +391,7 @@ describe('Canvas edge rendering', () => {
     Object.defineProperty(hitLine.ownerSVGElement, 'getScreenCTM', { configurable: true, value: () => ({}) });
     hitLine.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
 
-    expect(onEdgeClick).toHaveBeenCalledWith('e1', 290, 140);
+    expect(onEdgeClick).toHaveBeenCalledWith('e1', 290, 140, 120, 20);
     const edgeLayer = container.querySelector('[data-cactus-edge-layer-lines]')!;
     const firstNode = container.querySelector('[data-container-id="node-a"]')!;
     expect(Boolean(edgeLayer.compareDocumentPosition(firstNode) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
