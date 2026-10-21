@@ -7,6 +7,14 @@ export interface RegisteredNodeRect {
   h: number;
 }
 
+/** A clipped repeat of an Edge path in a host-selected visual band. */
+export interface EdgeContentOverlay {
+  /** Canvas-space clip region. The host can omit a Container's header here. */
+  clipRect: RegisteredNodeRect;
+  /** Host-selected band, ordered with NodeContainer visualBand values. */
+  band: number;
+}
+
 export interface RoutePoint {
   x: number;
   y: number;
@@ -30,10 +38,29 @@ export interface EdgeDeclaration {
   styling?: EdgeStyling;
   /** Raw label text. When present, cactus renders it truncated and click-revealable. */
   labelText?: string;
+  /** When supplied, clicking the label opens an inline editor and blur commits its value. */
+  onLabelEdit?: (value: string) => void;
+  /** Optional value used to initialize the editor when the display label is derived. */
+  labelEditValue?: string;
+  /** Called when the inline label editor receives or loses focus. */
+  onLabelEditFocus?: () => void;
+  onLabelEditBlur?: () => void;
+  /** False omits the label backing shape and text halo. Defaults to true. */
+  labelBackground?: boolean;
+  /** Color of the label backing shape and matching text halo. */
+  labelBackgroundColor?: string;
+  /** Shape of the label backing. Defaults to the existing rounded rectangle. */
+  labelBackgroundShape?: 'rounded' | 'circle';
+  /** Multiplicative adjustment to the normal zoom-aware label font size. */
+  labelFontScale?: number;
+  /** SVG font weight for this edge label. */
+  labelFontWeight?: number | string;
   /** Optional Solid component rendered at the path midpoint. */
   label?: () => JSX.Element;
   /** Optional host-owned route projection. Return null to use cactus's direct route. */
   routeBuilder?: (nodeRects: ReadonlyMap<string, RegisteredNodeRect>) => EdgeRoute | null;
+  /** Repeat the routed line, arrow, and hit target above selected underlays. */
+  contentOverlays?: EdgeContentOverlay[];
 }
 
 export interface EdgeStyling {

@@ -6,6 +6,9 @@ import { resolve } from "node:path"
 import { scanDocuments, resolveRoots } from "./workspace.js"
 import { dispatchNylon, nylonSession } from "./nylon.js"
 import type { NylonActionRequest } from '@luminous/core/nylon/history'
+import { applyDenimAction, DENIM_ACTION_CATALOG, readDenimSnapshot, type DenimAction } from '@luminous/core/denim/actions'
+import { queryDenim, DENIM_QUERY_CATALOG, type DenimQuery } from '@luminous/core/denim/queries'
+import { exportDenimDatabase, openDenimDatabase } from '@luminous/core/denim'
 import {
   getDocument,
   applyAction,
@@ -24,6 +27,12 @@ import {
   copyDocument,
   moveDocument,
   deleteDocument,
+  isSqlitePath,
+  createDenimDatabase,
+  readDenimDatabase,
+  writeDenimDatabase,
+  databaseRevision,
+  DocumentRevisionConflict,
 } from "./store.js"
 
 const port = Number(process.env.PORT ?? 4080)
@@ -90,8 +99,8 @@ function wsSendText(socket: Socket, text: string): void {
   socket.write(Buffer.concat([header, payload]))
 }
 
-function broadcast(path: string, revision?: string, actionId?: string): void {
-  const msg = JSON.stringify({ event: "changed", path, revision, actionId })
+function broadcast(path: string, revision?: string, actionId?: string, activateBoardId?: string): void {
+  const msg = JSON.stringify({ event: "changed", path, revision, actionId, activateBoardId })
   for (const socket of clients) {
     try {
       wsSendText(socket, msg)
@@ -106,8 +115,9 @@ function broadcast(path: string, revision?: string, actionId?: string): void {
 
 function setCorsHeaders(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, If-Match")
+  res.setHeader("Access-Control-Expose-Headers", "ETag")
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -132,6 +142,15 @@ async function parseBody(req: IncomingMessage): Promise<unknown> {
   })
 }
 
+async function parseBinaryBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    req.on("data", (chunk: Buffer) => chunks.push(chunk))
+    req.on("end", () => resolve(Buffer.concat(chunks)))
+    req.on("error", reject)
+  })
+}
+
 function hasTraversal(p: string): boolean {
   return p.includes("..") || p.startsWith("/")
 }
@@ -145,6 +164,145 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   const url = req.url ?? "/"
+
+  if (url.startsWith('/api/denim/database/') && (req.method === 'GET' || req.method === 'PUT' || req.method === 'POST')) {
+    const path = decodeURIComponent(url.slice('/api/denim/database/'.length))
+    if (!path || hasTraversal(path) || !isSqlitePath(path)) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
+    }
+    try {
+      if (req.method === 'GET') {
+        const bytes = await readDenimDatabase(path)
+        setCorsHeaders(res)
+        res.writeHead(200, { 'Content-Type': 'application/vnd.sqlite3', ETag: databaseRevision(bytes) })
+        res.end(bytes)
+      } else if (req.method === 'POST') {
+        const bytes = await parseBinaryBody(req)
+        if (bytes.length === 0) { sendJson(res, 400, { ok: false, error: 'Empty database body' }); return }
+        const revision = await createDenimDatabase(path, bytes)
+        broadcast(path, revision)
+        setCorsHeaders(res)
+        res.writeHead(201, { 'Content-Type': 'application/json', ETag: revision })
+        res.end(JSON.stringify({ ok: true, path }))
+      } else {
+        const bytes = await parseBinaryBody(req)
+        if (bytes.length === 0) { sendJson(res, 400, { ok: false, error: 'Empty database body' }); return }
+        const expectedRevision = req.headers['if-match']
+        if (typeof expectedRevision !== 'string') { sendJson(res, 428, { ok: false, error: 'If-Match revision is required' }); return }
+        const nextRevision = await writeDenimDatabase(path, bytes, expectedRevision)
+        broadcast(path, nextRevision)
+        setCorsHeaders(res)
+        res.setHeader('ETag', nextRevision)
+        sendJson(res, 200, { ok: true, path })
+      }
+    } catch (cause) {
+      if (req.method === 'POST' && cause && typeof cause === 'object' && 'code' in cause && cause.code === 'EEXIST') {
+        sendJson(res, 409, { ok: false, error: 'A project with that name already exists' }); return
+      }
+      if (cause instanceof DocumentRevisionConflict) {
+        res.setHeader('ETag', cause.currentRevision)
+        sendJson(res, 412, { ok: false, error: 'Database revision changed', revision: cause.currentRevision })
+        return
+      }
+      sendJson(res, req.method === 'GET' ? 404 : 400, { ok: false, error: 'Denim database not found or could not be saved' })
+    }
+    return
+  }
+
+  if (url.startsWith('/api/denim/snapshot/') && req.method === 'GET') {
+    const path = decodeURIComponent(url.slice('/api/denim/snapshot/'.length))
+    if (!path || hasTraversal(path) || !isSqlitePath(path) || !path.endsWith('.denim.sqlite')) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
+    }
+    let database: Awaited<ReturnType<typeof openDenimDatabase>> | undefined
+    try {
+      const bytes = await readDenimDatabase(path)
+      database = await openDenimDatabase(new Uint8Array(bytes))
+      const revision = databaseRevision(bytes)
+      res.setHeader('ETag', revision)
+      sendJson(res, 200, { ok: true, path, revision, ...readDenimSnapshot(database) })
+    } catch (cause) {
+      sendJson(res, 404, { ok: false, error: cause instanceof Error ? cause.message : 'Denim database not found' })
+    } finally {
+      database?.close()
+    }
+    return
+  }
+
+  if (url === '/api/denim/actions' && req.method === 'GET') {
+    sendJson(res, 200, { actions: DENIM_ACTION_CATALOG })
+    return
+  }
+
+  if (url === '/api/denim/queries' && req.method === 'GET') {
+    sendJson(res, 200, { queries: DENIM_QUERY_CATALOG })
+    return
+  }
+
+  if (url === '/api/denim/query' && req.method === 'POST') {
+    const body = await parseBody(req) as { path?: unknown; query?: unknown }
+    const path = body.path
+    if (typeof path !== 'string' || !path || hasTraversal(path) || !isSqlitePath(path) || !path.endsWith('.denim.sqlite')) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
+    }
+    let database: Awaited<ReturnType<typeof openDenimDatabase>> | undefined
+    try {
+      const bytes = await readDenimDatabase(path)
+      database = await openDenimDatabase(new Uint8Array(bytes))
+      const result = queryDenim(database, body.query as DenimQuery)
+      sendJson(res, 200, { ok: true, result, path, revision: databaseRevision(bytes) })
+    } catch (cause) {
+      sendJson(res, 400, { ok: false, error: cause instanceof Error ? cause.message : 'Denim query failed' })
+    } finally {
+      database?.close()
+    }
+    return
+  }
+
+  if (url === '/api/denim/action' && req.method === 'POST') {
+    const body = await parseBody(req) as { path?: unknown; baseRevision?: unknown; actionId?: unknown; action?: unknown; actions?: unknown }
+    const path = body.path
+    if (typeof path !== 'string' || !path || hasTraversal(path) || !isSqlitePath(path) || !path.endsWith('.denim.sqlite')) {
+      sendJson(res, 400, { ok: false, error: 'Invalid Denim database path' }); return
+    }
+    if (typeof body.baseRevision !== 'string' || !body.baseRevision) {
+      sendJson(res, 428, { ok: false, error: 'baseRevision is required' }); return
+    }
+    let database: Awaited<ReturnType<typeof openDenimDatabase>> | undefined
+    try {
+      const current = await readDenimDatabase(path)
+      const revision = databaseRevision(current)
+      if (revision !== body.baseRevision) {
+        sendJson(res, 412, { ok: false, error: 'Database revision changed', revision }); return
+      }
+      database = await openDenimDatabase(new Uint8Array(current))
+      const actionList = body.actions === undefined ? [body.action] : body.actions
+      if (!Array.isArray(actionList) || actionList.length === 0) {
+        sendJson(res, 400, { ok: false, error: 'actions must be a nonempty array' }); return
+      }
+      const results = actionList.map((action) => applyDenimAction(database!, action as DenimAction))
+      const result = results.at(-1)!
+      const changed = results.some((item) => item.changed)
+      let nextRevision = revision
+      if (changed) {
+        const bytes = exportDenimDatabase(database)
+        nextRevision = await writeDenimDatabase(path, bytes, revision)
+        broadcast(path, nextRevision, typeof body.actionId === 'string' ? body.actionId : undefined,
+          body.action && typeof body.action === 'object' && (body.action as { op?: unknown }).op === 'board.openJourney'
+            ? result.boardId : undefined)
+      }
+      res.setHeader('ETag', nextRevision)
+      sendJson(res, 200, { ...readDenimSnapshot(database), ...result, changed, results, path, revision: nextRevision })
+    } catch (cause) {
+      if (cause instanceof DocumentRevisionConflict) {
+        res.setHeader('ETag', cause.currentRevision)
+        sendJson(res, 412, { ok: false, error: 'Database revision changed', revision: cause.currentRevision })
+      } else sendJson(res, 400, { ok: false, error: cause instanceof Error ? cause.message : String(cause) })
+    } finally {
+      database?.close()
+    }
+    return
+  }
 
   if (url.startsWith('/api/nylon/document/') && req.method === 'GET') {
     const path = decodeURIComponent(url.slice('/api/nylon/document/'.length))
@@ -468,6 +626,8 @@ server.listen(port, () => {
     console.log(`[watch] external change detected: ${path}`)
     if (isNylonPath(path)) {
       void nylonSession(path).read().then((snapshot) => broadcast(path, snapshot.revision)).catch(() => broadcast(path))
+    } else if (path.endsWith('.denim.sqlite')) {
+      void readDenimDatabase(path).then((bytes) => broadcast(path, databaseRevision(bytes))).catch(() => broadcast(path))
     } else broadcast(path)
   })
 })

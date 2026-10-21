@@ -1,7 +1,8 @@
-import { createMemo, createSignal, For, Show, type JSX } from 'solid-js';
+import { createMemo, createSignal, createUniqueId, For, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
 import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
+import type { RoutePoint } from './types.js';
 
 export type EdgeEmphasis = 'neutral' | 'incident' | 'dimmed';
 
@@ -62,6 +63,8 @@ interface EdgeLayerProps {
   routeBand?: number;
   zoom: () => number;
   viewport?: () => { x: number; y: number; w: number; h: number } | null;
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
+  onEdgeHover?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
 }
 
 const LABEL_CAP = 28;
@@ -87,6 +90,102 @@ function arrowHeadPath(x1: number, y1: number, x2: number, y2: number, size = 8,
   const baseX2 = x2 - size * Math.cos(angle + Math.PI / 6);
   const baseY2 = y2 - size * Math.sin(angle + Math.PI / 6);
   return `M ${x2} ${y2} L ${baseX1} ${baseY1} L ${baseX2} ${baseY2} Z`;
+}
+
+function reportEdgeClick(
+  event: MouseEvent,
+  edgeId: string,
+  midpoint: { x: number; y: number },
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void,
+): void {
+  if (!onEdgeClick) return;
+  event.stopPropagation();
+  const svg = (event.currentTarget as SVGElement).ownerSVGElement;
+  const matrix = svg?.getScreenCTM();
+  if (!matrix) return;
+  const point = new DOMPoint(midpoint.x, midpoint.y).matrixTransform(matrix);
+  onEdgeClick(edgeId, point.x, point.y, midpoint.x, midpoint.y);
+}
+
+function reportEdgeHover(event: PointerEvent, edgeId: string, midpoint: { x: number; y: number }, onEdgeHover?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void): void {
+  if (!onEdgeHover) return;
+  const svg = (event.currentTarget as SVGElement).ownerSVGElement;
+  const matrix = svg?.getScreenCTM();
+  if (!matrix) return;
+  const point = new DOMPoint(midpoint.x, midpoint.y).matrixTransform(matrix);
+  onEdgeHover(edgeId, point.x, point.y, midpoint.x, midpoint.y);
+}
+
+function svgIdToken(value: string): string {
+  return Array.from(value, (char) => /[a-z\d-]/i.test(char)
+    ? char
+    : `_x${char.codePointAt(0)!.toString(16)}_`).join('');
+}
+
+interface EdgeLineSegmentProps {
+  edge: EdgeDeclaration;
+  start: () => RoutePoint;
+  end: () => RoutePoint;
+  index: number;
+  curved: () => boolean;
+  isFinal: () => boolean;
+  color: string;
+  width: () => number;
+  dashArray: () => string | undefined;
+  opacity: () => number;
+  arrowHead: boolean;
+  arrowSize: () => number;
+  hitWidth: () => number;
+  labelPosition: () => RoutePoint;
+  onEdgeClick?: EdgeLayerProps['onEdgeClick'];
+  onEdgeHover?: EdgeLayerProps['onEdgeHover'];
+}
+
+function EdgeLineSegment(props: EdgeLineSegmentProps) {
+  return <>
+    <Show when={props.curved()} fallback={(
+      <polyline
+        points={`${props.start().x},${props.start().y} ${props.end().x},${props.end().y}`}
+        stroke={props.color}
+        stroke-width={props.width()}
+        stroke-dasharray={props.dashArray()}
+        stroke-linecap="round"
+        fill="none"
+        opacity={props.opacity()}
+      />
+    )}>
+      <path
+        d={bezierSegmentPath(props.start().x, props.start().y, props.end().x, props.end().y)}
+        stroke={props.color}
+        stroke-width={props.width()}
+        stroke-dasharray={props.dashArray()}
+        stroke-linecap="round"
+        fill="none"
+        opacity={props.opacity()}
+      />
+    </Show>
+    <Show when={props.arrowHead && props.isFinal()}>
+      <path d={arrowHeadPath(props.start().x, props.start().y, props.end().x, props.end().y, props.arrowSize(), props.curved())}
+        fill={props.color} opacity={props.opacity()} />
+    </Show>
+    <Show when={props.curved()} fallback={(
+      <line
+        x1={props.start().x} y1={props.start().y} x2={props.end().x} y2={props.end().y}
+        stroke="transparent" stroke-width={props.hitWidth()} data-edge-id={props.edge.id}
+        data-route-segment={props.index} style={{ 'pointer-events': 'stroke' }}
+        onPointerEnter={(event) => reportEdgeHover(event, props.edge.id, props.labelPosition(), props.onEdgeHover)}
+        onClick={(event) => reportEdgeClick(event, props.edge.id, props.labelPosition(), props.onEdgeClick)}
+      />
+    )}>
+      <path
+        d={bezierSegmentPath(props.start().x, props.start().y, props.end().x, props.end().y)}
+        stroke="transparent" stroke-width={props.hitWidth()} fill="none" data-edge-id={props.edge.id}
+        data-route-segment={props.index} style={{ 'pointer-events': 'stroke' }}
+        onPointerEnter={(event) => reportEdgeHover(event, props.edge.id, props.labelPosition(), props.onEdgeHover)}
+        onClick={(event) => reportEdgeClick(event, props.edge.id, props.labelPosition(), props.onEdgeClick)}
+      />
+    </Show>
+  </>;
 }
 
 /** Horizontal-tangent cubic used for freeform relationship cards. The handle
@@ -152,7 +251,11 @@ function chooseLabelAnchor(
 }
 
 export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
+  const clipNamespace = createUniqueId();
   const [revealedId, setRevealedId] = createSignal<string | null>(null);
+  const [editingId, setEditingId] = createSignal<string | null>(null);
+  const [editingText, setEditingText] = createSignal('');
+  let editingInput: HTMLInputElement | undefined;
 
   // Counter-scale label text so on-screen size stays readable across zoom levels.
   const labelFontSize = createMemo(() => {
@@ -186,7 +289,6 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
   const labelAnchors = createMemo(() => {
     const rects = props.getNodeRects?.() ?? new Map<string, NodeRect>();
     const r = routed();
-    const fs = LABEL_ANCHOR_REF_FS;
     const map = new Map<string, { x: number; y: number }>();
     const placed: LabelRect[] = [];
     for (const edge of props.edges) {
@@ -196,8 +298,13 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
         map.set(edge.id, { x: pts.labelX, y: pts.labelY });
         continue;
       }
+      const fs = LABEL_ANCHOR_REF_FS * (edge.labelFontScale ?? 1);
       const text = truncate(edge.labelText);
-      const box = { w: text.length * fs * 0.56 + 10, h: fs * 1.4 };
+      const textWidth = text.length * fs * 0.56 + 10;
+      const textHeight = fs * 1.4;
+      const box = edge.labelBackgroundShape === 'circle'
+        ? { w: Math.max(textWidth, textHeight), h: Math.max(textWidth, textHeight) }
+        : { w: textWidth, h: textHeight };
       const anchor = chooseLabelAnchor(pts, box, edge.sourceId, edge.targetId, rects, placed);
       map.set(edge.id, anchor);
       placed.push({ x: anchor.x - box.w / 2, y: anchor.y - box.h / 2, w: box.w, h: box.h });
@@ -227,11 +334,12 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           const labelBox = createMemo(() => {
             if (!edge.labelText) return null;
             const text = truncate(edge.labelText);
-            const fs = labelFontSize();
-            return {
-              w: text.length * fs * 0.56 + 10,
-              h: fs * 1.4,
-            };
+            const fs = labelFontSize() * (edge.labelFontScale ?? 1);
+            const textWidth = text.length * fs * 0.56 + 10;
+            const textHeight = fs * 1.4;
+            return edge.labelBackgroundShape === 'circle'
+              ? { w: Math.max(textWidth, textHeight), h: Math.max(textWidth, textHeight) }
+              : { w: textWidth, h: textHeight };
           });
 
           const emphasis = createMemo(() => edgeEmphasis(edge, props.emphasisNodeIds()));
@@ -281,111 +389,153 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           // TODO(routing): straight-line routing only. Curve/avoid-containers routing is a follow-up.
           return (
             <Show when={endpoints()}>
-              {(pts) => (
+              {(pts) => {
+                const renderSegments = (includeAllBands: boolean) => <For each={pts().points.slice(1)}>{(_, index) => {
+                  const start = () => pts().points[index()];
+                  const end = () => pts().points[index() + 1];
+                  const segmentBand = () => pts().segmentLayers[index()] ?? 0;
+                  return <Show when={includeAllBands || props.routeBand === undefined || segmentBand() === props.routeBand}>
+                    <EdgeLineSegment
+                      edge={edge}
+                      start={start}
+                      end={end}
+                      index={index()}
+                      curved={() => edge.styling?.curve === 'bezier'}
+                      isFinal={() => index() === pts().points.length - 2}
+                      color={color}
+                      width={width}
+                      dashArray={strokeDasharray}
+                      opacity={opacity}
+                      arrowHead={arrowHead}
+                      arrowSize={arrowSize}
+                      hitWidth={hitWidth}
+                      labelPosition={() => ({ x: pts().labelX, y: pts().labelY })}
+                      onEdgeClick={props.onEdgeClick}
+                      onEdgeHover={props.onEdgeHover}
+                    />
+                  </Show>;
+                }}</For>;
+                return (
                 <>
                   <Show when={props.layer === 'lines'}>
-                    <For each={pts().points.slice(1)}>
-                      {(end, index) => {
-                        const start = () => pts().points[index()];
-                        const curved = () => edge.styling?.curve === 'bezier';
-                        const segmentBand = () => pts().segmentLayers[index()] ?? 0;
-                        const isFinal = () => index() === pts().points.length - 2;
-                        return (
-                          <Show when={props.routeBand === undefined || segmentBand() === props.routeBand}>
-                            <Show when={curved()} fallback={(
-                              <polyline
-                                points={`${start().x},${start().y} ${end.x},${end.y}`}
-                                stroke={color}
-                                stroke-width={width()}
-                                stroke-dasharray={strokeDasharray()}
-                                stroke-linecap="round"
-                                fill="none"
-                                opacity={opacity()}
-                              />
-                            )}>
-                              <path
-                                d={bezierSegmentPath(start().x, start().y, end.x, end.y)}
-                                stroke={color}
-                                stroke-width={width()}
-                                stroke-dasharray={strokeDasharray()}
-                                stroke-linecap="round"
-                                fill="none"
-                                opacity={opacity()}
-                              />
-                            </Show>
-                            <Show when={arrowHead && isFinal()}>
-                              <path d={arrowHeadPath(start().x, start().y, end.x, end.y, arrowSize(), curved())} fill={color} opacity={opacity()} />
-                            </Show>
-                            <Show when={curved()} fallback={(
-                              <line
-                                x1={start().x}
-                                y1={start().y}
-                                x2={end.x}
-                                y2={end.y}
-                                stroke="transparent"
-                                stroke-width={hitWidth()}
-                                data-edge-id={edge.id}
-                                data-route-segment={index()}
-                                style={{ 'pointer-events': 'stroke' }}
-                              />
-                            )}>
-                              <path
-                                d={bezierSegmentPath(start().x, start().y, end.x, end.y)}
-                                stroke="transparent"
-                                stroke-width={hitWidth()}
-                                fill="none"
-                                data-edge-id={edge.id}
-                                data-route-segment={index()}
-                                style={{ 'pointer-events': 'stroke' }}
-                              />
-                            </Show>
-                          </Show>
-                        );
-                      }}
-                    </For>
+                    {renderSegments(false)}
+                    <For each={pts().contentOverlays}>{(overlay, overlayIndex) => {
+                      const clipId = `cactus-edge-content-${svgIdToken(clipNamespace)}-${svgIdToken(edge.id)}-${props.routeBand}-${overlayIndex()}`;
+                      return <Show when={props.routeBand === overlay.band}>
+                        <defs>
+                          <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+                            <rect x={overlay.clipRect.x} y={overlay.clipRect.y}
+                              width={overlay.clipRect.w} height={overlay.clipRect.h} />
+                          </clipPath>
+                        </defs>
+                        <g clip-path={`url(#${clipId})`}>
+                          {renderSegments(true)}
+                        </g>
+                      </Show>;
+                    }}</For>
                   </Show>
                   <Show when={props.layer === 'labels' && lodStyle().labelVisible !== false && !!(edge.labelText || edge.label)}>
-                    <Show when={labelBox()}>
-                      {(box) => (
-                        <rect
-                          x={(labelAnchors().get(edge.id)?.x ?? pts().labelX) - box().w / 2}
-                          y={(labelAnchors().get(edge.id)?.y ?? pts().labelY) - box().h / 2}
-                          width={box().w}
-                          height={box().h}
-                          rx={3}
-                          fill="var(--cactus-canvas-bg, #ffffff)"
-                          opacity={opacity()}
-                          style={{ 'pointer-events': 'none' }}
-                        />
-                      )}
+                    <Show when={edge.labelBackground !== false}>
+                      <Show when={labelBox()}>
+                        {(box) => (
+                          <rect
+                            x={(labelAnchors().get(edge.id)?.x ?? pts().labelX) - box().w / 2}
+                            y={(labelAnchors().get(edge.id)?.y ?? pts().labelY) - box().h / 2}
+                            width={box().w}
+                            height={box().h}
+                            rx={edge.labelBackgroundShape === 'circle' ? Math.max(box().w, box().h) / 2 : 3}
+                            fill={edge.labelBackgroundColor ?? 'var(--cactus-canvas-bg, #ffffff)'}
+                            opacity={opacity()}
+                            style={{ 'pointer-events': 'none' }}
+                          />
+                        )}
+                      </Show>
                     </Show>
-                    <text
-                      x={labelAnchors().get(edge.id)?.x ?? pts().labelX}
-                      y={labelAnchors().get(edge.id)?.y ?? pts().labelY}
-                      text-anchor="middle"
-                      dominant-baseline="middle"
-                      font-size={`${labelFontSize()}`}
-                      fill={color}
-                      stroke="var(--cactus-canvas-bg, #ffffff)"
-                      stroke-width={labelHaloWidth()}
-                      stroke-linejoin="round"
-                      paint-order="stroke fill"
-                      opacity={opacity()}
-                      style={{
-                        'pointer-events': edge.labelText ? 'auto' : 'none',
-                        cursor: edge.labelText ? 'pointer' : undefined,
-                      }}
-                      onClick={
-                        edge.labelText
-                          ? () => setRevealedId((id) => (id === edge.id ? null : edge.id))
-                          : undefined
-                      }
-                    >
-                      {edge.labelText ? truncate(edge.labelText) : edge.label?.()}
-                    </text>
+                    <Show when={editingId() === edge.id && edge.onLabelEdit} fallback={
+                      <text
+                        x={labelAnchors().get(edge.id)?.x ?? pts().labelX}
+                        y={labelAnchors().get(edge.id)?.y ?? pts().labelY}
+                        text-anchor="middle"
+                        dominant-baseline="middle"
+                        font-size={`${labelFontSize() * (edge.labelFontScale ?? 1)}`}
+                        font-weight={edge.labelFontWeight ?? 'normal'}
+                        fill={color}
+                        stroke={edge.labelBackgroundColor ?? 'var(--cactus-canvas-bg, #ffffff)'}
+                        stroke-width={edge.labelBackground === false ? 0 : labelHaloWidth()}
+                        stroke-linejoin="round"
+                        paint-order="stroke fill"
+                        opacity={opacity()}
+                        style={{
+                          'pointer-events': edge.labelText ? 'auto' : 'none',
+                          cursor: edge.labelText ? 'pointer' : undefined,
+                        }}
+                        onClick={(event) => {
+                          if (!edge.labelText) return;
+                          event.stopPropagation();
+                          if (edge.onLabelEdit) {
+                            setRevealedId(null);
+                            setEditingText(edge.labelEditValue ?? edge.labelText);
+                            setEditingId(edge.id);
+                            requestAnimationFrame(() => { editingInput?.focus(); editingInput?.select(); });
+                          } else {
+                            setRevealedId((id) => (id === edge.id ? null : edge.id));
+                          }
+                        }}
+                      >
+                        {edge.labelText ? truncate(edge.labelText) : edge.label?.()}
+                      </text>
+                    }>
+                      <Show when={labelBox()}>{(box) => {
+                        const anchor = () => labelAnchors().get(edge.id) ?? { x: pts().labelX, y: pts().labelY };
+                        const width = () => Math.max(box().w, 52 / props.zoom());
+                        const height = () => Math.max(box().h, 30 / props.zoom());
+                        function finishEdit(cancel: boolean) {
+                          if (!cancel) {
+                            const text = editingText().trim();
+                            const value = Number(text);
+                            if (text !== '' && Number.isFinite(value) && String(value) !== (edge.labelEditValue ?? edge.labelText)) {
+                              edge.onLabelEdit?.(String(value));
+                            }
+                          }
+                          edge.onLabelEditBlur?.();
+                          setEditingId(null);
+                        }
+                        return <foreignObject
+                          x={anchor().x - width() / 2}
+                          y={anchor().y - height() / 2}
+                          width={width()}
+                          height={height()}
+                          style={{ overflow: 'visible' }}>
+                          <input ref={(element) => { editingInput = element; }} type="text" inputmode="decimal" value={editingText()}
+                            aria-label="Edit sequence priority"
+                            onInput={(event) => setEditingText(event.currentTarget.value)}
+                            onFocus={() => edge.onLabelEditFocus?.()}
+                            onBlur={() => finishEdit(false)}
+                            onKeyDown={(event) => {
+                              event.stopPropagation();
+                              if (event.key === 'Enter') event.currentTarget.blur();
+                              if (event.key === 'Escape') {
+                                setEditingText(edge.labelText ?? '');
+                                finishEdit(true);
+                              }
+                            }}
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                              width: '100%', height: '100%', 'box-sizing': 'border-box', padding: '0',
+                              'border-radius': '8px', border: '1px solid var(--cactus-accent, #8b6f47)',
+                              outline: 'none', background: '#fff', color,
+                              'text-align': 'center', 'font-size': `${labelFontSize() * (edge.labelFontScale ?? 1)}px`,
+                              'font-weight': String(edge.labelFontWeight ?? 600),
+                              'box-shadow': '0 2px 8px rgb(0 0 0 / 18%)',
+                            }} class="selection:bg-accent/30 selection:text-fg" />
+                        </foreignObject>;
+                      }}</Show>
+                    </Show>
                   </Show>
                 </>
-              )}
+                );
+              }}
             </Show>
           );
         }}
