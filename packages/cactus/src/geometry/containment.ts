@@ -5,7 +5,8 @@ export type { Rect, ComputeBoundsOptions } from './geometry.js';
 import { isPointInRect } from './geometry.js';
 
 /**
- * Whether a screen point falls within a node's `[data-soft-container]`
+ * Whether a screen point falls within a node's `[data-soft-container]` or
+ * `[data-box-select-surface]`
  * interior — the drawn container box, not the header/frame around it. The
  * interior element itself is `pointer-events: none` (NodeContainer.tsx), so
  * it never receives the native hit-test; callers instead pass the node's own
@@ -17,7 +18,7 @@ import { isPointInRect } from './geometry.js';
  * interior."
  */
 export function isOverContainerInterior(nodeEl: Element, clientX: number, clientY: number): boolean {
-  const interior = nodeEl.querySelector('[data-soft-container]');
+  const interior = nodeEl.querySelector('[data-soft-container], [data-box-select-surface]');
   if (!interior) return false;
   const rect = interior.getBoundingClientRect();
   return isPointInRect({ x: clientX, y: clientY }, { x: rect.left, y: rect.top, width: rect.width, height: rect.height });

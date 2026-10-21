@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./ui/styles.css";
 
 /* Tailwind v4 auto-detects content in the current package only.
    Cactus is a sibling workspace package, so its class names need to be
@@ -29,6 +30,11 @@ body {
   --accent-hover: #1d4ed8;
   --accent-10: rgba(37, 99, 235, 0.1);
   --accent-subtle: #3b82f6;
+  --danger: #b91c1c;
+  --danger-primary: #b91c1c;
+  --danger-primary-hover: #991b1b;
+  --on-danger-primary: #ffffff;
+  --danger-subtle: #fef2f2;
   /* Merino type badges: the token palette in this theme is dark/saturated
      enough that one fixed foreground reads on every token's fill. */
   --type-badge-fg: #ffffff;
@@ -85,6 +91,11 @@ body {
   --accent-hover: #c07840;
   --accent-10: rgba(212, 145, 90, 0.1);
   --accent-subtle: #d4915a;
+  --danger: #f87171;
+  --danger-primary: #e58b83;
+  --danger-primary-hover: #f0a39b;
+  --on-danger-primary: #281814;
+  --danger-subtle: #451a1a;
   /* Dusk's token palette runs light/pastel (it's the dark theme's accent
      hues, lifted to stay visible on a dark surface) — badge text needs to be
      dark, the opposite of --on-accent, to stay readable on those fills. */
@@ -163,6 +174,11 @@ body {
   --accent-hover: color-mix(in oklch, var(--hue-oxide) 75%, var(--tone-6));
   --accent-10: color-mix(in oklch, var(--hue-oxide) 10%, transparent);
   --accent-subtle: color-mix(in oklch, var(--hue-oxide) 70%, var(--tone-2));
+  --danger: #a8525a;
+  --danger-primary: #9b434c;
+  --danger-primary-hover: #803640;
+  --on-danger-primary: #fff8ee;
+  --danger-subtle: color-mix(in oklch, var(--hue-rose) 14%, var(--tone-1));
   --edge: var(--tone-3);
   --edge-label: var(--tone-4);
   --dot-grid: color-mix(in oklch, var(--tone-1) 80%, var(--tone-3));
@@ -205,6 +221,21 @@ body {
    redefined per [data-theme]; custom properties resolve lazily, so this single
    :root mapping flows all three Luminous themes through cactus automatically. */
 :root {
+  /* Numbered theme fills are the shared, hue-agnostic slots for typed UI.
+     Themes supply their own base hues above; components choose a slot without
+     depending on a color name such as moss or ochre. */
+  --theme-bg-1: color-mix(in oklch, var(--color-token-slate) 24%, var(--surface));
+  --theme-bg-2: color-mix(in oklch, var(--color-token-moss) 24%, var(--surface));
+  --theme-bg-3: color-mix(in oklch, var(--color-token-deep-moss) 24%, var(--surface));
+  --theme-bg-4: color-mix(in oklch, var(--color-token-ochre) 24%, var(--surface));
+  --theme-bg-5: color-mix(in oklch, var(--color-token-violet) 24%, var(--surface));
+  --theme-bg-6: color-mix(in oklch, var(--color-token-indigo) 24%, var(--surface));
+  --theme-bg-7: color-mix(in oklch, var(--color-token-oxide) 24%, var(--surface));
+  --theme-bg-8: color-mix(in oklch, var(--color-token-rose) 24%, var(--surface));
+  --theme-container-bg-1: var(--surface);
+  --theme-container-bg-2: color-mix(in oklch, var(--surface) 50%, var(--surface-alt));
+  --theme-node-border: color-mix(in oklch, var(--fg) 32%, var(--surface));
+
   --cactus-canvas-bg:     var(--canvas);
   --cactus-fg:            var(--fg);
   --cactus-fg-muted:      var(--fg-muted);

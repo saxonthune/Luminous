@@ -136,6 +136,14 @@ dev-mcp:
 cli *args:
     pnpm exec tsx scripts/luminous-cli.ts {{args}}
 
+# use the Denim action and query CLI
+denim *args:
+    @pnpm exec tsx scripts/luminous-cli.ts denim {{args}}
+
+# emit a reviewable batch of keyed Denim action/query dependency upserts
+denim-dependencies database board action_api_node query_api_node:
+    @pnpm exec tsx scripts/denim-dependencies.ts {{quote(database)}} {{quote(board)}} {{quote(action_api_node)}} {{quote(query_api_node)}}
+
 # preview the production client build
 preview:
     pnpm -C packages/client exec vp preview

@@ -112,6 +112,9 @@ export interface CanvasProps {
   backgroundContextMenu?: (position: CanvasContextMenuPosition) => MenuSchema | undefined;
   /** Returns a MenuSchema for an edge right-click, or undefined for no menu. */
   edgeContextMenu?: (edgeId: string) => MenuSchema | undefined;
+  /** Fires on Edge hover/click with the route midpoint in screen and canvas coordinates. */
+  onEdgeClick?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
+  onEdgeHover?: (edgeId: string, screenX: number, screenY: number, canvasX: number, canvasY: number) => void;
   /** Fires whenever the selection changes (click, marquee, clear). */
   onSelectionChange?: (ids: ReadonlyArray<string>) => void;
 }
@@ -432,6 +435,7 @@ export function Canvas(props: CanvasProps) {
     const bands = new Set<number>();
     for (const geometry of routedEdges().values()) {
       for (const band of geometry.segmentLayers) bands.add(band);
+      for (const overlay of geometry.contentOverlays) bands.add(overlay.band);
     }
     return [...bands].sort((a, b) => a - b);
   });
@@ -713,6 +717,8 @@ export function Canvas(props: CanvasProps) {
                       routeBand={band}
                       zoom={() => transform().k}
                       viewport={edgeViewport}
+                      onEdgeClick={props.onEdgeClick}
+                      onEdgeHover={props.onEdgeHover}
                     />
                   </svg>
                 )}
