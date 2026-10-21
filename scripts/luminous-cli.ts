@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+
 import { readFile, writeFile } from 'node:fs/promises';
 import {
   addDenimNode, connectDenimChild, createDenimChild, exportDenimDatabase, getDenimGraph,
@@ -113,6 +114,17 @@ async function readDocument(path: string): Promise<NylonDocument> {
 function denimUsage(): never {
   console.log(`Usage: just denim <command>
 
+Sequence Containers (running storage server):
+  just denim sequence read <database> <owner-id>
+  just denim sequence insert <database> <owner-id> --text TEXT [--type TYPE]
+    [--parent ID] [--before ID | --after ID] [--placement below|right] [--board ID] [--layout]
+  just denim sequence indent|outdent <database> <owner-id> <node-id> [--from-parent ID] [--layout] [--board ID]
+  just denim sequence move <database> <owner-id> <node-id> --from-parent ID --parent ID [--before ID | --after ID] [--layout] [--board ID]
+  just denim sequence layout <database> <owner-id> [--board ID]
+
+Board is inferred only when the container is loaded on exactly one Board.
+Placement is relative to the anchor (or last sibling/parent); default: below.
+
 Read a local Denim database:
   just denim boards <database>
   just denim journeys <database>
@@ -135,6 +147,55 @@ Pass --server URL to use a different storage server. The browser client port
 async function denimCli(): Promise<void> {
   const command = argv.shift();
   if (command === 'help' || command === '--help' || command === '-h' || command === undefined) denimUsage();
+  if (command === 'sequence') {
+    const operation = argv.shift();
+    const path = argv.shift();
+    const ownerNodeId = argv.shift();
+    const boardOption = takeOption('--board');
+    const parentId = takeOption('--parent');
+    const fromParentId = takeOption('--from-parent');
+    const beforeNodeId = takeOption('--before');
+    const afterNodeId = takeOption('--after');
+    const text = takeOption('--text');
+    const type = takeOption('--type');
+    const relativePlacement = takeOption('--placement');
+    const layout = takeFlag('--layout');
+    const nodeId = argv.shift();
+    if (!path || !ownerNodeId || argv.length) fail('Usage: sequence read|insert|indent|outdent|move|layout <database> <owner-id> [node-id] [options]');
+    if (!['read', 'insert', 'indent', 'outdent', 'move', 'layout'].includes(operation ?? '')) fail('Unknown sequence command');
+    if (relativePlacement && !['below', 'right'].includes(relativePlacement)) fail('--placement must be below or right');
+    const snapshot = await (await request(`/api/denim/snapshot/${encodeURIComponent(path)}`)).json() as {
+      revision: string; boards: Array<{ id: string; containers: Record<string, { sequenceContainerId?: string }> }>;
+    };
+    const needsBoard = operation === 'insert' || operation === 'layout' || layout;
+    const matches = snapshot.boards.filter(board => board.containers[ownerNodeId]?.sequenceContainerId);
+    const boardId = boardOption ?? (matches.length === 1 ? matches[0]!.id : undefined);
+    if (needsBoard && !boardId) fail('Specify --board ID (the Sequence Container must be loaded on that Board)');
+    let action: DenimAction;
+    if (operation === 'read') action = { op: 'sequenceContainer.read', ownerNodeId };
+    else if (operation === 'layout') action = { op: 'sequenceContainer.layout', ownerNodeId, boardId: boardId! };
+    else if (operation === 'insert') {
+      if (text === undefined) fail('insert requires --text');
+      action = { op: 'sequence.node.insert', ownerNodeId, boardId: boardId!, text, type, parentId, beforeNodeId, afterNodeId,
+        relativePlacement: relativePlacement as 'below' | 'right' | undefined };
+    } else {
+      if (!nodeId) fail(`${operation} requires a node ID`);
+      if (operation === 'move') {
+        if (!parentId || !fromParentId) fail('move requires --parent and --from-parent');
+        action = { op: 'sequence.node.move', ownerNodeId, nodeId, fromParentId, parentId, beforeNodeId, afterNodeId };
+      } else action = { op: operation === 'indent' ? 'sequence.node.indent' : 'sequence.node.outdent', ownerNodeId, nodeId, fromParentId };
+    }
+    if (nodeId && ['read', 'insert', 'layout'].includes(operation!)) fail('Unexpected positional argument');
+    const actions: DenimAction[] = [action];
+    if (layout && operation !== 'layout') actions.push({ op: 'sequenceContainer.layout', ownerNodeId, boardId: boardId! });
+    const response = await request('/api/denim/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, baseRevision: snapshot.revision, actionId: crypto.randomUUID(), actions }),
+    });
+    const result = await response.json() as { results: unknown[]; revision: string };
+    console.log(JSON.stringify({ results: result.results, revision: result.revision }, null, 2));
+    return;
+  }
   if (command === 'list') {
     if (argv.length) denimUsage();
     const response = await request('/api/documents');

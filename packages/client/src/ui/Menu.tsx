@@ -5,6 +5,7 @@ import { computeAnchoredPosition } from './positioning';
 export interface AnchoredMenuProps extends ParentProps {
   anchor: HTMLElement | undefined;
   label: string;
+  role?: 'menu' | 'dialog';
   side?: 'bottom' | 'right';
   alignRight?: boolean;
   relatedMenus?: Set<HTMLElement>;
@@ -62,7 +63,7 @@ export function AnchoredMenu(props: AnchoredMenuProps): JSX.Element {
   onMount(() => {
     frame = requestAnimationFrame(() => {
       updatePosition();
-      if (props.initialFocus) panel?.querySelector<HTMLElement>('[role^="menuitem"]:not(:disabled)')?.focus();
+      if (props.initialFocus) panel?.querySelector<HTMLElement>(props.role === 'dialog' ? 'button:not(:disabled)' : '[role^="menuitem"]:not(:disabled)')?.focus();
     });
     if (panel) props.relatedMenus?.add(panel);
     if (typeof ResizeObserver !== 'undefined') {
@@ -87,7 +88,7 @@ export function AnchoredMenu(props: AnchoredMenuProps): JSX.Element {
   });
 
   return <Portal mount={document.body}>
-    <div ref={panel} role="menu" aria-label={props.label} class={`lui-menu-panel${props.class ? ` ${props.class}` : ''}`}
+    <div ref={panel} role={props.role ?? 'menu'} aria-label={props.label} class={`lui-menu-panel${props.class ? ` ${props.class}` : ''}`}
       style={{ left: `${position()?.left ?? 0}px`, top: `${position()?.top ?? 0}px`, visibility: position() ? 'visible' : 'hidden' }}
       on:pointerdown={(event) => event.stopPropagation()}>
       {props.children}

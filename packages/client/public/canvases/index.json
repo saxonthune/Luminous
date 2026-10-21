@@ -122,7 +122,7 @@
     },
     {
       "path": "denim-itself.denim.sqlite",
-      "name": "A user builds a journey",
+      "name": "Denim itself — journeys and implementation",
       "root": "denim"
     }
   ]

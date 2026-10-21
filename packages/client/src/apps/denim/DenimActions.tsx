@@ -10,6 +10,7 @@ export interface DenimActionApi {
   readBoard(boardId: string): Promise<{ ok: boolean; error?: string; board?: DenimBoard; graph?: DenimGraph }>;
   queryNodes(query: DenimQuery): Promise<DenimNodeVisibilityEntry[]>;
   createNodeType(name: string): Promise<{ ok: boolean; error?: string }>;
+  setNodeTypeColor(typeId: string, themeSlot: number): Promise<{ ok: boolean; error?: string }>;
   renameNodeType(typeId: string, name: string): Promise<{ ok: boolean; error?: string }>;
   createJourney(text?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   createNode(type: string, text: string, placement?: { boardId: string; x: number; y: number }, id?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
@@ -23,6 +24,8 @@ export interface DenimActionApi {
   setEdgePriority(edgeId: string, priority: number): Promise<{ ok: boolean; error?: string }>;
   initializeSequence(parentId: string, orderedChildIds: string[]): Promise<{ ok: boolean; error?: string }>;
   clearSequence(parentId: string): Promise<{ ok: boolean; error?: string }>;
+  layoutSequence(ownerNodeId: string, boardId?: string): Promise<{ ok: boolean; error?: string }>;
+  indentSequenceNode(ownerNodeId: string, nodeId: string, fromParentId: string, direction: 'indent' | 'outdent'): Promise<{ ok: boolean; error?: string }>;
   moveSequenceNode(nodeId: string, fromParentId: string, parentId: string, placement?: { beforeNodeId?: string; afterNodeId?: string }): Promise<{ ok: boolean; error?: string }>;
   insertSequenceNodeAfter(sequenceOwnerId: string, parentId: string, afterNodeId: string, position: { x: number; y: number }, boardId?: string): Promise<{ ok: boolean; error?: string; nodeId?: string }>;
   createOrLoadSequenceContainer(ownerNodeId: string, container: DenimBoardContainer, boardId?: string): Promise<{ ok: boolean; error?: string; sequenceContainerId?: string }>;
@@ -48,6 +51,7 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     readBoard: (boardId) => dispatch({ op: 'board.read', boardId }),
     queryNodes: (query) => session.queryNodes(query),
     createNodeType: (name) => dispatch({ op: 'node.type.create', name }),
+    setNodeTypeColor: (typeId, themeSlot) => dispatch({ op: 'node.type.color.set', typeId, themeSlot }),
     renameNodeType: (typeId, name) => dispatch({ op: 'node.type.rename', typeId, name }),
     createJourney: (text) => dispatch({ op: 'journey.create', text }),
     createNode: (type, text, placement, id) => dispatch({ op: 'node.create', type, text, placement, id }),
@@ -62,6 +66,10 @@ export function createDenimActionApi(session: DenimSession): DenimActionApi {
     setEdgePriority: (edgeId, priority) => dispatch({ op: 'edge.priority.set', edgeId, priority }),
     initializeSequence: (parentId, orderedChildIds) => dispatch({ op: 'sequence.initialize', parentId, orderedChildIds }),
     clearSequence: (parentId) => dispatch({ op: 'sequence.clear', parentId }),
+    layoutSequence: (ownerNodeId, boardId = session.state.activeBoardId) => dispatch({ op: 'sequenceContainer.layout', ownerNodeId, boardId }),
+    indentSequenceNode: (ownerNodeId, nodeId, fromParentId, direction) => direction === 'indent'
+      ? dispatch({ op: 'sequence.node.indent', ownerNodeId, nodeId, fromParentId })
+      : dispatch({ op: 'sequence.node.outdent', ownerNodeId, nodeId, fromParentId }),
     moveSequenceNode: (nodeId, fromParentId, parentId, placement = {}) => dispatch({ op: 'sequence.node.move', nodeId, fromParentId, parentId, ...placement }),
     insertSequenceNodeAfter: (sequenceOwnerId, parentId, afterNodeId, position, boardId = session.state.activeBoardId) =>
       dispatch({ op: 'sequence.node.insertAfter', boardId, sequenceOwnerId, parentId, afterNodeId, position }),

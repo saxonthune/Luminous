@@ -79,3 +79,29 @@ can change without changing the database schema. One shared TypeScript module
 in `@luminous/core/denim` owns sql.js access for both the browser app and CLI.
 The browser app can edit a Denim database or keep edits to a bundled demo
 database in browser storage.
+
+## Static demo
+
+The bundled Denim example is `packages/client/public/canvases/denim-itself.denim.sqlite`.
+Braincrawl projects are not bundled as Denim examples. The initial Journeys Board
+shows “A user drafts a journey” in a Sequence Container, including nested steps.
+The Journey drafting Board provides another placement of that shared sequence;
+the Implementation Board reuses selected actions alongside capabilities, contracts,
+and modules in regular and nested containers. The original “A user builds a journey”
+Board retains the broader architecture exploration.
+
+The demo is a curated design example, not a complete generated inventory or call
+graph. Its older action-to-query call edges were removed during curation because
+they predated the action/database refactor; the retained `board.read` to
+`getDenimBoardGraph` edge follows the current handler. Capability-to-action edges
+on Implementation mean that the capability supports the action. They point toward
+the action so implementation detail does not become an extra sequence entry:
+Sequence Containers currently traverse all downstream parent-child Edges.
+
+The snapshot was curated from `.luminous/denim-starter.denim.sqlite` through the
+action API on a separate copy. Placeholder Nodes were removed, table definitions
+refreshed, and a Sequence Container UI module added. The six extra sequence
+operation/table-definition Nodes were removed after demo review. The bundled file is the portable
+artifact; no local working project is required to load it. Static-demo edits stay
+in the visitor's browser storage. An existing saved browser copy takes precedence
+over the bundled snapshot.

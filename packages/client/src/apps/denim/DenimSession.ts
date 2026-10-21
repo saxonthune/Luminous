@@ -130,7 +130,7 @@ export function createDenimSession(
 ): DenimSession {
   const boards = readDenimBoards(database);
   const transient = sessionStorageRead(sourceKey);
-  const initialBoardId = boards.some((board) => board.id === transient.activeBoardId) ? transient.activeBoardId! : PINNED_BOARDS[0].id;
+  const initialBoardId = boards.some((board) => board.id === transient.activeBoardId && board.kind !== 'pinned') ? transient.activeBoardId! : (boards.find((board) => board.kind !== 'pinned')?.id ?? PINNED_BOARDS[0].id);
   const [state, setState] = createStore<DenimSessionState>({
     boards,
     nodeTypes: listDenimNodeTypes(database),
@@ -202,7 +202,7 @@ export function createDenimSession(
         setState({ activeBoardId: result.boardId, selectedId: action.op === 'board.openJourney' ? action.journeyId : null });
         saveTransient();
       } else if (action.op === 'board.close' && state.activeBoardId === action.boardId) {
-        setState({ activeBoardId: PINNED_BOARDS[0].id, selectedId: null });
+        setState({ activeBoardId: snapshot.boards.find((board) => board.kind !== 'pinned')?.id ?? PINNED_BOARDS[0].id, selectedId: null });
         saveTransient();
       } else if (action.op === 'node.delete') {
         if (!state.boards.some((board) => board.id === state.activeBoardId)) {

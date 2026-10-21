@@ -60,6 +60,46 @@ queries over code.
    copy private source content, credentials, or unnecessary transcript text
    into the log.
 
+## Sequence Containers
+
+- A Sequence Container is a Graph Primitive owned by a Node. It presents an
+  ordered, nested sequence of Nodes; those Nodes retain their normal types and
+  can be reused elsewhere in the graph.
+- Sequence structure uses `parent-child` Edges, with sibling order supplied by
+  edge priorities. Nesting follows those Edges. Display labels such as `2a` and
+  `2b-i` are derived from the sequence, not part of Node text or identity.
+  These Edges express sequence structure; regular Container membership instead
+  uses `contains` Edges.
+- The primitive identity is persistent and shared across Boards. Each Board
+  stores its placement and Special/Graph Presentation choice. Special
+  Presentation shows the ordered list; Graph Presentation shows a canvas
+  container. Default/Drafting are editing states of Special Presentation.
+- Read before proposing changes: `just denim sequence read <database> <owner-id>`
+  returns ordered entries with Node/Edge IDs, parent IDs, depth, and display
+  labels. UI and CLI use the same sequence projection. `container.members.list`
+  reads `contains` Edges and is not a sequence reader.
+- Use `sequence insert <database> <owner-id> --text TEXT [--type TYPE]`
+  with `--before ID` or `--after ID`, or `--parent ID` to append a child.
+  `--placement below|right` places the new card relative to its anchor (default
+  below); this is simple relative placement, not collision avoidance.
+  Without an explicit type it copies the anchor's type, or the parent's type
+  for an unanchored insertion.
+- `sequence indent|outdent <database> <owner-id> <node-id>` matches Tab/Shift+Tab.
+  `sequence move` accepts `--from-parent ID --parent ID` and before/after.
+  These operations change shared edges; they are not Board-local formatting.
+- `sequence layout <database> <owner-id> --board ID` loads all sequence entries
+  onto that Board and arranges them in depth rows. The first child sits beneath
+  its parent; sibling subtrees are separated only as needed to prevent overlap.
+  Container bounds expand as needed to fit; layout never shrinks either dimension.
+  It updates Board positions without changing
+  sequence order. Add `--layout` to insert/indent/outdent/move to perform both in
+  one server batch. `--board` can be omitted only when exactly one Board has
+  the Sequence Container loaded. Discover action JSON forms with `just denim actions`.
+- From another repo, invoke `just --justfile /path/to/Luminous/justfile denim …`.
+  The running storage server defaults to port 4080; the client on port 5200
+  does not serve the action API. Preserve existing Node IDs when refining a
+  sequence so its other graph relationships remain intact.
+
 ## Scope
 
 Build design context for the user. Do not modify the target application's code

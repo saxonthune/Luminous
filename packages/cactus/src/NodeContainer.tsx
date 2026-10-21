@@ -11,6 +11,8 @@ export interface NodeContainerProps {
   h: () => number;
   /** Generic scene ordering number. Hosts may interleave nodes with route bands. */
   visualBand?: () => number;
+  /** Let host controls such as floating toolbars render beyond the node bounds. */
+  allowOverflow?: boolean;
   softContainer?: () => boolean;
   /** Host-supplied soft-container colors. */
   containerTint?: () => string;
@@ -68,7 +70,7 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
         top: `${props.y()}px`,
         width: `${props.w()}px`,
         height: `${props.h()}px`,
-        overflow: 'hidden',
+        overflow: props.allowOverflow ? 'visible' : 'hidden',
         'z-index': props.visualBand?.(),
         'pointer-events': 'auto',
         // A node is its own stacking context: z-index inside it (bezel, soft

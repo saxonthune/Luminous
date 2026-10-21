@@ -344,6 +344,15 @@ export function createDenimNodeType(db: Database, name: string): { type: DenimNo
   return { type: ensureDenimNodeType(db, normalized), changed: true };
 }
 
+export function setDenimNodeTypeColor(db: Database, id: string, themeSlot: number): boolean {
+  if (!Number.isInteger(themeSlot) || themeSlot < 1 || themeSlot > 8) throw new Error('Theme slot must be an integer from 1 to 8');
+  const previous = rows<DenimNodeType>(db, 'SELECT id, name, theme_slot AS themeSlot FROM denim_node_types WHERE id = ?', [id])[0];
+  if (!previous) throw new Error(`Node type not found: ${id}`);
+  if (previous.themeSlot === themeSlot) return false;
+  db.run('UPDATE denim_node_types SET theme_slot = ? WHERE id = ?', [themeSlot, id]);
+  return true;
+}
+
 export function renameDenimNodeType(db: Database, id: string, name: string): { type: DenimNodeType; changed: boolean } {
   const normalized = name.trim();
   if (!normalized) throw new Error('Node type name must be nonempty text');
@@ -636,6 +645,19 @@ export function moveDenimChild(
     if (oldParentId !== parentId) assignOrder(oldParentId, nextOldOrder);
   });
   return changed;
+}
+
+/** Insert a new child at a sibling index, preserving IDs and contiguous priorities. */
+export function insertDenimSequenceChild(db: Database, parentId: string, node: DenimNode, edgeId: string, index: number): void {
+  transaction(db, () => {
+    const children = rows<{ id: string }>(db,
+      'SELECT id FROM edges WHERE type = ? AND source_id = ? ORDER BY CASE WHEN priority IS NULL THEN 1 ELSE 0 END, priority, target_id',
+      [PARENT_CHILD, parentId]);
+    addDenimNode(db, node);
+    addDenimEdge(db, { id: edgeId, type: PARENT_CHILD, sourceId: parentId, targetId: node.id });
+    children.splice(index, 0, { id: edgeId });
+    children.forEach((edge, offset) => updateDenimEdgePriority(db, edge.id, offset + 1));
+  });
 }
 
 /** Create a sibling after an existing child, copying that Node's type and preserving its indentation. */

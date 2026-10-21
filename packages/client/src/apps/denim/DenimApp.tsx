@@ -1,3 +1,4 @@
+import { sequenceDescendantEntries, type SequenceListEntry } from '@luminous/core/denim/sequence';
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import ChevronLeft from 'lucide-solid/icons/chevron-left';
@@ -17,7 +18,8 @@ import SquareDashed from 'lucide-solid/icons/square-dashed';
 import Trash2 from 'lucide-solid/icons/trash';
 import Type from 'lucide-solid/icons/type';
 import X from 'lucide-solid/icons/x';
-import Zap from 'lucide-solid/icons/zap';
+import Menu from 'lucide-solid/icons/menu';
+import FolderOpen from 'lucide-solid/icons/folder-open';
 import { Canvas, NodeContainer, dagLayout, useCanvasContext, useGesture } from '@luminous/cactus';
 import { directRectRoute } from '@luminous/cactus/layout';
 import type { CanvasRef, EdgeDeclaration, TidyNode, Transform } from '@luminous/cactus';
@@ -25,7 +27,7 @@ import { exportDenimDatabase, hydrateDenimDatabase, openDenimDatabase, type Deni
 import { denimBoardToExcalidraw } from '@luminous/core/denim/excalidraw';
 import { DENIM_DEFAULT_CONTAINER_GAP, DENIM_DEFAULT_CONTAINER_SIZE, DENIM_DEFAULT_NODE_SIZE } from '@luminous/core/denim/board';
 import { DocumentPicker } from '../../DocumentPicker';
-import { AnchoredMenu, Button, computeAnchoredPosition, IconButton, MenuItem, MenuSeparator, MenuSubmenu, ToolbarSurface } from '../../ui';
+import { AnchoredMenu, Button, computeAnchoredPosition, IconButton, MenuItem, MenuSeparator, MenuSubmenu, Panel, ToolbarSurface } from '../../ui';
 import { createStaticDatabase, fetchServerSources, fetchStaticSources, type CanvasSource } from '../../sources';
 import { SourceConflictError } from '../../sources/CanvasSource';
 import { readParam, writeParam } from '../../urlState';
@@ -57,58 +59,23 @@ type PickerState = { mode: 'include' | 'connect'; parentId?: string; anchor: HTM
 type VisibilityQueryKind = 'board' | 'upstream' | 'downstream' | 'container';
 type OpenNodeVisibility = (kind: VisibilityQueryKind, nodeId: string | undefined, position: { x: number; y: number }) => void;
 type VisibilityMenuState = { kind: VisibilityQueryKind; nodeId?: string; boardId: string; boardTitle: string; title: string; x: number; y: number };
-type SequenceListEntry = { node: DenimNode; parentId: string; depth: number; orderLabel: string };
 
-function sequenceDescendantEntries(graph: DenimGraph, ownerNodeId: string): SequenceListEntry[] {
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-  const childrenByParent = new Map<string, typeof graph.edges>();
-  const edgeOrder = new Map(graph.edges.map((edge, index) => [edge.id, index]));
-  for (const edge of graph.edges) {
-    if (edge.type !== 'parent-child') continue;
-    const children = childrenByParent.get(edge.sourceId) ?? [];
-    children.push(edge);
-    childrenByParent.set(edge.sourceId, children);
-  }
-  const alpha = (value: number) => {
-    let current = value;
-    let label = '';
-    while (current > 0) {
-      current--;
-      label = String.fromCharCode(97 + current % 26) + label;
-      current = Math.floor(current / 26);
-    }
-    return label;
-  };
-  const roman = (value: number) => {
-    const numerals: Array<[number, string]> = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
-    let current = value;
-    let label = '';
-    for (const [amount, symbol] of numerals) while (current >= amount) { label += symbol; current -= amount; }
-    return label || String(value);
-  };
-  const output: SequenceListEntry[] = [];
-  const visited = new Set<string>([ownerNodeId]);
-  const visit = (parentId: string, path: number[]) => {
-    const edges = [...(childrenByParent.get(parentId) ?? [])].sort((a, b) => {
-      if (a.priority != null && b.priority != null) return a.priority - b.priority || a.targetId.localeCompare(b.targetId);
-      if (a.priority != null) return -1;
-      if (b.priority != null) return 1;
-      return (edgeOrder.get(a.id) ?? 0) - (edgeOrder.get(b.id) ?? 0);
-    });
-    edges.forEach((edge, index) => {
-      const node = nodeById.get(edge.targetId);
-      if (!node || visited.has(node.id)) return;
-      visited.add(node.id);
-      const nextPath = [...path, index + 1];
-      const label = nextPath.map((rank, depth) => depth === 0 ? String(rank)
-        : depth === 1 ? alpha(rank) : depth === 2 ? roman(rank) : String(rank))
-        .reduce((result, segment, depth) => depth === 0 ? segment : `${result}${depth === 1 ? '' : '-'}${segment}`, '');
-      output.push({ node, parentId, depth: nextPath.length - 1, orderLabel: label });
-      visit(node.id, nextPath);
-    });
-  };
-  visit(ownerNodeId, []);
-  return output;
+function stopWheelIfScrollable(event: WheelEvent & { currentTarget: HTMLElement }): void {
+  const element = event.currentTarget;
+  const canScrollVertically = element.scrollHeight > element.clientHeight + 1;
+  const canScrollHorizontally = element.scrollWidth > element.clientWidth + 1;
+  const canScrollY = event.deltaY < 0 ? element.scrollTop > 0
+    : event.deltaY > 0 ? element.scrollTop + element.clientHeight < element.scrollHeight - 1 : false;
+  const canScrollX = event.deltaX < 0 ? element.scrollLeft > 0
+    : event.deltaX > 0 ? element.scrollLeft + element.clientWidth < element.scrollWidth - 1 : false;
+  if ((canScrollVertically && canScrollY) || (canScrollHorizontally && canScrollX)) event.stopPropagation();
+}
+
+function stopCanvasZoomForOverflow(event: WheelEvent & { currentTarget: HTMLElement }): void {
+  const element = event.currentTarget;
+  const verticalOverflow = event.deltaY !== 0 && element.scrollHeight > element.clientHeight + 1;
+  const horizontalOverflow = event.deltaX !== 0 && element.scrollWidth > element.clientWidth + 1;
+  if (verticalOverflow || horizontalOverflow) event.stopPropagation();
 }
 
 function GraphCanvas(props: {
@@ -498,6 +465,7 @@ function CanvasNodes(props: {
       return offset ? { x: base.x + offset.dx, y: base.y + offset.dy } : base;
     });
     return <NodeContainer nodeId={node.id} x={() => pos().x} y={() => pos().y} w={() => NODE_W} h={() => NODE_H}
+      allowOverflow
       visualBand={() => 2 + 2 * (props.nodeDepths().get(node.id) ?? 0)}
       onPointerDown={(event) => {
         ctx.onNodePointerDown(node.id, event);
@@ -554,6 +522,7 @@ function ContainerVisual(props: {
   const isSequenceContainer = () => Boolean(props.container().sequenceContainerId);
   const sequencePresentation = () => props.container().presentation ?? 'special';
   const [sequenceEditingState, setSequenceEditingState] = createSignal<'default' | 'drafting'>('default');
+  const [sequenceToolbarCollapsed, setSequenceToolbarCollapsed] = createSignal(false);
   const [offset, setOffset] = createSignal<{ x: number; y: number } | null>(null);
   const [resize, setResize] = createSignal<{ width: number; height: number } | null>(null);
   let carried: Record<string, { x: number; y: number }> = {};
@@ -676,7 +645,7 @@ function ContainerVisual(props: {
           drag.beginPress(id, event);
         }} style={{ position: 'absolute', inset: '0', cursor: 'grab' }} />
         <Show when={!isSequenceContainer()}>
-          <ToolbarSurface variant="node" class="absolute left-2 top-1 z-10" data-container-toolbar
+          <ToolbarSurface variant="node" class="absolute left-2 top-1/2 -translate-y-1/2 z-10" data-container-toolbar
             style={{ '--lui-node-toolbar-bg': `var(--theme-bg-${session.state.nodeTypes.find((type) => type.name === props.head.type)?.themeSlot ?? 1})` }}
             onPointerDown={(event) => event.stopPropagation()}>
             <div class="lui-node-toolbar__more">
@@ -692,16 +661,21 @@ function ContainerVisual(props: {
           </ToolbarSurface>
         </Show>
         <Show when={isSequenceContainer()}>
-          <ToolbarSurface variant="node" class="absolute left-2 top-1 z-20" data-sequence-container-toolbar data-no-pan="true"
+          <ToolbarSurface variant="node" class="denim-sequence-header-toolbar" data-sequence-container-toolbar data-no-pan="true"
+            data-collapsed={sequenceToolbarCollapsed()}
             role="toolbar" aria-label="Sequence Container Toolbar"
-            style={{ '--lui-node-toolbar-bg': 'var(--surface)' }} onPointerDown={(event) => event.stopPropagation()}>
-            <div class="lui-node-toolbar__more">
-              <span aria-hidden="true" class="lui-node-toolbar__expander"><Ellipsis size={ICON_SIZE} strokeWidth={1.7} /></span>
-              <div class="lui-node-toolbar__actions">
+            style={{ '--lui-node-toolbar-bg': 'var(--surface)' }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onFocusIn={(event) => {
+              if ((event.target as HTMLElement).matches(':focus-visible')) setSequenceToolbarCollapsed(false);
+            }}
+            onPointerEnter={() => setSequenceToolbarCollapsed(false)}
+            onPointerLeave={() => setSequenceToolbarCollapsed(false)}>
                 <IconButton aria-label={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
                   title={`Switch to ${sequencePresentation() === 'special' ? 'Graph' : 'Special'} Presentation`}
                   class="lui-node-toolbar__action" onClick={(event) => {
                     event.stopPropagation();
+                    if (event.detail > 0) event.currentTarget.blur();
                     const next = sequencePresentation() === 'special' ? 'graph' : 'special';
                     void actions.setSequenceContainerPresentation(props.head.id, next, props.boardId());
                   }}>
@@ -713,6 +687,7 @@ function ContainerVisual(props: {
                   title={`Switch to ${sequenceEditingState() === 'default' ? 'Drafting' : 'Default'} State`}
                   class="lui-node-toolbar__action" onClick={async (event) => {
                     event.stopPropagation();
+                    if (event.detail > 0) event.currentTarget.blur();
                     if (sequencePresentation() === 'graph') {
                       const result = await actions.setSequenceContainerPresentation(props.head.id, 'special', props.boardId());
                       if (!result.ok) return;
@@ -724,19 +699,40 @@ function ContainerVisual(props: {
                     : <Check size={ICON_SIZE} strokeWidth={1.7} />}
                 </IconButton>
                 <Show when={sequencePresentation() === 'graph'}>
-                  <IconButton aria-label="Create Node" title="Create Node" class="lui-node-toolbar__action" onClick={() => {
+                  <div class="lui-node-toolbar__more" tabIndex={0} aria-label="More sequence container actions"
+                    onPointerEnter={() => setSequenceToolbarCollapsed(false)}>
+                    <span aria-hidden="true" class="lui-node-toolbar__expander"><Ellipsis size={ICON_SIZE} strokeWidth={1.7} /></span>
+                    <div class="lui-node-toolbar__actions">
+                  <IconButton aria-label="Layout sequence" title="Layout sequence" class="lui-node-toolbar__action"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (event.detail > 0) { event.currentTarget.blur(); setSequenceToolbarCollapsed(true); }
+                      void actions.layoutSequence(props.head.id, props.boardId());
+                    }}><ListTree size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+                  <IconButton aria-label="Create Node" title="Create Node" class="lui-node-toolbar__action" onClick={(event) => {
+                    event.stopPropagation();
+                    if (event.detail > 0) {
+                      event.currentTarget.blur();
+                      setSequenceToolbarCollapsed(true);
+                    }
                     void actions.createContainerNode(props.head.id, props.boardId()).then((result) => {
                       if (result.nodeId) props.onCreated(result.nodeId);
                     });
                   }}><Plus size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+                    </div>
+                  </div>
                 </Show>
-              </div>
-            </div>
           </ToolbarSurface>
         </Show>
-        <span style={{ 'pointer-events': 'none', 'margin-left': 'auto', 'margin-right': '8px' }}>
-          {isSequenceContainer() ? sequenceContainerHeaderLabel(props.head.text) : containerHeaderLabel(props.head.text)}
-        </span>
+        <Show when={isSequenceContainer()} fallback={
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', 'pointer-events': 'none', 'margin-left': 'auto', 'margin-right': '8px', 'min-width': '0' }}>
+            <span class="denim-sequence-header-title">{props.head.text.slice(0, 16).trim()}</span>
+            <span class="denim-sequence-header-badge">Container</span>
+          </div>
+        }>
+          <span class="denim-sequence-header-title">{props.head.text || '(untitled)'}</span>
+          <span class="denim-sequence-header-badge">Sequence Container</span>
+        </Show>
         <Show when={!isSequenceContainer()}>
           <button type="button" aria-label="Container Membership" title="Container Membership"
             onPointerDown={(event) => event.stopPropagation()}
@@ -809,22 +805,7 @@ function SequenceSpecialPresentation(props: {
   }
 
   async function reparent(entry: SequenceListEntry, direction: 'indent' | 'outdent'): Promise<void> {
-    const entries = props.entries();
-    if (direction === 'indent') {
-      const siblings = entries.filter((candidate) => candidate.parentId === entry.parentId);
-      const index = siblings.findIndex((candidate) => candidate.node.id === entry.node.id);
-      const previousSibling = siblings[index - 1];
-      if (!previousSibling) return;
-      const children = entries.filter((candidate) => candidate.parentId === previousSibling.node.id);
-      const result = await actions.moveSequenceNode(entry.node.id, entry.parentId, previousSibling.node.id,
-        children.length ? { afterNodeId: children[children.length - 1]!.node.id } : {});
-      if (result.ok) setPendingFocusId(entry.node.id);
-      return;
-    }
-    if (entry.parentId === props.ownerNodeId) return;
-    const parentEntry = entries.find((candidate) => candidate.node.id === entry.parentId);
-    if (!parentEntry) return;
-    const result = await actions.moveSequenceNode(entry.node.id, entry.parentId, parentEntry.parentId, { afterNodeId: parentEntry.node.id });
+    const result = await actions.indentSequenceNode(props.ownerNodeId, entry.node.id, entry.parentId, direction);
     if (result.ok) setPendingFocusId(entry.node.id);
   }
 
@@ -841,7 +822,9 @@ function SequenceSpecialPresentation(props: {
     setDraggedId(null);
   }
 
-  return <div data-no-pan="true" aria-label="Sequence Container Special Presentation" class="denim-sequence-special-presentation">
+  return <div data-no-pan="true" aria-label="Sequence Container Special Presentation"
+    class={`denim-sequence-special-presentation${props.editingState === 'drafting' ? ' is-drafting' : ''}`}
+    onWheel={stopCanvasZoomForOverflow}>
     <For each={props.entries()}>{(entry) => <div class="denim-sequence-list-row"
       style={{ 'margin-left': `${entry.depth * 16}px` }}
       draggable={props.editingState === 'default'}
@@ -857,8 +840,21 @@ function SequenceSpecialPresentation(props: {
       }}
       onDrop={(event) => void reorderBeforeOrAfter(event, entry)}
       onDragEnd={() => setDraggedId(null)}>
+      <Show when={props.editingState === 'drafting'}>
+        <SequenceDraftingNodeToolbar nodeId={entry.node.id} depth={entry.depth} />
+      </Show>
       <span class="denim-sequence-order-label">{entry.orderLabel}</span>
-      <DenimNodeListRepresentation node={entry.node} nodeTypes={props.nodeTypes}
+      <DenimNodeListRepresentation node={entry.node} nodeTypes={props.nodeTypes} class="denim-sequence-node-representation"
+        typeContent={props.editingState === 'drafting' ? <select
+          aria-label={`Change type for ${entry.node.text || 'untitled'}`}
+          class="denim-sequence-type-label" value={entry.node.type}
+          onPointerDown={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const type = event.currentTarget.value;
+            if (type !== entry.node.type) void actions.updateNode(entry.node.id, { type });
+          }}>
+          <For each={props.nodeTypes()}>{(type) => <option value={type.name}>{type.name}</option>}</For>
+        </select> : undefined}
         textContent={props.editingState === 'drafting' ? <textarea ref={(element) => editors.set(entry.node.id, element)}
           data-sequence-node-editor={entry.node.id} aria-label={`Draft ${entry.node.type}: ${entry.node.text || 'untitled'}`}
           class="denim-sequence-list-editor" value={entry.node.text}
@@ -887,14 +883,50 @@ function SequenceSpecialPresentation(props: {
   </div>;
 }
 
-function containerHeaderLabel(ownerText: string): string {
-  const owner = ownerText.slice(0, 16).trim();
-  return owner ? `${owner} Container` : 'Container';
+function SequenceDraftingNodeToolbar(props: { nodeId: string; depth: number }) {
+  return <ToolbarSurface variant="node" class="denim-sequence-drafting-node-toolbar" data-no-pan="true"
+    style={{ left: `${-28 - props.depth * 16}px` }}
+    role="toolbar" aria-label="Sequence Container Drafting Mode Node Toolbar"
+    onPointerDown={(event) => event.stopPropagation()}>
+    <NodeDeleteControl nodeId={props.nodeId} />
+  </ToolbarSurface>;
 }
 
-function sequenceContainerHeaderLabel(ownerText: string): string {
-  const owner = ownerText.slice(0, 16).trim();
-  return owner ? `${owner} Sequence Container` : 'Sequence Container';
+function NodeDeleteControl(props: { nodeId: string }) {
+  const actions = useDenimActions();
+  const [open, setOpen] = createSignal(false);
+  const [deleteSubmenu, setDeleteSubmenu] = createSignal<'single' | 'children' | null>(null);
+  const relatedMenus = new Set<HTMLElement>();
+  let button: HTMLButtonElement | undefined;
+  function close(): void {
+    setOpen(false);
+    setDeleteSubmenu(null);
+  }
+  return <div class="lui-node-toolbar__menu-anchor">
+    <IconButton ref={button} aria-label="Delete node" title="Delete node" danger class="lui-node-toolbar__action"
+      aria-expanded={open()} onClick={(event) => {
+        event.stopPropagation();
+        setOpen((current) => {
+          const next = !current;
+          if (!next) setDeleteSubmenu(null);
+          return next;
+        });
+      }}><Trash2 size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
+    <Show when={open()}>
+      <AnchoredMenu anchor={button} label="Delete node" relatedMenus={relatedMenus} onClose={close}>
+        <MenuSubmenu label="Confirm deleting node" open={deleteSubmenu() === 'single'}
+          onOpen={() => setDeleteSubmenu('single')} onClose={() => setDeleteSubmenu(null)} relatedMenus={relatedMenus}
+          trigger={<><span>Delete Node</span><ChevronRight size={14} /></>}>
+          <MenuItem danger onClick={() => { close(); void actions.deleteNode(props.nodeId, 'node'); }}>Confirm</MenuItem>
+        </MenuSubmenu>
+        <MenuSubmenu label="Confirm deleting node and children" open={deleteSubmenu() === 'children'}
+          onOpen={() => setDeleteSubmenu('children')} onClose={() => setDeleteSubmenu(null)} relatedMenus={relatedMenus}
+          trigger={<><span>Delete Node and Children</span><ChevronRight size={14} /></>}>
+          <MenuItem danger onClick={() => { close(); void actions.deleteNode(props.nodeId, 'subtree'); }}>Confirm</MenuItem>
+        </MenuSubmenu>
+      </AnchoredMenu>
+    </Show>
+  </div>;
 }
 
 function NodeCard(props: {
@@ -916,14 +948,11 @@ function NodeCard(props: {
 }) {
   const session = useDenimSession();
   const actions = useDenimActions();
-  const [openNodeMenu, setOpenNodeMenu] = createSignal<'type' | 'sequence' | 'delete' | null>(null);
-  const [deleteSubmenu, setDeleteSubmenu] = createSignal<'single' | 'children' | null>(null);
+  const [openNodeMenu, setOpenNodeMenu] = createSignal<'type' | 'sequence' | null>(null);
   const [editingText, setEditingText] = createSignal(false);
   const [draftText, setDraftText] = createSignal(props.node.text);
-  const deleteMenuRoots = new Set<HTMLElement>();
   let textInput: HTMLTextAreaElement | undefined;
   let sequenceOptionsButton: HTMLButtonElement | undefined;
-  let deleteButton: HTMLButtonElement | undefined;
   let typeChangeButton: HTMLButtonElement | undefined;
   const types = createMemo(() => [...new Set([...session.state.nodeTypes.map((type) => type.name), props.node.type])]);
   function beginTextEdit(): void {
@@ -938,16 +967,6 @@ function NodeCard(props: {
     const text = event.currentTarget.value;
     setEditingText(false);
     if (text !== props.node.text) void actions.updateNode(props.node.id, { text });
-  }
-  function handleTextWheel(event: WheelEvent & { currentTarget: HTMLElement }): void {
-    const content = event.currentTarget;
-    const canScrollVertically = content.scrollHeight > content.clientHeight + 1;
-    const canScrollHorizontally = content.scrollWidth > content.clientWidth + 1;
-    const canScrollY = event.deltaY < 0 ? content.scrollTop > 0
-      : event.deltaY > 0 ? content.scrollTop + content.clientHeight < content.scrollHeight - 1 : false;
-    const canScrollX = event.deltaX < 0 ? content.scrollLeft > 0
-      : event.deltaX > 0 ? content.scrollLeft + content.clientWidth < content.scrollWidth - 1 : false;
-    if ((canScrollVertically && canScrollY) || (canScrollHorizontally && canScrollX)) event.stopPropagation();
   }
   const downstreamCounts = () => {
     const all = props.databaseGraph();
@@ -981,13 +1000,13 @@ function NodeCard(props: {
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); beginTextEdit(); }
         }}
-        onWheel={handleTextWheel}
+        onWheel={stopWheelIfScrollable}
         class="denim-node-text-display min-h-0 flex-1 overflow-auto text-sm leading-5 text-fg">{props.node.text}</div>
     }>
       <textarea ref={textInput} data-denim-node-label-editor aria-label="Node text" value={draftText()}
         onPointerDown={(event) => event.stopPropagation()}
         onInput={(event) => setDraftText(event.currentTarget.value)}
-        onWheel={handleTextWheel}
+        onWheel={stopWheelIfScrollable}
         onKeyDown={(event) => {
           if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); event.currentTarget.blur(); }
         }}
@@ -1012,8 +1031,7 @@ function NodeCard(props: {
             props.onOpenNodeVisibility('downstream', props.node.id, { x: event.clientX, y: event.clientY });
           }}>{downstreamCounts().loaded}/{downstreamCounts().total}</button>
       </div>
-    </div>
-    <ToolbarSurface variant="node" class="absolute bottom-2 left-2" data-node-toolbar
+    <ToolbarSurface variant="node" class="absolute left-0 top-1/2 -translate-y-1/2" data-node-toolbar
       onPointerDown={(event) => event.stopPropagation()}>
       <Show when={props.node.type === 'Journey'}>
         <IconButton aria-label="Open Journey as a new Board" title="Open Journey as a new Board"
@@ -1083,35 +1101,11 @@ function NodeCard(props: {
               </AnchoredMenu>
             </Show>
           </div>
-          <div class="lui-node-toolbar__menu-anchor">
-            <IconButton ref={deleteButton} aria-label="Delete node" title="Delete node" danger class="lui-node-toolbar__action"
-              aria-expanded={openNodeMenu() === 'delete'} onClick={(event) => {
-                event.stopPropagation();
-                setOpenNodeMenu((current) => {
-                  const next = current === 'delete' ? null : 'delete';
-                  if (!next) setDeleteSubmenu(null);
-                  return next;
-                });
-              }}><Trash2 size={ICON_SIZE} strokeWidth={1.7} /></IconButton>
-            <Show when={openNodeMenu() === 'delete'}>
-              <AnchoredMenu anchor={deleteButton} label="Delete node" relatedMenus={deleteMenuRoots}
-                onClose={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); }}>
-                <MenuSubmenu label="Confirm deleting node" open={deleteSubmenu() === 'single'}
-                  onOpen={() => setDeleteSubmenu('single')} onClose={() => setDeleteSubmenu(null)} relatedMenus={deleteMenuRoots}
-                  trigger={<><span>Delete Node</span><ChevronRight size={14} /></>}>
-                  <MenuItem danger onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'node'); }}>Confirm</MenuItem>
-                </MenuSubmenu>
-                <MenuSubmenu label="Confirm deleting node and children" open={deleteSubmenu() === 'children'}
-                  onOpen={() => setDeleteSubmenu('children')} onClose={() => setDeleteSubmenu(null)} relatedMenus={deleteMenuRoots}
-                  trigger={<><span>Delete Node and Children</span><ChevronRight size={14} /></>}>
-                  <MenuItem danger onClick={() => { setOpenNodeMenu(null); setDeleteSubmenu(null); void actions.deleteNode(props.node.id, 'subtree'); }}>Confirm</MenuItem>
-                </MenuSubmenu>
-              </AnchoredMenu>
-            </Show>
-          </div>
+          <NodeDeleteControl nodeId={props.node.id} />
         </div>
       </div>
     </ToolbarSurface>
+    </div>
   </article>;
 }
 
@@ -1119,10 +1113,16 @@ function DenimAppToolbar(props: {
   onStatus: (message: string | null) => void;
   onOpenTypes: () => void;
   onOpenBoards: () => void;
+  typesOpen: boolean;
+  typesActive: boolean;
+  onCloseTypes: () => void;
 }) {
   const session = useDenimSession();
   const actions = useDenimActions();
   const [quickSelectOpen, setQuickSelectOpen] = createSignal(false);
+  const [journeyPickerOpen, setJourneyPickerOpen] = createSignal(false);
+  const [openingJourney, setOpeningJourney] = createSignal(false);
+  let journeyButton: HTMLButtonElement | undefined;
   const [boardMenu, setBoardMenu] = createSignal<{ board: DenimBoard; anchor: HTMLElement } | null>(null);
   const [exportSubmenuOpen, setExportSubmenuOpen] = createSignal(false);
   const [overflow, setOverflow] = createSignal(false);
@@ -1132,7 +1132,17 @@ function DenimAppToolbar(props: {
   let resizeObserver: ResizeObserver | undefined;
   let statusTimer: ReturnType<typeof setTimeout> | undefined;
   const refreshOverflow = () => setOverflow(Boolean(strip && strip.scrollWidth > strip.clientWidth + 1));
-  const tabs = () => session.state.boards;
+  const tabs = () => session.state.boards.filter((board) => board.kind !== 'pinned');
+  const journeys = () => session.databaseGraph().nodes.filter((node) => node.type === 'Journey');
+  async function openSelectedJourney(id: string) {
+    if (openingJourney()) return;
+    setOpeningJourney(true);
+    try {
+      const result = await actions.openJourney(id);
+      if (result.ok) { setJourneyPickerOpen(false); props.onOpenBoards(); }
+      else props.onStatus(result.error ?? 'Could not open Journey');
+    } finally { setOpeningJourney(false); }
+  }
   const activate = (id: string) => {
     setBoardMenu(null);
     setExportSubmenuOpen(false);
@@ -1194,6 +1204,7 @@ function DenimAppToolbar(props: {
       statusTimer = setTimeout(() => props.onStatus(null), 5000);
       return;
     }
+    props.onOpenBoards();
     props.onStatus('Created New Board');
     statusTimer = setTimeout(() => props.onStatus(null), 2400);
   }
@@ -1207,6 +1218,7 @@ function DenimAppToolbar(props: {
   });
   createEffect(() => {
     tabs();
+    props.typesOpen;
     queueMicrotask(refreshOverflow);
   });
   onCleanup(() => {
@@ -1215,29 +1227,43 @@ function DenimAppToolbar(props: {
   });
 
   function tabKey(event: KeyboardEvent, index: number): void {
-    const to = event.key === 'ArrowRight' ? Math.min(index + 1, tabs().length - 1)
+    const count = tabs().length + Number(props.typesOpen);
+    const to = event.key === 'ArrowRight' ? Math.min(index + 1, count - 1)
       : event.key === 'ArrowLeft' ? Math.max(index - 1, 0)
-        : event.key === 'Home' ? 0 : event.key === 'End' ? tabs().length - 1 : -1;
+        : event.key === 'Home' ? 0 : event.key === 'End' ? count - 1 : -1;
     if (to < 0) return;
     event.preventDefault();
     const next = tabs()[to];
-    activate(next.id);
+    if (next) activate(next.id);
+    else props.onOpenTypes();
     strip?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[to]?.focus();
   }
 
   return <ToolbarSurface variant="app" class="relative">
     <div class="lui-toolbar__section">
       <IconButton ref={quickSelectButton} aria-label="Quick Select" title="Quick Select" aria-expanded={quickSelectOpen()}
-        onClick={() => setQuickSelectOpen((open) => !open)}><Zap size={17} strokeWidth={1.8} /></IconButton>
+        onClick={() => { setJourneyPickerOpen(false); setQuickSelectOpen((open) => !open); }}><Menu size={17} strokeWidth={1.8} /></IconButton>
       <Show when={quickSelectOpen()}>
         <AnchoredMenu anchor={quickSelectButton} label="Quick Select" class="lui-menu-panel--wide" onClose={() => setQuickSelectOpen(false)}>
-          <For each={tabs().filter((board) => board.kind === 'pinned')}>
-            {(board) => <MenuItem onClick={() => activate(board.id)}>{board.title}</MenuItem>}
-          </For>
-          <MenuSeparator />
           <MenuItem onClick={() => void createNewBoard()}>New Board</MenuItem>
           <MenuSeparator />
           <MenuItem onClick={() => { props.onOpenTypes(); setQuickSelectOpen(false); }}>Types</MenuItem>
+        </AnchoredMenu>
+      </Show>
+      <IconButton ref={journeyButton} aria-label="Open User Journey" title="Open User Journey"
+        aria-expanded={journeyPickerOpen()} onClick={() => { setQuickSelectOpen(false); setJourneyPickerOpen((open) => !open); }}>
+        <FolderOpen size={17} strokeWidth={1.8} />
+      </IconButton>
+      <Show when={journeyPickerOpen()}>
+        <AnchoredMenu anchor={journeyButton} label="Open User Journey" class="lui-menu-panel--wide" onClose={() => setJourneyPickerOpen(false)}>
+          <div style={{ padding: '8px' }}>Open User Journey</div>
+          <div style={{ 'max-height': '60vh', 'overflow-y': 'auto' }}>
+            <For each={journeys()} fallback={<div style={{ padding: '8px' }}>No journeys yet.</div>}>
+              {(journey) => <MenuItem disabled={openingJourney()} onClick={() => void openSelectedJourney(journey.id)}>
+                <DenimNodeListRepresentation node={journey} nodeTypes={() => session.state.nodeTypes} />
+              </MenuItem>}
+            </For>
+          </div>
         </AnchoredMenu>
       </Show>
     </div>
@@ -1246,7 +1272,7 @@ function DenimAppToolbar(props: {
         <IconButton aria-label="Scroll tabs left" title="Scroll tabs left" class="lui-tab-scroll"
           onClick={() => strip?.scrollBy({ left: -180, behavior: 'smooth' })}><ChevronLeft size={16} /></IconButton>
       </Show>
-      <div ref={strip} role="tablist" aria-label="Boards" class="lui-tab-strip"
+      <div ref={strip} role="tablist" aria-label="Denim tabs" class="lui-tab-strip"
         onWheel={(event) => {
           if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
             event.preventDefault();
@@ -1254,9 +1280,9 @@ function DenimAppToolbar(props: {
           }
         }}>
         <For each={tabs()}>{(board, index) => <div class="lui-tab-item"
-          aria-selected={session.state.activeBoardId === board.id}>
-          <button type="button" role="tab" aria-selected={session.state.activeBoardId === board.id}
-            tabIndex={session.state.activeBoardId === board.id ? 0 : -1} title={board.title} class="lui-tab"
+          aria-selected={!props.typesActive && session.state.activeBoardId === board.id}>
+          <button type="button" role="tab" aria-selected={!props.typesActive && session.state.activeBoardId === board.id}
+            tabIndex={!props.typesActive && session.state.activeBoardId === board.id ? 0 : -1} title={board.title} class="lui-tab"
             onClick={() => activate(board.id)} onKeyDown={(event) => tabKey(event, index())}
             onContextMenu={(event) => {
               event.preventDefault();
@@ -1268,6 +1294,15 @@ function DenimAppToolbar(props: {
               onClick={() => void actions.closeBoard(board.id)}><X size={13} /></IconButton>
           </Show>
         </div>}</For>
+        <Show when={props.typesOpen}>
+          <div class="lui-tab-item" aria-selected={props.typesActive}>
+            <button type="button" role="tab" aria-selected={props.typesActive}
+              tabIndex={props.typesActive ? 0 : -1} class="lui-tab" title="Types"
+              onClick={props.onOpenTypes} onKeyDown={(event) => tabKey(event, tabs().length)}>Types</button>
+            <IconButton aria-label="Close Types" title="Close Types" class="lui-tab-close"
+              onClick={props.onCloseTypes}><X size={13} /></IconButton>
+          </div>
+        </Show>
       </div>
       <Show when={overflow()}>
         <IconButton aria-label="Scroll tabs right" title="Scroll tabs right" class="lui-tab-scroll"
@@ -1298,12 +1333,13 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
   const [query, setQuery] = createSignal('');
   const [statusToast, setStatusToast] = createSignal<string | null>(null);
   const [page, setPage] = createSignal<'board' | 'types'>('board');
+  const [typesOpen, setTypesOpen] = createSignal(false);
   const [edgeMenu, setEdgeMenu] = createSignal<{
     edgeId: string; x: number; y: number; canvasX: number; canvasY: number;
     kind: 'delete' | 'detach'; confirming?: boolean;
   } | null>(null);
   const activeBoard = () => session.state.boards.find((board) => board.id === session.state.activeBoardId)!;
-  const isJourneysBoard = () => activeBoard().id === 'pinned:journeys';
+
   onMount(() => {
     if (import.meta.env.DEV) console.info('[Denim startup]', { phase: 'board canvas mounted' });
   });
@@ -1358,17 +1394,13 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
         </Show>
       </div>}
     </Show>
-    <DenimAppToolbar onStatus={setStatusToast} onOpenTypes={() => setPage('types')} onOpenBoards={() => setPage('board')} />
-    <Show when={page() === 'types'} fallback={<>
+    <DenimAppToolbar onStatus={setStatusToast}
+      typesOpen={typesOpen()} typesActive={page() === 'types'}
+      onOpenTypes={() => { setTypesOpen(true); setPage('types'); }}
+      onCloseTypes={() => { setTypesOpen(false); if (page() === 'types') setPage('board'); }}
+      onOpenBoards={() => setPage('board')} />
+    <Show when={page() === 'types'} fallback={<Show when={activeBoard().kind !== 'pinned'} fallback={<div class="flex flex-1 items-center justify-center">Open a User Journey or create a New Board.</div>}><>
     <div class="relative min-h-0 flex-1" onPointerDown={() => setEdgeMenu(null)}>
-      <ToolbarSurface variant="floating" class="absolute left-1/2 top-3 z-10 -translate-x-1/2">
-        <Show when={isJourneysBoard()}>
-          <IconButton aria-label="Add a Journey" title="Add a Journey"
-            onClick={() => void actions.createJourney()}><Plus size={16} strokeWidth={1.8} /></IconButton>
-        </Show>
-        <IconButton aria-label="Add a node to this Board" title="Add a node to this Board"
-          onClick={(event) => openPicker('include', undefined, event)}><Plus size={16} strokeWidth={1.8} /></IconButton>
-      </ToolbarSurface>
       <GraphCanvas selectedId={() => session.state.selectedId} openPicker={openPicker}
         onStatus={setStatusToast}
         onOpenNodeVisibility={openNodeVisibility}
@@ -1432,7 +1464,7 @@ function DenimBoardCanvas(props: { onReload: () => void }) {
           : { op: 'container.members.list', boardId: menu().boardId, containerNodeId: menu().nodeId! })}
       setNodeLoaded={(nodeId, loaded, boardId) => actions.setNodeLoaded(nodeId, loaded, boardId)}
       onClose={() => setVisibilityMenu(null)} />}</Show>
-    </>}>
+    </></Show>}>
       <DenimTypesPage />
     </Show>
   </div>;
@@ -1453,9 +1485,11 @@ function DenimTypesPage() {
   }
 
   return <main class="denim-types-page" aria-label="Types">
+    <Panel title="Types" class="denim-types-panel">
     <div class="denim-types-page__list" role="list" aria-label="Node types">
       <For each={session.state.nodeTypes}>{(type) => <DenimTypeItem type={type}
-        onRename={(name) => actions.renameNodeType(type.id, name)} />}</For>
+        onRename={(name) => actions.renameNodeType(type.id, name)}
+        onColor={(slot) => actions.setNodeTypeColor(type.id, slot)} />}</For>
       <Show when={creating()}>
         <input ref={newTypeInput} class="denim-types-page__item" aria-label="New node type name"
           value={newName()} onInput={(event) => setNewName(event.currentTarget.value)}
@@ -1468,10 +1502,12 @@ function DenimTypesPage() {
         setNewName(''); setCreating(true); queueMicrotask(() => newTypeInput?.focus());
       }}><Plus size={16} strokeWidth={1.8} /></IconButton>
     </div>
+    </Panel>
   </main>;
 }
 
-function DenimTypeItem(props: { type: DenimNodeType; onRename: (name: string) => Promise<{ ok: boolean; error?: string }> }) {
+function DenimTypeItem(props: { type: DenimNodeType; onColor: (slot: number) => Promise<{ ok: boolean; error?: string }>; onRename: (name: string) => Promise<{ ok: boolean; error?: string }> }) {
+  const [error, setError] = createSignal('');
   const [name, setName] = createSignal(props.type.name);
   createEffect(() => setName(props.type.name));
   async function save(): Promise<void> {
@@ -1480,13 +1516,30 @@ function DenimTypeItem(props: { type: DenimNodeType; onRename: (name: string) =>
     const result = await props.onRename(next);
     if (!result.ok) setName(props.type.name);
   }
-  return <input class="denim-types-page__item" role="listitem" aria-label={`Node type: ${props.type.name}`}
+  return <div class="denim-types-page__row" role="listitem">
+    <div class="denim-types-page__fields">
+    <input class="denim-types-page__item" aria-label={`Node type: ${props.type.name}`}
     value={name()} readOnly={props.type.name === 'Journey'}
     onInput={(event) => setName(event.currentTarget.value)}
     onKeyDown={(event) => {
       if (event.key === 'Enter') { event.preventDefault(); event.currentTarget.blur(); }
       if (event.key === 'Escape') { setName(props.type.name); event.currentTarget.blur(); }
-    }} onBlur={() => void save()} />;
+    }} onBlur={() => void save()} />
+    <select class="denim-types-page__color" aria-label={`Color for ${props.type.name}`}
+      style={{ background: `var(--theme-bg-${props.type.themeSlot})` }} value={props.type.themeSlot}
+      onChange={async (event) => {
+        const element = event.currentTarget;
+        const result = await props.onColor(Number(element.value));
+        setError(result.ok ? '' : result.error ?? 'Could not save color');
+        if (!result.ok) element.value = String(props.type.themeSlot);
+      }}>
+      <For each={['Slate', 'Moss', 'Deep moss', 'Ochre', 'Violet', 'Indigo', 'Oxide', 'Rose']}>
+        {(label, index) => <option value={index() + 1}>{label}</option>}
+      </For>
+    </select>
+    </div>
+    <Show when={error()}><span role="alert">{error()}</span></Show>
+  </div>;
 }
 
 type ConnectionGesture = {

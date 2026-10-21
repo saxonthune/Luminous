@@ -1,4 +1,5 @@
 export { dagLayout } from './dagLayout.js';
+export { orderedTreeLayout } from './orderedTreeLayout.js';
 export { gridLayout } from './gridLayout.js';
 export { retainLayout } from './geometry/retainLayout.js';
 export { computeBounds } from './geometry/geometry.js';

@@ -6,6 +6,7 @@ export interface DenimNodeListRepresentationProps {
   nodeTypes: () => DenimNodeType[];
   class?: string;
   meta?: JSX.Element;
+  typeContent?: JSX.Element;
   textContent?: JSX.Element;
   trailing?: JSX.Element;
 }
@@ -16,7 +17,7 @@ export function DenimNodeListRepresentation(props: DenimNodeListRepresentationPr
   return <div class={`denim-node-list-representation${props.class ? ` ${props.class}` : ''}`}
     style={{ background: `var(--theme-bg-${slot()})` }}>
     <div class="denim-node-list-representation__content">
-      <span class="denim-node-list-representation__type">{props.node.type}</span>
+      {props.typeContent ?? <span class="denim-node-list-representation__type">{props.node.type}</span>}
       {props.textContent ?? <span class="denim-node-list-representation__text">{props.node.text || '(untitled)'}</span>}
       {props.meta}
     </div>

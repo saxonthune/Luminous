@@ -45,6 +45,36 @@ export async function fetchStaticSources(suffix?: string): Promise<CanvasSource[
 }
 
 const DB_NAME = 'luminous-static-denim';
+let resettingDemo = false;
+
+/** Clear app-owned demo data, preserving the user's theme preference. */
+export async function resetDemoState(): Promise<void> {
+  if (!__STATIC__) throw new Error('Demo reset is only available in static mode');
+  resettingDemo = true;
+  try {
+    const store = await openStaticDbStore();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = store.transaction('databases', 'readwrite');
+        tx.objectStore('databases').clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error ?? new Error('Demo reset cancelled'));
+      });
+    } finally { store.close(); }
+    for (const storage of [localStorage, sessionStorage]) {
+      for (const key of Object.keys(storage)) {
+        if (key.startsWith('luminous:') || key.startsWith('denim-active-') || key.startsWith('nylon-tabs:')) {
+          storage.removeItem(key);
+        }
+      }
+    }
+  } catch (error) {
+    resettingDemo = false;
+    throw error;
+  }
+}
+
 
 function openStaticDbStore(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -83,6 +113,7 @@ async function loadStaticDatabase(path: string): Promise<LoadedBinaryDocument> {
 }
 
 async function saveStaticDatabase(path: string, bytes: Uint8Array, expectedRevision: string): Promise<string> {
+  if (resettingDemo) throw new Error('Demo state is being reset');
   const store = await openStaticDbStore();
   const nextRevision = crypto.randomUUID();
   try {
@@ -112,6 +143,7 @@ async function saveStaticDatabase(path: string, bytes: Uint8Array, expectedRevis
 
 /** Persist a newly created local Denim project in the static demo's IndexedDB store. */
 export async function createStaticDatabase(path: string, bytes: Uint8Array): Promise<void> {
+  if (resettingDemo) throw new Error('Demo state is being reset');
   if (!path.endsWith('.denim.sqlite')) throw new Error('Expected a Denim SQLite path');
   const store = await openStaticDbStore();
   try {

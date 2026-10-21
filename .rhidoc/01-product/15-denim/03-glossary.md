@@ -100,6 +100,7 @@ relationships and contents were not specified in the source request.
 - **DTERM38.** [p] **List Representation** — a type-colored rectangular component that presents a Node's type and text in list form. Find a node results and the Sequence Container's Special Presentation use the same component.
 
 - **DTERM39.** [p] **Sequence Container Toolbar** — a toolbar in the Sequence Container header that uses the present and hidden action pattern and lets the user change presentation.
+- **DTERM40.** [p] **Sequence Container Drafting Mode Node Toolbar** — a Node toolbar in the left padding beside its sequence position label during Drafting State, with one delete icon that uses the usual Node deletion confirmation.
 
 ## Relationship priority
 

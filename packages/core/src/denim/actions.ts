@@ -1,3 +1,5 @@
+import { orderedTreeLayout } from '@luminous/cactus/layout';
+import { sequenceDescendantEntries, type SequenceListEntry } from './sequence.ts';
 import {
   addDenimNode,
   addDenimEdge,
@@ -19,12 +21,14 @@ import {
   getDenimSequenceContainerByOwner,
   hasDenimEdge,
   initializeDenimSequence,
+  insertDenimSequenceChild,
   listDenimDescendantIds,
   listDenimContainers,
   listDenimNodeIds,
   moveDenimChild,
   removeDenimBoard,
   renameDenimNodeType,
+  setDenimNodeTypeColor,
   replaceDenimContainment,
   runDenimTransaction,
   updateDenimEdgePriority,
@@ -35,6 +39,7 @@ import {
   type DenimNode,
 } from './database.ts';
 import {
+  DENIM_DEFAULT_NODE_SIZE,
   getDenimBoardGraph,
   ensureLoadedContainerPlacements,
   loadNodeOnSourceBoards,
@@ -50,7 +55,14 @@ export { DENIM_PINNED_BOARDS, getDenimBoardGraph, readDenimBoards } from './boar
 export type { DenimBoard, DenimBoardContainer, DenimQuerySource } from './board.ts';
 
 export type DenimAction =
+  | { op: 'sequenceContainer.read'; ownerNodeId: string }
+  | { op: 'sequenceContainer.layout'; ownerNodeId: string; boardId: string }
+  | { op: 'sequence.node.indent'; ownerNodeId: string; nodeId: string; fromParentId?: string }
+  | { op: 'sequence.node.outdent'; ownerNodeId: string; nodeId: string; fromParentId?: string }
+  | { op: 'sequence.node.insert'; ownerNodeId: string; boardId: string; parentId?: string; beforeNodeId?: string; afterNodeId?: string; text: string; type?: string; relativePlacement?: 'below' | 'right'; id?: string }
+
   | { op: 'journey.create'; id?: string; text?: string }
+  | { op: 'node.type.color.set'; typeId: string; themeSlot: number }
   | { op: 'node.type.create'; name: string }
   | { op: 'node.type.rename'; typeId: string; name: string }
   | { op: 'node.create'; id?: string; type: string; text: string; placement?: { boardId: string; x: number; y: number } }
@@ -67,7 +79,7 @@ export type DenimAction =
   | { op: 'edge.priority.set'; edgeId: string; priority: number }
   | { op: 'sequence.initialize'; parentId: string; orderedChildIds: string[] }
   | { op: 'sequence.clear'; parentId: string }
-  | { op: 'sequence.node.move'; nodeId: string; fromParentId: string; parentId: string; beforeNodeId?: string; afterNodeId?: string }
+  | { op: 'sequence.node.move'; ownerNodeId?: string; nodeId: string; fromParentId: string; parentId: string; beforeNodeId?: string; afterNodeId?: string }
   | { op: 'sequence.node.insertAfter'; boardId: string; sequenceOwnerId: string; parentId: string; afterNodeId: string; position: { x: number; y: number }; id?: string; edgeId?: string }
   | { op: 'sequenceContainer.create'; boardId: string; ownerNodeId: string; container: DenimBoardContainer; id?: string }
   | { op: 'sequenceContainer.presentation.set'; boardId: string; ownerNodeId: string; presentation: 'special' | 'graph' }
@@ -86,6 +98,12 @@ export type DenimAction =
 
 export const DENIM_ACTION_CATALOG = [
   { op: 'journey.create', required: [], optional: ['id', 'text'], purpose: 'Create a Journey Node.' },
+  { op: 'sequenceContainer.read', required: ['ownerNodeId'], optional: [], purpose: 'Read a shared Sequence Container as ordered entries with depth and labels.' },
+  { op: 'sequenceContainer.layout', required: ['ownerNodeId', 'boardId'], optional: [], purpose: 'Load and arrange sequence Nodes in ordered depth rows on a Board.' },
+  { op: 'sequence.node.indent', required: ['ownerNodeId', 'nodeId'], optional: ['fromParentId'], purpose: 'Move an entry under its previous sibling.' },
+  { op: 'sequence.node.outdent', required: ['ownerNodeId', 'nodeId'], optional: ['fromParentId'], purpose: 'Move an entry after its parent at the next outer depth.' },
+  { op: 'sequence.node.insert', required: ['ownerNodeId', 'boardId', 'text'], optional: ['parentId', 'beforeNodeId', 'afterNodeId', 'type', 'relativePlacement', 'id'], purpose: 'Insert an ordered Node, placing it below or right of its anchor.' },
+  { op: 'node.type.color.set', required: ['typeId', 'themeSlot'], optional: [], purpose: 'Set the shared theme color for a Node type.' },
   { op: 'node.type.create', required: ['name'], optional: [], purpose: 'Create a Node type.' },
   { op: 'node.type.rename', required: ['typeId', 'name'], optional: [], purpose: 'Rename a Node type and its Nodes.' },
   { op: 'node.create', required: ['type', 'text'], optional: ['id', 'placement'], purpose: 'Create an unconnected Node, optionally placing and including it on a Board.' },
@@ -102,7 +120,7 @@ export const DENIM_ACTION_CATALOG = [
   { op: 'edge.priority.set', required: ['edgeId', 'priority'], optional: [], purpose: 'Set an edge sequence priority.' },
   { op: 'sequence.initialize', required: ['parentId', 'orderedChildIds'], optional: [], purpose: 'Assign priorities in the supplied child order.' },
   { op: 'sequence.clear', required: ['parentId'], optional: [], purpose: 'Clear priorities on all child edges.' },
-  { op: 'sequence.node.move', required: ['nodeId', 'fromParentId', 'parentId'], optional: ['beforeNodeId', 'afterNodeId'], purpose: 'Move one parent-child Edge to a new parent and set its sibling position.' },
+  { op: 'sequence.node.move', required: ['nodeId', 'fromParentId', 'parentId'], optional: ['ownerNodeId', 'beforeNodeId', 'afterNodeId'], purpose: 'Move one parent-child Edge to a new parent and set its sibling position.' },
   { op: 'sequence.node.insertAfter', required: ['boardId', 'sequenceOwnerId', 'parentId', 'afterNodeId', 'position'], optional: ['id', 'edgeId'], purpose: 'Create a same-type sibling immediately after a Node in a Sequence Container.' },
   { op: 'sequenceContainer.create', required: ['boardId', 'ownerNodeId', 'container'], optional: ['id'], purpose: 'Create a shared Sequence Container if needed and load it onto a Board.' },
   { op: 'sequenceContainer.presentation.set', required: ['boardId', 'ownerNodeId', 'presentation'], optional: [], purpose: 'Set the Sequence Container presentation on one Board.' },
@@ -130,6 +148,8 @@ export interface DenimActionResult {
   board?: DenimBoard;
   graph?: ReturnType<typeof getDenimBoardGraph>;
   sequenceContainerId?: string;
+  owner?: DenimNode;
+  entries?: SequenceListEntry[];
 }
 
 const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
@@ -153,6 +173,11 @@ function handleJourneyCreate(db: DenimDatabase, action: ActionFor<'journey.creat
   addDenimNode(db, { id: nodeId, type: 'Journey', text: action.text ?? 'New journey' });
   loadNodeOnSourceBoards(db, nodeId);
   return { ok: true, changed: true, nodeId };
+}
+
+function handleNodeTypeColorSet(db: DenimDatabase, action: ActionFor<'node.type.color.set'>): DenimActionResult {
+  if (typeof action.typeId !== 'string' || !action.typeId) throw new Error('Node type ID must be nonempty text');
+  return { ok: true, changed: setDenimNodeTypeColor(db, action.typeId, action.themeSlot) };
 }
 
 function handleNodeTypeCreate(db: DenimDatabase, action: ActionFor<'node.type.create'>): DenimActionResult {
@@ -329,7 +354,101 @@ function handleSequenceClear(db: DenimDatabase, action: ActionFor<'sequence.clea
   return { ok: true, changed: true };
 }
 
+function readSequence(db: DenimDatabase, ownerNodeId: string) {
+  const owner = requireNode(db, ownerNodeId);
+  const primitive = getDenimSequenceContainerByOwner(db, ownerNodeId);
+  if (!primitive) throw new Error(`Sequence Container not found for owner: ${ownerNodeId}`);
+  const entries = sequenceDescendantEntries(getDenimGraph(db), ownerNodeId);
+  return { owner, primitive, entries };
+}
+
+function handleSequenceRead(db: DenimDatabase, action: ActionFor<'sequenceContainer.read'>): DenimActionResult {
+  const { owner, primitive, entries } = readSequence(db, action.ownerNodeId);
+  return { ok: true, changed: false, owner, entries, sequenceContainerId: primitive.id };
+}
+
+function handleSequenceIndent(db: DenimDatabase, action: ActionFor<'sequence.node.indent'> | ActionFor<'sequence.node.outdent'>): DenimActionResult {
+  const { entries } = readSequence(db, action.ownerNodeId);
+  const entry = entries.find(item => item.node.id === action.nodeId && (!action.fromParentId || item.parentId === action.fromParentId));
+  if (!entry) throw new Error('Sequence entry not found');
+  if (action.op === 'sequence.node.indent') {
+    const siblings = entries.filter(item => item.parentId === entry.parentId);
+    const previous = siblings[siblings.indexOf(entry) - 1];
+    if (!previous) return { ok: true, changed: false };
+    return { ok: true, changed: moveDenimChild(db, entry.node.id, entry.parentId, previous.node.id), nodeId: entry.node.id };
+  }
+  if (entry.parentId === action.ownerNodeId) return { ok: true, changed: false };
+  const parent = entries.find(item => item.node.id === entry.parentId)!;
+  return { ok: true, changed: moveDenimChild(db, entry.node.id, entry.parentId, parent.parentId, { afterNodeId: parent.node.id }), nodeId: entry.node.id };
+}
+
+function handleSequenceLayout(db: DenimDatabase, action: ActionFor<'sequenceContainer.layout'>): DenimActionResult {
+  const { entries } = readSequence(db, action.ownerNodeId);
+  const board = requireBoard(db, action.boardId);
+  const container = board.containers[action.ownerNodeId];
+  if (!container?.sequenceContainerId) throw new Error('Load the Sequence Container onto this Board first');
+  const relative = orderedTreeLayout(entries.map(entry => ({ id: entry.node.id,
+    parentId: entry.parentId === action.ownerNodeId ? null : entry.parentId })), DENIM_DEFAULT_NODE_SIZE);
+  const positions = { ...board.positions };
+  let width = Math.max(220, container.width), height = Math.max(140, container.height);
+  for (const [id, point] of relative) {
+    positions[id] = { x: container.x + 16 + point.x, y: container.y + 60 + point.y };
+    width = Math.max(width, point.x + DENIM_DEFAULT_NODE_SIZE.width + 32);
+    height = Math.max(height, point.y + DENIM_DEFAULT_NODE_SIZE.height + 76);
+  }
+  putBoard(db, { ...board, positions,
+    loadedNodeIds: [...new Set([...board.loadedNodeIds, action.ownerNodeId, ...relative.keys()])],
+    containers: { ...board.containers, [action.ownerNodeId]: { ...container, width, height } } });
+  return { ok: true, changed: true, boardId: board.id, nodeIds: [...relative.keys()] };
+}
+
+function handleSequenceInsert(db: DenimDatabase, action: ActionFor<'sequence.node.insert'>): DenimActionResult {
+  const { owner, entries } = readSequence(db, action.ownerNodeId);
+  const board = requireBoard(db, action.boardId);
+  const container = board.containers[action.ownerNodeId];
+  if (!container?.sequenceContainerId) throw new Error('Load the Sequence Container onto this Board first');
+  if (typeof action.text !== 'string') throw new Error('Node text must be text');
+  if (action.beforeNodeId && action.afterNodeId) throw new Error('Choose before or after');
+  if (action.relativePlacement !== undefined && !['below', 'right'].includes(action.relativePlacement)) throw new Error('Relative placement must be below or right');
+  const anchorId = action.afterNodeId ?? action.beforeNodeId;
+  const anchor = anchorId ? entries.find(entry => entry.node.id === anchorId) : undefined;
+  if (anchorId && !anchor) throw new Error('Anchor is outside the sequence');
+  const parentId = action.parentId ?? anchor?.parentId ?? owner.id;
+  if (parentId !== owner.id && !entries.some(entry => entry.node.id === parentId)) throw new Error('Parent is outside the sequence');
+  if (anchor && anchor.parentId !== parentId) throw new Error('Anchor is not a sibling under the requested parent');
+  const type = action.type ?? anchor?.node.type ?? requireNode(db, parentId).type;
+  if (typeof type !== 'string' || !type.trim()) throw new Error('Node type must be nonempty text');
+  const nodeId = action.id ?? newId('node');
+  if (getDenimNode(db, nodeId)) throw new Error(`Node already exists: ${nodeId}`);
+  const siblings = entries.filter(entry => entry.parentId === parentId);
+  const relativeTo = anchor?.node.id ?? siblings.at(-1)?.node.id ?? (parentId === owner.id ? undefined : parentId);
+  const base = relativeTo ? board.positions[relativeTo] : undefined;
+  const position = base ? {
+    x: base.x + (action.relativePlacement === 'right' ? DENIM_DEFAULT_NODE_SIZE.width + 24 : 0),
+    y: base.y + (action.relativePlacement === 'right' ? 0 : DENIM_DEFAULT_NODE_SIZE.height + 24),
+  } : { x: container.x + 16, y: container.y + 60 };
+    const order = siblings.map(entry => entry.node.id);
+    const index = action.beforeNodeId ? order.indexOf(action.beforeNodeId)
+      : action.afterNodeId ? order.indexOf(action.afterNodeId) + 1 : order.length;
+    insertDenimSequenceChild(db, parentId, { id: nodeId, type, text: action.text }, newId('parent-child'), index);
+    loadNodeOnSourceBoards(db, nodeId, parentId);
+    const current = requireBoard(db, board.id);
+    putBoard(db, { ...current, loadedNodeIds: [...new Set([...current.loadedNodeIds, nodeId])],
+      positions: { ...current.positions, [nodeId]: position },
+      containers: { ...current.containers, [owner.id]: { ...container,
+        width: Math.max(container.width, position.x - container.x + DENIM_DEFAULT_NODE_SIZE.width + 16),
+        height: Math.max(container.height, position.y - container.y + DENIM_DEFAULT_NODE_SIZE.height + 16) } } });
+  return { ok: true, changed: true, nodeId, boardId: board.id };
+}
+
 function handleSequenceNodeMove(db: DenimDatabase, action: ActionFor<'sequence.node.move'>): DenimActionResult {
+  if (action.ownerNodeId) {
+    const { entries } = readSequence(db, action.ownerNodeId);
+    if (!entries.some(entry => entry.node.id === action.nodeId && entry.parentId === action.fromParentId)
+      || (action.parentId !== action.ownerNodeId && !entries.some(entry => entry.node.id === action.parentId))) {
+      throw new Error('Move must stay within the requested sequence');
+    }
+  }
   requireNode(db, action.nodeId);
   requireNode(db, action.fromParentId);
   requireNode(db, action.parentId);
@@ -607,6 +726,7 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
   if (!action || typeof action !== 'object' || typeof action.op !== 'string') throw new Error('Invalid Denim action');
   switch (action.op) {
     case 'journey.create': return handleJourneyCreate(db, action);
+    case 'node.type.color.set': return handleNodeTypeColorSet(db, action);
     case 'node.type.create': return handleNodeTypeCreate(db, action);
     case 'node.type.rename': return handleNodeTypeRename(db, action);
     case 'node.create': return handleNodeCreate(db, action);
@@ -623,6 +743,11 @@ export function applyDenimAction(db: DenimDatabase, action: DenimAction): DenimA
     case 'edge.priority.set': return handleEdgePrioritySet(db, action);
     case 'sequence.initialize': return handleSequenceInitialize(db, action);
     case 'sequence.clear': return handleSequenceClear(db, action);
+    case 'sequenceContainer.read': return handleSequenceRead(db, action);
+    case 'sequenceContainer.layout': return handleSequenceLayout(db, action);
+    case 'sequence.node.indent':
+    case 'sequence.node.outdent': return handleSequenceIndent(db, action);
+    case 'sequence.node.insert': return handleSequenceInsert(db, action);
     case 'sequence.node.move': return handleSequenceNodeMove(db, action);
     case 'sequence.node.insertAfter': return handleSequenceNodeInsertAfter(db, action);
     case 'sequenceContainer.create': return handleSequenceContainerCreate(db, action);

@@ -13,7 +13,7 @@ export function IconButton(props: IconButtonProps): JSX.Element {
 }
 
 type ButtonProps = ParentProps<JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
-  tone?: 'quiet' | 'primary' | 'danger';
+  tone?: 'quiet' | 'primary' | 'danger' | 'danger-primary';
 }>;
 
 export function Button(props: ButtonProps): JSX.Element {

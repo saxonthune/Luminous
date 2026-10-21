@@ -17,7 +17,7 @@ extending one global counter.
 ## Boards and tabs
 
 - **VT1.** [p] When the user opens a Journey, Denim creates a persistent Board for it and opens that Board in a tab.
-- **VT2.** [p] The Journeys, Capabilities, and Instances Boards behave like pinned tabs.
+- **VT2.** [p] The Board Strip shows user Boards; built-in Journeys, Capabilities, and Instances Boards are not toolbar buttons or tabs.
 - **VT3.** [p] The user can open the same Journey in more than one independent Board.
 
 ## Project picker
@@ -47,12 +47,15 @@ extending one global counter.
 - **AT3.** [p] The Denim App Toolbar contains sections.
 - **AT4.** [p] The Denim App Toolbar is square-cornered and fills the entire row across the user's viewport.
 
+- **AT5.** [p] An Open User Journey icon opens a scrollable picker of all Journey Nodes, using their List Representations. Selecting a Journey creates and activates a new Board for it, even when another Board already shows that Journey.
+- **AT6.** [p] When no user Board is open, Denim prompts the user to open a User Journey or create a New Board.
+
 ## Quick Select
 
-- **QS1.** [p] Quick Select opens a menu of app-level actions, including built-in Boards and Types.
-- **QS2.** [p] The built-in Boards in Quick Select are Journeys, Capabilities, and Instances.
+- **QS1.** [p] Quick Select uses a general-menu icon and opens app-level actions, including New Board and Types.
+- **QS2.** [p] Quick Select does not offer Journeys, Capabilities, or Instances category shortcuts.
 - **QS3.** [p] For now, the user cannot add their own Boards to Quick Select.
-- **QS4.** [p] Selecting Types in Quick Select opens the Types page.
+- **QS4.** [p] Selecting Types in Quick Select opens and activates a Types tab in the Board Strip, reusing the existing Types tab if it is already open.
 - **QS5.** [p] Selecting New Board in Quick Select creates a Board.
 
 ## Types page
@@ -60,6 +63,9 @@ extending one global counter.
 - **TYP1.** [p] The Types page lists all Node types.
 - **TYP2.** [p] The user can create and rename Node types from the Types page.
 - **TYP3.** [p] The Journey Node type cannot be renamed from the UI.
+- **TYP5.** [p] The Types tab groups its title, type list, and Create type button in a floating themed panel.
+- **TYP6.** [p] The user can choose a shared theme color for each Node type from the Types tab. The choice is saved with the type and applies to its Nodes across Boards.
+- **TYP4.** [p] The user can switch between the Types tab and Board tabs, navigate to it with the tab-strip keyboard controls, and close it. Closing the active Types tab returns to the previously active Board.
 
 ## Board Strip
 
@@ -77,9 +83,10 @@ extending one global counter.
 ## Board Toolbar
 
 - **VWT1.** [p] The Board Toolbar contains actions relevant to the current Board.
-- **VWT2.** [p] On the Journeys Board, the Board Toolbar has a button to add a new Journey.
+- **VWT2.** [p] The canvas has no floating Add Journey button; users can create Journey Nodes through the Board Context Menu and type controls.
 - **VWT3.** [p] The Board Toolbar has rounded corners and floats below the Denim App Toolbar, centered horizontally over the canvas.
 - **VWT4.** [p] The Board Toolbar does not show the Add child node, Connect to node, or Query result buttons.
+- **VWT5.** [p] Adding a Node to a Board is accessed through the Board Context Menu; the canvas has no floating Add Node button. The Board Toolbar is absent when it has no actions.
 
 ## Save status
 
@@ -131,8 +138,8 @@ extending one global counter.
 - **NT1.** [p] Each Node has a Node Toolbar.
 - **NT2.** [p] A Node Toolbar may provide different capabilities according to the Node's type, while all Nodes have the same minimal capabilities.
 - **NT3.** [p] Node Toolbar affordances are represented by icons.
-- **NT4.** [p] A Node Toolbar is hidden when the pointer is outside its Node and it has no keyboard focus. Hovering the Node reveals the Toolbar with an ellipsis in the hidden-options slot; hovering or focusing within the Toolbar expands its hidden options.
-- **NT5.** [p] A Node Toolbar appears over the Node type label at the bottom-left of the Node Status Bar.
+- **NT4.** [p] Always-visible Toolbar actions remain visible when the pointer is outside the component. Hovering the component reveals an ellipsis when hidden actions are available. Hovering any part of the Toolbar, including its always-visible actions or ellipsis, hides the ellipsis and expands the Toolbar to show the always-visible actions followed by the hidden actions; keyboard focus also provides access to hidden actions.
+- **NT5.** [p] A Node Toolbar appears over the Node type label at the left of the Node Status Bar, vertically centered within that bar.
 - **NT6.** [p] Present Node Toolbar actions appear first on the left. While the Toolbar is collapsed, an ellipsis marks the first hidden option; when expanded, hidden actions replace the ellipsis and continue to the right.
 - **NT7.** [p] The hidden Node Toolbar options end with a trash icon for deleting the Node.
 - **NT8.** [p] A Node Toolbar menu aligns its left edge with the triggering button when space permits and shifts as needed to remain inside the viewport.
@@ -141,6 +148,7 @@ extending one global counter.
 - **NT11.** [p] The hidden Node Toolbar options include a Change Node Type icon immediately before the Spawn Container icon.
 - **NT12.** [p] A Node Toolbar is drawn above the full Node Status Bar, including its indicators and label.
 - **NT13.** [p] The hidden Node Toolbar options include an action to create a Sequence Container.
+- **NT14.** [p] A Node Toolbar may extend beyond the Node's boundaries so every action remains accessible.
 
 ## Node deletion
 
@@ -180,11 +188,11 @@ extending one global counter.
 - **CNT17.** [p] When a Container moves, each visually contained Node moves with it; any Container owned by those Nodes moves with them as well.
 - **CNT18.** [p] Nested Containers alternate between the default surface and a slightly greyer surface.
 - **CNT19.** [p] A dashed curved line connects a Container Node to its Container when both are nested inside another Container.
-- **CNT20.** [p] A Container header label shows the first 16 characters of its owner Node's text followed by “Container”.
+- **CNT20.** [p] A Container header label shows the first 16 characters of its owner Node's text followed by a “Container” badge, matching the Sequence Container badge styling.
 
 ## Container Toolbar
 
-- **CTB1.** [p] A Container Toolbar is located at the top-left of the Container area, below its header, and uses the Node Toolbar's present and hidden icon pattern.
+- **CTB1.** [p] A Container Toolbar is located at the left of the Container header, vertically centered in the header, and uses the Node Toolbar's present and hidden icon pattern.
 - **CTB2.** [p] The first Container Toolbar icon is Create Node.
 - **CTB3.** [p] When the user creates a Node from a Container Toolbar, Denim creates it inside that Container with the same type as the Container's owner Node.
 
@@ -260,9 +268,23 @@ extending one global counter.
 - **SC13.** [p] When the user presses Tab while drafting a Node, Denim indents that Node in the sequence.
 - **SC14.** [p] When the user presses Shift+Tab while drafting a Node, Denim de-indents that Node in the sequence.
 - **SC15.** [p] The existing Sequence options remain available alongside the Sequence Container.
-- **SC16.** [p] A Sequence Container Toolbar appears in the Sequence Container header with a white background and an ellipsis that expands into its actions when hovered or focused.
+- **SC16.** [p] The Sequence Container Toolbar is vertically centered in the header with a white base-token background. Its presentation toggle and Default/Drafting toggle are always visible. Additional actions follow the always-visible actions using the ellipsis pattern described in NT4. Activating a hidden action with the pointer collapses the hidden section while leaving always-visible actions visible.
 - **SC17.** [p] The Sequence Container Toolbar lets the user switch between Special Presentation and Graph Presentation; the header does not show a “Graph” label.
 - **SC18.** [p] The Sequence Container Toolbar has a Default/Drafting toggle immediately after the presentation toggle. If the user activates it in Graph Presentation, Denim switches to Special Presentation and then changes to the other editing state.
+- **SC19.** [p] When the Sequence Container's Special Presentation content overflows its viewport, scrolling over the content scrolls the sequence instead of zooming the canvas.
+- **SC20.** [p] In Drafting State, each Node has a Sequence Container Drafting Mode Node Toolbar in a left-justified column in the left padding beside its sequence position label. The toolbar has one delete icon, and deletion uses the Node Toolbar's existing confirmation.
+- **SC21.** [p] In Default State, the Sequence Container Drafting Mode Node Toolbar is hidden or positioned elsewhere so it does not occupy the drag-and-drop control's position.
+- **SC22.** [p] A Node's List Representation in a Sequence Container has the same height in Default State and Drafting State.
+- **SC23.** [p] In Default State and Drafting State, each Node's List Representation fills the remaining available width in its sequence row, after its indentation and sequence order label.
+- **SC24.** [p] In Drafting State, the user can click a Node's type label to open a dropdown and change its type.
+- **SC25.** [p] The Sequence Container header shows “Sequence Container” in a badge. Its owner title fills the available header width after the Toolbar's visible actions and badge, truncating with an ellipsis only when it does not fit.
+
+- **SC26.** [p] In Graph Presentation, sequence edges appear above Container contents' backgrounds and below Container headers.
+- **SC27.** [p] In Graph Presentation, the Sequence Container Toolbar has a hidden Layout sequence action.
+- **SC28.** [p] Applying sequence layout places siblings left to right at their depth, starting at the Container's top-left content area. The first child is directly below its parent; sibling subtrees receive additional spacing only where their Nodes would overlap at a shared depth.
+- **SC29.** [p] Applying sequence layout loads the sequence's Nodes onto the Board and expands its Container only when needed to fit them. Layout never reduces the Container's width or height and does not change sequence order or Node text.
+- **SC30.** [p] The CLI can read ordered Sequence Container entries, insert Nodes before or after a sibling or under a parent, indent/outdent entries, and move entries between parents using the shared action layer.
+- **SC31.** [p] CLI insertion supports relative placement below or right of an anchor. The user can request sequence layout separately or together with an insertion or move on a specified Board.
 
 ## Sequence options
 

@@ -31,6 +31,9 @@ body {
   --accent-10: rgba(37, 99, 235, 0.1);
   --accent-subtle: #3b82f6;
   --danger: #b91c1c;
+  --danger-primary: #b91c1c;
+  --danger-primary-hover: #991b1b;
+  --on-danger-primary: #ffffff;
   --danger-subtle: #fef2f2;
   /* Merino type badges: the token palette in this theme is dark/saturated
      enough that one fixed foreground reads on every token's fill. */
@@ -89,6 +92,9 @@ body {
   --accent-10: rgba(212, 145, 90, 0.1);
   --accent-subtle: #d4915a;
   --danger: #f87171;
+  --danger-primary: #e58b83;
+  --danger-primary-hover: #f0a39b;
+  --on-danger-primary: #281814;
   --danger-subtle: #451a1a;
   /* Dusk's token palette runs light/pastel (it's the dark theme's accent
      hues, lifted to stay visible on a dark surface) — badge text needs to be
@@ -169,6 +175,9 @@ body {
   --accent-10: color-mix(in oklch, var(--hue-oxide) 10%, transparent);
   --accent-subtle: color-mix(in oklch, var(--hue-oxide) 70%, var(--tone-2));
   --danger: #a8525a;
+  --danger-primary: #9b434c;
+  --danger-primary-hover: #803640;
+  --on-danger-primary: #fff8ee;
   --danger-subtle: color-mix(in oklch, var(--hue-rose) 14%, var(--tone-1));
   --edge: var(--tone-3);
   --edge-label: var(--tone-4);

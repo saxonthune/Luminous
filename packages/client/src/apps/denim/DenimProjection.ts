@@ -108,6 +108,8 @@ function edgeContentOverlays(input: {
     [edge.targetId, new Set(nodeContainers.get(edge.targetId) ?? [])],
   ]);
   const relevant = new Set([
+    ...(nodeContainers.get(edge.sourceId) ?? []),
+    ...(nodeContainers.get(edge.targetId) ?? []),
     ...dataContainerAncestors(parentByMember, edge.sourceId),
     ...dataContainerAncestors(parentByMember, edge.targetId),
   ]);

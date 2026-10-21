@@ -176,8 +176,7 @@
 }
 
 .lui-node-card [data-node-toolbar],
-[data-container-id] [data-container-toolbar],
-[data-container-id] [data-sequence-container-toolbar] {
+[data-container-id] [data-container-toolbar] {
   z-index: 20;
   opacity: 0;
   pointer-events: none;
@@ -225,8 +224,8 @@
 [data-node-toolbar]:focus-within .lui-node-toolbar__expander,
 [data-container-toolbar]:hover .lui-node-toolbar__expander,
 [data-container-toolbar]:focus-within .lui-node-toolbar__expander,
-[data-sequence-container-toolbar]:hover .lui-node-toolbar__expander,
-[data-sequence-container-toolbar]:focus-within .lui-node-toolbar__expander { display: none; }
+[data-sequence-container-toolbar]:hover .lui-node-toolbar__more .lui-node-toolbar__expander,
+[data-sequence-container-toolbar]:focus-within .lui-node-toolbar__more .lui-node-toolbar__expander { display: none; }
 
 .lui-node-toolbar__actions {
   position: absolute;
@@ -244,15 +243,23 @@
 [data-node-toolbar]:focus-within .lui-node-toolbar__actions,
 [data-container-toolbar]:hover .lui-node-toolbar__actions,
 [data-container-toolbar]:focus-within .lui-node-toolbar__actions,
-[data-sequence-container-toolbar]:hover .lui-node-toolbar__actions,
-[data-sequence-container-toolbar]:focus-within .lui-node-toolbar__actions { position: static; }
+[data-sequence-container-toolbar]:hover .lui-node-toolbar__more .lui-node-toolbar__actions,
+[data-sequence-container-toolbar]:focus-within .lui-node-toolbar__more .lui-node-toolbar__actions { position: static; }
 
 [data-node-toolbar]:hover .lui-node-toolbar__actions,
 [data-node-toolbar]:focus-within .lui-node-toolbar__actions,
 [data-container-toolbar]:hover .lui-node-toolbar__actions,
 [data-container-toolbar]:focus-within .lui-node-toolbar__actions,
-[data-sequence-container-toolbar]:hover .lui-node-toolbar__actions,
-[data-sequence-container-toolbar]:focus-within .lui-node-toolbar__actions { opacity: 1; pointer-events: auto; }
+[data-sequence-container-toolbar]:hover .lui-node-toolbar__more .lui-node-toolbar__actions,
+[data-sequence-container-toolbar]:focus-within .lui-node-toolbar__more .lui-node-toolbar__actions { opacity: 1; pointer-events: auto; }
+
+[data-sequence-container-toolbar][data-collapsed="true"] .lui-node-toolbar__more { width: 1.75rem; }
+[data-sequence-container-toolbar][data-collapsed="true"] .lui-node-toolbar__more .lui-node-toolbar__expander { display: flex; }
+[data-sequence-container-toolbar][data-collapsed="true"] .lui-node-toolbar__more .lui-node-toolbar__actions {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
 
 .lui-node-toolbar__action:focus-visible { pointer-events: auto; opacity: 1; }
 .denim-population-indicator {
@@ -271,6 +278,7 @@
 .denim-population-indicator:hover,
 .denim-population-indicator:focus-visible { color: var(--fg); background: var(--surface); }
 .denim-node-status-bar {
+  position: relative;
   display: flex;
   min-height: 1.75rem;
   align-items: center;
@@ -338,19 +346,39 @@
 .denim-find-node-picker__option + .denim-find-node-picker__option { margin-top: 6px; }
 .denim-find-node-picker__option:hover .denim-node-list-representation,
 .denim-find-node-picker__option:focus-visible .denim-node-list-representation { outline: 2px solid color-mix(in oklch, var(--fg) 25%, transparent); outline-offset: 1px; }
-.denim-sequence-list-row { display: flex; min-width: 0; align-items: stretch; gap: 6px; }
+/* Keep the order gutter separate from the card's available width in both modes.
+   A zero-minimum track lets long labels/editors shrink within the container. */
+.denim-sequence-list-row { position: relative; display: grid; grid-template-columns: max-content minmax(0, 1fr); min-width: 0; align-self: stretch; flex: 0 0 auto; align-items: stretch; gap: 6px; }
 .denim-sequence-list-row[draggable="true"] { cursor: grab; }
 .denim-sequence-list-row[draggable="true"]:active { cursor: grabbing; }
 .denim-sequence-order-label { display: flex; min-width: 34px; flex: 0 0 auto; align-items: center; justify-content: flex-end; color: var(--fg-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
 .denim-sequence-special-presentation { position: absolute; inset: 44px 0 0; display: flex; flex-direction: column; gap: 6px; overflow: auto; padding: 10px 12px; }
+.denim-sequence-special-presentation.is-drafting { padding-left: 40px; }
+.denim-sequence-header-toolbar { position: relative; z-index: 20; flex: 0 0 auto; }
+.denim-sequence-header-title { flex: 1 1 0; min-width: 0; margin: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; pointer-events: none; }
+.denim-sequence-header-badge { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; background: var(--surface); white-space: nowrap; pointer-events: none; }
+.denim-sequence-drafting-node-toolbar { position: absolute; top: 50%; left: -28px; z-index: 2; transform: translateY(-50%); }
+.denim-sequence-node-representation { box-sizing: border-box; width: 100%; height: 72px; min-height: 72px; max-height: 72px; min-width: 0; }
 .denim-sequence-list-editor { display: block; width: 100%; min-height: 38px; resize: vertical; border: 1px solid color-mix(in oklch, var(--theme-node-border) 65%, transparent); border-radius: 6px; padding: 5px 7px; background: color-mix(in oklch, var(--surface) 48%, transparent); color: var(--fg); font: inherit; font-size: 13px; line-height: 1.35; outline: none; }
+.denim-sequence-node-representation .denim-sequence-list-editor { box-sizing: border-box; height: 40px; min-height: 40px; max-height: 40px; resize: none; }
 .denim-sequence-list-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-subtle); }
 .denim-sequence-type-select { max-width: 120px; flex: 0 0 auto; border: 1px solid color-mix(in oklch, var(--fg) 20%, transparent); border-radius: 999px; padding: 4px 7px; background: color-mix(in oklch, var(--surface) 78%, transparent); color: var(--fg-muted); font: inherit; font-size: 10px; }
+.denim-sequence-type-label { align-self: flex-start; max-width: 100%; border: 0; padding: 0; background: transparent; color: var(--fg-muted); font: inherit; font-size: 10px; cursor: pointer; }
+.denim-sequence-type-label:focus-visible { outline: 2px solid var(--accent); border-radius: 3px; }
 .denim-node-text-display { white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; }
 .denim-node-visibility-menu__empty { padding: 14px; color: var(--fg-muted); font-size: 12px; }
 .denim-node-visibility-menu__error { margin: 0 14px 10px; color: var(--danger); font-size: 12px; }
 .denim-types-page { display: flex; min-height: 0; flex: 1; justify-content: center; overflow: auto; padding: 32px 16px; }
-.denim-types-page__list { display: flex; width: min(360px, 100%); flex-direction: column; gap: 4px; }
+.lui-panel { align-self: flex-start; min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--lui-radius-lg); background: var(--surface); color: var(--fg); box-shadow: var(--shadow-lg); }
+.lui-panel__header { padding: var(--lui-space-4); background: var(--surface-alt); border-bottom: 1px solid var(--border-subtle); }
+.lui-panel__header h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+.lui-panel__body { padding: var(--lui-space-3); }
+.denim-types-panel { width: min(460px, 100%); flex: 0 0 auto; }
+.denim-types-page__list { display: flex; flex-direction: column; gap: 4px; }
+.denim-types-page__fields { display: flex; align-items: center; gap: var(--lui-space-2); }
+.denim-types-page__fields .denim-types-page__item { min-width: 0; flex: 1; }
+.denim-types-page__color { width: 110px; flex: 0 0 auto; color: var(--fg); border: 1px solid var(--border-subtle); border-radius: var(--lui-radius-sm); padding: 6px; font: inherit; font-size: 12px; }
+.denim-types-page__row [role="alert"] { color: var(--danger); font-size: 12px; }
 .denim-types-page__item { width: 100%; min-height: 36px; border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; background: transparent; color: var(--fg); font: inherit; font-size: 13px; }
 .denim-types-page__item:focus { border-color: var(--border); outline: none; background: var(--surface); }
 .denim-types-page__item[readonly] { color: var(--fg-muted); }
@@ -574,4 +602,26 @@
 .lui-input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* Sequence toggles stay visible; only additional actions use the hover slot. */
+[data-sequence-container-toolbar] > .lui-node-toolbar__more { display: none; }
+[data-container-id]:hover [data-sequence-container-toolbar] > .lui-node-toolbar__more,
+[data-container-id]:focus-within [data-sequence-container-toolbar] > .lui-node-toolbar__more { display: block; }
+
+/* Filled destructive action, with theme-specific foreground contrast. */
+.lui-button--danger-primary {
+  color: var(--on-danger-primary);
+  background: var(--danger-primary);
+}
+.lui-button--danger-primary:hover:not(:disabled) {
+  background: var(--danger-primary-hover);
+}
+.lui-button--danger-primary:focus-visible {
+  outline: 2px solid var(--danger-primary);
+  outline-offset: 2px;
+}
+.lui-button--danger-primary:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
