@@ -8,7 +8,7 @@ import { DotGrid } from './DotGrid.js';
 import { CanvasContext, type CanvasContextValue, type NodeRect } from './CanvasContext.js';
 import type { ConnectionDragState } from './interactions/useConnectionDrag.js';
 import { EdgeLayer, type EdgeLodPolicy } from './EdgeLayer.js';
-import { routeEdges, type EdgeGeometry } from './edgeRouting.js';
+import { routeEdges, sameEdgeGeometry, type EdgeGeometry } from './edgeRouting.js';
 import type { EdgeDeclaration, ClusterDeclaration } from './types.js';
 import { computeBounds } from './geometry/geometry.js';
 import type { ChromeSchema, MenuSchema, Action } from './chrome/types.js';
@@ -45,6 +45,8 @@ export interface CanvasContextMenuPosition {
  * on mount). Edge geometry is computed from these positions.
  */
 export interface CanvasProps {
+  /** Opt-in diagnostics, also available in bundled production artifacts. */
+  onPerformanceEvent?: (event: { kind: 'routing' | 'edge-instance'; durationMs: number }) => void;
   viewportOptions?: UseViewportOptions;
   connectionDrag?: {
     onConnect: (connection: { source: string; sourceHandle: string | null; target: string; targetHandle: string | null }) => void;
@@ -428,7 +430,14 @@ export function Canvas(props: CanvasProps) {
   // separate sibling layer so host nodes can interleave with routes.
   const routedEdges = createMemo<ReadonlyMap<string, EdgeGeometry>>((previous) => {
     if (props.freezeEdgeRouting?.()) return previous;
-    return routeEdges(props.edges ?? [], getNodeRects());
+    const start = props.onPerformanceEvent ? performance.now() : 0;
+    const result = routeEdges(props.edges ?? [], getNodeRects());
+    for (const [id, geometry] of result) {
+      const prior = previous.get(id);
+      if (prior && sameEdgeGeometry(prior, geometry)) result.set(id, prior);
+    }
+    props.onPerformanceEvent?.({ kind: 'routing', durationMs: performance.now() - start });
+    return result;
   }, new Map());
 
   const edgeRouteBands = createMemo(() => {
@@ -713,6 +722,7 @@ export function Canvas(props: CanvasProps) {
                       emphasisNodeIds={edgeEmphasisNodeIds}
                       emphasisStyle={edgeEmphasisStyle}
                       lod={props.edgeLod}
+                      onInstanceCreated={() => props.onPerformanceEvent?.({ kind: 'edge-instance', durationMs: 0 })}
                       layer="lines"
                       routeBand={band}
                       zoom={() => transform().k}
@@ -746,7 +756,7 @@ export function Canvas(props: CanvasProps) {
         <Show when={(props.edges?.length ?? 0) > 0}>
           <svg data-cactus-edge-layer-labels width="100%" height="100%" style={{ position: 'absolute', inset: '0', "pointer-events": 'none' }}>
             <g transform={`translate(${transform().x}, ${transform().y}) scale(${transform().k})`}>
-              <EdgeLayer edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} lod={props.edgeLod} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
+              <EdgeLayer onInstanceCreated={() => props.onPerformanceEvent?.({ kind: 'edge-instance', durationMs: 0 })} edges={props.edges!} routes={routedEdges} emphasisNodeIds={edgeEmphasisNodeIds} emphasisStyle={edgeEmphasisStyle} lod={props.edgeLod} getNodeRects={getNodeRects} layer="labels" zoom={() => transform().k} viewport={edgeViewport} />
             </g>
           </svg>
         </Show>

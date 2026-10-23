@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "styles": {
+    "data": {
+      "label": "Data",
+      "light": {
+        "fill": "#cedfeb",
+        "stroke": "#728da4"
+      },
+      "dark": {
+        "fill": "#293e50",
+        "stroke": "#83a8c4"
+      }
+    },
+    "action": {
+      "label": "Action",
+      "light": {
+        "fill": "#ebccc7",
+        "stroke": "#af756e"
+      },
+      "dark": {
+        "fill": "#50302e",
+        "stroke": "#c78b80"
+      }
+    },
+    "invocation": {
+      "label": "Invocation",
+      "light": {
+        "fill": "#efdfa5",
+        "stroke": "#b29a48"
+      },
+      "dark": {
+        "fill": "#4e4325",
+        "stroke": "#c7af62"
+      }
+    },
+    "artifact": {
+      "label": "Output artifact",
+      "light": {
+        "fill": "#efdfa5",
+        "stroke": "#b29a48"
+      },
+      "dark": {
+        "fill": "#4e4325",
+        "stroke": "#c7af62"
+      }
+    },
+    "code": {
+      "label": "Module / function",
+      "light": {
+        "fill": "#ddd1e9",
+        "stroke": "#9278aa"
+      },
+      "dark": {
+        "fill": "#3e304d",
+        "stroke": "#ac91c3"
+      }
+    }
+  }
+}

@@ -28,6 +28,23 @@ export interface EdgeGeometry {
   contentOverlays: EdgeContentOverlay[];
 }
 
+/** Compare rendered geometry so unrelated node moves do not invalidate every edge. */
+export function sameEdgeGeometry(a: EdgeGeometry, b: EdgeGeometry): boolean {
+  return a.x1 === b.x1 && a.y1 === b.y1 && a.x2 === b.x2 && a.y2 === b.y2
+    && a.labelX === b.labelX && a.labelY === b.labelY
+    && a.points.length === b.points.length
+    && a.points.every((p, i) => p.x === b.points[i].x && p.y === b.points[i].y)
+    && a.segmentLayers.length === b.segmentLayers.length
+    && a.segmentLayers.every((band, i) => band === b.segmentLayers[i])
+    && a.contentOverlays.length === b.contentOverlays.length
+    && a.contentOverlays.every((overlay, i) => {
+      const other = b.contentOverlays[i];
+      return overlay.band === other.band && overlay.clipRect.x === other.clipRect.x
+        && overlay.clipRect.y === other.clipRect.y && overlay.clipRect.w === other.clipRect.w
+        && overlay.clipRect.h === other.clipRect.h;
+    });
+}
+
 const BUNDLE_SPACING = 18;
 // Fraction of line length that labels in a bundle spread across, centered on
 // the midpoint. 0.4 means the outermost labels sit at t = 0.3 and t = 0.7.

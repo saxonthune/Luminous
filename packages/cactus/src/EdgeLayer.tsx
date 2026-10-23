@@ -1,4 +1,4 @@
-import { createMemo, createSignal, createUniqueId, For, Show, type JSX } from 'solid-js';
+import { createMemo, createSignal, createUniqueId, For, Index, Show, type JSX } from 'solid-js';
 import type { EdgeDeclaration } from './types.js';
 import { EdgeLabel } from './EdgeLabel.js';
 import type { EdgeGeometry, NodeRect } from './edgeRouting.js';
@@ -16,6 +16,8 @@ export interface EdgeLodStyle {
   opacity?: number;
   /** False withdraws the label while retaining the Edge line and hit target. */
   labelVisible?: boolean;
+  /** Label-only opacity multiplier; leaves the edge stroke unchanged. */
+  labelOpacity?: number;
 }
 
 /** Host-owned semantic policy; cactus owns applying its visual result. */
@@ -48,6 +50,7 @@ export function counterScaledEdgeMetric(
 }
 
 interface EdgeLayerProps {
+  onInstanceCreated?: () => void;
   edges: EdgeDeclaration[];
   routes: () => ReadonlyMap<string, EdgeGeometry>;
   emphasisNodeIds: () => ReadonlyArray<string>;
@@ -269,12 +272,18 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
 
   const visibleEdges = createMemo(() => {
     const vp = props.viewport?.();
-    if (!vp) return props.edges;
+    const candidates = props.layer === 'labels'
+      ? props.edges.filter(edge => edge.label || (edge.labelText && (
+          edge.id === revealedId() || edge.id === editingId() ||
+          props.lod?.(edge, { zoom: props.zoom(), emphasis: edgeEmphasis(edge, props.emphasisNodeIds()) }).labelVisible !== false
+        )))
+      : props.edges;
+    if (!vp) return candidates;
     const r = routed();
     const padX = vp.w, padY = vp.h;
     const minX = vp.x - padX, maxX = vp.x + vp.w + padX;
     const minY = vp.y - padY, maxY = vp.y + vp.h + padY;
-    return props.edges.filter((edge) => {
+    return candidates.filter((edge) => {
       const pts = r.get(edge.id);
       if (!pts) return false;
       const eMinX = Math.min(pts.x1, pts.x2), eMaxX = Math.max(pts.x1, pts.x2);
@@ -283,15 +292,29 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
     });
   });
 
+  // Only the label layer needs collision placement. Keep the eligible list
+  // stable while zoom changes without changing which labels are shown.
+  const anchorEdges = createMemo(() => {
+    if (props.layer !== 'labels') return [] as EdgeDeclaration[];
+    const zoom = props.zoom();
+    const selected = props.emphasisNodeIds();
+    return props.edges.filter(edge => edge.labelText && (
+      edge.id === revealedId() || edge.id === editingId() ||
+      props.lod?.(edge, { zoom, emphasis: edgeEmphasis(edge, selected) }).labelVisible !== false
+    ));
+  }, undefined, { equals: (a, b) => a.length === b.length && a.every((edge, index) => edge === b[index]) });
+
   // Label anchors: for edges with text, slide along the line to dodge unrelated
   // nodes. Outer memo so per-edge rendering and the revealed-popover see the
   // same chosen position.
   const labelAnchors = createMemo(() => {
+    const eligible = anchorEdges();
+    const map = new Map<string, { x: number; y: number }>();
+    if (!eligible.length) return map;
     const rects = props.getNodeRects?.() ?? new Map<string, NodeRect>();
     const r = routed();
-    const map = new Map<string, { x: number; y: number }>();
     const placed: LabelRect[] = [];
-    for (const edge of props.edges) {
+    for (const edge of eligible) {
       const pts = r.get(edge.id);
       if (!pts) continue;
       if (!edge.labelText) {
@@ -326,13 +349,14 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
     <>
       <For each={visibleEdges()}>
         {(edge) => {
+          props.onInstanceCreated?.();
           const endpoints = createMemo(() => routed().get(edge.id) ?? null);
 
           // Estimated label box (text width + padding). Matches the ~5.6px per
           // glyph used by estimateEdgeLabelSize in PgCanvasView so the rendered
           // background stays in sync with the layout's reserved space.
           const labelBox = createMemo(() => {
-            if (!edge.labelText) return null;
+            if (props.layer !== 'labels' || !edge.labelText) return null;
             const text = truncate(edge.labelText);
             const fs = labelFontSize() * (edge.labelFontScale ?? 1);
             const textWidth = text.length * fs * 0.56 + 10;
@@ -390,18 +414,18 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
           return (
             <Show when={endpoints()}>
               {(pts) => {
-                const renderSegments = (includeAllBands: boolean) => <For each={pts().points.slice(1)}>{(_, index) => {
-                  const start = () => pts().points[index()];
-                  const end = () => pts().points[index() + 1];
-                  const segmentBand = () => pts().segmentLayers[index()] ?? 0;
+                const renderSegments = (includeAllBands: boolean) => <Index each={pts().points.slice(1)}>{(_, index) => {
+                  const start = () => pts().points[index];
+                  const end = () => pts().points[index + 1];
+                  const segmentBand = () => pts().segmentLayers[index] ?? 0;
                   return <Show when={includeAllBands || props.routeBand === undefined || segmentBand() === props.routeBand}>
                     <EdgeLineSegment
                       edge={edge}
                       start={start}
                       end={end}
-                      index={index()}
+                      index={index}
                       curved={() => edge.styling?.curve === 'bezier'}
-                      isFinal={() => index() === pts().points.length - 2}
+                      isFinal={() => index === pts().points.length - 2}
                       color={color}
                       width={width}
                       dashArray={strokeDasharray}
@@ -414,25 +438,25 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                       onEdgeHover={props.onEdgeHover}
                     />
                   </Show>;
-                }}</For>;
+                }}</Index>;
                 return (
                 <>
                   <Show when={props.layer === 'lines'}>
                     {renderSegments(false)}
-                    <For each={pts().contentOverlays}>{(overlay, overlayIndex) => {
-                      const clipId = `cactus-edge-content-${svgIdToken(clipNamespace)}-${svgIdToken(edge.id)}-${props.routeBand}-${overlayIndex()}`;
-                      return <Show when={props.routeBand === overlay.band}>
+                    <Index each={pts().contentOverlays}>{(overlay, overlayIndex) => {
+                      const clipId = `cactus-edge-content-${svgIdToken(clipNamespace)}-${svgIdToken(edge.id)}-${props.routeBand}-${overlayIndex}`;
+                      return <Show when={props.routeBand === overlay().band}>
                         <defs>
                           <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
-                            <rect x={overlay.clipRect.x} y={overlay.clipRect.y}
-                              width={overlay.clipRect.w} height={overlay.clipRect.h} />
+                            <rect x={overlay().clipRect.x} y={overlay().clipRect.y}
+                              width={overlay().clipRect.w} height={overlay().clipRect.h} />
                           </clipPath>
                         </defs>
                         <g clip-path={`url(#${clipId})`}>
                           {renderSegments(true)}
                         </g>
                       </Show>;
-                    }}</For>
+                    }}</Index>
                   </Show>
                   <Show when={props.layer === 'labels' && lodStyle().labelVisible !== false && !!(edge.labelText || edge.label)}>
                     <Show when={edge.labelBackground !== false}>
@@ -445,7 +469,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                             height={box().h}
                             rx={edge.labelBackgroundShape === 'circle' ? Math.max(box().w, box().h) / 2 : 3}
                             fill={edge.labelBackgroundColor ?? 'var(--cactus-canvas-bg, #ffffff)'}
-                            opacity={opacity()}
+                            opacity={opacity() * Math.min(1, Math.max(0, lodStyle().labelOpacity ?? 1))}
                             style={{ 'pointer-events': 'none' }}
                           />
                         )}
@@ -464,7 +488,7 @@ export function EdgeLayer(props: EdgeLayerProps): JSX.Element {
                         stroke-width={edge.labelBackground === false ? 0 : labelHaloWidth()}
                         stroke-linejoin="round"
                         paint-order="stroke fill"
-                        opacity={opacity()}
+                        opacity={opacity() * Math.min(1, Math.max(0, lodStyle().labelOpacity ?? 1))}
                         style={{
                           'pointer-events': edge.labelText ? 'auto' : 'none',
                           cursor: edge.labelText ? 'pointer' : undefined,

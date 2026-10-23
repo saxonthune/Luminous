@@ -17,7 +17,11 @@
       "default": "./src/chrome/types.ts"
     },
     "./cactus.css": "./src/cactus.css",
-    "./cactus-themes.css": "./src/cactus-themes.css"
+    "./cactus-themes.css": "./src/cactus-themes.css",
+    "./runtime": {
+      "types": "./dist/runtime-public.d.ts",
+      "default": "./src/runtime-public.ts"
+    }
   },
   "dependencies": {
     "@kobalte/core": "^0.13.14",

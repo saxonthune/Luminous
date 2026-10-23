@@ -1,3 +1,4 @@
+import { stopWheelIfScrollable } from '@luminous/cactus';
 import { sequenceDescendantEntries, type SequenceListEntry } from '@luminous/core/denim/sequence';
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { Portal } from 'solid-js/web';
@@ -60,16 +61,6 @@ type VisibilityQueryKind = 'board' | 'upstream' | 'downstream' | 'container';
 type OpenNodeVisibility = (kind: VisibilityQueryKind, nodeId: string | undefined, position: { x: number; y: number }) => void;
 type VisibilityMenuState = { kind: VisibilityQueryKind; nodeId?: string; boardId: string; boardTitle: string; title: string; x: number; y: number };
 
-function stopWheelIfScrollable(event: WheelEvent & { currentTarget: HTMLElement }): void {
-  const element = event.currentTarget;
-  const canScrollVertically = element.scrollHeight > element.clientHeight + 1;
-  const canScrollHorizontally = element.scrollWidth > element.clientWidth + 1;
-  const canScrollY = event.deltaY < 0 ? element.scrollTop > 0
-    : event.deltaY > 0 ? element.scrollTop + element.clientHeight < element.scrollHeight - 1 : false;
-  const canScrollX = event.deltaX < 0 ? element.scrollLeft > 0
-    : event.deltaX > 0 ? element.scrollLeft + element.clientWidth < element.scrollWidth - 1 : false;
-  if ((canScrollVertically && canScrollY) || (canScrollHorizontally && canScrollX)) event.stopPropagation();
-}
 
 function stopCanvasZoomForOverflow(event: WheelEvent & { currentTarget: HTMLElement }): void {
   const element = event.currentTarget;

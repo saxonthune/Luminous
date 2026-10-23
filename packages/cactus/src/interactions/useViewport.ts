@@ -10,6 +10,8 @@ export interface Transform {
 }
 
 export interface UseViewportOptions {
+  /** Live wheel preference. Ctrl+wheel always zooms. */
+  scrollZoom?: () => boolean;
   minZoom?: number; // default 0.15
   maxZoom?: number; // default 2
   /** Transform to restore when this viewport mounts. It remains transient: the
@@ -107,8 +109,32 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
   let container: HTMLDivElement | undefined;
   let zoomBehavior: ZoomBehavior<HTMLDivElement, unknown> | null = null;
 
+  // Cancel native middle-button autoscroll without swallowing the mouse
+  // event: d3 still receives mousedown and owns middle-drag panning.
+  const preventMiddleDefault = (event: MouseEvent) => {
+    if (event.button === 1) event.preventDefault();
+  };
+  const handleWheelPan = (event: WheelEvent) => {
+    if (event.ctrlKey || (options.scrollZoom?.() ?? true) || !container || !zoomBehavior) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
+    const current = transform();
+    const selection = select(container);
+    selection.interrupt();
+    selection.call(zoomBehavior.transform, zoomIdentity.translate(current.x - event.deltaX * unit, current.y - event.deltaY * unit).scale(current.k));
+  };
+  const removeMiddleListeners = () => {
+    container?.removeEventListener('mousedown', preventMiddleDefault, true);
+    container?.removeEventListener('auxclick', preventMiddleDefault, true);
+    container?.removeEventListener('wheel', handleWheelPan);
+  };
   const setContainerRef = (el: HTMLDivElement) => {
+    removeMiddleListeners();
     container = el;
+    el.addEventListener('mousedown', preventMiddleDefault, true);
+    el.addEventListener('auxclick', preventMiddleDefault, true);
+    el.addEventListener('wheel', handleWheelPan, { passive: false });
     // A canvas clips its infinite scene; it must never become a scroll
     // container. Browsers may otherwise scroll it to reveal a focused editor,
     // shifting overlays and the apparent camera independently of d3-zoom.
@@ -117,6 +143,9 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
 
     const zb = d3Zoom<HTMLDivElement, unknown>()
       .scaleExtent([minZoom, maxZoom])
+      // D3 normally multiplies Ctrl+wheel by ten (for trackpad pinch).
+      // Use the ordinary wheel sensitivity for both gestures.
+      .wheelDelta(event => -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002))
       .filter((event) => shouldViewportPan(event, { leftDragPan }))
       .on('zoom', (event) => {
         const next = {
@@ -140,6 +169,7 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
   };
 
   onCleanup(() => {
+    removeMiddleListeners();
     if (container) select(container).on('.zoom', null);
   });
 
@@ -202,7 +232,12 @@ export function useViewport(options: UseViewportOptions = {}): UseViewportResult
     const target = zoomIdentity.translate(clamped.x, clamped.y).scale(clamped.k);
     const selection = select(container);
     if (animate) selection.transition().duration(300).call(zoomBehavior.transform, target);
-    else selection.call(zoomBehavior.transform, target);
+    else {
+      // An immediate camera correction must not be overwritten by an older
+      // fit/zoom transition on the next animation tick.
+      selection.interrupt();
+      selection.call(zoomBehavior.transform, target);
+    }
   };
 
   const focusView = (

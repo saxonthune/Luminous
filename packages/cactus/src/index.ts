@@ -93,3 +93,6 @@ export type { CactusToken } from './cactus-tokens.js';
 
 export { placeAdjacent } from './geometry/placeAdjacent.js';
 export { visibleRects } from './geometry/visibleRects.js';
+
+export { ToolbarSurface } from './ToolbarSurface.js';
+export { stopWheelIfScrollable } from './interactions/scroll.js';

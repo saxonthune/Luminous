@@ -15,3 +15,8 @@ export type { EdgeDeclaration, RegisteredNodeRect } from './types.js';
 
 export { placeAdjacent } from './geometry/placeAdjacent.js';
 export { directRectRoute } from './edgeRouting.js';
+
+export { elkLayout } from './elkLayout.js';
+export type { ElkLayoutOptions } from './elkLayout.js';
+export { compoundLayeredLayout } from './compoundLayeredLayout.js';
+export { rowWithInputsLayout } from './rowWithInputsLayout.js';

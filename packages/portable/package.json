@@ -1,0 +1,20 @@
+{
+  "name": "@luminous/portable",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@luminous/cactus": "workspace:*",
+    "lucide-solid": "^1.49.0",
+    "marked": "^18.0.13",
+    "pele": "1.8.0",
+    "solid-js": "^1.9.15",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "typescript": "~7.0.2",
+    "vite": "catalog:",
+    "vite-plugin-solid": "^2.11.14",
+    "vite-plus": "catalog:"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "styles": {
+    "data": {
+      "label": "Stored or produced data",
+      "light": {
+        "fill": "#e1d4bf",
+        "stroke": "#9c8768"
+      },
+      "dark": {
+        "fill": "#443a2c",
+        "stroke": "#9c8768"
+      }
+    },
+    "operation": {
+      "label": "Operation",
+      "light": {
+        "fill": "#d9dfd0",
+        "stroke": "#7e8d71"
+      },
+      "dark": {
+        "fill": "#303a2d",
+        "stroke": "#8b9c7e"
+      }
+    },
+    "state": {
+      "label": "Mutable browser state",
+      "light": {
+        "fill": "#d2dce3",
+        "stroke": "#768da0"
+      },
+      "dark": {
+        "fill": "#2b3944",
+        "stroke": "#819eb3"
+      }
+    },
+    "event": {
+      "label": "Event or author choice",
+      "light": {
+        "fill": "#e6d2c9",
+        "stroke": "#ad7d65"
+      },
+      "dark": {
+        "fill": "#47352e",
+        "stroke": "#ba927b"
+      }
+    }
+  }
+}

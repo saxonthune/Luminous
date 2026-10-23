@@ -172,6 +172,17 @@ Orphaned attachments (non-md files with no corresponding root .md) are reported 
 | doc01.15.05 | `15-denim/05-denim-ui-requirements.md` | Denim's persistent Boards, tab navigation, toolbars, and node component behavior. | denim, ui, requirements, boards, toolbar, tabs, nodes, icons, dragging | doc01.15.01, doc01.15.03 | — | — |
 | doc01.15.06 | `15-denim/06-shared-graph-use-case.md` | A motivating use case for reusing shared design Nodes across Journey Boards so queries can reveal requirements across the whole product. | denim, use-case, graph, boards, journeys, reuse, queries | doc01.15.01, doc01.15.02, doc01.15.04 | — | — |
 
+### Portable
+
+| Ref | File | Summary | Tags | Deps | Refs | Attachments |
+|-----|------|---------|------|------|------|-------------|
+
+| doc01.16.00 | `16-portable/00-index.md` |  |  | — | — | — |
+| doc01.16.01 | `16-portable/01-overview.md` | Standalone interactive graph artifacts, initially using Solid and shared Luminous packages. | portable, canvas | — | — | — |
+| doc01.16.02 | `16-portable/02-requirements.md` | User-supported Portable requirements, pending wording review. | portable, requirements, layout | — | — | — |
+| doc01.16.03 | `16-portable/03-recipes.md` | Purpose-driven Recipe concept and requirements, with a proposed flowchart pipeline. | portable, glossary, requirements, recipes | — | — | — |
+| doc01.16.04 | `16-portable/04-canvas-headers.md` | Canvas Header and Fullscreen Canvas Header glossary, features, and requirements. | portable, glossary, requirements, fullscreen | — | — | — |
+
 ## 02-design — Design
 
 | Ref | File | Summary | Tags | Deps | Refs | Attachments |
@@ -292,7 +303,7 @@ Quick lookup for file-path→doc mapping:
 | `braincrawl` | doc01.07.02 |
 | `cactus` | doc01.06.01.01, doc01.06.01.02, doc01.06.01.03, doc01.06.01.04, doc01.06.01.05, doc01.06.01.06, doc01.06.01.07, doc01.06.01.08, doc01.06.01.09, doc01.06.01.10, doc01.06.01.11, doc02.05.01, doc02.05.02, doc02.05.03, doc02.05.04, doc02.05.05, doc02.05.06, doc02.20, doc03.07 |
 | `cactus-boundary` | doc02.08 |
-| `canvas` | doc01.01, doc01.06.01.01, doc01.08.01, doc02.01, doc02.05.01, doc02.05.02, doc02.12, doc02.13, doc02.14, doc02.16, doc02.17, doc02.18, doc02.19, doc03.06 |
+| `canvas` | doc01.01, doc01.06.01.01, doc01.08.01, doc01.16.01, doc02.01, doc02.05.01, doc02.05.02, doc02.12, doc02.13, doc02.14, doc02.16, doc02.17, doc02.18, doc02.19, doc03.06 |
 | `canvas-engine` | doc02.11 |
 | `case-study` | doc01.05.02, doc01.07.02 |
 | `chrome` | doc02.19, doc02.20 |
@@ -345,10 +356,11 @@ Quick lookup for file-path→doc mapping:
 | `fifa-bracketing` | doc01.05.02 |
 | `formalization` | doc01.12.05, doc02.02, doc03.02 |
 | `format` | doc02.21.01 |
+| `fullscreen` | doc01.16.04 |
 | `function-info` | doc01.13.06 |
 | `gap-analysis` | doc02.10.02 |
 | `gestalt` | doc03.04 |
-| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.13.05, doc01.15.03 |
+| `glossary` | doc00.04, doc00.05, doc01.05.02, doc01.05.03, doc01.07.03, doc01.09.02, doc01.12.03, doc01.13.05, doc01.15.03, doc01.16.03, doc01.16.04 |
 | `gojs` | doc01.06.01.06 |
 | `graph` | doc01.15.01, doc01.15.02, doc01.15.03, doc01.15.06, doc02.15 |
 | `graph-visualization` | doc01.06.01.05 |
@@ -369,7 +381,7 @@ Quick lookup for file-path→doc mapping:
 | `json-schema` | doc02.10.02 |
 | `konva` | doc01.06.01.04 |
 | `labor` | doc03.08 |
-| `layout` | doc01.13.07, doc02.05.03, doc02.05.04, doc02.05.06 |
+| `layout` | doc01.13.07, doc01.16.02, doc02.05.03, doc02.05.04, doc02.05.06 |
 | `legibility` | doc03.07 |
 | `libraries` | doc01.06.01.01 |
 | `linen` | doc01.09.01, doc01.09.02 |
@@ -406,6 +418,7 @@ Quick lookup for file-path→doc mapping:
 | `pipelines` | doc03.04 |
 | `plain-language` | doc00.04 |
 | `platform` | doc01.04, doc02.22.01 |
+| `portable` | doc01.16.01, doc01.16.02, doc01.16.03, doc01.16.04 |
 | `ports` | doc01.07.06 |
 | `primitives` | doc02.09, doc02.16 |
 | `principles` | doc01.12.01 |
@@ -421,13 +434,14 @@ Quick lookup for file-path→doc mapping:
 | `react-flow` | doc01.06.01.02 |
 | `reactive` | doc03.01 |
 | `reactivity` | doc02.06.01, doc03.05 |
+| `recipes` | doc01.16.03 |
 | `rectangle-algebra` | doc01.07.05 |
 | `reference` | doc01.07.05, doc02.09, doc02.18 |
 | `reference-graph` | doc03.05 |
 | `relations` | doc01.07.05 |
 | `renderer` | doc02.16 |
 | `rendering` | doc02.16, doc02.21.03, doc03.05 |
-| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04, doc01.13.04, doc01.15.01, doc01.15.02, doc01.15.05 |
+| `requirements` | doc01.05.04, doc01.07.04, doc01.10.01, doc01.10.02, doc01.12.04, doc01.13.04, doc01.15.01, doc01.15.02, doc01.15.05, doc01.16.02, doc01.16.03, doc01.16.04 |
 | `research` | doc03.01, doc03.02, doc03.03, doc03.04, doc03.05, doc03.06, doc03.07, doc03.08 |
 | `reuse` | doc01.15.06 |
 | `rhidoc` | doc01.02 |

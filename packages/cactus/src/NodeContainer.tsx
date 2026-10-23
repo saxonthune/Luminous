@@ -5,6 +5,8 @@ import type { ChildLayoutPolicy } from './layout-types.js';
 
 export interface NodeContainerProps {
   nodeId: string;
+  /** Optional selection outline width in screen pixels, independent of zoom. */
+  selectionOutlineScreenWidth?: number;
   x: () => number;
   y: () => number;
   w: () => number;
@@ -126,7 +128,12 @@ export function NodeContainer(props: NodeContainerProps): JSX.Element {
             position: 'absolute',
             inset: '0',
             'z-index': '20',
-            border: `${Math.max(1, 1.75 / ctx.transform().k)}px solid var(--cactus-selection-outline, var(--cactus-accent, #2563eb))`,
+            border: props.selectionOutlineScreenWidth === undefined
+              ? `${Math.max(1, 1.75 / ctx.transform().k)}px solid var(--cactus-selection-outline, var(--cactus-accent, #2563eb))`
+              : undefined,
+            'box-shadow': props.selectionOutlineScreenWidth === undefined
+              ? undefined
+              : `inset 0 0 0 ${props.selectionOutlineScreenWidth / ctx.transform().k}px var(--cactus-selection-outline, var(--cactus-accent, #2563eb))`,
             'border-radius': 'var(--cactus-node-radius, 8px)',
             'box-sizing': 'border-box',
             'pointer-events': 'none',

@@ -1,7 +1,7 @@
 /*
  * cactus shipped themes.
  *
- * Two interchangeable implementations of the --cactus-* token contract
+ * Interchangeable implementations of the --cactus-* token contract
  * (see doc02.05.05). Apply either class on any ancestor of the canvas:
  *
  *   <div class="cactus-theme-dark"><Canvas>…</Canvas></div>
@@ -57,4 +57,28 @@
   --cactus-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --cactus-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
   --cactus-container-tint: rgba(232, 224, 216, 0.05);
+}
+
+/* Ground palette from the Luminous platform theme. */
+.cactus-theme-ground {
+  --cactus-canvas-bg: #f4ece1;
+  --cactus-fg: #1f1810;
+  --cactus-fg-muted: #7d6b50;
+  --cactus-fg-subtle: #b8a78c;
+  --cactus-overlay: #faf7f1;
+  --cactus-surface: #faf7f1;
+  --cactus-surface-alt: #ddcfba;
+  --cactus-border: #b8a78c;
+  --cactus-border-subtle: color-mix(in oklch, #ddcfba 70%, #b8a78c);
+  --cactus-accent: #9a4a2a;
+  --cactus-accent-subtle: color-mix(in oklch, #9a4a2a 70%, #ddcfba);
+  --cactus-selection: rgba(154, 74, 42, 0.1);
+  --cactus-on-accent: #f4ece1;
+  --cactus-danger: #a8525a;
+  --cactus-danger-subtle: color-mix(in oklch, #a8525a 14%, #faf7f1);
+  --cactus-grid-dot: color-mix(in oklch, #faf7f1 80%, #b8a78c);
+  --cactus-resize-handle: #b8a78c;
+  --cactus-shadow-sm: 0 1px 2px rgba(31, 24, 16, 0.08);
+  --cactus-shadow-lg: 0 10px 15px rgba(31, 24, 16, 0.15);
+  --cactus-container-tint: #ddcfba;
 }

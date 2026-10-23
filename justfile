@@ -87,7 +87,7 @@ test-e2e:
 # ---- typecheck ----
 
 # typecheck all packages
-typecheck: typecheck-core typecheck-cactus typecheck-mcp typecheck-client typecheck-server
+typecheck: typecheck-core typecheck-cactus typecheck-mcp typecheck-client typecheck-server typecheck-portable
 
 typecheck-server:
     pnpm exec tsc --noEmit -p packages/server/tsconfig.json
@@ -236,3 +236,12 @@ check-skill-reference: gen-skill-reference
 kill:
     -bash scripts/kill-dev.sh
     @echo "Killed processes on ports 4080 and 5200"
+
+# Typecheck the Portable scaffold
+typecheck-portable:
+    pnpm exec tsc --noEmit -p packages/portable/tsconfig.json
+
+# Generate a standalone Portable HTML artifact from Mermaid
+[positional-arguments]
+portable *args:
+    pnpm exec tsx packages/portable/src/generate.ts "$@"

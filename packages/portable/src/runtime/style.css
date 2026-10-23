@@ -1,0 +1,108 @@
+*{box-sizing:border-box}html,body,#app{height:100%;margin:0}body{font:14px system-ui,sans-serif}.portable{height:100%;display:flex;flex-direction:column;color:var(--cactus-fg);background:var(--cactus-canvas-bg);--cactus-node-radius:8px}.portable header{display:flex;align-items:center;gap:8px;padding:12px;border-bottom:1px solid var(--cactus-border);flex-wrap:wrap}.portable header strong{margin-right:auto}.portable button{font:inherit;color:inherit;background:var(--cactus-surface-alt);border:1px solid var(--cactus-border);padding:7px 10px;border-radius:6px;cursor:pointer}.portable button:disabled{opacity:.45}.portable button:focus-visible{outline:2px solid var(--cactus-accent)}.portable main{flex:1;min-height:0}.portable footer{padding:8px 12px;color:var(--cactus-fg-muted);font-size:12px}.portable-node,.portable-group{position:relative;height:100%;border-radius:8px;overflow:visible;background:var(--cactus-surface);cursor:grab}.portable-node{display:flex;align-items:center;padding:16px;background:var(--cactus-surface-alt)}.portable-label{white-space:pre-wrap;overflow-wrap:anywhere;line-height:21px}.portable-group>.portable-label{height:48px;padding:10px 16px;background:var(--cactus-surface-alt);font-weight:600;overflow:hidden}.cactus-theme-light.portable{--cactus-canvas-bg:#f6f7f9;--cactus-grid-dot:#b7c1cd}.cactus-theme-dark.portable{--cactus-grid-dot:#60574e}
+
+/* An inset overlay keeps boundaries visible without changing content geometry.
+   Shadow spread supports fractional canvas pixels without border-width snapping. */
+.portable-node::after,.portable-group::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  box-shadow:inset 0 0 0 var(--portable-border-width,1px) var(--portable-border-color,var(--cactus-border));
+  pointer-events:none;
+}
+
+.portable-container-body{position:absolute;top:48px;left:0;right:0;bottom:0;cursor:default}
+.portable-node>.portable-label{width:100%;max-height:100%;overflow:auto;min-height:0}
+.portable-group>.portable-label{border-radius:8px 8px 0 0;cursor:grab}
+
+/* A document scrolls normally; each embedded canvas has its own viewport. */
+.portable{height:auto;min-height:100%;display:block}
+.portable-page-header{position:sticky;top:0;z-index:1000;background:var(--cactus-surface)}
+.portable-document{max-width:1440px;margin:0 auto;padding:24px clamp(16px,4vw,64px) 80px;line-height:1.65}
+.portable-document h1,.portable-document h2,.portable-document h3{line-height:1.25;margin-top:1.6em}
+.portable-document p,.portable-document ul,.portable-document ol{max-width:85ch}
+.portable-document a{color:var(--cactus-accent)}
+.portable-document pre{overflow:auto;padding:16px;background:var(--cactus-surface-alt);border-radius:8px}
+.portable-document code{font-family:ui-monospace,monospace}
+.portable-document blockquote{border-left:3px solid var(--cactus-border);margin-left:0;padding-left:20px;color:var(--cactus-fg-muted)}
+.portable-document table{border-collapse:collapse;max-width:100%;display:block;overflow:auto}
+.portable-document th,.portable-document td{padding:8px 12px;border:1px solid var(--cactus-border)}
+.portable-canvas{height:clamp(480px,82vh,960px);display:flex;flex-direction:column;position:relative;margin:28px 0;border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-canvas-bg);line-height:normal;min-width:0}
+.portable-canvas:focus-visible{outline:2px solid var(--cactus-accent);outline-offset:3px}
+.portable-canvas-viewport{flex:1;min-height:0;position:relative}
+.portable-canvas header{border-radius:8px 8px 0 0;background:var(--cactus-surface)}
+
+/* Article surface is independent from the page/canvas backdrop. */
+.portable{--portable-content-bg:var(--cactus-surface)}
+.portable-document{background:var(--portable-content-bg)}
+.portable-canvas-expanded{border-radius:0}
+.portable-canvas-expanded>header{border-radius:0}
+
+.portable-document>:first-child{margin-top:0}
+
+.portable-fullscreen-dialog{position:fixed;inset:0;width:100%;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;overflow:hidden;overscroll-behavior:none;background:var(--cactus-canvas-bg);color:var(--cactus-fg)}
+.portable-fullscreen-dialog::backdrop{background:var(--cactus-canvas-bg)}
+.portable-canvas.portable-canvas-fullscreen{width:100%;height:100%;margin:0;border:0;border-radius:0}
+.portable-canvas-fullscreen>header{border-radius:0;flex-shrink:0}
+.portable-canvas-fullscreen>footer{flex-shrink:0}
+
+/* Card sections have independent theme slots; zoom never changes the footprint. */
+.portable-node.portable-card-node{padding:0;overflow:hidden;background:var(--portable-card-color,var(--cactus-surface-alt))!important}
+.portable-card{width:100%;height:100%;display:flex;flex-direction:column;white-space:pre-wrap;overflow-wrap:anywhere}
+.portable-card-title{flex-shrink:1;min-height:0;overflow:auto;padding:8px 10px;font-weight:650;font-size:16px;line-height:24px;background:var(--portable-card-title-bg,color-mix(in srgb,var(--portable-card-color) 88%,var(--portable-border-color)));color:var(--portable-card-title-fg,var(--cactus-fg))}
+.portable-card-body{flex:1;min-height:0;overflow:auto;padding:8px 10px;line-height:21px;background:var(--portable-card-body-bg,var(--portable-card-color));color:var(--portable-card-body-fg,var(--cactus-fg))}
+.portable-card-footer{flex-shrink:1;min-height:0;overflow:auto;padding:8px 10px;font-size:14px;line-height:21px;background:var(--portable-card-footer-bg,color-mix(in srgb,var(--portable-card-color) 94%,var(--portable-border-color)));color:var(--portable-card-footer-fg,var(--cactus-fg))}
+.portable-card-footer a{color:inherit;text-decoration:underline;cursor:pointer}
+.portable-card-footer a:focus-visible{outline:2px solid var(--cactus-accent)}
+.portable-card-summary{position:relative;justify-content:center;background:var(--portable-card-title-bg,color-mix(in srgb,var(--portable-card-color) 88%,var(--portable-border-color)))}
+.portable-card-summary .portable-card-title{position:relative;z-index:1;flex-shrink:0;max-height:100%;font-size:22px;line-height:28px}
+
+.portable-settings{position:relative;display:flex}
+.portable-settings>button{display:flex;align-items:center;justify-content:center}
+.portable-settings-dropdown{position:absolute;right:0;top:calc(100% + 8px);z-index:1100;min-width:170px;padding:12px;border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-surface);box-shadow:0 4px 16px #0003}
+.portable-settings-dropdown label{display:flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer}
+
+/* Text and icon controls share one line box and therefore the same height. */
+.portable-canvas>header button{line-height:20px;height:36px}
+.portable-card-disclosure{position:absolute;right:10px;bottom:8px;z-index:0;font-size:24px;line-height:20px;color:var(--cactus-fg-muted);cursor:help}
+
+/* A canvas-owned overlay, outside zoomed geometry, retained in fullscreen. */
+.portable-legend{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:1200;max-width:min(300px,calc(100vw - 24px));border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-surface);color:var(--cactus-fg);box-shadow:0 4px 16px #0003;font-size:14px;line-height:1.4}
+.portable-legend-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:4px 8px 4px 12px}
+.portable-legend-header button{min-width:44px;min-height:44px;cursor:pointer}
+.portable-legend ul{margin:0;padding:0 12px 12px;list-style:none;max-height:40dvh;overflow:auto;overscroll-behavior:contain}
+.portable-legend ul[hidden]{display:none}
+.portable-legend li{display:flex;align-items:center;gap:8px;margin:6px 0;overflow-wrap:anywhere}
+.portable-legend-swatch{width:18px;height:18px;flex:0 0 18px;border:2px solid;border-radius:4px}
+
+/* Shared diff vocabulary is declared in src/diff.ts; geometry belongs here. */
+.portable-card-heading{display:flex;flex:0 1 auto;min-height:0;align-items:stretch;background:var(--portable-card-title-bg,color-mix(in srgb,var(--portable-card-color) 88%,var(--portable-border-color)))}
+.portable-card-heading .portable-card-title{flex:1;min-width:0}
+.portable-card-heading-diff{min-height:48px}
+.portable-card-heading .portable-diff-badge{margin-left:auto;align-self:flex-start}
+.portable-diff-badge{display:inline-flex;width:48px;height:48px;flex:0 0 48px;padding:0;font:700 24px/1 system-ui;background:var(--diff-fill);color:var(--diff-ink)}
+.portable-diff-badge>span{display:flex;align-items:center;justify-content:center;flex:1;min-width:0}
+.portable-diff-badge .portable-diff-removed{background:var(--diff-remove);color:var(--diff-remove-ink)}
+.cactus-theme-dark .portable-diff-badge{background:var(--diff-dark-fill);color:var(--diff-dark-ink)}
+.cactus-theme-dark .portable-diff-badge .portable-diff-removed{background:var(--diff-dark-remove);color:var(--diff-dark-remove-ink)}
+.portable-card-summary .portable-card-heading{position:relative;z-index:1;flex-shrink:0;max-height:100%}
+.portable-legend .portable-diff-badge{width:32px;height:32px;flex-basis:32px;font-size:18px}
+
+
+/* Extended Info Plugin: canvas-owned overlays, outside the zoomed graph. */
+.portable-card-more{margin-left:8px;white-space:nowrap}
+.portable-card-footer-summary{flex-shrink:0;align-self:stretch;text-align:right;background:transparent;font-size:20px;line-height:26px}
+.portable-card-footer-summary .portable-card-more{margin:0}
+.portable-card-summary:has(.portable-card-more) .portable-card-heading{max-height:calc(100% - 42px)}
+.portable-extended-info{position:absolute;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-surface);color:var(--cactus-fg);box-shadow:0 8px 24px #0004;line-height:1.5;font-size:16px}
+.portable-extended-info:focus-visible{outline:2px solid var(--cactus-accent);outline-offset:-3px}
+.portable-extended-info-header{display:flex;align-items:center;gap:4px;flex-shrink:0;padding:4px 6px 4px 12px;background:var(--cactus-surface-alt);border-bottom:1px solid var(--cactus-border);cursor:grab;touch-action:none;user-select:none}
+.portable-extended-info-header strong{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.portable-extended-info-header button{flex:0 0 44px;height:44px;padding:4px}
+.portable-extended-info-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px 16px 32px;overflow-wrap:anywhere;user-select:text}
+.portable-extended-info-body[hidden]{display:none}
+.portable-extended-info-body>:first-child{margin-top:0}
+.portable-extended-info-body h1,.portable-extended-info-body h2,.portable-extended-info-body h3{font-size:1.1em;margin:16px 0 8px}
+.portable-extended-info-body pre{padding:8px;white-space:pre;overflow:auto}
+.portable-extended-info-body a{color:var(--cactus-accent);text-decoration:underline}
+.portable-extended-info .portable-extended-info-resize{position:absolute;right:0;bottom:0;width:28px;height:28px;padding:0;border-radius:6px 0 6px 0;cursor:nwse-resize;touch-action:none}
