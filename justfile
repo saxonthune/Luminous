@@ -241,6 +241,10 @@ kill:
 typecheck-portable:
     pnpm exec tsc --noEmit -p packages/portable/tsconfig.json
 
+# Focused Portable component tests using the shared workspace test runner
+portable-component-test:
+    pnpm -C packages/cactus exec vitest run --root ../portable --config ../portable/vitest.config.ts
+
 # Generate a standalone Portable HTML artifact from Mermaid
 [positional-arguments]
 portable *args:

@@ -2,6 +2,13 @@ import { ExtendedInfo } from './ExtendedInfo.js';
 import { Legend } from './Legend.js';
 import { CanvasSettings } from './CanvasSettings.js';
 import { Card } from './Card.js';
+import { UsageCard } from './UsageCard.js';
+import { TransitionNode } from './TransitionNode.js';
+import { RestCard } from './RestCard.js';
+import { restRole, restStyles } from '../rest.js';
+import { buildRestTree, hiddenRestNodes, revealRestChildren } from '../rest-tree.js';
+import { themeFromUrl, urlWithTheme, type Theme } from '../theme-url.js';
+import { visibleTreeLayout } from '@luminous/cactus/tree-layout';
 import { batch, createSignal, createMemo, For, onMount, onCleanup } from 'solid-js';
 import { render } from 'solid-js/web';
 import { createStore, unwrap } from 'solid-js/store';
@@ -21,7 +28,6 @@ if (artifact.debugPerformance && artifact.bundleSize) {
   console.table(report.packages);
   console.groupEnd();
 }
-type Theme = 'ground' | 'light' | 'dark';
 function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onThemeChange: () => void }) {
   const diagram = props.diagram;
   const title = diagram.settings?.title ?? diagram.id;
@@ -121,6 +127,29 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
   const depth = (node: PortableNode): number => node.parentId ? 1 + depth(byId.get(node.parentId)!) : 0;
   const ancestors = (id: string): string[] => { const parent = byId.get(id)?.parentId; return parent ? [parent, ...ancestors(parent)] : []; };
   const nodes = [...diagram.graph.nodes].sort((a, b) => depth(a) - depth(b));
+  const tree = diagram.mode === 'rest-api-tree' ? buildRestTree(diagram.graph) : undefined;
+  const [collapsed, setCollapsed] = createSignal<ReadonlySet<string>>(new Set());
+  const [activeVisibilityNode, setActiveVisibilityNode] = createSignal<string>();
+  const hidden = createMemo(() => tree ? hiddenRestNodes(tree.descendants, collapsed()) : new Set<string>());
+  const visibleNodes = createMemo(() => nodes.filter(node => !hidden().has(node.id)));
+  function changeVisibility(id: string, action: 'toggle' | 'children-only') {
+    if (!tree) return;
+    const next = action === 'children-only' ? revealRestChildren(tree.children, collapsed(), id) : new Set(collapsed());
+    if (action === 'toggle') { if (next.has(id)) next.delete(id); else next.add(id); }
+    const sizes = new Map(nodes.map(node => [node.id, { w: layout[node.id].w, h: layout[node.id].h }]));
+    const positions = visibleTreeLayout(tree.roots, tree.children, sizes, next);
+    // Keep the clicked header in place and retain the user's camera and node sizes.
+    const anchor = positions.get(id)!;
+    const offset = { x: layout[id].x - anchor.x, y: layout[id].y - anchor.y };
+    batch(() => {
+      setCollapsed(next);
+      for (const [nodeId, position] of positions) {
+        const x = position.x + offset.x, y = position.y + offset.y;
+        if (layout[nodeId].x !== x || layout[nodeId].y !== y) setLayout(nodeId, { x, y });
+      }
+    });
+    canvas.setSelectedIds(selected().filter(selectedId => !hidden().has(selectedId)));
+  }
   // Graph topology is immutable. Solid's For preserves these object identities.
   const groupOverlays = new Map(nodes.filter(node => node.group).map(node => [node.id, createMemo(() => {
     const rect = layout[node.id];
@@ -134,14 +163,15 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
       get contentOverlays() { return overlays(); },
     };
   });
+  const visibleEdges = createMemo(() => edges.filter(edge => !hidden().has(edge.sourceId) && !hidden().has(edge.targetId)));
   function fit(ids?: readonly string[]) {
-    const rects = Object.entries(layout).filter(([id]) => !ids || ids.includes(id)).map(([, rect]) => ({ ...rect, width: rect.w, height: rect.h }));
+    const rects = Object.entries(layout).filter(([id]) => !hidden().has(id) && (!ids || ids.includes(id))).map(([, rect]) => ({ ...rect, width: rect.w, height: rect.h }));
     canvas?.fitView(rects, 48);
   }
-  const reset = () => { batch(() => { setLayout(structuredClone(diagram.defaultLayout)); }); fit(); };
+  const reset = () => { batch(() => { setCollapsed(new Set<string>()); setLayout(structuredClone(diagram.defaultLayout)); }); fit(); };
   const keydown = (event: KeyboardEvent) => {
     if ((event.target as HTMLElement)?.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
-    if ((event.ctrlKey || event.metaKey) && event.key === 'a') { event.preventDefault(); canvas.setSelectedIds(nodes.map(node => node.id)); }
+    if ((event.ctrlKey || event.metaKey) && event.key === 'a') { event.preventDefault(); canvas.setSelectedIds(visibleNodes().map(node => node.id)); }
     if (event.key === 'Escape') {
       if (fullscreen()) { event.preventDefault(); exitFullscreen(); }
       else canvas.clearSelection();
@@ -207,18 +237,19 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
         diagnostics.end(released);
       },
     } });
-    return <For each={nodes}>{node => {
+    return <For each={visibleNodes()}>{node => {
       const rect = () => layout[node.id];
-      const palette = () => node.classes.map(name => artifact.theme?.styles[name]?.[props.theme === 'dark' ? 'dark' : 'light']).find(Boolean);
-      return <><NodeContainer allowOverflow selectionOutlineScreenWidth={2} nodeId={node.id} x={() => rect().x} y={() => rect().y} w={() => rect().w} h={() => rect().h} visualBand={() => node.group ? depth(node) * 2 : 100} onPointerDown={event => {
+      const palette = () => node.classes.map(name => artifact.theme?.styles[name]?.[props.theme === 'dark' ? 'dark' : 'light']).find(Boolean)
+        ?? (node.card?.component === 'rest-card' ? restStyles[restRole(node.card.title, node.card.methods ?? [])][props.theme === 'dark' ? 'dark' : 'light'] : undefined);
+      return <><NodeContainer allowOverflow selectionOutlineScreenWidth={2} nodeId={node.id} x={() => rect().x} y={() => rect().y} w={() => rect().w} h={() => rect().h} visualBand={() => activeVisibilityNode() === node.id ? 200 : node.group ? depth(node) * 2 : 100} onPointerDown={event => {
         const target = event.target as HTMLElement;
         if (target.closest('a, button, input, textarea, select, [contenteditable="true"], [role="toolbar"], [data-cactus-resize-handle]')) return;
         if (node.group && target.closest('[data-box-select-surface]')) return;
         ctx.onNodePointerDown(node.id, event);
         if (ctx.isSelected(node.id)) drag.beginPress(node.id, event);
       }}>
-        <div class={node.group ? 'portable-group' : node.card ? 'portable-node portable-card-node' : 'portable-node'} style={{ background: palette()?.fill, '--portable-card-color': palette()?.fill ?? 'var(--cactus-surface-alt)', '--portable-border-color': palette()?.stroke ?? 'var(--cactus-border)', '--portable-border-width': `${1 / ctx.transform().k}px` }}>
-          {node.card ? <Card content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : <div class="portable-label" title={node.label} onWheel={stopWheelIfScrollable}>{node.label}</div>}
+        <div class={node.group ? 'portable-group' : node.card?.component === 'transition' ? 'portable-node portable-transition-node' : node.card ? 'portable-node portable-card-node' : 'portable-node'} style={{ background: palette()?.fill, '--portable-card-color': palette()?.fill ?? 'var(--cactus-surface-alt)', '--portable-border-color': palette()?.stroke ?? 'var(--cactus-border)', '--portable-border-width': `${1 / ctx.transform().k}px` }}>
+          {node.card ? node.card.component === 'usage-card' ? <UsageCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : node.card.component === 'transition' ? <TransitionNode label={node.card.title} /> : node.card.component === 'rest-card' ? <RestCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} descendantCount={tree?.descendants.get(node.id)?.length} collapsed={collapsed().has(node.id)} onToggle={() => changeVisibility(node.id, 'toggle')} onChildrenOnly={() => changeVisibility(node.id, 'children-only')} onToolbarActiveChange={active => setActiveVisibilityNode(current => active ? node.id : current === node.id ? undefined : current)} /> : <Card content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : <div class="portable-label" title={node.label} onWheel={stopWheelIfScrollable}>{node.label}</div>}
           {node.group && <div class="portable-container-body" data-box-select-surface />}
 
         </div>
@@ -240,7 +271,7 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
       })}
       renderBackground={transform => <DotGrid patternId={`portable-grid-${diagram.id}`} transform={{ ...transform, k: 1 }} spacing={22} dotRadius={0.8} />}
       edgeEmphasis={{ dimUnselected: false, selectedWidthMultiplier: 2 }}
-      edges={edges}>
+      edges={visibleEdges()}>
       <Cards />
     </Canvas>
     <For each={infoPanels()}>{panel => <ExtendedInfo content={artifact.info![panel.id]} viewport={() => viewport}
@@ -255,8 +286,12 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
   </div>;
 }
 function App() {
-  const [theme, setTheme] = createSignal<Theme>('ground');
-  const cycleTheme = () => setTheme(theme() === 'ground' ? 'light' : theme() === 'light' ? 'dark' : 'ground');
+  const [theme, setTheme] = createSignal<Theme>(themeFromUrl(window.location.href));
+  const cycleTheme = () => {
+    const next = theme() === 'ground' ? 'light' : theme() === 'light' ? 'dark' : 'ground';
+    window.history.replaceState(window.history.state, '', urlWithTheme(window.location.href, next));
+    setTheme(next);
+  };
   let article!: HTMLElement;
   onMount(() => {
     const disposers = Array.from(article.querySelectorAll<HTMLElement>('[data-portable-canvas]')).map(slot => {

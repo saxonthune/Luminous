@@ -1,5 +1,6 @@
 export { dagLayout } from './dagLayout.js';
 export { orderedTreeLayout } from './orderedTreeLayout.js';
+export { leadingTreeLayout, visibleTreeLayout } from './leadingTreeLayout.js';
 export { gridLayout } from './gridLayout.js';
 export { retainLayout } from './geometry/retainLayout.js';
 export { computeBounds } from './geometry/geometry.js';
@@ -20,3 +21,5 @@ export { elkLayout } from './elkLayout.js';
 export type { ElkLayoutOptions } from './elkLayout.js';
 export { compoundLayeredLayout } from './compoundLayeredLayout.js';
 export { rowWithInputsLayout } from './rowWithInputsLayout.js';
+
+export { connectionCorridorLayout } from './connectionCorridorLayout.js';

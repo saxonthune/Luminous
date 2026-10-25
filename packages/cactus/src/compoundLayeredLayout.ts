@@ -7,6 +7,8 @@ import type { LayoutRequest, LayoutResult } from './layout-types.js';
  * overriding them. Positions are relative to each node's parent. */
 export async function compoundLayeredLayout(req: LayoutRequest, options: {
   direction?: 'RIGHT' | 'DOWN';
+  /** Inter-node spacing multiplier; defaults to the compact 0.7 density. */
+  spacing?: number;
   containerDirections?: ReadonlyMap<string, 'RIGHT' | 'DOWN'>;
 } = {}): Promise<LayoutResult> {
   const positions = new Map<string, { x: number; y: number }>();
@@ -25,7 +27,7 @@ export async function compoundLayeredLayout(req: LayoutRequest, options: {
       const from = owner.get(edge.from), to = owner.get(edge.to);
       return from && to && from !== to ? [{ ...edge, from, to }] : [];
     });
-    const result = await elkLayout({ rootIds: ids, childrenOf: new Map(), nodeSizes: sizes, edges }, { direction, spacing: 0.7 });
+    const result = await elkLayout({ rootIds: ids, childrenOf: new Map(), nodeSizes: sizes, edges }, { direction, spacing: options.spacing ?? 0.7 });
     const top = parent ? req.headerHeight ?? 48 : 0;
     for (const id of ids) {
       const point = result.positions.get(id)!;

@@ -16,6 +16,7 @@ description: >-
 ```
 
 - **PDL1.** [p] Portable computes a default layout for the graph.
+- **PDL3.** [p] The default graph layout shall leave room between nodes for edge labels.
 - **PDL2.** [p] The user can reset node positions to the computed default layout.
 
 ## Artifact generation
@@ -120,6 +121,9 @@ description: Users can combine explanatory Markdown and interactive diagrams in 
 - **PMD9.** [p] Users can horizontally expand an individual canvas to the full viewport width.
 
 - **PMD10.** [p] Expanding or restoring a canvas width preserves the screen position of its content and its zoom level.
+
+- **PMD11.** [p] When the user changes the theme, Portable stores the selected theme in the URL query string.
+- **PMD12.** [p] When the user refreshes the artifact, Portable restores the theme from the URL query string.
 
 Canvas Header and Fullscreen Canvas Header glossary and requirements: doc01.16.04.
 

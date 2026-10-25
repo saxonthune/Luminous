@@ -93,6 +93,19 @@
 .portable-card-more{margin-left:8px;white-space:nowrap}
 .portable-card-footer-summary{flex-shrink:0;align-self:stretch;text-align:right;background:transparent;font-size:20px;line-height:26px}
 .portable-card-footer-summary .portable-card-more{margin:0}
+.portable-rest-methods{display:flex;flex:0 0 auto;flex-wrap:wrap;gap:4px;padding:6px 10px;background:var(--portable-card-color);white-space:normal}
+.portable-rest-method{display:inline-flex;align-items:center;padding:2px 6px;border-radius:3px;font:700 12px/20px ui-monospace,monospace;background:#e5e7eb;color:#26313e}
+.portable-rest-method-get,.portable-rest-method-head{background:#cce8ff;color:#094c7c}
+.portable-rest-method-post{background:#caeed8;color:#145733}
+.portable-rest-method-put{background:#ffe0ad;color:#714100}
+.portable-rest-method-patch{background:#e7d7ff;color:#58318c}
+.portable-rest-method-delete{background:#ffd4d4;color:#8a2323}
+.portable-rest-method-options,.portable-rest-method-trace,.portable-rest-method-connect{background:#dce1e8;color:#354354}
+.portable-rest-card.portable-card-summary{justify-content:flex-start}
+.portable-rest-card.portable-card-summary .portable-card-title{font-size:16px;line-height:24px}
+.portable-rest-card.portable-card-summary .portable-card-footer-summary{margin-top:auto;font-size:14px;line-height:21px}
+.portable .portable-visibility-button{display:flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;align-self:center;min-width:28px;height:28px;min-height:28px;padding:2px 5px;border:1px solid var(--cactus-border);border-radius:999px;background:var(--cactus-surface);color:var(--cactus-fg);box-shadow:0 1px 3px #0003;font-size:12px;font-weight:700;line-height:18px;white-space:nowrap;cursor:pointer}
+.portable-rest-card:has(.portable-visibility-button) .portable-card-heading{min-height:40px}
 .portable-card-summary:has(.portable-card-more) .portable-card-heading{max-height:calc(100% - 42px)}
 .portable-extended-info{position:absolute;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-surface);color:var(--cactus-fg);box-shadow:0 8px 24px #0004;line-height:1.5;font-size:16px}
 .portable-extended-info:focus-visible{outline:2px solid var(--cactus-accent);outline-offset:-3px}
@@ -106,3 +119,40 @@
 .portable-extended-info-body pre{padding:8px;white-space:pre;overflow:auto}
 .portable-extended-info-body a{color:var(--cactus-accent);text-decoration:underline}
 .portable-extended-info .portable-extended-info-resize{position:absolute;right:0;bottom:0;width:28px;height:28px;padding:0;border-radius:6px 0 6px 0;cursor:nwse-resize;touch-action:none}
+
+/* A contiguous anchor/bridge region keeps hover menus open without a delay. */
+.portable-node.portable-card-node:has(.portable-rest-card){overflow:visible}
+.portable-visibility-controls{position:relative;display:flex;flex:0 0 auto;align-self:center;margin:2px 6px 2px auto}
+.portable-visibility-controls>.portable-visibility-button{margin-left:0}
+.portable-visibility-toolbar-bridge{position:absolute;bottom:100%;left:0;width:max-content;padding-bottom:6px;display:none;z-index:10}
+.portable-visibility-controls:not([data-dismissed="true"]):hover>.portable-visibility-toolbar-bridge,.portable-visibility-controls:not([data-dismissed="true"]):focus-within>.portable-visibility-toolbar-bridge{display:block}
+.portable-visibility-toolbar{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--cactus-border);border-radius:999px;background:var(--cactus-surface);color:var(--cactus-fg);box-shadow:0 4px 12px #0004;white-space:nowrap}
+.portable .portable-visibility-toolbar button{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:8px;border:0;border-radius:999px;background:var(--cactus-surface-alt);font-size:14px;line-height:24px;white-space:nowrap}
+
+/* Overflowing labels remain inside the draggable node DOM subtree. */
+.portable-node.portable-transition-node{padding:0;border-radius:999px;background:var(--portable-card-color,#c7e9fa)!important}
+.portable-transition{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:999px;color:var(--cactus-fg);cursor:grab;overflow:visible;user-select:none;touch-action:none}
+.portable-transition:focus-visible{outline:2px solid var(--cactus-accent);outline-offset:3px}
+
+.portable-transition-label{flex:0 0 132px;width:132px;text-align:center;white-space:normal;overflow-wrap:anywhere;font-size:14px;line-height:18px;font-weight:600;cursor:inherit}
+
+.portable-usage-card{height:100%;width:100%}.portable-usage-frame{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.portable-usage{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:auto;scrollbar-color:var(--portable-border-color) color-mix(in srgb,var(--portable-card-color) 75%,transparent);scrollbar-gutter:stable;padding:8px 10px;font-size:13px;line-height:18px}
+.portable-usage-content{display:flex;flex-direction:column;gap:12px}
+.portable-usage h3{font-size:13px;line-height:18px;margin:0 0 4px;font-weight:700}
+.portable-usage ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.portable .portable-usage-endpoint{width:100%;text-align:left;cursor:pointer;display:flex;align-items:baseline;gap:6px;padding:2px 6px;border-radius:5px;border:1px solid color-mix(in srgb,var(--portable-border-color) 60%,transparent);background:color-mix(in srgb,var(--portable-card-color) 75%,var(--portable-border-color));font-family:ui-monospace,monospace;overflow-wrap:anywhere}
+.portable-usage-verb{font-weight:800;flex:0 0 auto}
+.portable-usage-empty{opacity:.6}
+
+.portable-usage-description{padding:6px 8px 4px;line-height:20px;white-space:normal;overflow-wrap:anywhere}
+.portable-usage-scroll-hint{display:flex;align-items:center;justify-content:center;gap:6px;flex:0 0 22px;min-height:22px;padding:2px 10px;font-size:12px;line-height:18px;text-align:center;color:var(--cactus-fg-muted)}
+
+.portable-usage::-webkit-scrollbar{width:12px;height:12px}
+.portable-usage::-webkit-scrollbar-track{background:color-mix(in srgb,var(--portable-card-color) 75%,transparent)}
+.portable-usage::-webkit-scrollbar-thumb{background:var(--portable-border-color);border:2px solid var(--portable-card-color);border-radius:8px}
+
+.portable-usage-scroll-arrow{flex:0 0 14px;text-align:center}
+
+.portable-usage-route code{display:block;font:inherit;font-family:ui-monospace,monospace;overflow-wrap:anywhere;white-space:normal}
+.portable-usage-route p{margin:4px 0 0;line-height:18px;overflow-wrap:anywhere}

@@ -28,6 +28,8 @@ Reset layout restores the computed default positions without changing source dat
 - Fit all / `0`, Fit selection / `F`, zoom buttons / `+` and `-`.
 - Escape clears selection; Ctrl/Command-A selects all nodes.
 - One page-level theme control cycles Ground, Light and Dark.
+- Theme selection is stored in the URL's `theme` query parameter and restored
+  on refresh. Missing or invalid values use Ground.
 - Each canvas has independent fit, zoom, reset, selection and transient geometry.
 - Click or tab into a canvas to target its keyboard shortcuts.
 - Wheel gestures outside a canvas scroll the document.
@@ -179,6 +181,22 @@ experiment, not the full Recipe system.
 
 ## Card content
 
+The `rest-card` variant reuses Card and adds a colored HTTP-method row between
+header and body. Supply `methods: [GET, PUT]` (or `[]` for a prefix) and use the
+local path segment as `title`. Parameter segments such as `/{bookId}` can have
+methods too. Authoring and the initial background convention are described in
+`.agents/skills/luminous-portable-artifact-generator/references/rest-api-tree.md`.
+Use `mermaid rest-api-tree` with `flowchart LR` to select first-child-aligned
+tree layout and parent header collapse controls. Collapsed parents show the
+total descendant count. Leaf Cards have no collapse control. Collapse and expand
+reflow the visible API tree to reclaim or reserve space for later branches.
+The clicked header, camera and node sizes are preserved. Reset expands all
+branches; collapse states and node movements are transient.
+Hover a parent Card's Visibility Button to open its stadium-shaped Visibility
+Toolbar above the button. Hide Grandchildren and Reveal Children disclose one
+child level and reflow the tree; the pointer can cross the gap without closing
+the toolbar. It also opens through keyboard focus.
+
 Keep topology in Mermaid; place one `portable-nodes` YAML fence after the diagram
 it describes. IDs are local to that diagram. Content is plain text, not HTML.
 
@@ -306,3 +324,62 @@ link opens a reusable, draggable/resizable, scrollable canvas-owned panel with
 minimize/restore and close controls. Source links use `zed://file/absolute/path`;
 `zed:///absolute/path` input is normalized. Missing references stop generation.
 See the metamodel reference above for complete syntax and layout-ordering hints.
+
+### Transition nodes
+
+Use `component: transition` and `title: Full navigation label` in `portable-nodes`
+for a blueish stadium-shaped transition node with a visible label. Only these two fields are accepted.
+Connect `source --> transition_id --> destination` without edge labels. Each
+node occupies a horizontal layout footprint and centers its label directly on the
+pill. Text may overflow; both the pill and its label remain draggable. Its
+accessible name also carries the full title.
+Declare a semantic transition kind and include it in that canvas's Legend;
+supply its blue palette through the theme. State nodes remain ordinary Cards.
+
+Flat navigation graphs reserve a corridor per connected state pair, sized for
+all transitions in both directions. Mark return second legs in
+`layout.nonOrderingEdges`; cactus uses the forward graph for ordering and
+places forward/return pills together inside each reserved corridor.
+
+### Usage Patterns Diagram
+
+`usage-card` is a reusable Card variant whose structured body lists API usage:
+
+```yaml
+component: usage-card
+title: Library
+usage:
+  uiRoute:
+    paths: [/reading-buddy]
+    context: Document Library; no Book selected.
+  startup:
+    - method: GET
+      endpoint: /reading-buddy/books
+      description: Loads the prepared documents shown in the Library.
+  capabilities:
+    - method: PUT
+      endpoint: /reading-buddy/books/{bookId}
+      description: Registers the selected prepared Book revision for reading.
+```
+
+The required `uiRoute` object records UI `paths` and state `context`; it renders
+above Startup and Capabilities. Both `startup` and `capabilities` arrays are required; either can be empty.
+Methods use uppercase HTTP verbs, and endpoint paths start with `/`. Every item
+uses a compact badge background. A required nonempty `description` explains
+why this UI state needs the endpoint. Press the badge to toggle that description
+below it. Usage Cards reserve generous space up to a shared maximum height;
+expanded content scrolls within the body, with above/below overflow indicators. `info`, footer and diff fields retain ordinary
+Card behavior; structured `usage` replaces `body`. Details use Card semantic zoom.
+
+Give mirrored states separate IDs but matching titles, and a distinct semantic
+kind/palette. Clone the navigation connections with separate IDs and mark return
+second legs in `layout.nonOrderingEdges`. Keep both trees disconnected in one
+flat canvas. Cactus stacks connected components vertically using their full
+bounds, so taller usage Cards cannot overlap the upper UI-state tree. This is
+layout behavior, not an additional visible container. Retain a kind Legend for
+the usage Cards. This support does not infer or verify application API use;
+input authors must supply evidence and distinguish current from proposed routes.
+
+Run `just portable-component-test` for focused component interactions in jsdom.
+It uses the workspace’s existing cactus Vitest runner; it does not launch a
+browser or test real scroll geometry.

@@ -13,6 +13,9 @@
       "types": "./dist/layout-public.d.ts",
       "default": "./src/layout-public.ts"
     },
+    "./tree-layout": {
+      "default": "./src/leadingTreeLayout.ts"
+    },
     "./chrome-types": {
       "default": "./src/chrome/types.ts"
     },

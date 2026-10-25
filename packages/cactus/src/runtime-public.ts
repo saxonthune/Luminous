@@ -6,6 +6,7 @@ export type { CanvasProps, CanvasRef } from './Canvas.js';
 export { NodeContainer } from './NodeContainer.js';
 export { DotGrid } from './DotGrid.js';
 export { ResizeHandle } from './ResizeHandle.js';
+export { ToolbarSurface } from './ToolbarSurface.js';
 export { useCanvasContext } from './CanvasContext.js';
 export { useGesture } from './interactions/useGesture.js';
 export { stopWheelIfScrollable } from './interactions/scroll.js';

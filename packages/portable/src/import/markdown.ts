@@ -14,7 +14,7 @@ export async function importMarkdown(source: string): Promise<ParsedDocument> {
   let model: ParsedDocument['model'];
   let info: ParsedDocument['info'];
   let searchOffset = 0;
-  const sources: { text: string; line: number; mode?: 'action-flow'; content?: unknown; settings?: ParsedDiagram['settings'] }[] = [];
+  const sources: { text: string; line: number; mode?: ParsedDiagram['mode']; content?: unknown; settings?: ParsedDiagram['settings'] }[] = [];
   const markdown = new Marked({ renderer: {
     html({ text }) { return escape(text); },
     code(token) {
@@ -72,7 +72,9 @@ export async function importMarkdown(source: string): Promise<ParsedDocument> {
         return '';
       }
       if (token.lang?.trim().split(/\s+/)[0] !== 'mermaid') return false;
-      const index = sources.push({ text: token.text, line, mode: token.lang?.trim().split(/\s+/)[1] === 'action-flow' ? 'action-flow' : undefined }) - 1;
+      const mode = token.lang?.trim().split(/\s+/)[1];
+      if (mode && mode !== 'action-flow' && mode !== 'rest-api-tree') throw new Error(`Unknown Mermaid layout mode: ${mode}`);
+      const index = sources.push({ text: token.text, line, mode: mode === 'action-flow' || mode === 'rest-api-tree' ? mode : undefined }) - 1;
       return `<div data-portable-canvas="${index}"></div>`;
     },
     link({ href, tokens, title }) {

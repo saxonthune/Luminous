@@ -140,6 +140,12 @@ not a general type-inference engine.
 
 ## Extended Info Plugin
 
+Cards also accept `component: rest-card` with a required `methods` array of
+unique uppercase HTTP methods. Its `title` is the local path segment. It reuses
+Card disclosure and adds a persistent method-badge row between header and body.
+See [REST API Tree](rest-api-tree.md) for authoring and background categories.
+Node `kind` and Legend coverage remain independent of this component choice.
+
 A document may declare one `portable-info` fence, mapping stable IDs to a title
 and Markdown body. A Card refers to one entry using `info` in `portable-nodes`.
 Multiple Cards/canvases may reuse one entry. Unknown IDs are unconditional
@@ -201,3 +207,71 @@ The hint changes no call semantics, labels, direction or graph validation. It do
 not add a new edge. It is unsupported in `action-flow`, whose execution chain
 must remain unambiguous. Prefer a hint over deleting a true dependency to make a
 layout look tidy.
+
+### Transition nodes
+
+Use `component: transition` and `title: Full navigation label` in `portable-nodes`
+for a blueish stadium-shaped transition node with a visible label. Only these two fields are accepted.
+Connect `source --> transition_id --> destination` without edge labels. Each
+node occupies a horizontal layout footprint and centers its label directly on the
+pill. Text may overflow; both the pill and its label remain draggable. Its
+accessible name also carries the full title.
+Declare a semantic transition kind and include it in that canvas's Legend;
+supply its blue palette through the theme. State nodes remain ordinary Cards.
+
+For flat navigation graphs, retain return transitions as real
+`state --> transition --> prior_state` edges. Mark only the second leg
+(`transition --> prior_state`) in `layout.nonOrderingEdges`. Every transition
+must have exactly one incoming state and one outgoing state. Other flat graph
+edges must also pass through transition nodes to select this layout.
+
+Portable passes endpoint pairs, sizes and ordering hints to cactus's
+`connectionCorridorLayout`. Cactus groups transitions by unordered state pair,
+counts both directions and sums the pill heights with lane gaps (or widths in
+top-down layout). Each pair becomes a reserved corridor box in the forward
+layout. The engine then replaces that box with the individual transition nodes,
+forward first, return second. Forward and Back pills stay beside each other in
+the same corridor. Return-only pairs follow the forward graph's topological
+order; they cannot reverse it. Cycles among ordering connections are errors.
+The synthetic corridor boxes never appear as diagram nodes. All original edges
+and transition identities remain intact, and every pill remains draggable.
+
+### Usage Patterns Diagram
+
+`usage-card` is a reusable Card variant whose structured body lists API usage:
+
+```yaml
+component: usage-card
+title: Library
+usage:
+  uiRoute:
+    paths: [/reading-buddy]
+    context: Document Library; no Book selected.
+  startup:
+    - method: GET
+      endpoint: /reading-buddy/books
+      description: Loads the prepared documents shown in the Library.
+  capabilities:
+    - method: PUT
+      endpoint: /reading-buddy/books/{bookId}
+      description: Registers the selected prepared Book revision for reading.
+```
+
+The required `uiRoute` object contains nonempty UI `paths` and state `context`.
+It appears above Startup and Capabilities. Both endpoint arrays are required
+and may be empty.
+Methods use uppercase HTTP verbs, and endpoint paths start with `/`. Every item
+uses a compact badge background. A required nonempty `description` explains
+why this UI state needs the endpoint. Press the badge to toggle that description
+below it. Usage Cards reserve generous space up to a shared maximum height;
+expanded content scrolls within the body, with above/below overflow indicators. `info`, footer and diff fields retain ordinary
+Card behavior; structured `usage` replaces `body`. Details use Card semantic zoom.
+
+Give mirrored states separate IDs but matching titles, and a distinct semantic
+kind/palette. Clone the navigation connections with separate IDs and mark return
+second legs in `layout.nonOrderingEdges`. Keep both trees disconnected in one
+flat canvas. Cactus stacks connected components vertically using their full
+bounds, so taller usage Cards cannot overlap the upper UI-state tree. This is
+layout behavior, not an additional visible container. Retain a kind Legend for
+the usage Cards. This support does not infer or verify application API use;
+input authors must supply evidence and distinguish current from proposed routes.

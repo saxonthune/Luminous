@@ -1,20 +1,24 @@
 import { DiffBadge } from './DiffBadge.js';
-import { createMemo, Show } from 'solid-js';
+import { createMemo, Show, type JSX } from 'solid-js';
 import { stopWheelIfScrollable } from '@luminous/cactus/runtime';
 import type { PortableCard } from '../graph.js';
 
-export function Card(props: { content: PortableCard; zoom: number; onMore?: (id: string, opener: HTMLAnchorElement) => void }) {
+export function Card(props: { content: PortableCard; zoom: number; onMore?: (id: string, opener: HTMLAnchorElement) => void; badgeRow?: JSX.Element; headerAction?: JSX.Element; rest?: boolean; bodyContent?: JSX.Element }) {
+  const bodyContent = createMemo(() => props.bodyContent);
   const details = createMemo(() => props.zoom >= 0.6);
-  return <div class="portable-card" classList={{ 'portable-card-summary': !details() }}>
+  return <div class="portable-card" classList={{ 'portable-card-summary': !details(), 'portable-rest-card': props.rest }}>
     <div class="portable-card-heading" classList={{ 'portable-card-heading-diff': !!props.content.diff }}>
       <div class="portable-card-title" onWheel={stopWheelIfScrollable}>{props.content.title}</div>
       <Show when={props.content.diff}>{kind => <DiffBadge kind={kind()} />}</Show>
+      {props.headerAction}
     </div>
+    {props.badgeRow}
     <Show when={!details() && !props.content.info && (props.content.body || props.content.footer)}>
       <span class="portable-card-disclosure" title="Zoom in to see details" aria-label="Zoom in to see details">…</span>
     </Show>
     <Show when={details()}>
-      <Show when={props.content.body}><div class="portable-card-body" onWheel={stopWheelIfScrollable}>{props.content.body}</div></Show>
+      <Show when={bodyContent()}>{bodyContent()}</Show>
+      <Show when={!bodyContent() && props.content.body}><div class="portable-card-body" onWheel={stopWheelIfScrollable}>{props.content.body}</div></Show>
     </Show>
     <Show when={props.content.info || details() && props.content.footer}>
       <div class="portable-card-footer" classList={{ 'portable-card-footer-summary': !details() }} onWheel={stopWheelIfScrollable}>

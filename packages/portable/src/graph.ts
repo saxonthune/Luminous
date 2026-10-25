@@ -1,6 +1,9 @@
+export interface EndpointUse { description: string; method: import('./rest.js').HttpMethod; endpoint: string }
 import type { DiffKind } from './diff.js';
 export interface PortableCard {
-  component: 'card';
+  component: 'card' | 'rest-card' | 'transition' | 'usage-card';
+  usage?: { uiRoute: { paths: string[]; context: string }; startup: EndpointUse[]; capabilities: EndpointUse[] };
+  methods?: import('./rest.js').HttpMethod[];
   diff?: DiffKind;
   info?: string;
   title: string;
@@ -40,6 +43,7 @@ export interface PortableTheme {
 export interface LayoutHints { nonOrderingEdges: { source: string; target: string }[] }
 export interface PortableDiagram {
   id: string;
+  mode?: 'action-flow' | 'rest-api-tree';
   graph: PortableGraph;
   defaultLayout: PortableLayout;
   settings?: { title?: string; scrollZoom?: boolean; layout?: LayoutHints; legend?: { entries: ({ class: string; label?: string } | { diff: DiffKind; label?: string })[] } };

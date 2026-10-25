@@ -58,6 +58,9 @@ for the vocabulary, declarations, and layout limits.
 ## Current behavior and limits
 
 - Ground is the default page theme; users can switch Ground/Light/Dark.
+  Theme changes update `?theme=ground|light|dark` without reloading or adding a
+  history entry. Refresh restores the URL theme; unrelated query fields and
+  the fragment are retained.
 - Each canvas supports dragging, selection, fit, reset, width expansion, and
   fullscreen. Scroll Zoom defaults to enabled; retain that default unless the user
   requests wheel panning. Ctrl+wheel always zooms.
@@ -71,7 +74,7 @@ for the vocabulary, declarations, and layout limits.
   `@luminous/cactus/runtime`, excluding ELK. Do not reintroduce the broad cactus
   import into Portable runtime code while addressing an authoring problem.
 - Mermaid is topology; `portable-nodes` supplies presentation content. Only the
-  built-in `card` component is currently supported, not arbitrary executable
+  built-in `card`, `rest-card`, `transition`, and `usage-card` components are supported, not arbitrary executable
   components. Recipes are still a proposal; `action-flow` is a layout experiment.
 - Raw Markdown HTML is escaped, images render alt text, and ordinary prose links
   allow HTTP(S), mailto, and anchors. Custom CSS is trusted author input.
@@ -113,6 +116,27 @@ suggestion or an automatic requirement. Read relevant existing logs when an
 issue recurs; don't load the entire directory by default.
 
 ## Semantic models and validation
+
+For a REST API Tree, use `rest-card` with a local path-segment `title` and a
+`methods` list (uppercase HTTP verbs; empty for organizational prefixes).
+The reusable variant adds colored verb badges between header and body.
+See [REST API Tree](references/rest-api-tree.md) for full-tree authoring and the
+overlap between parameter segments and callable resources. This is a convention
+toward a Recipe, not a registered `rest-api-tree` parser Recipe.
+
+Keep recipe definitions and recipe-specific requirements in this skill’s reference
+docs, rather than the Luminous Rhidoc workspace.
+
+For a **UI State Diagram**, inventory abstract UI states and their navigation
+exits, including Back/Close. Use state Cards and labeled stadium transition
+nodes, with corridor space reserved for both directions. Read
+[UI State Diagram](references/ui-state-diagram.md) for the recipe definition,
+input example, initial-pass scope, and current layout constraints.
+
+For a **Usage Patterns Diagram**, mirror the UI-state tree below its counterpart
+in the same canvas. Use differently colored `usage-card` nodes with matching
+titles and structured Startup/Capabilities endpoint lists. See the [Usage Patterns component](references/ui-state-diagram.md#usage-patterns-component)
+for requirements, input shape, and interaction behavior. Clearly identify whether endpoints are current or proposed.
 
 For diagrams whose meaning must be checked, read [the implemented metamodel](references/metamodel.md).
 Declare a `portable-model`, assign node/container `kinds` per canvas, and reference

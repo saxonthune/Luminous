@@ -23,7 +23,7 @@ export interface ParsedDiagram {
   id: string;
   graph: PortableGraph;
   line: number;
-  mode?: 'action-flow';
+  mode?: 'action-flow' | 'rest-api-tree';
   settings?: Omit<NonNullable<PortableDiagram['settings']>, 'legend'> & {
     kinds?: Record<string, string>;
     legend?: { entries: LegendInput[] };
@@ -145,6 +145,7 @@ export function projectDiagram(diagram: ParsedDiagram, declared?: Model): Omit<P
   const presentation = { ...recipe?.presentation, ...declared?.presentation };
   return {
     id: diagram.id,
+    mode: diagram.mode,
     graph: { ...diagram.graph, nodes: diagram.graph.nodes.map(n => ({ ...n, classes: n.kind ? [presentation[n.kind], ...n.classes.filter(c => c !== presentation[n.kind!])] : n.classes })) },
     settings: diagram.settings ? { title: diagram.settings.title, scrollZoom: diagram.settings.scrollZoom, layout: diagram.settings.layout, legend: diagram.settings.legend ? {
       entries: diagram.settings.legend.entries.map(e => 'kind' in e ? { class: presentation[e.kind], kind: e.kind, label: e.label ?? vocabulary[e.kind].label } : e),
