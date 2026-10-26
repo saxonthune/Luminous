@@ -60,8 +60,10 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: pnpm install --frozen-lockfile
       - run: just build-static
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy packages/client/dist --project-name=luminous-demo --branch=main
+      # dlx installs Wrangler in isolation; npm installation at the workspace
+      # root cannot resolve pnpm's catalog: dependencies.
+      - name: Deploy static demo
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm dlx wrangler@4.153.0 pages deploy packages/client/dist --project-name=luminous-demo --branch=main
