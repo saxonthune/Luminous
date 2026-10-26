@@ -383,3 +383,52 @@ input authors must supply evidence and distinguish current from proposed routes.
 Run `just portable-component-test` for focused component interactions in jsdom.
 It uses the workspace’s existing cactus Vitest runner; it does not launch a
 browser or test real scroll geometry.
+
+## Static demo gallery
+
+`just build-static` builds the client demo and then generates `/portable/` into
+`packages/client/dist/portable/`. The demo header links to this overview. The
+existing Cloudflare demo deployment publishes the complete client output,
+including these generated pages.
+
+The ordered selection lives in `demo/artifacts.json`; input files are drawn from
+`examples/` by default. Add or reorder entries to change the gallery:
+
+```json
+[
+  {
+    "slug": "modules",
+    "title": "Modules and containment",
+    "input": "modules.md",
+    "description": "A browser and service diagram."
+  }
+]
+```
+
+`theme` and `css` are optional input filenames, relative to the input directory.
+Each artifact is emitted as `<slug>/index.html`. The overview is itself a
+Portable-generated Markdown document, with large linked list cards in manifest
+order. Its presentation lives in `demo/gallery.css`, separate from artifact CSS.
+Generate it independently or use another input directory and manifest:
+
+```sh
+just portable-gallery --manifest packages/portable/demo/artifacts.json --input-dir packages/portable/examples --output-dir packages/client/dist/portable
+```
+
+Run `just preview` after `just build-static`, then visit `/portable/` on the
+printed preview URL. Each artifact is self-contained and can also be downloaded.
+The standalone gallery command replaces listed outputs; a full static build
+starts with Vite's clean output directory, so removed entries do not linger.
+
+## Page footer and source view
+
+Every generated page ends with a normal-flow footer containing “Made using
+Luminous Portable.”, a GitHub link, and **View Source**. It scrolls with the page.
+View Source navigates to `?view=source` in the same artifact, displaying the exact
+input Markdown as plain text, with a return link. It uses embedded source data
+and works offline. Existing query fields and the selected theme are preserved.
+Companion theme JSON/CSS files are not part of the Markdown source view.
+
+Canvas Headers use `--portable-canvas-header-bg`, defaulting to the canvas/body
+background, so their surface differs from the article content. Custom CSS can
+override this token independently of `--portable-content-bg`.

@@ -37,3 +37,15 @@ Progressive disclosure remains future work, outside this first implementation.
 
 User-supported requirements are recorded in doc01.16.02. Earlier agent proposals
 are design discussion, not an adopted requirements list.
+
+## Demo gallery and source access
+
+The static Luminous demo links to `/portable/`, a generated overview of selected
+artifacts. `packages/portable/demo/artifacts.json` supplies their order, titles,
+input filenames, and optional theme/CSS files; the default input directory is
+`packages/portable/examples/`. `just portable-gallery` can build another selection,
+and `just build-static` includes the default gallery in the demo output.
+
+Generated pages have a normal-flow footer with generator attribution, GitHub,
+and View Source. The source view displays the original embedded Markdown as plain
+text and works offline.

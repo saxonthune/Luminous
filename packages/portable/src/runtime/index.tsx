@@ -1,3 +1,4 @@
+import { PageFooter } from './PageFooter.js';
 import { ExtendedInfo } from './ExtendedInfo.js';
 import { Legend } from './Legend.js';
 import { CanvasSettings } from './CanvasSettings.js';
@@ -9,7 +10,7 @@ import { restRole, restStyles } from '../rest.js';
 import { buildRestTree, hiddenRestNodes, revealRestChildren } from '../rest-tree.js';
 import { themeFromUrl, urlWithTheme, type Theme } from '../theme-url.js';
 import { visibleTreeLayout } from '@luminous/cactus/tree-layout';
-import { batch, createSignal, createMemo, For, onMount, onCleanup } from 'solid-js';
+import { batch, createSignal, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
 import { render } from 'solid-js/web';
 import { createStore, unwrap } from 'solid-js/store';
 import { Canvas, NodeContainer, DotGrid, useCanvasContext, useGesture, type CanvasRef, type EdgeDeclaration, ResizeHandle, stopWheelIfScrollable } from '@luminous/cactus/runtime';
@@ -286,14 +287,23 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
   </div>;
 }
 function App() {
+  const sourceView = new URL(window.location.href).searchParams.get('view') === 'source';
+  const viewHref = () => {
+    const url = new URL(window.location.href);
+    if (sourceView) url.searchParams.delete('view');
+    else url.searchParams.set('view', 'source');
+    url.searchParams.set('theme', theme());
+    return url.href;
+  };
   const [theme, setTheme] = createSignal<Theme>(themeFromUrl(window.location.href));
   const cycleTheme = () => {
     const next = theme() === 'ground' ? 'light' : theme() === 'light' ? 'dark' : 'ground';
     window.history.replaceState(window.history.state, '', urlWithTheme(window.location.href, next));
     setTheme(next);
   };
-  let article!: HTMLElement;
+  let article: HTMLElement | undefined;
   onMount(() => {
+    if (!article) return;
     const disposers = Array.from(article.querySelectorAll<HTMLElement>('[data-portable-canvas]')).map(slot => {
       const diagram = artifact.diagrams[Number(slot.dataset.portableCanvas)];
       return render(() => <PortableCanvas diagram={diagram} theme={theme()} onThemeChange={cycleTheme} />, slot);
@@ -304,7 +314,14 @@ function App() {
     <header class="portable-page-header"><strong>{artifact.title}</strong>
       <button onClick={cycleTheme}>Theme: {theme()}</button>
     </header>
-    <article ref={article} class="portable-document" innerHTML={artifact.html} />
+    <Show when={sourceView} fallback={<article ref={element => article = element} class="portable-document" innerHTML={artifact.html} />}>
+      <article class="portable-document portable-source-view">
+        <h1>{artifact.sourceFilename}</h1>
+        <a href={viewHref()}>Back to document</a>
+        <pre aria-label="Markdown source"><code>{artifact.sourceMarkdown}</code></pre>
+      </article>
+    </Show>
+    <PageFooter sourceHref={viewHref()} sourceView={sourceView} />
   </div>;
 }
 render(() => <App />, document.getElementById('app')!);

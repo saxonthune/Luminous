@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "styles": {
+    "boundary": {
+      "label": "Logical boundary",
+      "light": {
+        "fill": "#e9ebee",
+        "stroke": "#8b929c"
+      },
+      "dark": {
+        "fill": "#25282e",
+        "stroke": "#818995"
+      }
+    },
+    "worker": {
+      "label": "Executing code",
+      "light": {
+        "fill": "#fff0db",
+        "stroke": "#b66b16"
+      },
+      "dark": {
+        "fill": "#3e2b1b",
+        "stroke": "#e9a252"
+      }
+    },
+    "durable": {
+      "label": "Durable Object",
+      "light": {
+        "fill": "#eee5ff",
+        "stroke": "#8255b7"
+      },
+      "dark": {
+        "fill": "#30233f",
+        "stroke": "#b594e4"
+      }
+    },
+    "storage": {
+      "label": "Persistent storage",
+      "light": {
+        "fill": "#dcf3ed",
+        "stroke": "#2d8978"
+      },
+      "dark": {
+        "fill": "#18352f",
+        "stroke": "#6bc4ad"
+      }
+    },
+    "contract": {
+      "label": "Access contract / reference",
+      "light": {
+        "fill": "#e1f2fa",
+        "stroke": "#297c9e"
+      },
+      "dark": {
+        "fill": "#192f3a",
+        "stroke": "#71bbd8"
+      }
+    },
+    "content": {
+      "label": "Content / presentation",
+      "light": {
+        "fill": "#f4ead9",
+        "stroke": "#9b845f"
+      },
+      "dark": {
+        "fill": "#352e25",
+        "stroke": "#c1a777"
+      }
+    },
+    "rest-prefix": {
+      "label": "Organizational path prefix",
+      "light": {
+        "fill": "#e9ebee",
+        "stroke": "#8b929c"
+      },
+      "dark": {
+        "fill": "#25282e",
+        "stroke": "#818995"
+      }
+    },
+    "rest-endpoint": {
+      "label": "Callable literal resource",
+      "light": {
+        "fill": "#dcf3ed",
+        "stroke": "#2d8978"
+      },
+      "dark": {
+        "fill": "#18352f",
+        "stroke": "#6bc4ad"
+      }
+    },
+    "rest-parameter": {
+      "label": "Path parameter; badges indicate callability",
+      "light": {
+        "fill": "#eee5ff",
+        "stroke": "#8255b7"
+      },
+      "dark": {
+        "fill": "#30233f",
+        "stroke": "#b594e4"
+      }
+    },
+    "ui-state": {
+      "label": "UI state",
+      "light": {
+        "fill": "#eee5ff",
+        "stroke": "#8255b7"
+      },
+      "dark": {
+        "fill": "#30233f",
+        "stroke": "#b594e4"
+      }
+    },
+    "ui-transition": {
+      "label": "Navigation transition",
+      "light": {
+        "fill": "#c4e7fa",
+        "stroke": "#3588b0"
+      },
+      "dark": {
+        "fill": "#234c65",
+        "stroke": "#77c6ee"
+      }
+    },
+    "ui-usage": {
+      "label": "Resource usage by UI state",
+      "light": {
+        "fill": "#f9ead0",
+        "stroke": "#b18135"
+      },
+      "dark": {
+        "fill": "#443422",
+        "stroke": "#d2a85f"
+      }
+    }
+  }
+}

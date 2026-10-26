@@ -61,6 +61,7 @@ export interface PortableArtifact {
   debugPerformance?: boolean;
   title: string;
   sourceFilename: string;
+  sourceMarkdown: string;
   html: string;
   diagrams: PortableDiagram[];
   theme?: PortableTheme;

@@ -1,0 +1,28 @@
+[
+  {
+    "slug": "braincrawl-unified-worker-api-tree",
+    "title": "Braincrawl API and UI navigation",
+    "input": "braincrawl-unified-worker-api-tree.md",
+    "theme": "braincrawl-unified-worker-api-tree.theme.json",
+    "description": "Explore the resource API tree alongside Reading Buddy, Researcher, and account-management navigation and API usage."
+  },
+  {
+    "slug": "conversion-walkthrough",
+    "title": "How Portable converts a document",
+    "input": "conversion-walkthrough.md",
+    "theme": "conversion-walkthrough.theme.json",
+    "description": "Follow Markdown through layout and packaging, with Cards linking actions to their implementing code."
+  },
+  {
+    "slug": "modules",
+    "title": "Modules and containment",
+    "input": "modules.md",
+    "description": "Explore a small browser and service diagram with nested containers."
+  },
+  {
+    "slug": "plain-markdown",
+    "title": "A document without diagrams",
+    "input": "plain-markdown.md",
+    "description": "Portable also renders ordinary Markdown prose, tables, lists, and code."
+  }
+]

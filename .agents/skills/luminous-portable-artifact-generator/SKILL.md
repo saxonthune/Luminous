@@ -77,7 +77,22 @@ for the vocabulary, declarations, and layout limits.
   built-in `card`, `rest-card`, `transition`, and `usage-card` components are supported, not arbitrary executable
   components. Recipes are still a proposal; `action-flow` is a layout experiment.
 - Raw Markdown HTML is escaped, images render alt text, and ordinary prose links
-  allow HTTP(S), mailto, and anchors. Custom CSS is trusted author input.
+  allow HTTP(S), mailto, anchors, and explicit relative/local paths. Custom CSS is trusted author input.
+
+## Gallery and source publishing
+
+`just build-static` includes the ordered Portable gallery at `/portable/`.
+Selection is `packages/portable/demo/artifacts.json`, using the `examples/` input
+directory. For a custom list/directory, use `just portable-gallery --manifest
+/absolute/list.json --input-dir /absolute/inputs --output-dir /absolute/site/portable`.
+Entries use `slug`, `title`, `input`, and optional `description`, `theme`, `css`.
+List order is display order. Building is local; publishing still follows the
+user's chosen deployment workflow.
+
+Pages include a normal-flow footer with GitHub and View Source links. The latter
+opens `?view=source` and shows the exact embedded Markdown as plain text, including
+metadata fences. It works offline and has a return link. Header contrast can be
+styled through `--portable-canvas-header-bg` separately from article content.
 
 ## Diagnose and explain friction
 

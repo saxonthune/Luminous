@@ -41,6 +41,7 @@ build-client:
 build-static:
     pnpm exec tsc -b packages/client/tsconfig.json
     STATIC_BUILD=true pnpm -C packages/client exec vp build
+    just portable-gallery
 
 # ---- test ----
 
@@ -249,3 +250,7 @@ portable-component-test:
 [positional-arguments]
 portable *args:
     pnpm exec tsx packages/portable/src/generate.ts "$@"
+
+# generate the ordered Portable gallery (included in build-static)
+portable-gallery *args:
+    pnpm exec tsx packages/portable/src/generate-gallery.ts "$@"

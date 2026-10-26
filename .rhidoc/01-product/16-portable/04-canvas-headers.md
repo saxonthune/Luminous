@@ -31,6 +31,8 @@ description: Users can access controls for an individual canvas, including openi
 
 - **PCH8.** [p] Authors can set a canvas title in Markdown; regular and fullscreen headers display it, falling back to the generated canvas ID when no title is supplied.
 
+- **PCH9.** [p] The Canvas Header background is visually distinct from the article/content background.
+
 ## Fullscreen Canvas Header
 
 ```yaml rhidoc-feature
@@ -68,3 +70,6 @@ translation compensates for viewport displacement on entry and exit.
 | Escape while fullscreen | Exit fullscreen |
 | Tab / Shift-Tab while fullscreen | Navigate controls inside the modal |
 | Theme selector | Change the shared page and canvas theme |
+
+Canvas Header surface: `--portable-canvas-header-bg` defaults to the canvas/body
+background, independently of the article surface token.

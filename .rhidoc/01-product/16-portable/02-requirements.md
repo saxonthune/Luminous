@@ -245,3 +245,36 @@ Implementation: `portable-info` defines document-level Markdown entries; Card
 `info` references them. The reusable `runtime/ExtendedInfo.tsx` component is owned
 by each canvas. Unknown references reject generation. Input and interaction
 contracts are documented in the Portable skill's `references/metamodel.md`.
+
+## Portable demo gallery
+
+```yaml rhidoc-feature
+prefix: PGAL
+name: Portable demo gallery
+description: Users can browse an ordered collection of Portable artifacts on the Luminous demo site.
+```
+
+- **PGAL1.** [p] The Luminous demo provides a Portable overview list page at /portable/.
+- **PGAL2.** [p] The overview and artifact pages are generated from an ordered JSON artifact list and an input directory.
+- **PGAL3.** [p] The overview lists artifact links in the order declared in the JSON list.
+
+- **PGAL4.** [p] The Portable overview displays artifacts as linked list cards with titles and descriptions, using compact card padding and spacing.
+
+## Portable page footer
+
+```yaml rhidoc-feature
+prefix: PFTR
+name: Portable page footer
+description: Users can identify the artifact generator, visit its repository, and inspect the original Markdown.
+```
+
+- **PFTR1.** [p] The page footer is not sticky; users see it at the bottom of the document after scrolling through its content.
+- **PFTR2.** [p] The footer displays “Made using Luminous Portable.”.
+- **PFTR3.** [p] The footer provides a GitHub link to the Luminous repository.
+- **PFTR4.** [p] The footer provides a View Source link that opens a separate view showing the original Markdown as plain text.
+
+Implementation: `just build-static` generates the gallery from
+`packages/portable/demo/artifacts.json` and its selected example inputs into
+`packages/client/dist/portable/`. The page footer links to `?view=source`, which
+displays the exact embedded Markdown and offers a return link. Source view works
+in standalone files without a server.

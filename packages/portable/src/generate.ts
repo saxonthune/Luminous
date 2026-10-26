@@ -40,7 +40,7 @@ if (values.help) {
       const diagram = projectDiagram(source, notebook.model);
       diagrams.push({ ...diagram, defaultLayout: await computeDefaultLayout(diagram.graph, source.mode, source.settings?.layout) });
     }
-    const artifact: PortableArtifact = { debugPerformance: values['debug-performance'], title: values.title, sourceFilename: basename(values.input), html: notebook.html, diagrams, theme, model: notebook.model, info: renderInfo(notebook.info) };
+    const artifact: PortableArtifact = { debugPerformance: values['debug-performance'], title: values.title, sourceFilename: basename(values.input), sourceMarkdown: source, html: notebook.html, diagrams, theme, model: notebook.model, info: renderInfo(notebook.info) };
     const directory = dirname(fileURLToPath(import.meta.url));
     const temporary = await mkdtemp(join(tmpdir(), 'luminous-portable-build-'));
     const sizeReport: BundleSizeReport = { javascriptBytes: 0, cssBytes: 0, contentBytes: 0, packages: [] };

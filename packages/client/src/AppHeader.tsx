@@ -53,6 +53,9 @@ export function AppHeader(props: AppHeaderProps) {
             </button>
           )}
         </For>
+        <Show when={__STATIC__}>
+          <a href="/portable/" class="rounded px-2 py-1 text-sm text-fg-muted hover:bg-surface-alt hover:text-fg">Portable</a>
+        </Show>
         <span id="app-header-left" class="flex items-center gap-3" />
       </div>
       <div class="flex items-center gap-1">

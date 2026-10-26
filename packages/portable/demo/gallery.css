@@ -1,0 +1,49 @@
+/* Gallery-only presentation: retain an ordered, semantic list underneath. */
+.portable-document > ol {
+  display: grid;
+  gap: 10px;
+  max-width: none;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.portable-document > ol > li {
+  position: relative;
+  margin: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--cactus-border);
+  border-radius: 10px;
+  background: var(--cactus-surface-alt);
+}
+.portable-document > ol > li > p {
+  max-width: 80ch;
+  margin: 4px 0 0;
+  color: var(--cactus-fg-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.portable-document > ol > li > p:first-child { margin-top: 0; }
+.portable-document > ol > li > p:first-child > a {
+  color: var(--cactus-fg);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-decoration: none;
+}
+.portable-document > ol > li > p:first-child > a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.portable-document > ol > li:hover {
+  border-color: var(--cactus-accent);
+  background: color-mix(in srgb, var(--cactus-surface-alt) 94%, var(--cactus-accent));
+}
+.portable-document > ol > li:focus-within {
+  outline: 2px solid var(--cactus-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .portable-document > ol > li { padding: 14px 16px; }
+}

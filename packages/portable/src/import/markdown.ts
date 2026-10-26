@@ -79,8 +79,8 @@ export async function importMarkdown(source: string): Promise<ParsedDocument> {
     },
     link({ href, tokens, title }) {
       const label = this.parser.parseInline(tokens);
-      // Allow only explicit web/mail links and local document anchors.
-      if (!/^(https?:\/\/|mailto:|#)/i.test(href)) return label;
+      // Allow web/mail links, anchors, and explicit local paths (for galleries).
+      if (!/^(https?:\/\/|mailto:|#|\.{1,2}\/|\/(?!\/))/i.test(href)) return label;
       return `<a href="${escape(href)}"${title ? ` title="${escape(title)}"` : ''} rel="noreferrer">${label}</a>`;
     },
     image({ text }) { return `<span>${escape(text)}</span>`; },

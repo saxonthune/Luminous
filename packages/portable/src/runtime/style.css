@@ -156,3 +156,11 @@
 
 .portable-usage-route code{display:block;font:inherit;font-family:ui-monospace,monospace;overflow-wrap:anywhere;white-space:normal}
 .portable-usage-route p{margin:4px 0 0;line-height:18px;overflow-wrap:anywhere}
+
+/* Canvas chrome contrasts with the article and can be themed independently. */
+.portable{--portable-canvas-header-bg:var(--cactus-canvas-bg);display:flex;flex-direction:column}
+.portable-canvas>header{background:var(--portable-canvas-header-bg)}
+.portable-document{width:100%;flex:1}
+.portable .portable-page-footer{position:static;display:flex;align-items:center;flex-wrap:wrap;gap:16px;width:100%;max-width:1440px;margin:0 auto;padding:24px clamp(16px,4vw,64px);font-size:14px;line-height:1.5;border-top:1px solid var(--cactus-border);background:var(--portable-content-bg)}
+.portable-page-footer a{color:var(--cactus-fg);text-underline-offset:3px}
+.portable-source-view pre{white-space:pre;line-height:1.6;tab-size:2}

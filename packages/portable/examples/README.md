@@ -7,6 +7,7 @@ fixtures for development; adding a fixture does not run an automated test.
 |---|---|
 | `plain-markdown.md` | No Mermaid: prose, lists, tables, quotes and ordinary code |
 | `conversion-walkthrough.md` | Invocation-first execution flow, browser startup, and a separately marked Recipe proposal |
+| `braincrawl-unified-worker-api-tree.md` | Public resource API tree with Reading Buddy, Researcher, and account navigation/usage diagrams; recovered from the supplied standalone artifact |
 | `modules.md` | A small canvas with surrounding Markdown |
 | `recipe-pipeline.md` | Multiple independent canvases and commentary |
 | `recipe-pipeline.theme.json` | Class palettes for the Recipe notebook |
