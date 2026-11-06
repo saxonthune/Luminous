@@ -95,6 +95,8 @@ the proposal explicitly changes them; make those changes clear to the reader.
   legend. See authoring.md for the declaration format.
 - Positions and settings changed in the browser are transient. Reset restores
   generated coordinates. There is no source watcher or save-back workflow.
+- Node geometry is measured from the actual styled components in generation-time
+  Chromium before layout; see authoring.md for browser setup and font consistency.
 - Ordinary flowcharts use generation-time cactus/ELK layout. Browser code uses
   `@luminous/cactus/runtime`, excluding ELK. Do not reintroduce the broad cactus
   import into Portable runtime code while addressing an authoring problem.

@@ -8,6 +8,7 @@ import { build } from 'vite';
 import solid from 'vite-plugin-solid';
 import { validateDocument, projectDiagram, formatDiagnostic } from './semantics.js';
 import { computeDefaultLayout } from './layout/index.js';
+import { measureDiagrams } from './measurement/index.js';
 import { renderInfo } from './import/extended-info.js';
 import { importMarkdown } from './import/markdown.js';
 import { missingSchemaTypes } from './schema-diagnostics.js';
@@ -39,20 +40,21 @@ if (values.help) {
     console.error('Generation rejected. Existing HTML, if any, is unchanged and represents the previous successful generation.');
     process.exitCode = 1;
   } else {
-    const diagrams = [];
-    for (const source of notebook.diagrams) {
-      const diagram = projectDiagram(source, notebook.model);
-      diagrams.push({ ...diagram, defaultLayout: await computeDefaultLayout(diagram.graph, source.mode, source.settings?.layout) });
-    }
-    const artifact: PortableArtifact = { debugPerformance: values['debug-performance'], title: values.title, sourceFilename: basename(values.input), sourceMarkdown: source, html: notebook.html, diagrams, theme, model: notebook.model, info: renderInfo(notebook.info) };
     const directory = dirname(fileURLToPath(import.meta.url));
     const temporary = await mkdtemp(join(tmpdir(), 'luminous-portable-build-'));
     const sizeReport: BundleSizeReport = { javascriptBytes: 0, cssBytes: 0, contentBytes: 0, packages: [] };
     try {
+      const customCss = values.css ? await readFile(resolve(values.css), 'utf8') : '';
+      const projected = notebook.diagrams.map(source => projectDiagram(source, notebook.model));
+      const measurements = await measureDiagrams(projected, theme, customCss, join(temporary, 'measure'));
+      const diagrams = [];
+      for (const [index, diagram] of projected.entries()) {
+        diagrams.push({ ...diagram, measurements: measurements[index], defaultLayout: await computeDefaultLayout(diagram.graph, measurements[index], diagram.mode, diagram.settings?.layout) });
+      }
+      const artifact: PortableArtifact = { debugPerformance: values['debug-performance'], title: values.title, sourceFilename: basename(values.input), sourceMarkdown: source, html: notebook.html, diagrams, theme, model: notebook.model, info: renderInfo(notebook.info) };
       await build({ configFile: false, root: resolve(directory, '..'), plugins: [solid(), ...(values['debug-performance'] ? [bundleSizePlugin(sizeReport)] : [])], logLevel: 'warn', build: { outDir: temporary, emptyOutDir: false, lib: { entry: join(directory, 'runtime/index.tsx'), name: 'LuminousPortable', formats: ['iife'], fileName: () => 'runtime.js' }, cssCodeSplit: false } });
       const js = await readFile(join(temporary, 'runtime.js'), 'utf8');
       const css = await readFile(join(temporary, 'portable.css'), 'utf8');
-      const customCss = values.css ? await readFile(resolve(values.css), 'utf8') : '';
       if (values['debug-performance']) {
         sizeReport.javascriptBytes = Buffer.byteLength(js);
         sizeReport.cssBytes = Buffer.byteLength(css + customCss);

@@ -1,6 +1,8 @@
 export interface EndpointUse { description: string; method: import('./rest.js').HttpMethod; endpoint: string }
 import type { DiffKind } from './diff.js';
 export interface PortableCard {
+  /** Generated intrinsic geometry for nested schema disclosures; not author input. */
+  measuredSize?: NodeMeasurement;
   component: 'card' | 'rest-card' | 'transition' | 'usage-card' | 'schema-card';
   fields?: { name: string; type: string; kind: 'identifier' | 'number' | 'text' | 'object' | 'collection' | 'choice' | 'reference'; optional?: boolean; diff?: DiffKind; schema?: PortableCard }[];
   description?: string;
@@ -38,6 +40,8 @@ export interface PortableGraph {
   direction: 'DOWN' | 'RIGHT';
 }
 export interface NodeRect { x: number; y: number; w: number; h: number }
+export interface NodeMeasurement { w: number; h: number; headerHeight?: number }
+export type NodeMeasurements = Record<string, NodeMeasurement>;
 export type PortableLayout = Record<string, NodeRect>;
 export interface PortableTheme {
   version: 1;
@@ -49,6 +53,7 @@ export interface PortableDiagram {
   mode?: 'action-flow' | 'rest-api-tree';
   graph: PortableGraph;
   defaultLayout: PortableLayout;
+  measurements?: NodeMeasurements;
   settings?: { title?: string; scrollZoom?: boolean; layout?: LayoutHints; legend?: { entries: ({ class: string; label?: string } | { diff: DiffKind; label?: string })[] } };
 }
 export interface BundleSizeReport {

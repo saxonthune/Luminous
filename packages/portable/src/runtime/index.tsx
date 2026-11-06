@@ -2,11 +2,7 @@ import { PageFooter } from './PageFooter.js';
 import { ExtendedInfo } from './ExtendedInfo.js';
 import { Legend } from './Legend.js';
 import { CanvasSettings } from './CanvasSettings.js';
-import { Card } from './Card.js';
-import { UsageCard } from './UsageCard.js';
-import { SchemaCard } from './SchemaCard.js';
-import { TransitionNode } from './TransitionNode.js';
-import { RestCard } from './RestCard.js';
+import { NodeView } from './NodeView.js';
 import { restRole, restStyles } from '../rest.js';
 import { buildRestTree, hiddenRestNodes, revealRestChildren } from '../rest-tree.js';
 import { themeFromUrl, urlWithTheme, type Theme } from '../theme-url.js';
@@ -14,7 +10,7 @@ import { visibleTreeLayout } from '@luminous/cactus/tree-layout';
 import { batch, createSignal, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
 import { render } from 'solid-js/web';
 import { createStore, unwrap } from 'solid-js/store';
-import { Canvas, NodeContainer, DotGrid, useCanvasContext, useGesture, type CanvasRef, type EdgeDeclaration, ResizeHandle, stopWheelIfScrollable } from '@luminous/cactus/runtime';
+import { Canvas, NodeContainer, DotGrid, useCanvasContext, useGesture, type CanvasRef, type EdgeDeclaration, ResizeHandle } from '@luminous/cactus/runtime';
 import type { PortableArtifact, PortableDiagram, PortableLayout, PortableNode } from '../graph.js';
 import '@luminous/cactus/cactus.css';
 import '@luminous/cactus/cactus-themes.css';
@@ -157,8 +153,8 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
     if (existing) { setSchemaLinks(items => [...items, { parent, field: fieldName, target: existing.id }]); return; }
     const side = schemaNodes().find(item => item.node.id === parent)?.side ?? diagram.settings?.layout?.attachments?.find(item => item.node === parent)?.side ?? 'right';
     const rect = layout[parent];
-    const lines = (text: string, chars: number) => text.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / chars)), 0);
-    const w = 400, h = Math.max(field.schema.diff ? 48 : 0, lines(field.schema.title, 36) * 24 + 16) + 16 + (field.schema.description ? lines(field.schema.description, 44) * 20 + 10 : 0) + (field.schema.fields ?? []).reduce((height, item) => height + Math.max(30, lines(`${item.name} ${item.type}${item.optional ? ' optional' : ''}`, 38) * 20 + 10), 0) + (field.schema.footer || field.schema.info ? 37 : 0);
+    if (!field.schema.measuredSize) throw new Error('Nested schema has no measured geometry; regenerate this artifact.');
+    const { w, h } = field.schema.measuredSize;
     const x = side === 'left' ? rect.x - w - 100 : rect.x + rect.w + 100;
     let y = rect.y;
     const occupied = [...nodes.map(node => layout[node.id]), ...schemaNodes().map(item => layout[item.node.id])].filter(Boolean);
@@ -193,7 +189,8 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
   // Graph topology is immutable. Solid's For preserves these object identities.
   const groupOverlays = new Map(nodes.filter(node => node.group).map(node => [node.id, createMemo(() => {
     const rect = layout[node.id];
-    return { band: depth(node) * 2 + 1, clipRect: { ...rect, y: rect.y + 48, h: Math.max(0, rect.h - 48) } };
+    const headerHeight = diagram.measurements?.[node.id]?.headerHeight ?? 48;
+    return { band: depth(node) * 2 + 1, clipRect: { ...rect, y: rect.y + headerHeight, h: Math.max(0, rect.h - headerHeight) } };
   })]));
   const edges: EdgeDeclaration[] = diagram.graph.edges.filter(edge => !edge.invisible).map(edge => {
     const containers = [...new Set([...ancestors(edge.source), ...ancestors(edge.target)])];
@@ -289,11 +286,13 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
         ctx.onNodePointerDown(node.id, event);
         if (ctx.isSelected(node.id)) drag.beginPress(node.id, event);
       }}>
-        <div class={node.group ? 'portable-group' : node.card?.component === 'transition' ? 'portable-node portable-transition-node' : node.card ? 'portable-node portable-card-node' : 'portable-node'} style={{ background: palette()?.fill, '--portable-card-color': palette()?.fill ?? 'var(--cactus-surface-alt)', '--portable-border-color': palette()?.stroke ?? 'var(--cactus-border)', '--portable-border-width': `${1 / ctx.transform().k}px` }}>
-          {node.card ? node.card.component === 'schema-card' ? <SchemaCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} onField={field => toggleSchema(node.id, field)} isOpen={field => schemaLinks().some(item => item.parent === node.id && item.field === field)} isFixed={field => fixedSchemaLinks.some(item => item.parent === node.id && item.field === field)} /> : node.card.component === 'usage-card' ? <UsageCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : node.card.component === 'transition' ? <TransitionNode label={node.card.title} /> : node.card.component === 'rest-card' ? <RestCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} descendantCount={tree?.descendants.get(node.id)?.length} collapsed={collapsed().has(node.id)} onToggle={() => changeVisibility(node.id, 'toggle')} onChildrenOnly={() => changeVisibility(node.id, 'children-only')} onToolbarActiveChange={active => setActiveVisibilityNode(current => active ? node.id : current === node.id ? undefined : current)} /> : <Card content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : <div class="portable-label" title={node.label} onWheel={stopWheelIfScrollable}>{node.label}</div>}
-          {node.group && <div class="portable-container-body" data-box-select-surface />}
-
-        </div>
+        <NodeView node={node} zoom={ctx.transform().k} palette={palette()} headerHeight={diagram.measurements?.[node.id]?.headerHeight}
+          onMore={openInfo} onField={field => toggleSchema(node.id, field)}
+          isOpen={field => schemaLinks().some(item => item.parent === node.id && item.field === field)}
+          isFixed={field => fixedSchemaLinks.some(item => item.parent === node.id && item.field === field)}
+          descendantCount={tree?.descendants.get(node.id)?.length} collapsed={collapsed().has(node.id)}
+          onToggle={() => changeVisibility(node.id, 'toggle')} onChildrenOnly={() => changeVisibility(node.id, 'children-only')}
+          onToolbarActiveChange={active => setActiveVisibilityNode(current => active ? node.id : current === node.id ? undefined : current)} />
       </NodeContainer>
         <ResizeHandle nodeId={node.id} rect={rect} visible={() => ctx.isSelected(node.id)} onResizePointerDown={(id, direction, event) => {
           event.stopPropagation(); drag.beginResize(id, direction, event);

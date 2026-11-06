@@ -19,6 +19,7 @@ description: >-
 - **PDL3.** [p] The default graph layout shall leave room between nodes for edge labels.
 - **PDL2.** [p] The user can reset node positions to the computed default layout.
 - **PDL4.** [p] The graph definition can select the layout algorithm.
+- **PDL5.** [p] Portable resolves node styling and measures node content before computing layout.
 
 ## Artifact generation
 

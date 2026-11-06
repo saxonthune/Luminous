@@ -1,42 +1,19 @@
 import { compoundLayeredLayout, rowWithInputsLayout, leadingTreeLayout, connectionCorridorLayout } from '@luminous/cactus/layout';
-import { USAGE_CARD_MAX_HEIGHT } from '../usage.js';
 import { buildRestTree } from '../rest-tree.js';
-import type { PortableGraph, PortableLayout, LayoutHints } from '../graph.js';
+import type { PortableGraph, PortableLayout, LayoutHints, NodeMeasurements } from '../graph.js';
 
 /** Layered compound layout, following the same broad approach as Pele.
  * Default geometry is computed once; runtime movement never mutates it. */
-export async function computeDefaultLayout(graph: PortableGraph, mode?: 'action-flow' | 'rest-api-tree', hints?: LayoutHints): Promise<PortableLayout> {
+export async function computeDefaultLayout(graph: PortableGraph, measurements: NodeMeasurements, mode?: 'action-flow' | 'rest-api-tree', hints?: LayoutHints): Promise<PortableLayout> {
   const children = new Map<string, string[]>();
   const sizes = new Map<string, { w: number; h: number }>();
+  const headers = new Map<string, number>();
   for (const node of graph.nodes) {
     if (node.parentId) children.set(node.parentId, [...(children.get(node.parentId) ?? []), node.id]);
-    if (node.card?.component === 'transition') {
-      sizes.set(node.id, { w: 144, h: 44 });
-      continue;
-    }
-    if (node.card) {
-      const lines = (text: string, chars: number) => text.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(line.length / chars)), 0);
-      if (node.card.component === 'schema-card') {
-        sizes.set(node.id, { w: 400, h: Math.max(node.card.diff ? 48 : 0, lines(node.card.title, 36) * 24 + 16) + 16 + (node.card.description ? lines(node.card.description, 44) * 20 + 10 : 0) + node.card.fields!.reduce((height, field) => height + Math.max(30, lines(`${field.name} ${field.type}${field.optional ? ' optional' : ''}`, 38) * 20 + 10), 0) + (node.card.footer || node.card.info ? 37 : 0) });
-        continue;
-      }
-      if (node.card.component === 'usage-card') {
-        const usage = node.card.usage!;
-        const sectionHeight = (rows: typeof usage.startup) => 28 + (rows.length ? rows.reduce((height, row) => height + Math.ceil((row.method.length + row.endpoint.length + 2) / 62) * 18 + 10 + Math.ceil(row.description.length / 62) * 20 + 12, 0) : 22);
-        sizes.set(node.id, { w: 520, h: Math.min(USAGE_CARD_MAX_HEIGHT, lines(node.card.title, 52) * 24 + 16 + 32 + usage.uiRoute.paths.reduce((height, path) => height + lines(path, 62) * 18, 0) + lines(usage.uiRoute.context, 62) * 18 + sectionHeight(usage.startup) + sectionHeight(usage.capabilities) + 40 + (node.card.info ? 37 : 0)) });
-        continue;
-      }
-      if (node.card.component === 'rest-card') {
-        sizes.set(node.id, { w: 240, h: Math.max(mode === 'rest-api-tree' ? 40 : 44, node.card.diff ? 48 : 0, lines(node.card.title, mode === 'rest-api-tree' ? 20 : 23) * 24 + 16) + (node.card.methods?.length ? Math.ceil(node.card.methods.length / 4) * 24 + 12 : 0) + (node.card.body ? lines(node.card.body, 27) * 21 + 16 : 0) + (node.card.footer || node.card.info ? 37 : 0) });
-        continue;
-      }
-      sizes.set(node.id, { w: 340, h: Math.max(node.card.diff ? 48 : 0, lines(node.card.title, node.card.diff ? 30 : 36) * 24 + 16) + Math.max(0, node.card.body ? lines(node.card.body, 40) * 21 + 16 : 0) + (node.card.footer || node.card.info ? lines((node.card.footer?.text ?? '') + (node.card.info ? ' [more]' : ''), 40) * 21 + 16 : 0) });
-      continue;
-    }
-    const longest = Math.max(...node.label.split('\n').map(line => line.length));
-    const w = Math.min(380, Math.max(180, longest * 8 + 32));
-    const lines = node.label.split('\n').reduce((n, line) => n + Math.max(1, Math.ceil(line.length * 8 / (w - 32))), 0);
-    sizes.set(node.id, { w, h: node.group ? 64 : Math.max(64, lines * 21 + 32) });
+    const measured = measurements[node.id];
+    if (!measured || !Number.isFinite(measured.w) || !Number.isFinite(measured.h) || measured.w <= 0 || measured.h <= 0) throw new Error(`Missing or invalid measured size for ${node.id}`);
+    sizes.set(node.id, { w: measured.w, h: measured.h });
+    if (node.group) headers.set(node.id, (measured.headerHeight ?? measured.h) + 16);
   }
   if (hints?.spine) {
     if (mode) throw new Error('spine layout requires an ordinary Mermaid diagram');
@@ -70,7 +47,7 @@ export async function computeDefaultLayout(graph: PortableGraph, mode?: 'action-
     for (const id of spine) {
       const owner = graph.nodes.find(node => node.id === id)?.parentId;
       const previous = spine[spine.indexOf(id) - 1];
-      if (owner && graph.nodes.find(node => node.id === previous)?.parentId !== owner) y += 64;
+      if (owner && graph.nodes.find(node => node.id === previous)?.parentId !== owner) y += headers.get(owner)!;
       const step = sizes.get(id)!;
       const attached = attachments.filter(item => item.step === id);
       const sideHeight = (side: 'left' | 'right') => attached.filter(item => item.side === side).reduce((n, item) => n + sizes.get(item.node)!.h + 32, 0) - 32;
@@ -88,9 +65,10 @@ export async function computeDefaultLayout(graph: PortableGraph, mode?: 'action-
     }
     for (const group of groups) {
       const members = spine.filter(id => graph.nodes.find(node => node.id === id)?.parentId === group.id).map(id => result[id]);
-      const top = Math.min(...members.map(rect => rect.y)) - 64;
+      const top = Math.min(...members.map(rect => rect.y)) - headers.get(group.id)!;
       const bottom = Math.max(...members.map(rect => rect.y + rect.h)) + 20;
-      result[group.id] = { x: centerX - spineWidth / 2 - 20, y: top, w: spineWidth + 40, h: bottom - top };
+      const width = Math.max(spineWidth + 40, sizes.get(group.id)!.w);
+      result[group.id] = { x: centerX - width / 2, y: top, w: width, h: bottom - top };
     }
     return result;
   }
@@ -146,7 +124,7 @@ export async function computeDefaultLayout(graph: PortableGraph, mode?: 'action-
       return Object.fromEntries(graph.nodes.map(node => [node.id, { ...result.positions.get(node.id)!, ...result.sizes.get(node.id)! }]));
     }
   }
-  const result = await compoundLayeredLayout({ rootIds: graph.nodes.filter(node => !node.parentId).map(node => node.id), childrenOf: children, nodeSizes: sizes, headerHeight: 64, edges: graph.edges.filter(edge => !hints?.nonOrderingEdges.some(hint => hint.source === edge.source && hint.target === edge.target)).map(edge => ({ id: edge.id, from: edge.source, to: edge.target })) }, { direction: graph.direction, spacing: 1.1, containerDirections: new Map(graph.nodes.filter(node => node.direction).map(node => [node.id, node.direction!])) });
+  const result = await compoundLayeredLayout({ rootIds: graph.nodes.filter(node => !node.parentId).map(node => node.id), childrenOf: children, nodeSizes: sizes, headerHeights: headers, edges: graph.edges.filter(edge => !hints?.nonOrderingEdges.some(hint => hint.source === edge.source && hint.target === edge.target)).map(edge => ({ id: edge.id, from: edge.source, to: edge.target })) }, { direction: graph.direction, spacing: 1.1, containerDirections: new Map(graph.nodes.filter(node => node.direction).map(node => [node.id, node.direction!])) });
   const layout: PortableLayout = {};
   const byId = new Map(graph.nodes.map(node => [node.id, node]));
   function rect(id: string): PortableLayout[string] {

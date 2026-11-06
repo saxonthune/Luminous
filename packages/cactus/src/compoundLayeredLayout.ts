@@ -28,7 +28,7 @@ export async function compoundLayeredLayout(req: LayoutRequest, options: {
       return from && to && from !== to ? [{ ...edge, from, to }] : [];
     });
     const result = await elkLayout({ rootIds: ids, childrenOf: new Map(), nodeSizes: sizes, edges }, { direction, spacing: options.spacing ?? 0.7 });
-    const top = parent ? req.headerHeight ?? 48 : 0;
+    const top = parent ? req.headerHeights?.get(parent) ?? req.headerHeight ?? 48 : 0;
     for (const id of ids) {
       const point = result.positions.get(id)!;
       positions.set(id, { x: point.x + (parent ? 12 : 0), y: point.y + top });

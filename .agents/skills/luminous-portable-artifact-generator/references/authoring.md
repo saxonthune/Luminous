@@ -237,3 +237,19 @@ bounds, so taller usage Cards cannot overlap the upper UI-state tree. This is
 layout behavior, not an additional visible container. Retain a kind Legend for
 the usage Cards. This support does not infer or verify application API use;
 input authors must supply evidence and distinguish current from proposed routes.
+
+## Styled component measurement
+
+Portable now applies custom CSS during a generation-time Chromium measurement pass,
+using the same Solid components as the final canvas. Layout consumes measured bounds;
+large labels, wrapped headings, subgraph titles, and nested schema disclosures no
+longer use independent character-count estimates. Measurement covers all three
+supported themes and full/summary Card states. Usage bodies remain intentionally
+bounded and scrollable.
+
+Install Chromium with `pnpm --dir packages/portable exec playwright install chromium`
+or set `PORTABLE_CHROMIUM_PATH` to a compatible executable. One browser serves the
+whole generation; this does not run an E2E suite. Plain Markdown needs no browser.
+For cross-machine consistency, use available or embedded fonts; arbitrary viewport-
+dependent CSS or different installed fonts can still change metrics after generation.
+Regenerate the same output when changing fonts, wrapping, padding, or component data.

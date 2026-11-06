@@ -436,3 +436,40 @@ override this token independently of `--portable-content-bg`.
 ### Schema references in spine layouts
 
 Schema cards may assign `schemaKey` to identify a definition. A field with a nested `schema` using the same key as a default-visible card is connected by a permanent dashed edge and does not offer a redundant expansion control. When both cards are spine attachments, layout prefers the referring card’s side. Definitions without a default-visible target can be expanded and collapsed as usual. Schema definitions are authored; Portable does not extract them from source.
+
+## Measure styled content before layout
+
+Generation resolves semantic presentation and reads custom CSS, measures the actual
+Solid node components in headless Chromium, then passes those dimensions to layout.
+The browser measurement uses the same `NodeView` as the finished canvas. It covers
+Ground/Light/Dark and full/summary Card states, including nested schema disclosures.
+Subgraph headers receive their measured height. Usage bodies retain their intended
+maximum height and scrolling. Layout functions no longer estimate text sizes.
+
+Install the generation-time browser once:
+
+```sh
+pnpm --dir packages/portable exec playwright install chromium
+```
+
+Set `PORTABLE_CHROMIUM_PATH` to use an existing compatible Chromium executable.
+This is a generation dependency, not an E2E test run. One browser measures the entire
+document; the HTML remains self-contained and does not bundle Chromium, Playwright,
+or the generation-time ELK engine. Plain Markdown without diagrams needs no browser.
+
+`measurement/contracts.ts` defines component width constraints;
+`measurement/browser.tsx` measures intrinsic content using final CSS;
+`measurement/index.ts` runs the batch;
+`runtime/NodeView.tsx` owns the shared presentation.
+Change these together when adding a component. Supplied geometry is mandatory for
+`computeDefaultLayout`; there is no character-count fallback.
+
+Generation waits for fonts to load. Use the same available fonts when viewing the
+artifact, or embed fonts in the supplied CSS, for consistent cross-machine metrics.
+CSS depending on viewport dimensions or external font substitutions can change
+geometry after generation; regenerate when changing metric-affecting styles.
+Palette-only theme switches reuse geometry. The generator measures the maximum
+requirements of the three supported themes so authored theme typography is covered.
+
+The reproduction input is `examples/label-measurement.md`, with
+`examples/label-measurement.css` for larger type and wrapping.

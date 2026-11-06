@@ -7,11 +7,12 @@
     "@luminous/cactus": "workspace:*",
     "lucide-solid": "^1.49.0",
     "marked": "^18.0.13",
-    "pele": "1.8.0",
+    "pele": "1.13.0",
     "solid-js": "^1.9.15",
     "yaml": "^2.9.1"
   },
   "devDependencies": {
+    "playwright": "1.63.0",
     "typescript": "~7.0.2",
     "vite": "catalog:",
     "vite-plugin-solid": "^2.11.14",
