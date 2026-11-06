@@ -12,11 +12,24 @@ export function applyNodeContent(graph: PortableGraph, content: unknown): void {
   for (const [id, card] of Object.entries(content)) {
     const node = graph.nodes.find(node => node.id === id);
     if (!node || node.group) throw new Error(`portable-nodes: ${id} must name a non-container node`);
-    if (!object(card) || !['card', 'rest-card', 'transition', 'usage-card'].includes(String(card.component)) || typeof card.title !== 'string') {
+    if (!object(card) || !['card', 'rest-card', 'transition', 'usage-card', 'schema-card'].includes(String(card.component)) || typeof card.title !== 'string') {
       throw new Error(`portable-nodes: ${id} needs component: card, rest-card, transition or usage-card and a string title`);
     }
     if (card.component === 'transition' && Object.keys(card).some(key => !['component', 'title'].includes(key))) throw new Error(`Transition ${id} accepts only component and title`);
-    if (Object.keys(card).some(key => !['component', 'title', 'body', 'footer', 'diff', 'info', ...(card.component === 'rest-card' ? ['methods'] : []), ...(card.component === 'usage-card' ? ['usage'] : [])].includes(key))) throw new Error(`Unknown card field on ${id}`);
+    if (Object.keys(card).some(key => !['component', 'title', 'body', 'footer', 'diff', 'info', ...(card.component === 'rest-card' ? ['methods'] : []), ...(card.component === 'usage-card' ? ['usage'] : []), ...(card.component === 'schema-card' ? ['fields', 'description', 'schemaKey'] : [])].includes(key))) throw new Error(`Unknown card field on ${id}`);
+    if (card.component === 'schema-card') {
+      if (card.description !== undefined && (typeof card.description !== 'string' || !card.description.trim())) throw new Error(`Invalid schema description on ${id}`);
+      if (card.schemaKey !== undefined && (typeof card.schemaKey !== 'string' || !card.schemaKey.trim())) throw new Error(`Invalid schemaKey on ${id}`);
+      const kinds = ['identifier', 'number', 'text', 'object', 'collection', 'choice', 'reference'];
+      if (!Array.isArray(card.fields) || card.fields.some(row => !object(row) || typeof row.name !== 'string' || !row.name.trim() || typeof row.type !== 'string' || !row.type.trim() || !kinds.includes(String(row.kind)) || (row.optional !== undefined && typeof row.optional !== 'boolean') || (row.diff !== undefined && !isDiffKind(row.diff)) || Object.keys(row).some(key => !['name', 'type', 'kind', 'optional', 'diff', 'schema'].includes(key)))) throw new Error(`Invalid schema fields on ${id}`);
+      if (new Set(card.fields.map(row => row.name)).size !== card.fields.length || card.body !== undefined) throw new Error(`Invalid schema-card ${id}: fields must be unique and replace body`);
+      for (const row of card.fields) if (/[\w\]>)]+\s*\[\s*[^\]\s][^\]]*\]/.test(row.type)) throw new Error(`Schema field ${id}.${row.name}: indexed-access type labels are not allowed; name and define the referenced shape instead`);
+      for (const row of card.fields) if (row.schema !== undefined) {
+        const nested: PortableGraph = { nodes: [{ id: 'nested', label: '', group: false, classes: [] }], edges: [], direction: 'DOWN' };
+        applyNodeContent(nested, { nested: row.schema });
+        if (nested.nodes[0].card?.component !== 'schema-card') throw new Error(`Nested schema on ${id}.${row.name} must be a schema-card`);
+      }
+    }
     if (card.component === 'rest-card' && (!Array.isArray(card.methods) || !card.methods.every(isHttpMethod) || new Set(card.methods).size !== card.methods.length)) {
       throw new Error(`Invalid methods on ${id}: rest-card needs a unique list of uppercase HTTP methods (empty for prefixes)`);
     }
@@ -40,6 +53,6 @@ export function applyNodeContent(graph: PortableGraph, content: unknown): void {
       if (value.href !== undefined && (typeof value.href !== 'string' || !/^(https?:\/\/|zed:\/\/|mailto:|#)/i.test(value.href))) throw new Error(`Unsupported footer link on ${id}`);
       footer = { text: value.text, href: value.href as string | undefined };
     }
-    node.card = { component: card.component as 'card' | 'rest-card' | 'transition' | 'usage-card', ...(card.component === 'rest-card' ? { methods: card.methods as import('../rest.js').HttpMethod[] } : {}), ...(card.component === 'usage-card' ? { usage: card.usage as import('../graph.js').PortableCard['usage'] } : {}), info: card.info as string | undefined, diff: card.diff as import('../diff.js').DiffKind | undefined, title: card.title, body: card.body as string | undefined, footer };
+    node.card = { component: card.component as import('../graph.js').PortableCard['component'], ...(card.component === 'rest-card' ? { methods: card.methods as import('../rest.js').HttpMethod[] } : {}), ...(card.component === 'usage-card' ? { usage: card.usage as import('../graph.js').PortableCard['usage'] } : {}), ...(card.component === 'schema-card' ? { fields: card.fields as import('../graph.js').PortableCard['fields'], description: card.description as string | undefined, schemaKey: card.schemaKey as string | undefined } : {}), info: card.info as string | undefined, diff: card.diff as import('../diff.js').DiffKind | undefined, title: card.title, body: card.body as string | undefined, footer };
   }
 }

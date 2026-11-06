@@ -40,8 +40,10 @@ export async function importMarkdown(source: string): Promise<ParsedDocument> {
         if (settings.title !== undefined && (typeof settings.title !== 'string' || !settings.title.trim())) throw new Error('portable-canvas title must be a non-empty string');
         if (settings.layout !== undefined) {
           const layout = settings.layout;
-          if (!layout || typeof layout !== 'object' || Array.isArray(layout) || Object.keys(layout).some(key => key !== 'nonOrderingEdges') || !Array.isArray(layout.nonOrderingEdges)
+          if (!layout || typeof layout !== 'object' || Array.isArray(layout) || Object.keys(layout).some(key => !['nonOrderingEdges', 'spine', 'attachments'].includes(key)) || !Array.isArray(layout.nonOrderingEdges)
             || layout.nonOrderingEdges.some((edge: any) => !edge || typeof edge !== 'object' || Array.isArray(edge) || Object.keys(edge).some(key => !['source', 'target'].includes(key)) || typeof edge.source !== 'string' || typeof edge.target !== 'string')) throw new Error('layout accepts nonOrderingEdges: [{ source, target }]');
+          if (layout.spine !== undefined && (!Array.isArray(layout.spine) || !layout.spine.length || layout.spine.some((id: unknown) => typeof id !== 'string' || !id))) throw new Error('layout spine requires a nonempty list of node IDs');
+          if (layout.attachments !== undefined && (!Array.isArray(layout.attachments) || layout.attachments.some((item: any) => !item || typeof item !== 'object' || Object.keys(item).some(key => !['node', 'step', 'side'].includes(key)) || typeof item.node !== 'string' || typeof item.step !== 'string' || !['left', 'right'].includes(item.side)))) throw new Error('layout attachments require node, step, and left or right side');
         }
         if (settings.kinds !== undefined && (!settings.kinds || typeof settings.kinds !== 'object' || Array.isArray(settings.kinds) || Object.values(settings.kinds).some(value => typeof value !== 'string' || !value.trim()))) throw new Error('kinds must map node IDs to nonempty kind IDs');
         if (settings.legend !== undefined) {

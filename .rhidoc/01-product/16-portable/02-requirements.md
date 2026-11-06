@@ -18,6 +18,7 @@ description: >-
 - **PDL1.** [p] Portable computes a default layout for the graph.
 - **PDL3.** [p] The default graph layout shall leave room between nodes for edge labels.
 - **PDL2.** [p] The user can reset node positions to the computed default layout.
+- **PDL4.** [p] The graph definition can select the layout algorithm.
 
 ## Artifact generation
 
@@ -99,6 +100,7 @@ description: Users can view Portable in the Ground theme.
 ```
 
 - **PAPP1.** [p] Ground is the default theme for Portable.
+- **PAPP2.** [p] The graph definition can select styles.
 
 ## Markdown pages
 
@@ -148,6 +150,14 @@ description: Users can present node information in separately styled sections.
 - **PCARD9.** [p] While zoomed out, a Card with hidden content displays an indicator that more content is available by zooming in.
 
 - **PCARD10.** [p] While zoomed out, Card titles are drawn above the ellipsis disclosure indicator; the indicator does not reserve space that clips the title.
+
+- **PCARD11.** [p] Authors can use a simple Mermaid-like node presentation with a short label of fewer than ten words.
+- **PCARD12.** [p] The simple node presentation displays its label in large text.
+
+The user suggested omitting semantic level-of-detail changes for this presentation;
+that choice remains under discussion. The label preference does not yet prescribe
+an input-rejection rule. The intended Mermaid support uses Pele or Luminous layout
+engines; the supported diagram types and syntax coverage remain to be scoped.
 
 ## Legend
 

@@ -49,11 +49,36 @@ into an unrelated design.
    the same output and tell the user to refresh. Say what generation verified;
    do not claim browser interactions were tested unless actually exercised.
 
+## Diagram clarity
+
+Choose distinct node kinds for different meanings or concerns in a diagram;
+do not give actions, data, decisions, or other materially different concepts one
+undifferentiated type merely because they share a shape. Explain the kinds in
+the canvas legend, using visual distinctions as well as readable labels. Prefer
+the legend's node descriptions to repeated edge labels when a node already makes
+the meaning clear. Retain edge labels when they add relationship-specific meaning,
+such as a decision branch condition, that the node kinds do not convey.
+When context and change badges establish that an item is a proposal, do not
+repeat “proposed” or “proposal” in each label. Retain distinct uncertainty,
+such as an optional component or unsettled ownership.
+Give a contained surface a background distinct from the content immediately
+surrounding it, including diagram headers against their canvases.
+Prefer vertical diagram content or an arrangement that fits the default canvas's
+aspect ratio. Avoid long horizontal layouts that make the whole diagram difficult
+to read at its initial fit; adapt grouping and direction to the actual content.
+
+For a code-oriented control path with module ownership and nearby contracts, see
+[control-tree-diagram.md](references/control-tree-diagram.md). This is an exploratory
+authoring recipe; its definition of a navigable “room” remains open.
+
 ## Architecture comparisons
 
 For a proposed-versus-current architecture view, use the shared Card diff badges
 and preserve the base diagram's identities. Read [diff-language.md](references/diff-language.md)
 for the vocabulary, declarations, and layout limits.
+For any current/proposed diagram pair, retain every current node with its identity
+in the proposed diagram, plus changed and new nodes. Preserve relationships unless
+the proposal explicitly changes them; make those changes clear to the reader.
 
 ## Current behavior and limits
 
@@ -74,7 +99,7 @@ for the vocabulary, declarations, and layout limits.
   `@luminous/cactus/runtime`, excluding ELK. Do not reintroduce the broad cactus
   import into Portable runtime code while addressing an authoring problem.
 - Mermaid is topology; `portable-nodes` supplies presentation content. Only the
-  built-in `card`, `rest-card`, `transition`, and `usage-card` components are supported, not arbitrary executable
+  built-in `card`, `rest-card`, `transition`, `usage-card`, and `schema-card` components are supported, not arbitrary executable
   components. Recipes are still a proposal; `action-flow` is a layout experiment.
 - Raw Markdown HTML is escaped, images render alt text, and ordinary prose links
   allow HTTP(S), mailto, anchors, and explicit relative/local paths. Custom CSS is trusted author input.
@@ -131,6 +156,14 @@ suggestion or an automatic requirement. Read relevant existing logs when an
 issue recurs; don't load the entire directory by default.
 
 ## Semantic models and validation
+
+For creating or maintaining a recipe, read [recipe authoring](references/recipe-authoring.md).
+Extract the user's stated recipe requirements into the recipe document and preserve
+their scope and uncertainty as the recipe evolves.
+
+For a business process diagram, see [business process](references/business-process.md).
+For a proposed schema comparison, see [schema diagram](references/schema-diagram.md)
+for an experimental authoring convention; it is not a registered Recipe.
 
 For a REST API Tree, use `rest-card` with a local path-segment `title` and a
 `methods` list (uppercase HTTP verbs; empty for organizational prefixes).

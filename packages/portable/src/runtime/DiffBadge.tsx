@@ -15,7 +15,9 @@ export function DiffBadge(props: { kind: DiffKind }) {
     };
   };
   return <span class="portable-diff-badge" style={variables()} role="img" aria-label={definition().label} title={definition().label}>
-    <Show when={props.kind === 'modified'} fallback={<span aria-hidden="true">{definition().symbol}</span>}>
+    <Show when={props.kind === 'modified'} fallback={<Show when={props.kind === 'new'} fallback={<span aria-hidden="true">{definition().symbol}</span>}>
+      <svg viewBox="0 0 24 24" width="55%" height="55%" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+    </Show>}>
       <span class="portable-diff-removed" aria-hidden="true">−</span><span aria-hidden="true">+</span>
     </Show>
   </span>;

@@ -4,6 +4,7 @@ import { Legend } from './Legend.js';
 import { CanvasSettings } from './CanvasSettings.js';
 import { Card } from './Card.js';
 import { UsageCard } from './UsageCard.js';
+import { SchemaCard } from './SchemaCard.js';
 import { TransitionNode } from './TransitionNode.js';
 import { RestCard } from './RestCard.js';
 import { restRole, restStyles } from '../rest.js';
@@ -128,11 +129,49 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
   const depth = (node: PortableNode): number => node.parentId ? 1 + depth(byId.get(node.parentId)!) : 0;
   const ancestors = (id: string): string[] => { const parent = byId.get(id)?.parentId; return parent ? [parent, ...ancestors(parent)] : []; };
   const nodes = [...diagram.graph.nodes].sort((a, b) => depth(a) - depth(b));
+  const fixedSchemaLinks = nodes.flatMap(node => (node.card?.fields ?? []).flatMap(field => {
+    const key = field.schema?.schemaKey;
+    const target = key && nodes.find(candidate => candidate.id !== node.id && candidate.card?.schemaKey === key);
+    return target ? [{ parent: node.id, field: field.name, target: target.id }] : [];
+  }));
+  const [schemaNodes, setSchemaNodes] = createSignal<{ node: PortableNode; parent: string; field: string; side: 'left' | 'right' }[]>([]);
+  const [schemaLinks, setSchemaLinks] = createSignal<{ parent: string; field: string; target: string }[]>([]);
+  function toggleSchema(parent: string, fieldName: string) {
+    const id = `${parent}::${fieldName}`;
+    if (schemaLinks().some(link => link.parent === parent && link.field === fieldName)) {
+      let links = schemaLinks().filter(link => !(link.parent === parent && link.field === fieldName));
+      const reachable = new Set(nodes.map(node => node.id));
+      let changed = true;
+      while (changed) { changed = false; for (const link of links) if (reachable.has(link.parent) && !reachable.has(link.target)) { reachable.add(link.target); changed = true; } }
+      const removed = new Set(schemaNodes().filter(item => !reachable.has(item.node.id)).map(item => item.node.id));
+      links = links.filter(link => reachable.has(link.parent) && reachable.has(link.target));
+      batch(() => { setSchemaLinks(links); setSchemaNodes(items => items.filter(item => !removed.has(item.node.id))); });
+      canvas.setSelectedIds(selected().filter(id => !removed.has(id)));
+      return;
+    }
+    const parentNode = nodes.find(node => node.id === parent) ?? schemaNodes().find(item => item.node.id === parent)?.node;
+    const field = parentNode?.card?.fields?.find(field => field.name === fieldName);
+    if (!field?.schema) return;
+    const key = field.schema.schemaKey;
+    const existing = key ? [...nodes, ...schemaNodes().map(item => item.node)].find(node => node.id !== parent && node.card?.schemaKey === key) : undefined;
+    if (existing) { setSchemaLinks(items => [...items, { parent, field: fieldName, target: existing.id }]); return; }
+    const side = schemaNodes().find(item => item.node.id === parent)?.side ?? diagram.settings?.layout?.attachments?.find(item => item.node === parent)?.side ?? 'right';
+    const rect = layout[parent];
+    const lines = (text: string, chars: number) => text.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / chars)), 0);
+    const w = 400, h = Math.max(field.schema.diff ? 48 : 0, lines(field.schema.title, 36) * 24 + 16) + 16 + (field.schema.description ? lines(field.schema.description, 44) * 20 + 10 : 0) + (field.schema.fields ?? []).reduce((height, item) => height + Math.max(30, lines(`${item.name} ${item.type}${item.optional ? ' optional' : ''}`, 38) * 20 + 10), 0) + (field.schema.footer || field.schema.info ? 37 : 0);
+    const x = side === 'left' ? rect.x - w - 100 : rect.x + rect.w + 100;
+    let y = rect.y;
+    const occupied = [...nodes.map(node => layout[node.id]), ...schemaNodes().map(item => layout[item.node.id])].filter(Boolean);
+    while (occupied.some(other => x < other.x + other.w + 24 && x + w + 24 > other.x && y < other.y + other.h + 24 && y + h + 24 > other.y)) y += 80;
+    setLayout(id, { x, y, w, h });
+    setSchemaNodes(items => [...items, { node: { id, label: field.schema!.title, card: field.schema, group: false, classes: parentNode?.classes ?? [] }, parent, field: fieldName, side }]);
+    setSchemaLinks(items => [...items, { parent, field: fieldName, target: id }]);
+  }
   const tree = diagram.mode === 'rest-api-tree' ? buildRestTree(diagram.graph) : undefined;
   const [collapsed, setCollapsed] = createSignal<ReadonlySet<string>>(new Set());
   const [activeVisibilityNode, setActiveVisibilityNode] = createSignal<string>();
   const hidden = createMemo(() => tree ? hiddenRestNodes(tree.descendants, collapsed()) : new Set<string>());
-  const visibleNodes = createMemo(() => nodes.filter(node => !hidden().has(node.id)));
+  const visibleNodes = createMemo(() => [...nodes.filter(node => !hidden().has(node.id)), ...schemaNodes().map(item => item.node)]);
   function changeVisibility(id: string, action: 'toggle' | 'children-only') {
     if (!tree) return;
     const next = action === 'children-only' ? revealRestChildren(tree.children, collapsed(), id) : new Set(collapsed());
@@ -164,12 +203,13 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
       get contentOverlays() { return overlays(); },
     };
   });
-  const visibleEdges = createMemo(() => edges.filter(edge => !hidden().has(edge.sourceId) && !hidden().has(edge.targetId)));
+  const visibleEdges = createMemo(() => [...edges.filter(edge => !hidden().has(edge.sourceId) && !hidden().has(edge.targetId)), ...[...fixedSchemaLinks, ...schemaLinks()].filter(item => !hidden().has(item.parent) && !hidden().has(item.target)).map(item => ({ id: `schema-edge:${item.parent}::${item.field}`, sourceId: item.parent, targetId: item.target, styling: { arrowHead: true, dash: 'dashed' as const } }))]);
   function fit(ids?: readonly string[]) {
-    const rects = Object.entries(layout).filter(([id]) => !hidden().has(id) && (!ids || ids.includes(id))).map(([, rect]) => ({ ...rect, width: rect.w, height: rect.h }));
+    const visible = new Set(visibleNodes().map(node => node.id));
+    const rects = Object.entries(layout).filter(([id]) => visible.has(id) && (!ids || ids.includes(id))).map(([, rect]) => ({ ...rect, width: rect.w, height: rect.h }));
     canvas?.fitView(rects, 48);
   }
-  const reset = () => { batch(() => { setCollapsed(new Set<string>()); setLayout(structuredClone(diagram.defaultLayout)); }); fit(); };
+  const reset = () => { batch(() => { setSchemaLinks([]); setSchemaNodes([]); setCollapsed(new Set<string>()); setLayout(structuredClone(diagram.defaultLayout)); }); canvas.clearSelection(); fit(); };
   const keydown = (event: KeyboardEvent) => {
     if ((event.target as HTMLElement)?.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
     if ((event.ctrlKey || event.metaKey) && event.key === 'a') { event.preventDefault(); canvas.setSelectedIds(visibleNodes().map(node => node.id)); }
@@ -250,7 +290,7 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
         if (ctx.isSelected(node.id)) drag.beginPress(node.id, event);
       }}>
         <div class={node.group ? 'portable-group' : node.card?.component === 'transition' ? 'portable-node portable-transition-node' : node.card ? 'portable-node portable-card-node' : 'portable-node'} style={{ background: palette()?.fill, '--portable-card-color': palette()?.fill ?? 'var(--cactus-surface-alt)', '--portable-border-color': palette()?.stroke ?? 'var(--cactus-border)', '--portable-border-width': `${1 / ctx.transform().k}px` }}>
-          {node.card ? node.card.component === 'usage-card' ? <UsageCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : node.card.component === 'transition' ? <TransitionNode label={node.card.title} /> : node.card.component === 'rest-card' ? <RestCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} descendantCount={tree?.descendants.get(node.id)?.length} collapsed={collapsed().has(node.id)} onToggle={() => changeVisibility(node.id, 'toggle')} onChildrenOnly={() => changeVisibility(node.id, 'children-only')} onToolbarActiveChange={active => setActiveVisibilityNode(current => active ? node.id : current === node.id ? undefined : current)} /> : <Card content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : <div class="portable-label" title={node.label} onWheel={stopWheelIfScrollable}>{node.label}</div>}
+          {node.card ? node.card.component === 'schema-card' ? <SchemaCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} onField={field => toggleSchema(node.id, field)} isOpen={field => schemaLinks().some(item => item.parent === node.id && item.field === field)} isFixed={field => fixedSchemaLinks.some(item => item.parent === node.id && item.field === field)} /> : node.card.component === 'usage-card' ? <UsageCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : node.card.component === 'transition' ? <TransitionNode label={node.card.title} /> : node.card.component === 'rest-card' ? <RestCard content={node.card} zoom={ctx.transform().k} onMore={openInfo} descendantCount={tree?.descendants.get(node.id)?.length} collapsed={collapsed().has(node.id)} onToggle={() => changeVisibility(node.id, 'toggle')} onChildrenOnly={() => changeVisibility(node.id, 'children-only')} onToolbarActiveChange={active => setActiveVisibilityNode(current => active ? node.id : current === node.id ? undefined : current)} /> : <Card content={node.card} zoom={ctx.transform().k} onMore={openInfo} /> : <div class="portable-label" title={node.label} onWheel={stopWheelIfScrollable}>{node.label}</div>}
           {node.group && <div class="portable-container-body" data-box-select-surface />}
 
         </div>

@@ -1,7 +1,10 @@
 export interface EndpointUse { description: string; method: import('./rest.js').HttpMethod; endpoint: string }
 import type { DiffKind } from './diff.js';
 export interface PortableCard {
-  component: 'card' | 'rest-card' | 'transition' | 'usage-card';
+  component: 'card' | 'rest-card' | 'transition' | 'usage-card' | 'schema-card';
+  fields?: { name: string; type: string; kind: 'identifier' | 'number' | 'text' | 'object' | 'collection' | 'choice' | 'reference'; optional?: boolean; diff?: DiffKind; schema?: PortableCard }[];
+  description?: string;
+  schemaKey?: string;
   usage?: { uiRoute: { paths: string[]; context: string }; startup: EndpointUse[]; capabilities: EndpointUse[] };
   methods?: import('./rest.js').HttpMethod[];
   diff?: DiffKind;
@@ -40,7 +43,7 @@ export interface PortableTheme {
   version: 1;
   styles: Record<string, { label: string; light: { fill: string; stroke: string }; dark: { fill: string; stroke: string } }>;
 }
-export interface LayoutHints { nonOrderingEdges: { source: string; target: string }[] }
+export interface LayoutHints { nonOrderingEdges: { source: string; target: string }[]; spine?: string[]; attachments?: { node: string; step: string; side: 'left' | 'right' }[] }
 export interface PortableDiagram {
   id: string;
   mode?: 'action-flow' | 'rest-api-tree';

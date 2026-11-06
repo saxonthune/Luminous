@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { computeDefaultLayout } from './layout/index.js';
+import type { PortableGraph } from './graph.js';
+
+test('spine layout keeps process vertical and attachments beside their assigned steps', async () => {
+  const graph: PortableGraph = { direction: 'DOWN', nodes: ['a', 'b', 'left', 'right'].map(id => ({ id, label: id, group: false, classes: [] })), edges: [] };
+  const layout = await computeDefaultLayout(graph, undefined, { nonOrderingEdges: [], spine: ['a', 'b'], attachments: [{ node: 'left', step: 'a', side: 'left' }, { node: 'right', step: 'b', side: 'right' }] });
+  assert.equal(layout.a.x, layout.b.x);
+  assert.ok(layout.a.y + layout.a.h < layout.b.y);
+  assert.ok(layout.left.x + layout.left.w < layout.a.x);
+  assert.ok(layout.right.x > layout.b.x + layout.b.w);
+  assert.ok(layout.left.y < layout.a.y + layout.a.h && layout.left.y + layout.left.h > layout.a.y);
+  assert.ok(layout.right.y < layout.b.y + layout.b.h && layout.right.y + layout.right.h > layout.b.y);
+});
+
+test('spine containers enclose consecutive owned steps without enclosing side records', async () => {
+  const graph: PortableGraph = { direction: 'DOWN', nodes: [
+    { id: 'owner', label: 'Owner', group: true, classes: [] },
+    { id: 'a', label: 'a', group: false, parentId: 'owner', classes: [] },
+    { id: 'b', label: 'b', group: false, parentId: 'owner', classes: [] },
+    { id: 'record', label: 'record', group: false, classes: [] },
+  ], edges: [] };
+  const layout = await computeDefaultLayout(graph, undefined, { nonOrderingEdges: [], spine: ['a', 'b'], attachments: [{ node: 'record', step: 'a', side: 'left' }] });
+  assert.ok(layout.owner.y < layout.a.y && layout.owner.y + layout.owner.h > layout.b.y + layout.b.h);
+  assert.ok(layout.owner.x < layout.a.x && layout.owner.x + layout.owner.w > layout.a.x + layout.a.w);
+  assert.ok(layout.record.x + layout.record.w < layout.owner.x);
+});
+
+test('related default schema attachments share the referring side', async () => {
+  const graph: PortableGraph = { direction: 'DOWN', nodes: [
+    { id: 'step', label: 'step', group: false, classes: [] },
+    { id: 'source', label: 'source', group: false, classes: [], card: { component: 'schema-card', title: 'Source', fields: [{ name: 'item', type: 'Item', kind: 'object', schema: { component: 'schema-card', title: 'Item', schemaKey: 'item', fields: [] } }] } },
+    { id: 'target', label: 'target', group: false, classes: [], card: { component: 'schema-card', title: 'Item', schemaKey: 'item', fields: [] } },
+  ], edges: [] };
+  const layout = await computeDefaultLayout(graph, undefined, { nonOrderingEdges: [], spine: ['step'], attachments: [{ node: 'source', step: 'step', side: 'left' }, { node: 'target', step: 'step', side: 'right' }] });
+  assert.ok(layout.source.x + layout.source.w < layout.step.x);
+  assert.ok(layout.target.x + layout.target.w < layout.step.x);
+  assert.ok(layout.source.y + layout.source.h < layout.target.y);
+});

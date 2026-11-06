@@ -10,6 +10,7 @@ import { validateDocument, projectDiagram, formatDiagnostic } from './semantics.
 import { computeDefaultLayout } from './layout/index.js';
 import { renderInfo } from './import/extended-info.js';
 import { importMarkdown } from './import/markdown.js';
+import { missingSchemaTypes } from './schema-diagnostics.js';
 import type { PortableArtifact, PortableTheme, BundleSizeReport } from './graph.js';
 
 const { values } = parseArgs({ options: { input: { type: 'string' }, theme: { type: 'string' }, css: { type: 'string' }, output: { type: 'string' }, title: { type: 'string', default: 'Luminous Portable' }, 'debug-performance': { type: 'boolean', default: false }, force: { type: 'boolean', default: false }, help: { type: 'boolean' } } });
@@ -30,6 +31,9 @@ if (values.help) {
     for (const style of Object.values(theme.styles)) for (const palette of [style.light, style.dark]) for (const color of [palette?.fill, palette?.stroke]) if (!/^#[0-9a-f]{6}$/i.test(color)) throw new Error('Theme colors must be six-digit hex values');
   }
   const diagnostics = validateDocument(notebook, theme);
+  for (const diagram of notebook.diagrams) for (const node of diagram.graph.nodes) if (node.card) {
+    for (const finding of missingSchemaTypes(node.card)) diagnostics.push({ ruleId: 'schema/unresolved-type', severity: 'warning', canvasId: diagram.id, line: diagram.line, elementIds: [node.id], message: `${finding.path}: type ${JSON.stringify(finding.type)} has no expandable schema; define one or use a primitive type expression` });
+  }
   for (const diagnostic of diagnostics) console.error(formatDiagnostic(diagnostic, values.input));
   if (diagnostics.some(d => d.severity === 'error')) {
     console.error('Generation rejected. Existing HTML, if any, is unchanged and represents the previous successful generation.');

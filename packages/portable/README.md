@@ -432,3 +432,7 @@ Companion theme JSON/CSS files are not part of the Markdown source view.
 Canvas Headers use `--portable-canvas-header-bg`, defaulting to the canvas/body
 background, so their surface differs from the article content. Custom CSS can
 override this token independently of `--portable-content-bg`.
+
+### Schema references in spine layouts
+
+Schema cards may assign `schemaKey` to identify a definition. A field with a nested `schema` using the same key as a default-visible card is connected by a permanent dashed edge and does not offer a redundant expansion control. When both cards are spine attachments, layout prefers the referring card’s side. Definitions without a default-visible target can be expanded and collapsed as usual. Schema definitions are authored; Portable does not extract them from source.
