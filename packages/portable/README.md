@@ -473,3 +473,23 @@ requirements of the three supported themes so authored theme typography is cover
 
 The reproduction input is `examples/label-measurement.md`, with
 `examples/label-measurement.css` for larger type and wrapping.
+
+### Spine side columns
+
+For `layout.spine`, each stage's attachments use one side, selected by its first attachment declaration. Later attachments on that stage are normalized to that side. The first attachment shares the stage's top edge; the remaining attachments stack below in declaration order. The next stage clears the full stack. This uses the same `leadingTreeLayout` height calculation as REST API Trees.
+
+### Retained artifact versions
+
+```sh
+just portable --input /project/.luminous/design.md --history /project/.luminous/artifacts/design --revision-label 'Grouped side calls' --force
+```
+
+The default output is `<history>/design.html`. `--output` can override it. The history directory contains `versions.json` (ordered version IDs), immutable `<N>.json` compiled document snapshots, and `<N>.md`, `<N>.css`, `<N>.theme.json` source companions. A changed compiled document appends a version; an unchanged latest document does not. Old snapshots retain measured layout and use one shared renderer per generated HTML. Their runtime rendering can change with renderer upgrades. Version labels and timestamps describe capture, not the date of reconstructed designs.
+
+`?v=N` pins a version; absent `v` or `?v=latest` selects the newest version. The dropdown pushes a history entry, preserving other query parameters. Back/Forward restores the selection. Invalid versions show an error. Switching disposes canvases and Extended Info panels and replaces custom CSS. Inactive versions incur JSON storage/parse cost but no mounted graph cost. The bundle contains one runtime and complete version documents; no iframe or delta-compression scheme.
+
+Generation locks the history directory and publishes only after parsing, validation, measurement and bundling succeed. A stale `.write-lock` after a killed process must be inspected before removal. Snapshot files are committed through the index; orphan files after interruption can be replaced on retry. HTML and history are separate filesystem publications, not a cross-file transaction: a disk failure after HTML publication can leave the index behind; rerun generation to reconcile. `--force` atomically replaces existing HTML. To keep the artifact shareable, snapshots do not depend on sibling files at runtime.
+
+### Canvas size
+
+Drag the bottom-left resize handle to enlarge a canvas. A strong border previews the result; the live canvas changes only on release. Width grows symmetrically, the top stays fixed, and neither dimension can shrink below its default. Applying a size uses the same camera compensation as Expand width, retaining node screen positions instead of fitting or relaying out the graph. Escape, pointer cancellation, lost capture or a window resize cancels an in-progress drag. The handle supports arrow keys (Shift for larger steps); Restore size returns to the default. Fullscreen temporarily hides the handle and retains the custom size for return. Size is local to each mounted canvas and resets on reload/version switch.

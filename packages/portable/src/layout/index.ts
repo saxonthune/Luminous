@@ -29,6 +29,12 @@ export async function computeDefaultLayout(graph: PortableGraph, measurements: N
         if (other) other.side = item.side;
       }
     }
+    // A stage owns one attachment column. Its first declaration selects the side.
+    const stageSides = new Map<string, 'left' | 'right'>();
+    for (const item of attachments) {
+      if (!stageSides.has(item.step)) stageSides.set(item.step, item.side);
+      item.side = stageSides.get(item.step)!;
+    }
     const all = [...spine, ...attachments.map(item => item.node)];
     const groups = graph.nodes.filter(node => node.group);
     const leaves = graph.nodes.filter(node => !node.group);
@@ -40,7 +46,7 @@ export async function computeDefaultLayout(graph: PortableGraph, measurements: N
     }
     const spineWidth = Math.max(...spine.map(id => sizes.get(id)!.w));
     const leftWidth = Math.max(0, ...attachments.filter(item => item.side === 'left').map(item => sizes.get(item.node)!.w));
-    const gap = 110;
+    const gap = 260;
     const centerX = leftWidth + gap + spineWidth / 2;
     const result: PortableLayout = {};
     let y = 0;
@@ -50,16 +56,19 @@ export async function computeDefaultLayout(graph: PortableGraph, measurements: N
       if (owner && graph.nodes.find(node => node.id === previous)?.parentId !== owner) y += headers.get(owner)!;
       const step = sizes.get(id)!;
       const attached = attachments.filter(item => item.step === id);
-      const sideHeight = (side: 'left' | 'right') => attached.filter(item => item.side === side).reduce((n, item) => n + sizes.get(item.node)!.h + 32, 0) - 32;
-      const height = Math.max(step.h, sideHeight('left'), sideHeight('right'));
-      result[id] = { x: centerX - step.w / 2, y: y + (height - step.h) / 2, ...step };
-      for (const side of ['left', 'right'] as const) {
-        let sideY = y + (height - Math.max(0, sideHeight(side))) / 2;
-        for (const item of attached.filter(item => item.side === side)) {
-          const size = sizes.get(item.node)!;
-          result[item.node] = { x: side === 'left' ? leftWidth - size.w : leftWidth + gap + spineWidth + gap, y: sideY, ...size };
-          sideY += size.h + 32;
-        }
+      // Reuse the REST API tree's first-child alignment and subtree demand.
+      const stageIds = [id, ...attached.map(item => item.node)];
+      const stageSizes = new Map(stageIds.map(node => [node, sizes.get(node)!]));
+      const stage = leadingTreeLayout([id], new Map([[id, attached.map(item => item.node)]]), stageSizes, { x: gap, y: 32 });
+      const height = Math.max(...stageIds.map(node => stage.get(node)!.y + sizes.get(node)!.h));
+      result[id] = { x: centerX - step.w / 2, y, ...step };
+      for (const item of attached) {
+        const size = sizes.get(item.node)!;
+        result[item.node] = {
+          x: item.side === 'left' ? leftWidth - size.w : leftWidth + gap + spineWidth + gap,
+          y: y + stage.get(item.node)!.y,
+          ...size,
+        };
       }
       y += height + 64;
     }

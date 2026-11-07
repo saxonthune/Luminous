@@ -77,6 +77,10 @@ description: Users can navigate and rearrange the generated graph transiently.
 | Drag selected item resize handle | Resize that item |
 | Wheel over overflowing text | Scroll text; zoom when it cannot scroll further in that direction |
 | Canvas Expand width / Restore width | Toggle that canvas between viewport width and article width |
+| Drag canvas bottom-left corner | Preview symmetric width and bottom-only height changes; release to apply |
+| Escape during canvas resize | Cancel preview without resizing |
+| Focused canvas resize handle + arrow keys | Resize in small increments; Shift uses larger increments |
+| Canvas Restore size | Return manually enlarged canvas to default dimensions |
 | Click Card footer source link | Open the source using its registered URL handler |
 | Left-drag node | Move the selected nodes; a group includes its descendants |
 | Left-drag background | Box-select nodes |
@@ -289,3 +293,38 @@ Implementation: `just build-static` generates the gallery from
 `packages/client/dist/portable/`. The page footer links to `?view=source`, which
 displays the exact embedded Markdown and offers a return link. Source view works
 in standalone files without a server.
+
+## Artifact versioning
+
+```yaml rhidoc-feature
+prefix: PVER
+name: Artifact versioning
+description: Authors can retain and revisit artifact iterations to improve them.
+```
+
+- **PVER1.** [p] Portable retains generated artifacts outside temporary directories so authors can revisit them for improvement.
+- **PVER2.** [p] One HTML artifact can contain multiple versions selectable through a version dropdown.
+- **PVER3.** [p] The version dropdown selects the version through the URL query string using ?v=N or ?v=latest.
+- **PVER4.** [p] When the URL has no version parameter, the artifact displays the latest version.
+- **PVER5.** [p] One HTML file uses one shared renderer for its versions.
+- **PVER6.** [p] The version dropdown retains its current colors and matches the height of the adjacent Theme button.
+
+## Canvas resizing
+
+```yaml rhidoc-feature
+prefix: PCR
+name: Canvas resizing
+description: Users can enlarge a canvas while keeping its content visually stationary.
+```
+
+- **PCR1.** [p] The user can resize a canvas by dragging its bottom-left corner.
+- **PCR2.** [p] When a resize is committed, canvas contents appear to remain in the same position, as with Expand width.
+- **PCR3.** [p] While the user drags the resize corner, a strong border previews the proposed canvas boundaries.
+- **PCR4.** [p] The canvas changes size only when the user releases the resize drag.
+- **PCR5.** [p] Horizontal resizing moves both side borders symmetrically.
+- **PCR6.** [p] Vertical resizing changes the bottom border without moving the top border.
+- **PCR7.** [p] The canvas cannot be resized smaller than its default size.
+- **PCR8.** [p] When the pointer would request a size below the default minimum, the preview border stops at that minimum.
+
+
+Canvas resizing implementation: the bottom-left handle previews bounds without changing the live viewport. Release applies clamped dimensions through the existing view-anchor preservation path. Pointer cancellation, lost capture, Escape and window resizing cancel the preview. The handle is hidden in fullscreen; the custom size is restored on leaving fullscreen. Restore size resets manual dimensions. Resizing is transient and does not relayout nodes.

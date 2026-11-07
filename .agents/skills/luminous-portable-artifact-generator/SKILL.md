@@ -5,7 +5,7 @@ description: Create or revise a standalone interactive HTML document with Lumino
 
 # Luminous Portable artifact generator
 
-Create one self-contained HTML file from retained Markdown input. The page can
+Create one self-contained HTML file from retained Markdown input. Keep generated artifacts and their version history in the project, outside temporary directories. The page can
 contain prose and zero or more interactive canvases. No server is needed.
 This skill authors artifacts; it does not require changing Portable's implementation.
 
@@ -23,7 +23,7 @@ into an unrelated design.
 
 ## Author and generate
 
-1. Keep editable `.md` inputs and any companion theme/CSS files. Use the user's
+1. Keep editable `.md` inputs and any companion theme/CSS files. Default to `.luminous/artifacts/<name>/` for retained output/history; do not use `/tmp` as the artifact’s only home. Use the user's
    project when appropriate; Portable's `examples/` is for reusable public
    samples, `examples/local/` for ignored private or ad-hoc samples, and
    `examples/generated/` for ignored HTML. Do not leave the only input in `/tmp`.
@@ -37,13 +37,13 @@ into an unrelated design.
    the source lives elsewhere:
 
    ```sh
-   just portable --input /absolute/design.md --output /absolute/design.html --title 'Design walkthrough'
+   just portable --input /absolute/design.md --history /project/.luminous/artifacts/design --title 'Design walkthrough' --force
    ```
 
    Optional: `--theme /absolute/theme.json`, `--css /absolute/style.css`,
    `--debug-performance`. Add `--force` when intentionally regenerating an
    existing output. Without `--output`, the generator prints a unique `/tmp`
-   artifact path. If setup is missing, inspect the repo instructions and
+   artifact path, but use `--history` for the retained workflow. If setup is missing, inspect the repo instructions and
    `just portable --help`; don't silently switch to a different renderer.
 5. Return clickable input and HTML paths. For an existing preview, regenerate
    the same output and tell the user to refresh. Say what generation verified;
@@ -93,6 +93,7 @@ the proposal explicitly changes them; make those changes clear to the reader.
   `legend` in its `portable-canvas` block. The Legend belongs to that canvas, stays
   at its bottom-right, always says **Legend**, and has its own minimize/expand state. There is no page-level
   legend. See authoring.md for the declaration format.
+- Each canvas has a bottom-left resize handle: drag previews the border, release applies symmetric width and bottom-only height growth while preserving content position. The default size is the minimum. Escape cancels; Restore size resets it.
 - Positions and settings changed in the browser are transient. Reset restores
   generated coordinates. There is no source watcher or save-back workflow.
 - Node geometry is measured from the actual styled components in generation-time
@@ -199,3 +200,13 @@ from Cards using `info`. The reusable Extended Info component opens from `[more]
 with Markdown, Zed links, drag/resize, minimize/restore and close. Details and the
 `layout.nonOrderingEdges` hint for retaining real return-call arrows are in the
 [metamodel reference](references/metamodel.md).
+
+## Artifact versions
+
+Use `--history /project/.luminous/artifacts/<name>` to retain immutable numbered document snapshots and publish one shared-renderer `design.html` there. A changed source, theme, CSS, or generated document/layout appends the next version; unchanged regeneration reuses the latest revision. `--revision-label` names a newly appended revision. Snapshots retain source Markdown, theme, custom CSS, measured geometry and layout; only the newest source is parsed/measured during regeneration. Previous versions use the renderer bundled in the newly generated HTML, not historical runtime code.
+
+The dropdown selects `?v=N` or `?v=latest`; absent `v` means latest. Preserve the stable artifact path across iterations. Switching versions disposes the mounted document and replaces its custom CSS. All version data is embedded, but only the selected document renders. Back/Forward restores selection; View Source shows the selected version. Unknown versions produce an explicit error with a latest-version recovery action.
+
+Prefer a durable file URL from the start. If migrating an already-open `/tmp` preview, keep the durable file as the source of record and optionally copy the generated HTML to the existing preview path; do not open a second tab for the same artifact. Reconstructed historical versions must say they are reconstructions; do not invent original generation timestamps or claim pixel-exact historical layouts.
+
+See `packages/portable/README.md` for snapshot files and locking. Do not edit old snapshot JSON to improve it: change the editable input and generate a new version.

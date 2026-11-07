@@ -1,8 +1,10 @@
-import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, mkdtemp, rm, rename } from 'node:fs/promises';
 import { resolve, dirname, join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { publishHistory } from './history.js';
+import type { VersionedArtifact } from './versions.js';
 import { bundleSizePlugin } from './bundle-size.js';
 import { build } from 'vite';
 import solid from 'vite-plugin-solid';
@@ -14,9 +16,9 @@ import { importMarkdown } from './import/markdown.js';
 import { missingSchemaTypes } from './schema-diagnostics.js';
 import type { PortableArtifact, PortableTheme, BundleSizeReport } from './graph.js';
 
-const { values } = parseArgs({ options: { input: { type: 'string' }, theme: { type: 'string' }, css: { type: 'string' }, output: { type: 'string' }, title: { type: 'string', default: 'Luminous Portable' }, 'debug-performance': { type: 'boolean', default: false }, force: { type: 'boolean', default: false }, help: { type: 'boolean' } } });
+const { values } = parseArgs({ options: { input: { type: 'string' }, history: { type: 'string' }, 'revision-label': { type: 'string' }, theme: { type: 'string' }, css: { type: 'string' }, output: { type: 'string' }, title: { type: 'string', default: 'Luminous Portable' }, 'debug-performance': { type: 'boolean', default: false }, force: { type: 'boolean', default: false }, help: { type: 'boolean' } } });
 if (values.help) {
-  console.log('just portable --input INPUT.md [--theme theme.json] [--css style.css] [--output design.html] [--title TITLE] [--force] [--debug-performance]');
+  console.log('just portable --input INPUT.md [--theme theme.json] [--css style.css] [--output design.html] [--title TITLE] [--force] [--debug-performance] [--history DIR] [--revision-label LABEL]');
 } else {
   if (!values.input || !values.input.toLowerCase().endsWith('.md')) throw new Error('--input requires a Markdown (.md) file');
   const source = await readFile(resolve(values.input), 'utf8');
@@ -65,10 +67,19 @@ if (values.help) {
         console.table(sizeReport.packages);
       }
       const escape = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
-      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="darkreader-lock"><title>${escape(values.title)}</title><style>${(css + customCss).replace(/<\/style/gi, '<\\/style')}</style></head><body><div id="app"></div><script id="portable-data" type="application/json">${JSON.stringify(artifact).replaceAll('<', '\\u003c')}</script><script>${js.replace(/<\/script/gi, '<\\/script')}</script></body></html>`;
-      const output = values.output ? resolve(values.output) : join(await mkdtemp(join(tmpdir(), 'luminous-portable-')), 'design.html');
+      const output = values.output ? resolve(values.output) : values.history ? join(resolve(values.history), 'design.html') : join(await mkdtemp(join(tmpdir(), 'luminous-portable-')), 'design.html');
       await mkdir(dirname(output), { recursive: true });
-      await writeFile(output, html, { flag: values.force ? 'w' : 'wx' });
+      const publish = async (payload: PortableArtifact | VersionedArtifact) => {
+        const versioned = 'format' in payload;
+        const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="darkreader-lock"><title>${escape(values.title)}</title><style>${(css + (versioned ? '' : customCss)).replace(/<\/style/gi, '<\\/style')}</style></head><body><div id="app"></div><script id="portable-data" type="application/json">${JSON.stringify(payload).replaceAll('<', '\\u003c')}</script><script>${js.replace(/<\/script/gi, '<\\/script')}</script></body></html>`;
+        if (values.force) {
+          const staged = join(dirname(output), `.${basename(output)}.${process.pid}.tmp`);
+          try { await writeFile(staged, html); await rename(staged, output); }
+          finally { await rm(staged, { force: true }); }
+        } else await writeFile(output, html, { flag: 'wx' });
+      };
+      if (values.history) await publishHistory(resolve(values.history), artifact, customCss, values['revision-label'], publish);
+      else await publish(artifact);
       console.log(output);
     } finally { await rm(temporary, { recursive: true, force: true }); }
   }

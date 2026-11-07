@@ -30,7 +30,7 @@
 .portable-document tr>:last-child{border-right:0}.portable-document tbody tr:last-child>td{border-bottom:0}
 .portable-document td{background:var(--portable-table-bg,var(--cactus-surface-alt))}
 .portable-document th{background:var(--portable-table-header-bg,color-mix(in srgb,var(--cactus-surface-alt) 82%,var(--cactus-border)))}
-.portable-canvas{height:clamp(480px,82vh,960px);display:flex;flex-direction:column;position:relative;margin:28px 0;border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-canvas-bg);line-height:normal;min-width:0}
+.portable-canvas{height:var(--portable-canvas-default-height,clamp(480px,82vh,960px));display:flex;flex-direction:column;position:relative;margin:28px 0;border:1px solid var(--cactus-border);border-radius:8px;background:var(--cactus-canvas-bg);line-height:normal;min-width:0}
 .portable-canvas:focus-visible{outline:2px solid var(--cactus-accent);outline-offset:3px}
 .portable-canvas-viewport{flex:1;min-height:0;position:relative}
 .portable-canvas header{border-radius:8px 8px 0 0;background:var(--cactus-surface)}
@@ -178,3 +178,12 @@
 .portable .portable-schema-expand:hover,.portable .portable-schema-expand:focus-visible{background:color-mix(in srgb,var(--portable-card-color) 80%,var(--portable-border-color));outline:0}
 .portable .portable-schema-expand:focus-visible{box-shadow:inset 0 0 0 2px var(--cactus-accent)}
 .portable-schema-expand .portable-schema-type{margin-left:auto}
+
+.portable-page-header>button,.portable-page-header select{height:36px}
+.portable-page-header label{display:flex;align-items:center;gap:6px}
+.portable-page-header select{font:inherit;padding:7px 10px;cursor:pointer}
+
+.portable-canvas-size-probe{position:absolute;top:0;left:0;width:100%;height:var(--portable-canvas-default-height,clamp(480px,82vh,960px));visibility:hidden;pointer-events:none}
+.portable .portable-canvas-resize{position:absolute;left:0;bottom:0;z-index:30;width:30px;height:30px;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:0 6px 0 6px;cursor:nesw-resize;touch-action:none;user-select:none}
+.portable-canvas>footer{padding-left:36px}
+.portable-canvas-resize-preview{position:absolute;top:0;z-index:1100;border:3px solid var(--cactus-accent);border-radius:8px;box-shadow:0 0 0 1px var(--cactus-surface);pointer-events:none}

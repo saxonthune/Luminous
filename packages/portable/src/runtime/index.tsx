@@ -1,3 +1,6 @@
+import { CanvasResizeHandle } from './CanvasResizeHandle.js';
+import type { CanvasSize } from '../canvas-resize.js';
+import { selectedVersion, urlWithVersion, type VersionedArtifact } from '../versions.js';
 import { PageFooter } from './PageFooter.js';
 import { ExtendedInfo } from './ExtendedInfo.js';
 import { Legend } from './Legend.js';
@@ -17,16 +20,9 @@ import '@luminous/cactus/cactus-themes.css';
 import './style.css';
 import { createPerformanceDiagnostics } from './performance.js';
 
-const artifact: PortableArtifact = JSON.parse(document.getElementById('portable-data')!.textContent!);
-if (artifact.debugPerformance && artifact.bundleSize) {
-  const report = artifact.bundleSize;
-  console.groupCollapsed('[portable bundle size]');
-  console.info('Exact UTF-8 payload bytes (content excludes this report)', { javascript: report.javascriptBytes, css: report.cssBytes, content: report.contentBytes });
-  console.info('Package attribution: rendered characters before final minification, not final byte totals or runtime memory.');
-  console.table(report.packages);
-  console.groupEnd();
-}
-function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onThemeChange: () => void }) {
+const payload: PortableArtifact | VersionedArtifact = JSON.parse(document.getElementById('portable-data')!.textContent!);
+function PortableCanvas(props: { artifact: PortableArtifact; diagram: PortableDiagram; theme: Theme; onThemeChange: () => void }) {
+  const artifact = props.artifact;
   const diagram = props.diagram;
   const title = diagram.settings?.title ?? diagram.id;
   const diagnostics = createPerformanceDiagnostics(artifact.debugPerformance);
@@ -47,6 +43,9 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
   let restoreFocus: HTMLElement | null = null;
   let previousOverflow = "";
   const [expanded, setExpanded] = createSignal(false);
+  const [customSize, setCustomSize] = createSignal<CanvasSize>();
+  const [minimumSize, setMinimumSize] = createSignal<CanvasSize>({ width: 0, height: 0 });
+  let sizeProbe!: HTMLDivElement;
   const [pageWidth, setPageWidth] = createSignal(0);
   const [canvasInset, setCanvasInset] = createSignal(0);
   const [selected, setSelected] = createSignal<readonly string[]>([]);
@@ -90,7 +89,24 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
       widthFrame = 0;
     });
   }
-  const toggleWidth = () => preserveAnchor(() => setExpanded(value => !value));
+  const toggleWidth = () => preserveAnchor(() => {
+    if (expanded() || customSize()) { setExpanded(false); setCustomSize(undefined); }
+    else setExpanded(true);
+  });
+  const commitSize = (size: CanvasSize) => preserveAnchor(() => {
+    setExpanded(false);
+    setCustomSize(size);
+  });
+  const sectionStyle = () => {
+    if (fullscreen()) return {};
+    const size = customSize();
+    if (size) {
+      const minimum = minimumSize();
+      const width = Math.max(minimum.width, size.width);
+      return { width: `${width}px`, height: `${Math.max(minimum.height, size.height)}px`, 'margin-left': `${(minimum.width - width) / 2}px` };
+    }
+    return expanded() ? { width: `${pageWidth()}px`, 'margin-left': `${-canvasInset()}px` } : {};
+  };
   function enterFullscreen() {
     restoreFocus = document.activeElement as HTMLElement | null;
     previousOverflow = document.documentElement.style.overflow;
@@ -227,6 +243,8 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
     const measure = () => {
       setPageWidth(document.documentElement.clientWidth);
       setCanvasInset(home.getBoundingClientRect().left);
+      const baseline = sizeProbe.getBoundingClientRect();
+      setMinimumSize({ width: baseline.width, height: baseline.height });
     };
     const observer = new ResizeObserver(measure);
     observer.observe(document.documentElement);
@@ -300,10 +318,11 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
       </>;
     }}</For>;
   }
-  return <div ref={home} style={{ 'min-height': placeholderHeight() === undefined ? undefined : `${placeholderHeight()}px` }}>
+  return <div ref={home} style={{ position: 'relative', 'min-height': placeholderHeight() === undefined ? undefined : `${placeholderHeight()}px` }}>
+  <div ref={sizeProbe} class="portable-canvas-size-probe" aria-hidden="true" />
   <section class="portable-canvas" classList={{ 'portable-canvas-expanded': expanded(), 'portable-canvas-fullscreen': fullscreen() }}
-    style={expanded() && !fullscreen() ? { width: `${pageWidth()}px`, 'margin-left': `${-canvasInset()}px` } : {}} tabIndex={0} aria-label={`Diagram ${title}`} onKeyDown={keydown} ref={section}>
-    <header aria-label={fullscreen() ? "Fullscreen Canvas Header" : "Canvas Header"}><strong>{fullscreen() ? `${artifact.sourceFilename} · ${title}` : title}</strong><button onClick={() => fit()}>Fit all</button><button disabled={!selected().length} onClick={() => fit(selected())}>Fit selection</button><button onClick={() => canvas.zoomOut()} aria-label="Zoom out">−</button><button onClick={() => canvas.zoomIn()} aria-label="Zoom in">+</button><button onClick={reset}>Reset layout</button><button disabled={fullscreen()} aria-pressed={expanded()} onClick={toggleWidth}>{expanded() ? 'Restore width' : 'Expand width'}</button><button aria-pressed={fullscreen()} onClick={() => fullscreen() ? exitFullscreen() : enterFullscreen()}>{fullscreen() ? 'Exit fullscreen' : 'Fullscreen'}</button>{fullscreen() && <button onClick={props.onThemeChange}>Theme: {props.theme}</button>}<CanvasSettings scrollZoom={scrollZoom()} onScrollZoomChange={setScrollZoom} /></header>
+    style={sectionStyle()} tabIndex={0} aria-label={`Diagram ${title}`} onKeyDown={keydown} ref={section}>
+    <header aria-label={fullscreen() ? "Fullscreen Canvas Header" : "Canvas Header"}><strong>{fullscreen() ? `${artifact.sourceFilename} · ${title}` : title}</strong><button onClick={() => fit()}>Fit all</button><button disabled={!selected().length} onClick={() => fit(selected())}>Fit selection</button><button onClick={() => canvas.zoomOut()} aria-label="Zoom out">−</button><button onClick={() => canvas.zoomIn()} aria-label="Zoom in">+</button><button onClick={reset}>Reset layout</button><button disabled={fullscreen()} aria-pressed={expanded() || Boolean(customSize())} onClick={toggleWidth}>{customSize() ? 'Restore size' : expanded() ? 'Restore width' : 'Expand width'}</button><button aria-pressed={fullscreen()} onClick={() => fullscreen() ? exitFullscreen() : enterFullscreen()}>{fullscreen() ? 'Exit fullscreen' : 'Fullscreen'}</button>{fullscreen() && <button onClick={props.onThemeChange}>Theme: {props.theme}</button>}<CanvasSettings scrollZoom={scrollZoom()} onScrollZoomChange={setScrollZoom} /></header>
     <div class="portable-canvas-viewport" ref={viewport}><Canvas onPerformanceEvent={artifact.debugPerformance ? diagnostics.event : undefined} ref={handle => canvas = handle} viewportOptions={{ minZoom: 0.015, maxZoom: 3, scrollZoom }} boxSelect={{ trigger: 'drag' }} onSelectionChange={setSelected}
       edgeLod={(_edge, state) => ({
         labelVisible: state.zoom > 0.3 || state.emphasis === 'incident',
@@ -320,12 +339,19 @@ function PortableCanvas(props: { diagram: PortableDiagram; theme: Theme; onTheme
     <Legend definition={diagram.settings?.legend} palette={artifact.theme} theme={props.theme} />
     </div>
     <footer>Drag nodes · Drag background to select · Shift-click to add/remove · Right/middle-drag to pan · {scrollZoom() ? 'Wheel to zoom' : 'Wheel to pan'} · Ctrl+wheel to zoom · F to fit selection · Esc to clear · {selected().length} selected</footer>
+    <Show when={!fullscreen()}><CanvasResizeHandle section={() => section} minimum={() => minimumSize()} onCommit={commitSize} /></Show>
   </section>
   <dialog ref={dialog} class="portable-fullscreen-dialog" aria-label={`Fullscreen canvas ${title}`}
     onCancel={event => { event.preventDefault(); exitFullscreen(); }} />
   </div>;
 }
-function App() {
+function App(props: { artifact: PortableArtifact; versions?: VersionedArtifact; selection?: string; onVersion?: (value: string) => void }) {
+  const artifact = props.artifact;
+  if (artifact.debugPerformance && artifact.bundleSize) {
+    console.groupCollapsed('[portable bundle size]');
+    console.info('Exact UTF-8 payload bytes', artifact.bundleSize);
+    console.groupEnd();
+  }
   const sourceView = new URL(window.location.href).searchParams.get('view') === 'source';
   const viewHref = () => {
     const url = new URL(window.location.href);
@@ -345,12 +371,16 @@ function App() {
     if (!article) return;
     const disposers = Array.from(article.querySelectorAll<HTMLElement>('[data-portable-canvas]')).map(slot => {
       const diagram = artifact.diagrams[Number(slot.dataset.portableCanvas)];
-      return render(() => <PortableCanvas diagram={diagram} theme={theme()} onThemeChange={cycleTheme} />, slot);
+      return render(() => <PortableCanvas artifact={artifact} diagram={diagram} theme={theme()} onThemeChange={cycleTheme} />, slot);
     });
     onCleanup(() => disposers.forEach(dispose => dispose()));
   });
   return <div class={`portable cactus-theme-${theme()}`}>
     <header class="portable-page-header"><strong>{artifact.title}</strong>
+      <Show when={props.versions}><label>Version <select aria-label="Artifact version" value={props.selection ?? 'latest'} onChange={event => props.onVersion?.(event.currentTarget.value)}>
+        <option value="latest">Latest (v{props.versions?.versions.at(-1)?.version})</option>
+        <For each={props.versions?.versions}>{version => <option value={String(version.version)}>v{version.version} · {version.label}</option>}</For>
+      </select></label></Show>
       <button onClick={cycleTheme}>Theme: {theme()}</button>
     </header>
     <Show when={sourceView} fallback={<article ref={element => article = element} class="portable-document" innerHTML={artifact.html} />}>
@@ -363,4 +393,26 @@ function App() {
     <PageFooter sourceHref={viewHref()} sourceView={sourceView} />
   </div>;
 }
-render(() => <App />, document.getElementById('app')!);
+function VersionedApp(props: { collection: VersionedArtifact }) {
+  const [href, setHref] = createSignal(window.location.href);
+  const selected = createMemo(() => {
+    try { return { version: selectedVersion(props.collection.versions, href()), error: '' }; }
+    catch (error) { return { version: undefined, error: String(error) }; }
+  });
+  const selection = () => new URL(href()).searchParams.get('v') ?? 'latest';
+  const change = (value: string) => {
+    window.history.pushState(null, '', urlWithVersion(window.location.href, value === 'latest' ? value : Number(value)));
+    setHref(window.location.href);
+  };
+  onMount(() => {
+    const pop = () => setHref(window.location.href);
+    window.addEventListener('popstate', pop);
+    onCleanup(() => window.removeEventListener('popstate', pop));
+  });
+  // A keyed subtree disposes canvases, observers and info panels before mounting another version.
+  return <Show when={selected().version} keyed fallback={<main role="alert"><p>{selected().error}</p><button onClick={() => change('latest')}>Show latest version</button></main>}>{version => <>
+    <style data-portable-version-style>{version.customCss}</style>
+    <App artifact={version.artifact} versions={props.collection} selection={selection()} onVersion={change} />
+  </>}</Show>;
+}
+render(() => 'format' in payload ? <VersionedApp collection={payload} /> : <App artifact={payload} />, document.getElementById('app')!);

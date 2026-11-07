@@ -41,3 +41,26 @@ test('related default schema attachments share the referring side', async () => 
   assert.ok(layout.target.x + layout.target.w < layout.step.x);
   assert.ok(layout.source.y + layout.source.h < layout.target.y);
 });
+
+
+test('one stage stacks mixed-side attachments on its first side and reserves their full height', async () => {
+  const graph: PortableGraph = { direction: 'DOWN', nodes: ['step', 'next', 'one', 'two', 'three'].map(id => ({ id, label: id, group: false, classes: [] })), edges: [] };
+  const measurements = { step: { w: 200, h: 60 }, next: { w: 200, h: 60 }, one: { w: 150, h: 90 }, two: { w: 180, h: 120 }, three: { w: 160, h: 70 } };
+  for (const side of ['left', 'right'] as const) {
+    const result = await computeDefaultLayout(graph, measurements, undefined, {
+      nonOrderingEdges: [], spine: ['step', 'next'], attachments: [
+        { node: 'one', step: 'step', side },
+        { node: 'two', step: 'step', side: side === 'left' ? 'right' : 'left' },
+        { node: 'three', step: 'step', side },
+      ],
+    });
+    assert.equal(result.one.y, result.step.y);
+    assert.ok(result.two.y >= result.one.y + result.one.h);
+    assert.ok(result.three.y >= result.two.y + result.two.h);
+    assert.ok(result.next.y > result.three.y + result.three.h);
+    for (const id of ['one', 'two', 'three']) {
+      if (side === 'left') assert.ok(result[id].x + result[id].w < result.step.x);
+      else assert.ok(result[id].x > result.step.x + result.step.w);
+    }
+  }
+});
