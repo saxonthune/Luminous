@@ -61,6 +61,22 @@ Spine layout reuses the REST API Tree's `leadingTreeLayout` for alignment and he
 
 What should a navigable “room” represent: a function, a basic block, a meaningful operation with relevant state, or a zoom-dependent unit? How should loops, concurrent work, conditional reachability, state changes and repeated calls be unfolded? Which runtime observations are available and how should unknowns be shown? These are exploration questions, not decided semantics. The related Research Documents distinguish possible progression, runtime configuration, and an observed execution trace.
 
+## Rust ownership labels
+
+For a static function/module call map, use explicit labels:
+
+- `Binary: <Cargo binary target name>` for code rooted in a binary target.
+- `Library: <Rust library crate name>` for a whole library target.
+- `Module: <crate_name>::<module>::<nested_module>` for module containers.
+
+Read target identities from Cargo manifests; do not conflate a package name with its binary and library targets. Use Rust `::` namespace separators, not decorative dots or abbreviations such as `CLI · credentials`. For example, package `braincrawl-cli` can contain binary `braincrawl` and library `braincrawl_cli`; `Module: braincrawl_cli::credentials` belongs to the library. A file is source location, not automatically a separate namespace. Keep proposed modules and unchanged modules distinguishable through the diagram's change language and supporting contracts. Do not wrap the vertical-flow projection in ownership containers; it retains ownership inside Cards.
+
 ## Candidate code-graph projection
 
 A future source index could provide definitions with repository, revision, file, span and symbol identity; module containment, imports and exports; call sites and possible callees (including async callbacks and dynamic dispatch with uncertainty); control branches, guards, loops and exceptional returns; type declarations, fields, optionality, unions, generic arguments and type references; function parameters and return types; reads, writes and provenance of state; endpoint callers, routes, handlers, storage operations and external services. Include evidence and analysis confidence, distinguish declared, inferred, proposed and observed facts, and keep runtime values and traces separate from static code. Query backward from a selected operation for its inputs and sources, and forward for effects, projecting only the paths and expandable types needed to answer the question. Preserve unknowns and do not claim a static reference proves execution, reachability or readiness.
+
+## File-change ownership projection
+
+For a complete code-change plan, group file Cards into containers identifying actual crate/library targets, shared packages, deployed Workers, Web clients and verification tooling. Use repo-relative file paths in footers, filenames in headers and source links for existing files. Mark suggested paths explicitly. Use the shared diff badges independently of role colors; an existing dependency or contract audit alone does not imply a code change. Solid edges show relevant calls/dependencies; distinguish HTTP crossings, compatibility relationships and verification edges. This ownership projection differs from the ordered-call spine, which keeps module ownership inside function Cards.
+
+When the user names a successful reference artifact, inspect its editable input and carry forward its grouping, labels, components and disclosure conventions. Apply relevant recorded steering before simplifying it to a flat file list.

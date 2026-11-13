@@ -484,7 +484,7 @@ For `layout.spine`, each stage's attachments use one side, selected by its first
 just portable --input /project/.luminous/design.md --history /project/.luminous/artifacts/design --revision-label 'Grouped side calls' --force
 ```
 
-The default output is `<history>/design.html`. `--output` can override it. The history directory contains `versions.json` (ordered version IDs), immutable `<N>.json` compiled document snapshots, and `<N>.md`, `<N>.css`, `<N>.theme.json` source companions. A changed compiled document appends a version; an unchanged latest document does not. Old snapshots retain measured layout and use one shared renderer per generated HTML. Their runtime rendering can change with renderer upgrades. Version labels and timestamps describe capture, not the date of reconstructed designs.
+The default output is `<history>/design.html`. `--output` can override it. The history directory contains `versions.json` (ordered version IDs), `<N>.json` compiled document snapshots, and `<N>.md`, `<N>.css`, `<N>.theme.json` source companions. A changed compiled document appends a version by default; an unchanged latest document does not. `--amend-latest` explicitly replaces only the current numbered version for additive or trivial edits. Old snapshots retain measured layout and use one shared renderer per generated HTML. Their runtime rendering can change with renderer upgrades. Version labels and timestamps describe capture, not the date of reconstructed designs.
 
 `?v=N` pins a version; absent `v` or `?v=latest` selects the newest version. The dropdown pushes a history entry, preserving other query parameters. Back/Forward restores the selection. Invalid versions show an error. Switching disposes canvases and Extended Info panels and replaces custom CSS. Inactive versions incur JSON storage/parse cost but no mounted graph cost. The bundle contains one runtime and complete version documents; no iframe or delta-compression scheme.
 
@@ -492,4 +492,16 @@ Generation locks the history directory and publishes only after parsing, validat
 
 ### Canvas size
 
-Drag the bottom-left resize handle to enlarge a canvas. A strong border previews the result; the live canvas changes only on release. Width grows symmetrically, the top stays fixed, and neither dimension can shrink below its default. Applying a size uses the same camera compensation as Expand width, retaining node screen positions instead of fitting or relaying out the graph. Escape, pointer cancellation, lost capture or a window resize cancels an in-progress drag. The handle supports arrow keys (Shift for larger steps); Restore size returns to the default. Fullscreen temporarily hides the handle and retains the custom size for return. Size is local to each mounted canvas and resets on reload/version switch.
+Drag the bottom-right resize handle to enlarge a canvas. A strong border previews the result; the live canvas changes only on release. Width grows symmetrically, the top stays fixed, and neither dimension can shrink below its default. Applying a size uses the same camera compensation as Expand width, retaining node screen positions instead of fitting or relaying out the graph. Escape, pointer cancellation, lost capture or a window resize cancels an in-progress drag. The handle supports arrow keys (Shift for larger steps); Restore size returns to the default. Fullscreen temporarily hides the handle and retains the custom size for return. Size is local to each mounted canvas and resets on reload/version switch.
+
+### Updating the current version
+
+For additive or trivial edits, pass `--history DIR --amend-latest --force`.
+This republishes the latest numbered version and its source/theme/CSS companions
+without adding a dropdown entry. It preserves the original version timestamp and
+label unless a new label is supplied. Older versions remain unchanged. An empty
+history cannot be amended. Normal generation still appends meaningful revisions.
+
+## Document-flow schema blocks
+
+A `portable-schema` Markdown fence renders the existing SchemaCard presentation without a canvas. It accepts `title`, `description`, `fields`, optional diff and source footer; nested definitions expand below the block. Root `component` is omitted; nested `schema` objects use the existing `component: schema-card` contract. Normal `ts` and `sql` fences remain code, not inferred schemas. See `examples/schema-block.md` and the artifact skill's authoring reference. No browser measurement is required for a schema-only document.

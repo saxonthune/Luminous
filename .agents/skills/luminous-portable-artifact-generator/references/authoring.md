@@ -253,3 +253,25 @@ whole generation; this does not run an E2E suite. Plain Markdown needs no browse
 For cross-machine consistency, use available or embedded fonts; arbitrary viewport-
 dependent CSS or different installed fonts can still change metrics after generation.
 Regenerate the same output when changing fonts, wrapping, padding, or component data.
+
+## Schema blocks without a canvas
+
+Use a `portable-schema` fence when the reader needs colored type fields and nested definitions in the page rather than a diagram. The fence contains one schema definition; omit the root `component`. It reuses SchemaCard validation, field colors, optional markers, diff badges and source footers. An authored nested `schema` expands below the block; no dragging, zoom, graph edges, or canvas metadata is involved. Canvas-only `info` panels are not supported here. Ordinary TypeScript/SQL fences are unchanged; Portable does not infer schema fields from code.
+
+````markdown
+```portable-schema
+title: BookListSummary
+description: Small private record used to draw one list card.
+fields:
+  - { name: id, type: string, kind: identifier }
+  - { name: title, type: string, kind: text }
+  - { name: authors, type: "string[]", kind: collection }
+  - { name: filename, type: string, kind: text, optional: true }
+```
+````
+
+The same field definitions can be used in a canvas `schema-card` or a document `portable-schema`; this is a presentation choice, not another type system. Nested `schema` definitions retain `component: schema-card` as in the canvas format. Shared `schemaKey` values do not create document-wide references or edges in this first document-flow presentation.
+
+## Component badges and modifier sections
+
+Cards support optional `badges: string[]` and `modifiers` sections. Badges remain visible at summary zoom. Modifier sections show a name and label/value rows at detail zoom. Each modifier has `name` and `parameters`; each parameter has string `name` and string `value`. These are descriptive values rather than executable controls. See the [Blender Object Assembly recipe](blender-object-assembly.md) for an example.

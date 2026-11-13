@@ -6,6 +6,7 @@ export type MeasurementOutput = Record<string, NodeMeasurement>;
 
 /** Width is a presentation constraint, never a guess about text length. */
 export function componentWidth(card?: PortableCard): number | undefined {
+  if (card?.modifiers?.length) return 340;
   switch (card?.component) {
     case 'schema-card': return 400;
     case 'usage-card': return 520;

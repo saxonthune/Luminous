@@ -16,7 +16,7 @@ export function applyNodeContent(graph: PortableGraph, content: unknown): void {
       throw new Error(`portable-nodes: ${id} needs component: card, rest-card, transition or usage-card and a string title`);
     }
     if (card.component === 'transition' && Object.keys(card).some(key => !['component', 'title'].includes(key))) throw new Error(`Transition ${id} accepts only component and title`);
-    if (Object.keys(card).some(key => !['component', 'title', 'body', 'footer', 'diff', 'info', ...(card.component === 'rest-card' ? ['methods'] : []), ...(card.component === 'usage-card' ? ['usage'] : []), ...(card.component === 'schema-card' ? ['fields', 'description', 'schemaKey'] : [])].includes(key))) throw new Error(`Unknown card field on ${id}`);
+    if (Object.keys(card).some(key => !['component', 'title', 'body', 'footer', 'diff', 'info', 'badges', 'modifiers', ...(card.component === 'rest-card' ? ['methods'] : []), ...(card.component === 'usage-card' ? ['usage'] : []), ...(card.component === 'schema-card' ? ['fields', 'description', 'schemaKey'] : [])].includes(key))) throw new Error(`Unknown card field on ${id}`);
     if (card.component === 'schema-card') {
       if (card.description !== undefined && (typeof card.description !== 'string' || !card.description.trim())) throw new Error(`Invalid schema description on ${id}`);
       if (card.schemaKey !== undefined && (typeof card.schemaKey !== 'string' || !card.schemaKey.trim())) throw new Error(`Invalid schemaKey on ${id}`);
@@ -43,6 +43,8 @@ export function applyNodeContent(graph: PortableGraph, content: unknown): void {
       }
       if (card.body !== undefined) throw new Error(`usage-card ${id} uses structured usage instead of body`);
     }
+    if (card.badges !== undefined && (!Array.isArray(card.badges) || card.badges.some(value => typeof value !== 'string' || !value.trim()))) throw new Error(`Invalid badges on ${id}`);
+    if (card.modifiers !== undefined && (!Array.isArray(card.modifiers) || card.modifiers.some(group => !object(group) || typeof group.name !== 'string' || !group.name.trim() || Object.keys(group).some(key => !['name', 'parameters'].includes(key)) || !Array.isArray(group.parameters) || group.parameters.some(row => !object(row) || typeof row.name !== 'string' || !row.name.trim() || typeof row.value !== 'string' || Object.keys(row).some(key => !['name', 'value'].includes(key)))))) throw new Error(`Invalid modifier sections on ${id}`);
     if (card.body !== undefined && typeof card.body !== 'string') throw new Error(`Invalid body on ${id}`);
     if (card.diff !== undefined && !isDiffKind(card.diff)) throw new Error(`Invalid diff on ${id}: expected new, additive, or modified`);
     if (card.info !== undefined && (typeof card.info !== 'string' || !card.info.trim())) throw new Error(`Invalid info reference on ${id}`);
@@ -53,6 +55,6 @@ export function applyNodeContent(graph: PortableGraph, content: unknown): void {
       if (value.href !== undefined && (typeof value.href !== 'string' || !/^(https?:\/\/|zed:\/\/|mailto:|#)/i.test(value.href))) throw new Error(`Unsupported footer link on ${id}`);
       footer = { text: value.text, href: value.href as string | undefined };
     }
-    node.card = { component: card.component as import('../graph.js').PortableCard['component'], ...(card.component === 'rest-card' ? { methods: card.methods as import('../rest.js').HttpMethod[] } : {}), ...(card.component === 'usage-card' ? { usage: card.usage as import('../graph.js').PortableCard['usage'] } : {}), ...(card.component === 'schema-card' ? { fields: card.fields as import('../graph.js').PortableCard['fields'], description: card.description as string | undefined, schemaKey: card.schemaKey as string | undefined } : {}), info: card.info as string | undefined, diff: card.diff as import('../diff.js').DiffKind | undefined, title: card.title, body: card.body as string | undefined, footer };
+    node.card = { component: card.component as import('../graph.js').PortableCard['component'], ...(card.component === 'rest-card' ? { methods: card.methods as import('../rest.js').HttpMethod[] } : {}), ...(card.component === 'usage-card' ? { usage: card.usage as import('../graph.js').PortableCard['usage'] } : {}), ...(card.component === 'schema-card' ? { fields: card.fields as import('../graph.js').PortableCard['fields'], description: card.description as string | undefined, schemaKey: card.schemaKey as string | undefined } : {}), badges: card.badges as string[] | undefined, modifiers: card.modifiers as import('../graph.js').PortableCard['modifiers'], info: card.info as string | undefined, diff: card.diff as import('../diff.js').DiffKind | undefined, title: card.title, body: card.body as string | undefined, footer };
   }
 }

@@ -1,5 +1,5 @@
 import { DiffBadge } from './DiffBadge.js';
-import { createMemo, Show, type JSX } from 'solid-js';
+import { createMemo, For, Show, type JSX } from 'solid-js';
 import { stopWheelIfScrollable } from '@luminous/cactus/runtime';
 import type { PortableCard } from '../graph.js';
 
@@ -12,11 +12,24 @@ export function Card(props: { content: PortableCard; zoom: number; onMore?: (id:
       <Show when={props.content.diff}>{kind => <DiffBadge kind={kind()} />}</Show>
       {props.headerAction}
     </div>
+    <Show when={props.content.badges?.length}>
+      <div class="portable-object-badges" aria-label="Component status">
+        <For each={props.content.badges}>{badge => <span class="portable-object-badge">{badge}</span>}</For>
+      </div>
+    </Show>
     {props.badgeRow}
     <Show when={!details() && !props.content.info && (props.content.body || props.content.footer)}>
       <span class="portable-card-disclosure" title="Zoom in to see details" aria-label="Zoom in to see details">…</span>
     </Show>
     <Show when={details()}>
+      <Show when={props.content.modifiers?.length}>
+        <div class="portable-modifier-sections" onWheel={stopWheelIfScrollable}>
+          <For each={props.content.modifiers}>{modifier => <section class="portable-modifier-section">
+            <div class="portable-modifier-name">{modifier.name}</div>
+            <dl><For each={modifier.parameters}>{parameter => <div class="portable-modifier-row"><dt>{parameter.name}</dt><dd>{parameter.value}</dd></div>}</For></dl>
+          </section>}</For>
+        </div>
+      </Show>
       <Show when={bodyContent()}>{bodyContent()}</Show>
       <Show when={!bodyContent() && props.content.body}><div class="portable-card-body" onWheel={stopWheelIfScrollable}>{props.content.body}</div></Show>
     </Show>

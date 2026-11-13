@@ -1,5 +1,5 @@
 /** REST Card meaning and fallback palettes. Path parameters may also have methods. */
-export const HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'TRACE', 'CONNECT'] as const;
+export const HTTP_METHODS = ['GET', 'HEAD', 'QUERY', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'TRACE', 'CONNECT'] as const;
 export type HttpMethod = typeof HTTP_METHODS[number];
 export type RestRole = 'prefix' | 'endpoint' | 'parameter';
 export const isHttpMethod = (value: unknown): value is HttpMethod => typeof value === 'string' && (HTTP_METHODS as readonly string[]).includes(value);

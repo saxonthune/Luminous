@@ -29,7 +29,7 @@ export interface ParsedDiagram {
     legend?: { entries: LegendInput[] };
   };
 }
-export interface ParsedDocument { html: string; diagrams: ParsedDiagram[]; model?: Model; info?: Record<string, import('./import/extended-info.js').InfoInput> }
+export interface ParsedDocument { html: string; diagrams: ParsedDiagram[]; model?: Model; info?: Record<string, import('./import/extended-info.js').InfoInput>; schemaBlocks?: import('./graph.js').PortableCard[] }
 export interface RuleContext { diagram: ParsedDiagram; model?: Model }
 export interface RuleFinding { message: string; elementIds?: string[]; suggestion?: string }
 export interface ValidationRule { id: string; check(context: RuleContext): RuleFinding[] }

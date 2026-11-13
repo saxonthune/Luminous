@@ -29,7 +29,7 @@ into an unrelated design.
    `examples/generated/` for ignored HTML. Do not leave the only input in `/tmp`.
 2. Use ordinary Markdown for commentary and fenced `mermaid` flowcharts for
    diagrams. Multiple blocks produce independent canvases sharing one page theme.
-   Markdown without diagrams is valid. Input must be `.md`, not `.mmd`.
+   Markdown without diagrams is valid. Use `portable-schema` fences for colored type fields and nested definitions directly in document flow, without a canvas; see authoring.md. Input must be `.md`, not `.mmd`.
 3. Read [authoring.md](references/authoring.md) for metadata fences, Cards, themes,
    source links, and the optional action-flow layout. Keep proposed behavior
    distinct from implemented behavior when explaining a codebase.
@@ -45,9 +45,14 @@ into an unrelated design.
    existing output. Without `--output`, the generator prints a unique `/tmp`
    artifact path, but use `--history` for the retained workflow. If setup is missing, inspect the repo instructions and
    `just portable --help`; don't silently switch to a different renderer.
-5. Return clickable input and HTML paths. For an existing preview, regenerate
+5. On first generation, open the retained HTML in the user’s browser using the available OS opener or the user's explicitly preferred browser. For later revisions, refresh the existing artifact instead of opening duplicate tabs.
+6. Return clickable input and HTML paths. For an existing preview, regenerate
    the same output and tell the user to refresh. Say what generation verified;
    do not claim browser interactions were tested unless actually exercised.
+
+## Didactic purpose
+
+The primary goal of an artifact is didactic: induce learning and understanding in the reader. Correctness is necessary; organize information so the explanation is rhetorically effective. Lead with the main idea and make each view develop it. Prefer concrete contracts and examples over prose inventories when explaining new structures; move supporting detail out of the reader’s main path. Check whether a reader can explain the change after the first view, rather than judging only completeness or rendering.
 
 ## Diagram clarity
 
@@ -93,7 +98,7 @@ the proposal explicitly changes them; make those changes clear to the reader.
   `legend` in its `portable-canvas` block. The Legend belongs to that canvas, stays
   at its bottom-right, always says **Legend**, and has its own minimize/expand state. There is no page-level
   legend. See authoring.md for the declaration format.
-- Each canvas has a bottom-left resize handle: drag previews the border, release applies symmetric width and bottom-only height growth while preserving content position. The default size is the minimum. Escape cancels; Restore size resets it.
+- Each canvas has a bottom-right resize handle: drag previews the border, release applies symmetric width and bottom-only height growth while preserving content position. The default size is the minimum. Escape cancels; Restore size resets it.
 - Positions and settings changed in the browser are transient. Reset restores
   generated coordinates. There is no source watcher or save-back workflow.
 - Node geometry is measured from the actual styled components in generation-time
@@ -138,6 +143,12 @@ the narrow capability that would help. If the path was easy, say how the artifac
 was produced. Record useful feedback below without making product decisions
 or changing the implementation merely to complete an artifact.
 
+## Learning from artifact iterations
+
+When the user steers an artifact—correcting layout, grouping, vocabulary, components or explanation—record the steering in a timestamped file in `feedback/`. Include the user’s concrete preference, what failed, the corrected approach, artifact/input paths and verification limits. Record at the time of the correction; do not rely on conversation memory. Do not log every routine successful generation.
+
+Before revising an artifact, inspect its retained inputs and any user-named reference artifact. Read only feedback relevant to the current diagram or recurring issue. Reuse accepted conventions across iterations unless the user changes direction. When feedback establishes a reusable authoring practice, update the fitting recipe/reference as well as keeping the evidence in the log. Keep feedback details out of this main file. Artifact iterations should improve from recorded steering rather than rediscovering the same preferences.
+
 ## Feedback logs
 
 Write useful learnings, difficulties, bugs, ideas, and user corrections into
@@ -160,7 +171,7 @@ issue recurs; don't load the entire directory by default.
 
 ## Semantic models and validation
 
-For creating or maintaining a recipe, read [recipe authoring](references/recipe-authoring.md).
+For creating or maintaining a recipe, read [recipe authoring](references/recipe-authoring.md). For a change specification, use [Spec Artifacts](references/spec-artifacts.md), composing existing recipes and the standardized **Code Changes** and **Test Changes** views. Recipes may compose other recipes; the evolving [Braincrawl change-design composition](references/change-design.md) combines lifecycle, CLI/API trees, code ownership, types and testing strategy.
 Extract the user's stated recipe requirements into the recipe document and preserve
 their scope and uncertainty as the recipe evolves.
 
@@ -203,10 +214,18 @@ with Markdown, Zed links, drag/resize, minimize/restore and close. Details and t
 
 ## Artifact versions
 
-Use `--history /project/.luminous/artifacts/<name>` to retain immutable numbered document snapshots and publish one shared-renderer `design.html` there. A changed source, theme, CSS, or generated document/layout appends the next version; unchanged regeneration reuses the latest revision. `--revision-label` names a newly appended revision. Snapshots retain source Markdown, theme, custom CSS, measured geometry and layout; only the newest source is parsed/measured during regeneration. Previous versions use the renderer bundled in the newly generated HTML, not historical runtime code.
+Choose the version action **before generation**, in this order:
+
+1. Follow the user's explicit instruction to create a version or amend one.
+2. Create a **new version** for meaningful changes to scope, architecture, diagram structure or abstraction (for example, replacing file Cards with function Cards). Omit `--amend-latest`.
+3. **Amend latest** for small corrections or an added diagram that leaves the existing design intact. Pass `--amend-latest`.
+
+Use `--history /project/.luminous/artifacts/<name>` for both actions. Before reporting completion, inspect `versions.json` and verify the requested version action occurred. Do not treat every revision request as an additive edit. Snapshots retain source Markdown, theme, custom CSS, measured geometry and layout; only the newest source is parsed/measured during regeneration. Previous versions use the renderer bundled in the newly generated HTML, not historical runtime code.
 
 The dropdown selects `?v=N` or `?v=latest`; absent `v` means latest. Preserve the stable artifact path across iterations. Switching versions disposes the mounted document and replaces its custom CSS. All version data is embedded, but only the selected document renders. Back/Forward restores selection; View Source shows the selected version. Unknown versions produce an explicit error with a latest-version recovery action.
 
 Prefer a durable file URL from the start. If migrating an already-open `/tmp` preview, keep the durable file as the source of record and optionally copy the generated HTML to the existing preview path; do not open a second tab for the same artifact. Reconstructed historical versions must say they are reconstructions; do not invent original generation timestamps or claim pixel-exact historical layouts.
 
-See `packages/portable/README.md` for snapshot files and locking. Do not edit old snapshot JSON to improve it: change the editable input and generate a new version.
+See `packages/portable/README.md` for snapshot files and locking. Do not manually edit snapshot JSON: change the editable input and regenerate. Use `--amend-latest` for the current version when appropriate; earlier numbered versions remain unchanged.
+
+For a Blender component tree with representative array units, master-linked parts, blockout badges, and structured modifier values, use the [Blender Object Assembly recipe](references/blender-object-assembly.md).

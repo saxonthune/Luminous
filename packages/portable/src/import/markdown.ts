@@ -4,6 +4,7 @@ import { parse as parseYaml } from 'yaml';
 import { applyNodeContent } from './node-content.js';
 import { Marked } from 'marked';
 import { importMermaid } from './mermaid.js';
+import { parseSchemaBlock } from './schema-block.js';
 import { parseModel, type ParsedDocument, type ParsedDiagram } from '../semantics.js';
 
 
@@ -13,6 +14,7 @@ const escape = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '
 export async function importMarkdown(source: string): Promise<ParsedDocument> {
   let model: ParsedDocument['model'];
   let info: ParsedDocument['info'];
+  const schemaBlocks: NonNullable<ParsedDocument['schemaBlocks']> = [];
   let searchOffset = 0;
   const sources: { text: string; line: number; mode?: ParsedDiagram['mode']; content?: unknown; settings?: ParsedDiagram['settings'] }[] = [];
   const markdown = new Marked({ renderer: {
@@ -21,6 +23,10 @@ export async function importMarkdown(source: string): Promise<ParsedDocument> {
       const offset = source.indexOf(token.raw, searchOffset);
       const line = offset < 0 ? 1 : source.slice(0, offset).split('\n').length;
       if (offset >= 0) searchOffset = offset + token.raw.length;
+      if (token.lang?.trim() === 'portable-schema') {
+        const index = schemaBlocks.push(parseSchemaBlock(parseYaml(token.text))) - 1;
+        return `<div data-portable-schema="${index}"></div>`;
+      }
       if (token.lang?.trim() === 'portable-info') {
         if (info) throw new Error('Only one portable-info block is allowed per document');
         info = parseInfo(parseYaml(token.text));
@@ -98,5 +104,5 @@ export async function importMarkdown(source: string): Promise<ParsedDocument> {
       throw new Error(`Mermaid block ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  return { html, diagrams, model, info };
+  return { html, diagrams, model, info, schemaBlocks };
 }

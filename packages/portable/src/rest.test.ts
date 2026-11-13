@@ -7,8 +7,8 @@ import type { PortableGraph } from './graph.js';
 const graph = (): PortableGraph => ({ direction: 'RIGHT', nodes: [{ id: 'resource', label: '', group: false, classes: [] }], edges: [] });
 test('REST methods survive parsing alongside ordinary Card disclosure', () => {
   const g = graph();
-  applyNodeContent(g, { resource: { component: 'rest-card', title: '/{bookId}', methods: ['GET', 'PUT'], info: 'book-contract' } });
-  assert.deepEqual(g.nodes[0].card?.methods, ['GET', 'PUT']);
+  applyNodeContent(g, { resource: { component: 'rest-card', title: '/{bookId}', methods: ['GET', 'QUERY', 'PUT'], info: 'book-contract' } });
+  assert.deepEqual(g.nodes[0].card?.methods, ['GET', 'QUERY', 'PUT']);
   assert.equal(g.nodes[0].card?.info, 'book-contract');
   assert.equal(restRole('/{bookId}', g.nodes[0].card!.methods!), 'parameter');
   assert.equal(restRole('/books', ['GET']), 'endpoint');

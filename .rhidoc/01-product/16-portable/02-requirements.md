@@ -77,7 +77,7 @@ description: Users can navigate and rearrange the generated graph transiently.
 | Drag selected item resize handle | Resize that item |
 | Wheel over overflowing text | Scroll text; zoom when it cannot scroll further in that direction |
 | Canvas Expand width / Restore width | Toggle that canvas between viewport width and article width |
-| Drag canvas bottom-left corner | Preview symmetric width and bottom-only height changes; release to apply |
+| Drag canvas bottom-right corner | Preview symmetric width and bottom-only height changes; release to apply |
 | Escape during canvas resize | Cancel preview without resizing |
 | Focused canvas resize handle + arrow keys | Resize in small increments; Shift uses larger increments |
 | Canvas Restore size | Return manually enlarged canvas to default dimensions |
@@ -308,6 +308,7 @@ description: Authors can retain and revisit artifact iterations to improve them.
 - **PVER4.** [p] When the URL has no version parameter, the artifact displays the latest version.
 - **PVER5.** [p] One HTML file uses one shared renderer for its versions.
 - **PVER6.** [p] The version dropdown retains its current colors and matches the height of the adjacent Theme button.
+- **PVER7.** [p] Additive, non-destructive or trivial artifact edits, including adding a diagram, can update the current version without creating a separate version for the prior content.
 
 ## Canvas resizing
 
@@ -317,7 +318,7 @@ name: Canvas resizing
 description: Users can enlarge a canvas while keeping its content visually stationary.
 ```
 
-- **PCR1.** [p] The user can resize a canvas by dragging its bottom-left corner.
+- **PCR1.** [p] The user can resize a canvas by dragging its bottom-right corner.
 - **PCR2.** [p] When a resize is committed, canvas contents appear to remain in the same position, as with Expand width.
 - **PCR3.** [p] While the user drags the resize corner, a strong border previews the proposed canvas boundaries.
 - **PCR4.** [p] The canvas changes size only when the user releases the resize drag.
@@ -327,4 +328,14 @@ description: Users can enlarge a canvas while keeping its content visually stati
 - **PCR8.** [p] When the pointer would request a size below the default minimum, the preview border stops at that minimum.
 
 
-Canvas resizing implementation: the bottom-left handle previews bounds without changing the live viewport. Release applies clamped dimensions through the existing view-anchor preservation path. Pointer cancellation, lost capture, Escape and window resizing cancel the preview. The handle is hidden in fullscreen; the custom size is restored on leaving fullscreen. Restore size resets manual dimensions. Resizing is transient and does not relayout nodes.
+Canvas resizing implementation: the bottom-right handle previews bounds without changing the live viewport. Release applies clamped dimensions through the existing view-anchor preservation path. Pointer cancellation, lost capture, Escape and window resizing cancel the preview. The handle is hidden in fullscreen; the custom size is restored on leaving fullscreen. Restore size resets manual dimensions. Resizing is transient and does not relayout nodes.
+
+## Schema blocks in document flow
+
+- Portable supports a dedicated Markdown fence for type/schema presentation in normal document flow, without a canvas.
+- Schema blocks reuse the type presentation behavior, including coordinated field colors, from the existing schema Cards.
+
+The `portable-schema` fence uses the schema Card field contract. Nested definitions expand below the block rather than opening canvas nodes. It is declarative schema markup, not a TypeScript or SQL parser.
+
+- In Ground, document code and schema blocks use a neutral background rather than the brown control surface.
+- Document schema fields keep their names and type annotations close enough to read together, with readable text sizing.

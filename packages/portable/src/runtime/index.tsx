@@ -18,6 +18,7 @@ import type { PortableArtifact, PortableDiagram, PortableLayout, PortableNode } 
 import '@luminous/cactus/cactus.css';
 import '@luminous/cactus/cactus-themes.css';
 import './style.css';
+import { SchemaBlock } from './SchemaBlock.js';
 import { createPerformanceDiagnostics } from './performance.js';
 
 const payload: PortableArtifact | VersionedArtifact = JSON.parse(document.getElementById('portable-data')!.textContent!);
@@ -373,6 +374,10 @@ function App(props: { artifact: PortableArtifact; versions?: VersionedArtifact; 
       const diagram = artifact.diagrams[Number(slot.dataset.portableCanvas)];
       return render(() => <PortableCanvas artifact={artifact} diagram={diagram} theme={theme()} onThemeChange={cycleTheme} />, slot);
     });
+    for (const slot of article.querySelectorAll<HTMLElement>('[data-portable-schema]')) {
+      const content = artifact.schemaBlocks?.[Number(slot.dataset.portableSchema)];
+      if (content) disposers.push(render(() => <SchemaBlock content={content} />, slot));
+    }
     onCleanup(() => disposers.forEach(dispose => dispose()));
   });
   return <div class={`portable cactus-theme-${theme()}`}>

@@ -44,7 +44,7 @@ book:
 ```
 
 `methods` is required, may be empty, and accepts unique uppercase standard HTTP
-methods. Ordinary Cards do not accept it. Verbs render as colored badges between
+methods, including `QUERY` for safe body-bearing reads. `QUERY` shares the read-method badge palette. Ordinary Cards do not accept it. Verbs render as colored badges between
 header and body and remain visible at summary zoom. Header/body/footer, diff and
 Extended Info reuse the existing Card behavior.
 

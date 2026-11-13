@@ -64,7 +64,7 @@ export function CanvasResizeHandle(props: {
         const rect = props.section().getBoundingClientRect();
         const delta = event.shiftKey ? 40 : 10;
         props.onCommit(resizedCanvas(rect, props.minimum(), event.key === 'ArrowLeft' ? -delta : event.key === 'ArrowRight' ? delta : 0, event.key === 'ArrowDown' ? delta : event.key === 'ArrowUp' ? -delta : 0));
-      }}><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M3 5v12h12M3 17L16 4" fill="none" stroke="currentColor" stroke-width="2" /></svg></button>
+      }}><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M17 5v12H5M17 17L4 4" fill="none" stroke="currentColor" stroke-width="2" /></svg></button>
     <Show when={preview()}>{size => <div class="portable-canvas-resize-preview" aria-hidden="true" style={{ left: `${size().left}px`, width: `${size().width}px`, height: `${size().height}px` }} />}</Show>
   </>;
 }

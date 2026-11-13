@@ -16,9 +16,9 @@ import { importMarkdown } from './import/markdown.js';
 import { missingSchemaTypes } from './schema-diagnostics.js';
 import type { PortableArtifact, PortableTheme, BundleSizeReport } from './graph.js';
 
-const { values } = parseArgs({ options: { input: { type: 'string' }, history: { type: 'string' }, 'revision-label': { type: 'string' }, theme: { type: 'string' }, css: { type: 'string' }, output: { type: 'string' }, title: { type: 'string', default: 'Luminous Portable' }, 'debug-performance': { type: 'boolean', default: false }, force: { type: 'boolean', default: false }, help: { type: 'boolean' } } });
+const { values } = parseArgs({ options: { input: { type: 'string' }, history: { type: 'string' }, 'amend-latest': { type: 'boolean', default: false }, 'revision-label': { type: 'string' }, theme: { type: 'string' }, css: { type: 'string' }, output: { type: 'string' }, title: { type: 'string', default: 'Luminous Portable' }, 'debug-performance': { type: 'boolean', default: false }, force: { type: 'boolean', default: false }, help: { type: 'boolean' } } });
 if (values.help) {
-  console.log('just portable --input INPUT.md [--theme theme.json] [--css style.css] [--output design.html] [--title TITLE] [--force] [--debug-performance] [--history DIR] [--revision-label LABEL]');
+  console.log('just portable --input INPUT.md [--theme theme.json] [--css style.css] [--output design.html] [--title TITLE] [--force] [--debug-performance] [--history DIR] [--revision-label LABEL] [--amend-latest]');
 } else {
   if (!values.input || !values.input.toLowerCase().endsWith('.md')) throw new Error('--input requires a Markdown (.md) file');
   const source = await readFile(resolve(values.input), 'utf8');
@@ -53,7 +53,7 @@ if (values.help) {
       for (const [index, diagram] of projected.entries()) {
         diagrams.push({ ...diagram, measurements: measurements[index], defaultLayout: await computeDefaultLayout(diagram.graph, measurements[index], diagram.mode, diagram.settings?.layout) });
       }
-      const artifact: PortableArtifact = { debugPerformance: values['debug-performance'], title: values.title, sourceFilename: basename(values.input), sourceMarkdown: source, html: notebook.html, diagrams, theme, model: notebook.model, info: renderInfo(notebook.info) };
+      const artifact: PortableArtifact = { debugPerformance: values['debug-performance'], title: values.title, sourceFilename: basename(values.input), sourceMarkdown: source, html: notebook.html, schemaBlocks: notebook.schemaBlocks, diagrams, theme, model: notebook.model, info: renderInfo(notebook.info) };
       await build({ configFile: false, root: resolve(directory, '..'), plugins: [solid(), ...(values['debug-performance'] ? [bundleSizePlugin(sizeReport)] : [])], logLevel: 'warn', build: { outDir: temporary, emptyOutDir: false, lib: { entry: join(directory, 'runtime/index.tsx'), name: 'LuminousPortable', formats: ['iife'], fileName: () => 'runtime.js' }, cssCodeSplit: false } });
       const js = await readFile(join(temporary, 'runtime.js'), 'utf8');
       const css = await readFile(join(temporary, 'portable.css'), 'utf8');
@@ -78,7 +78,8 @@ if (values.help) {
           finally { await rm(staged, { force: true }); }
         } else await writeFile(output, html, { flag: 'wx' });
       };
-      if (values.history) await publishHistory(resolve(values.history), artifact, customCss, values['revision-label'], publish);
+      if (values['amend-latest'] && !values.history) throw new Error('--amend-latest requires --history');
+      if (values.history) await publishHistory(resolve(values.history), artifact, customCss, values['revision-label'], publish, values['amend-latest']);
       else await publish(artifact);
       console.log(output);
     } finally { await rm(temporary, { recursive: true, force: true }); }

@@ -5,7 +5,7 @@ import type { PortableArtifact } from './graph.js';
 import type { ArtifactVersion, VersionedArtifact } from './versions.js';
 
 /** The lock covers snapshot allocation and publication. A failed publish leaves history unchanged. */
-export async function publishHistory(directory: string, artifact: PortableArtifact, customCss: string, label: string | undefined, publish: (payload: VersionedArtifact) => Promise<void>): Promise<void> {
+export async function publishHistory(directory: string, artifact: PortableArtifact, customCss: string, label: string | undefined, publish: (payload: VersionedArtifact) => Promise<void>, amendLatest = false): Promise<void> {
   await mkdir(directory, { recursive: true });
   const lock = join(directory, '.write-lock');
   await mkdir(lock).catch(() => { throw new Error(`Artifact history is locked: ${lock}. Check for an active generator before removing a stale lock.`); });
@@ -23,9 +23,10 @@ export async function publishHistory(directory: string, artifact: PortableArtifa
     const { bundleSize: _bundleSize, debugPerformance: _debug, ...content } = artifact;
     const digest = createHash('sha256').update(JSON.stringify({ content, customCss })).digest('hex');
     const latest = versions.at(-1);
+    if (amendLatest && !latest) throw new Error('Cannot amend an empty artifact history');
     const added = latest?.digest !== digest;
-    const revision: ArtifactVersion = added ? { version: (latest?.version ?? 0) + 1, label: label ?? artifact.title, createdAt: new Date().toISOString(), digest, customCss, artifact: content } : latest!;
-    const payload: VersionedArtifact = { format: 'portable-versions-1', versions: added ? [...versions, revision] : versions };
+    const revision: ArtifactVersion = added ? { version: amendLatest ? latest!.version : (latest?.version ?? 0) + 1, label: label ?? (amendLatest ? latest!.label : artifact.title), createdAt: amendLatest ? latest!.createdAt : new Date().toISOString(), digest, customCss, artifact: content } : latest!;
+    const payload: VersionedArtifact = { format: 'portable-versions-1', versions: added ? [...(amendLatest ? versions.slice(0, -1) : versions), revision] : versions };
     await publish(payload);
     if (added) {
       // Manifest is the commit point. Orphans after interruption can be overwritten on retry.

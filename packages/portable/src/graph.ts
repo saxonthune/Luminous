@@ -13,6 +13,8 @@ export interface PortableCard {
   info?: string;
   title: string;
   body?: string;
+  badges?: string[];
+  modifiers?: { name: string; parameters: { name: string; value: string }[] }[];
   footer?: { text: string; href?: string };
 }
 export interface PortableNode {
@@ -63,6 +65,7 @@ export interface BundleSizeReport {
   packages: { name: string; renderedCharacters: number; modules: number }[];
 }
 export interface PortableArtifact {
+  schemaBlocks?: PortableCard[];
   info?: Record<string, import('./import/extended-info.js').ExtendedInfo>;
   model?: import('./semantics.js').Model;
   bundleSize?: BundleSizeReport;
